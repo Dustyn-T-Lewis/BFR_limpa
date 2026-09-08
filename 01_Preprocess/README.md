@@ -1,66 +1,62 @@
 # 01 · Preprocess
 
-Turns the DIA-NN report into a protein matrix. Two sub-stages, run in order. Each one reads
-the previous one's `c_data` folder and writes its own. Nothing passes in memory.
+Turns the DIA-NN search output into a protein table with uncertainty attached. Two sub-stages.
 
 ```
 00_Input/report.parquet + metadata.csv
-  01_Filtering       repair the annotation, then remove rows  -> precursors_filtered.rds
-  02_Quantification  fit the DPC, roll up, filter             -> proteins.rds
-                                                                 |
-                                              02_Differential_Expression
+  01_Filtering       clean up the peptide table    -> precursors_filtered.rds
+  02_Quantification  peptides to proteins          -> proteins.rds
+                                                      |
+                                       02_Differential_Expression
 ```
+
+| Sub-stage | What it does |
+|---|---|
+| `01_Filtering` | reads the report, repairs a fault in the search database, removes peptides that cannot be assigned to one protein, removes blood and skin proteins |
+| `02_Quantification` | learns how missingness relates to abundance, then rolls peptides up to proteins |
 
 Run both from the repo root:
 
-```sh
+```
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd        --output-dir ../b_reports
 quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-dir ../b_reports
 ```
 
-## Why the stages are shaped this way
+## What comes out
 
-This is the limpa vignette's sequence with nothing added: `readDIANN`, the two precursor
-filters, `dpc`, `dpcQuant`, `filterByDetection`, then `dpcDE` in the next stage. The only
-code here that is not a limpa call repairs what the search FASTA broke and removes proteins
-skeletal muscle does not express. Both have to run before `dpc()` sees the matrix.
+`proteins.rds` is the file every later stage reads. It holds three things per protein per
+sample: an abundance, a standard error, and a count of how many peptides were actually detected
+behind it. The standard error is the point. A protein reconstructed mostly from missing peptides
+still gets a number, but a wide one, and the statistics downstream weight it accordingly.
 
-limpa reverses two habits from older proteomics pipelines. It does not impute, and it does
-not want you to filter missing values out. A precursor nobody detected is evidence that it
-was faint, `dpc()` fits that relationship, and `dpcQuant()` then uses it. Filter on
-missingness and you throw away the information the method exists to use.
+Keep the `.rds`. A CSV of the abundances alone drops the standard errors, which makes the
+analysis ordinary again.
 
-## There is no normalization stage
+## Why the order is what it is
 
-limpa ships no normalization function. Its vignette does not normalize. Its published
-DIA-NN case study does not normalize. `readDIANN()` reads DIA-NN's `Precursor.Normalised`
-column by default, which is where the normalization already happened: DIA-NN applies a
-retention-time correction during the search, and this pipeline uses that output.
+This follows limpa's own sequence with nothing added: read, remove ambiguous peptides, fit the
+detection curve, quantify, filter on detection.
 
-An earlier version of this stage estimated one offset per sample and subtracted it before
-the DPC. We removed it on 2026-09-07. The measurement behind it was a 1.37 log2 spread in
-column medians, but that number is the range across 131 samples, which two extreme samples
-can set on their own, and it sat on top of a correction DIA-NN had already applied.
+Two orderings are load-bearing. **The search-database repair happens before any filter**, because
+the fault it fixes makes limpa's filters delete real muscle protein. And **nothing is filtered on
+missing values before quantification**, because those gaps are the data the detection curve is
+fitted to.
 
-limpa's documentation mentions normalization once, in `filterByDetection()`'s help: "after
-`dpcQuant` but before normalization or `dpcDE`". That would put it on the protein matrix,
-not the precursor matrix, and limpa still gives you no function for it.
+## No normalization step
 
-Anything that refers to `sample_offsets.csv`, `normalization_estimators.csv` or
-`precursors_normalized.rds` describes the old pipeline.
-
-## The DPC slope
-
-Reported as fitted. We never substitute a preset value. The limpa FAQ puts the acceptable
-range at 0.1 to 1.0 and calls 0.7 to 0.9 typical for DIA-NN searched with match-between-runs.
-limpa's own DIA-NN case study fitted 0.59 and used it. The vignette says the slope comes out
-low when peptides vary a lot, which is what a within-subject design with heavy missingness
-looks like. A low slope also recovers less from missing values, so it errs toward finding
-nothing rather than toward finding too much.
+There isn't one, and that is deliberate. limpa ships no normalization function and its own
+worked examples do not normalize, because the DIA-NN column we read is already normalized during
+the search. An earlier version of this stage added a second correction on top. Removing it
+changed essentially nothing, which was the answer.
 
 ## Packages
 
-`limpa` for everything it covers, and `dplyr`, `stringr`, `purrr`, `readr` and `tibble` for
-the handling around it. `readDIANN()` needs `nanoparquet` to read a DIA-NN v2 report, so
-install it even though no line here calls it. `limma` enters at
-`02_Differential_Expression`, not here.
+`limpa` for the quantification, `nanoparquet` so it can read the report, and
+`dplyr`/`stringr`/`purrr`/`readr`/`tibble` for the handling around it. `limma` is not needed
+until the next stage.
+
+## Cost
+
+The quantification step takes about 100 minutes on a laptop and holds roughly 11 GB. It is
+cached and keyed to its input file, so it re-runs when the filtering output changes and not
+otherwise. Filtering itself takes a few minutes.

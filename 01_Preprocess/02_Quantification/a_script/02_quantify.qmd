@@ -53,15 +53,15 @@ dpc_parameters
 `dpc()` defaults to `model = "cn"` and its help says it then returns `dpcCN()`, the
 complete-normal estimator the limpa FAQ recommends for noisy data. Its `subset = 2000`
 default fits on a systematic sample stratified by missingness and mean intensity rather
-than all `r format(nrow(y), big.mark = ",")` rows. `robust` is documented as *"Only used
-if `model='on'"*, so it is inactive here and robustness comes from the subsample.
+than all `r format(nrow(y), big.mark = ",")` rows. limpa documents `robust` as *"Only used
+if `model='on'"*, so it does nothing here and the subsample supplies the robustness.
 
-The slope is reported as fitted and never replaced by a preset. The FAQ puts the acceptable
-range at 0.1–1.0 and calls 0.7–0.9 typical for DIA-NN searched with match-between-runs; the
-vignette adds that the slope is under-estimated when per-peptide variability is large,
-which is what a within-subject design with heavy missingness looks like. limpa's own
-published DIA-NN case study fitted 0.59 and used it uncorrected. A shallow slope also
-recovers *less* from missing values, so it is the conservative direction to be wrong in.
+We report the slope as fitted and never substitute a preset. The FAQ puts the usable range at
+0.1 to 1.0 and calls 0.7 to 0.9 typical for DIA-NN searched with match-between-runs. The
+vignette adds that the slope comes out low when peptides vary a lot, which is what a
+within-subject design with heavy missingness looks like. limpa's own published DIA-NN case
+study fitted 0.59 and used it. A shallow slope also recovers less from missing values, so it
+errs toward finding nothing rather than finding too much.
 
 ::: {.callout-note}
 The visual fit is not the diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
