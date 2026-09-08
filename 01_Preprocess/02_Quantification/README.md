@@ -1,68 +1,59 @@
 # 01_Preprocess / 02_Quantification
 
-Fits the detection probability curve, rolls precursors up to protein groups, then filters on
-detection. This is the slow stage.
+Learns how missingness relates to abundance, rolls peptides up to proteins, then drops proteins
+nobody detected often enough. This is the slow step.
 
 | | |
 |---|---|
 | **Script** | `a_script/02_quantify.qmd` |
 | **Reads** | `01_Filtering/c_data/precursors_filtered.rds` |
-| **Writes** | `c_data/proteins.rds`, `c_data/dpc_parameters.csv`, `c_data/protein_quality.csv` |
-| **Read by** | both sub-stages of `02_Differential_Expression` |
+| **Writes** | `c_data/proteins.rds`, plus the fitted curve parameters and a per-protein quality table |
+| **Next** | `02_Differential_Expression` |
 
-## Why the DPC is not its own stage
+## The idea
 
-It is three lines and two plots, and limpa's case study runs it inline just before
-`dpcQuant()`. A separate stage bought one checkpoint, and `#| cache: true` on the
-`dpcQuant` chunk already gives you that: the curve and its plots render in seconds at the
-top of the notebook, so you see a bad fit long before the slow step runs again.
+Faint peptides go missing more often than abundant ones. limpa fits that as a curve, so a
+missing value becomes the statement "this was below the detection limit" rather than a blank to
+be filled in. Every protein then gets a value in every sample.
 
-## What a DPC is
+This is not imputation. limpa estimates each protein's abundance from the peptides it did see
+plus the probability that the ones it did not see were faint, and reports how uncertain the
+answer is.
 
-Faint precursors go missing more often than bright ones. `dpc()` fits that relationship,
-giving the probability a precursor is detected as a function of how much of it was there.
-`dpcQuant()` then reads a missing value as "this was below the detection threshold" rather
-than filling in a number and forgetting where it came from.
+## What comes out
 
-Two defaults are worth knowing. `subset = 2000` fits the curve on a systematic sample
-stratified by missingness and mean intensity, not on every row. `robust` applies only when
-`model = "on"`, and the default is `model = "cn"`, so outlier downweighting is off and the
-subsample supplies the robustness. Under `model = "cn"` the help page says `dpc()` returns
-`dpcCN()`, which the FAQ recommends for noisy data, so calling `dpcCN()` separately would
-change nothing.
+`proteins.rds` carries three matrices:
 
-The slope is reported as fitted. The stage README says why we never substitute a preset.
+- **abundance**, one number per protein per sample, no gaps
+- **standard error**, how much to trust each number
+- **detections**, how many peptides were actually seen behind each number
 
-## What dpcQuant() returns
+The standard error is why this project uses limpa. It travels into the statistics as a weight, so
+a protein built mostly from missing peptides counts for less than one measured directly. Anything
+that pulls the abundances out into a plain matrix throws that away.
 
-An `EList` with one row per protein group, and two extra matrices in `$other`.
-`standard.error` says how certain each value is. `n.observations` counts the precursors
-actually detected behind it. It also adds `NPrec` and `PropObs` to `$genes`, though the help
-page calls the first of those `NPeptides`.
+## Reading the curve
 
-Those standard errors are why this project uses limpa. A protein rebuilt mostly from missing
-precursors still gets a value, but a wide one, and `dpcDE()` turns that width into a
-precision weight. The FAQ says plainly that `lmFit`, `arrayWeights` and `vooma` must not run
-on a limpa object, and that pulling the matrix out and handing it to ordinary limma costs
-power and can cost error-rate control.
+The notebook reports the fitted slope and never substitutes a preset. A shallow slope means less
+information is recovered from missing values, which errs toward finding nothing rather than
+finding too much, so it is the safe direction to be wrong in. limpa's guidance puts the usable
+range between 0.1 and 1.0.
 
-The `dpcQuant` chunk is cached, so re-rendering to fix prose does not run it again. Delete
+The curve's plot is not the diagnostic. It compares a fitted curve against proportions computed
+a different way, so some mismatch is expected. Judge the slope.
+
+## The detection filter
+
+Runs after quantification, which is the order limpa specifies. A protein has to be detected in at
+least as many samples as the smallest group holds. Set it lower and proteins resting on almost
+nothing reach the statistics; set it higher and a protein present in one condition and absent in
+the other gets dropped, which in a training study may be the interesting case.
+
+## Cost
+
+About 100 minutes and 11 GB. The step is cached and keyed to its input file, so it re-runs when
+filtering produces a new matrix and not when the surrounding text changes. Delete
 `a_script/02_quantify_cache/` to force it.
 
-## Detection filtering
-
-limpa fixes this order explicitly. `filterByDetection()`'s help says it runs after
-`dpcQuant` and before DE, and it returns a logical vector rather than an object, so you
-write `y[keep, ]`.
-
-We set `n.samples` to the smallest group size, which the help page suggests for a small
-experiment. That group is `BFR_T2` with 32 samples, one short because nobody acquired S06's
-left leg at T2.
-
-## The MDS plot
-
-`plotMDSUsingSEs()` rather than `plotMDS()`, because limpa's version accounts for the
-standard errors. Do not expect samples to separate by group. Every participant contributes
-all four cells, so differences between participants dominate the first dimensions, and the
-participant term in the design is what removes them. Investigate a sample sitting far from
-everything else. Do not read anything into the lack of group structure.
+One protein group holds over three thousand peptides, and cost grows steeply with that count, so
+a handful of very large proteins account for most of the runtime.
