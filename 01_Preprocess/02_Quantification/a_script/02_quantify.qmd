@@ -1,0 +1,158 @@
+---
+title: "02 · Quantification"
+subtitle: "Detection probability curve, protein roll-up, detection filter"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+Half of a DIA matrix is empty, and not at random: faint precursors go missing more often
+than bright ones. `dpc()` fits that as a curve, and `dpcQuant()` uses it to give every
+protein a value in every sample without imputing anything. This stage is the limpa
+vignette's own sequence, unaltered.
+
+```{r setup}
+pacman::p_load(here, limpa, dplyr, readr, tibble)
+set.seed(20260904)
+
+y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
+dim(y)
+```
+
+## The missingness relationship
+
+```{r ave-vs-mis}
+plotAveVsMis(y)
+```
+
+A downward trend means detection depends on intensity and the DPC has something to fit. A
+flat cloud would mean missingness is closer to random, where limpa still works but gains
+less over simpler methods.
+
+## The curve
+
+```{r dpc}
+dpcest <- dpc(y$E)
+plotDPC(dpcest)
+
+dpc_parameters <- tibble(
+  parameter = c("intercept (b0)", "slope (b1)"),
+  estimate = as.numeric(dpcest$dpc)
+)
+stopifnot(is.finite(dpcest$dpc[2]), dpcest$dpc[2] > 0)
+dpc_parameters
+```
+
+`dpc()` defaults to `model = "cn"` and its help says it then returns `dpcCN()`, the
+complete-normal estimator the limpa FAQ recommends for noisy data. Its `subset = 2000`
+default fits on a systematic sample stratified by missingness and mean intensity rather
+than all `r format(nrow(y), big.mark = ",")` rows. `robust` is documented as *"Only used
+if `model='on'"*, so it is inactive here and robustness comes from the subsample.
+
+The slope is reported as fitted and never replaced by a preset. The FAQ puts the acceptable
+range at 0.1–1.0 and calls 0.7–0.9 typical for DIA-NN searched with match-between-runs; the
+vignette adds that the slope is under-estimated when per-peptide variability is large,
+which is what a within-subject design with heavy missingness looks like. limpa's own
+published DIA-NN case study fitted 0.59 and used it uncorrected. A shallow slope also
+recovers *less* from missing values, so it is the conservative direction to be wrong in.
+
+::: {.callout-note}
+The visual fit is not the diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
+against proportions computed on *observed* intensity, so some discrepancy is structural.
+Judge the slope.
+:::
+
+## Roll-up
+
+`dpcQuant()` fits an additive precursor-plus-sample model per protein, maximising a
+posterior that scores observed values by squared residual and missing values by their DPC
+probability. The returned `$other$standard.error` is why this project uses limpa: `dpcDE()`
+reads it as a precision weight, so a protein reconstructed largely from missing precursors
+gets a value and a wide one. Handing `$E` to `lmFit()` discards that and treats every
+protein as equally reliable.
+
+```{r quantify}
+#| cache: true
+elapsed <- system.time(
+  proteins <- dpcQuant(y, "Protein.Group", dpc = dpcest)
+)
+```
+
+`r format(nrow(proteins), big.mark = ",")` protein groups from
+`r format(nrow(y), big.mark = ",")` precursors in
+`r round(elapsed[["elapsed"]] / 60, 1)` minutes. The matrix has no missing values; what
+varies is how certain each value is.
+
+## Detection filter
+
+`filterByDetection()`'s help fixes the order: it runs after `dpcQuant()` and before DE, and
+it returns a logical vector rather than an object. For a small experiment the help suggests
+setting `n.samples` to the smallest group size. Here that is `BFR_T2` with 32 samples, one
+short because nobody acquired S06's left leg at T2.
+
+```{r detection}
+group_sizes <- table(proteins$targets$group)
+keep <- filterByDetection(proteins, n.samples = min(group_sizes))
+proteins <- proteins[keep, ]
+
+group_sizes
+c(before = length(keep), kept = sum(keep), dropped = sum(!keep))
+```
+
+## What survives
+
+```{r quality}
+protein_quality <- tibble(
+  protein = rownames(proteins),
+  gene = proteins$genes$Genes,
+  n_precursors = proteins$genes$NPrec,
+  prop_observed = proteins$genes$PropObs,
+  mean_log2 = rowMeans(proteins$E),
+  mean_standard_error = rowMeans(proteins$other$standard.error),
+  mean_n_observations = rowMeans(proteins$other$n.observations)
+)
+stopifnot(!anyNA(protein_quality))
+summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
+```
+
+`NPrec` is what the installed version writes; the help page calls it `NPeptides`. A protein
+with a high mean standard error and few observations is one whose estimate leans on the DPC
+rather than on data.
+
+```{r mds}
+#| fig-height: 5
+plotMDSUsingSEs(proteins,
+  labels = proteins$targets$group,
+  col = as.integer(factor(proteins$targets$group))
+)
+```
+
+Samples are not expected to separate by group. Every participant contributes all four cells,
+so between-participant variation dominates the leading dimensions and the participant term
+in the design is what removes it. A sample sitting far from everything else is worth
+investigating; a lack of group structure is not.
+
+## Outputs
+
+`proteins.rds` is read by both stages of `02_Differential_Expression`.
+
+```{r write}
+saveRDS(proteins, here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+write_csv(
+  dpc_parameters,
+  here("01_Preprocess", "02_Quantification", "c_data", "dpc_parameters.csv")
+)
+write_csv(
+  protein_quality,
+  here("01_Preprocess", "02_Quantification", "c_data", "protein_quality.csv")
+)
+```
+
+```{r session}
+sessionInfo()
+```
