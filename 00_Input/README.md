@@ -22,10 +22,9 @@ matter when we ask whether a protein change tracks a muscle change.
 
 ## Two things that are easy to get wrong
 
-**Treatment is not the leg letter.** Run names contain `D` and `E`, Portuguese for right and
-left. Which leg got restriction was counterbalanced across participants, so the letter tells you
-the side and nothing else. `metadata.csv` carries `treatment` as its own column, worked out once
-by hand.
+**Treatment is not the leg letter.** Run names contain `D` and `E` (right and
+left). Which leg got restriction was counterbalanced across participants, so the letter tells you
+the side only. `metadata.csv` carries `treatment` as its own column, simply done by hand.
 
 **The same sample has three names.** The MS run name, our analysis ID, and the participant-plus-leg
 pair. `metadata.csv` carries all three, and `01_Preprocess` reconciles them in one step so no
@@ -33,5 +32,5 @@ later stage has to.
 
 ## Why phenotype.csv has one row per leg
 
-Training volume is one number for the whole leg. Store it once per MS sample instead and it gets
+Training volume is one number for the whole leg. If we store it once per MS sample, it gets
 repeated, so adding up the column would report twice the real volume.
