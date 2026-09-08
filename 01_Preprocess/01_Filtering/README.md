@@ -38,9 +38,10 @@ detection curve is fitted across the whole matrix and contaminants left in place
 
 ## How contaminants are decided
 
-A list of gene symbols in the notebook, plus three patterns for the antibody and keratin
-families. Symbols were checked against single-cell muscle expression rather than whole-tissue
-values, because tissue measurements are themselves blood-contaminated.
+A list of gene symbols in the notebook, plus four patterns for the antibody, keratin,
+small-proline-rich and haemoglobin families. Symbols were checked against single-cell muscle
+expression rather than whole-tissue values, because tissue measurements are themselves
+blood-contaminated.
 
 A protein group counts as contamination only when **every** gene name on it does. One protein can
 carry several names, so testing just the first one would get it wrong in both directions.
