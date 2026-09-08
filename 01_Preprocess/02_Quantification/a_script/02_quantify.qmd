@@ -17,7 +17,11 @@ protein a value in every sample without imputing anything. This stage is the lim
 vignette's own sequence, unaltered.
 
 ```{r setup}
-pacman::p_load(here, limpa, dplyr, readr, tibble)
+library(here)
+library(limpa)
+library(dplyr)
+library(readr)
+library(tibble)
 
 y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 dim(y)
