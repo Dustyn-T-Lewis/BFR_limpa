@@ -18,7 +18,6 @@ vignette's own sequence, unaltered.
 
 ```{r setup}
 pacman::p_load(here, limpa, dplyr, readr, tibble)
-set.seed(20260904)
 
 y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 dim(y)
@@ -44,7 +43,10 @@ dpc_parameters <- tibble(
   parameter = c("intercept (b0)", "slope (b1)"),
   estimate = as.numeric(dpcest$dpc)
 )
-stopifnot(is.finite(dpcest$dpc[2]), dpcest$dpc[2] > 0)
+stopifnot(
+  is.finite(dpcest$dpc),
+  dpcest$dpc[2] > 0.1, dpcest$dpc[2] < 1.0
+)
 dpc_parameters
 ```
 
@@ -78,6 +80,8 @@ protein as equally reliable.
 
 ```{r quantify}
 #| cache: true
+#| dependson: "dpc"
+#| cache.extra: !expr tools::md5sum(here::here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 elapsed <- system.time(
   proteins <- dpcQuant(y, "Protein.Group", dpc = dpcest)
 )
@@ -95,8 +99,13 @@ it returns a logical vector rather than an object. For a small experiment the he
 setting `n.samples` to the smallest group size. Here that is `BFR_T2` with 32 samples, one
 short because nobody acquired S06's left leg at T2.
 
+The function does not read `group`. It counts detections across all samples and keeps a
+protein when that count clears the threshold, so the smallest group size sets a
+cohort-wide bar rather than guaranteeing detection within any one group.
+
 ```{r detection}
 group_sizes <- table(proteins$targets$group)
+stopifnot(min(group_sizes) > 0)
 keep <- filterByDetection(proteins, n.samples = min(group_sizes))
 proteins <- proteins[keep, ]
 
@@ -107,6 +116,7 @@ c(before = length(keep), kept = sum(keep), dropped = sum(!keep))
 ## What survives
 
 ```{r quality}
+stopifnot(!is.null(proteins$genes$Genes))
 protein_quality <- tibble(
   protein = rownames(proteins),
   gene = proteins$genes$Genes,
@@ -116,7 +126,7 @@ protein_quality <- tibble(
   mean_standard_error = rowMeans(proteins$other$standard.error),
   mean_n_observations = rowMeans(proteins$other$n.observations)
 )
-stopifnot(!anyNA(protein_quality))
+stopifnot(!anyNA(select(protein_quality, where(is.numeric))))
 summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
 ```
 

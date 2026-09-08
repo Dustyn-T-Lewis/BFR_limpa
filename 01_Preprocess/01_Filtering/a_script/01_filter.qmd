@@ -19,8 +19,11 @@ skeletal muscle does not express. No sample is dropped and no missing value is f
 ```{r setup}
 pacman::p_load(here, limpa, dplyr, stringr, purrr, readr, tibble)
 
-CONTAMINANT_FAMILIES <- str_c(
-  "^(IGH|IGK|IGL|JCHAIN$|KRT|SPRR|HRNR$|DCD$|SBSN$|CSTA$|HB[ABDGMQZ][0-9]?$|AHSP$)"
+# Every alternative is anchored at both ends. An unanchored IGH/IGK/IGL/KRT/SPRR prefix
+# also matches IGHMBP2, IGLON5 and KRTCAP2, which muscle expresses.
+CONTAMINANT_FAMILIES <- paste0(
+  "^(IG[HKL][VDJCAGMEL]([0-9][0-9A-Z-]*)?$|JCHAIN$|KRT([0-9]|AP)[0-9A-Z-]*$|",
+  "SPRR[0-9][0-9A-Z]*$|HRNR$|DCD$|SBSN$|CSTA$|HB[ABDGMQZ][0-9]?$|AHSP$)"
 )
 
 # From a review of all 3,750 gene symbols in this dataset (Claude, claude-sonnet-5,
@@ -91,12 +94,13 @@ discarded S08 injection, which is in the report but not the sheet.
 ```{r map-samples}
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
 i <- match(str_to_lower(metadata$run), str_to_lower(colnames(y)))
-stopifnot(!any(is.na(i)))
+stopifnot(!anyNA(i), !anyDuplicated(i))
 
 runs_dropped <- setdiff(colnames(y), colnames(y)[i])
 y <- y[, i]
 colnames(y) <- metadata$sample_id
 y$targets <- as.data.frame(metadata)
+rownames(y$targets) <- metadata$sample_id
 
 signal_start <- sum(2^y$E, na.rm = TRUE)
 c(runs_in_report = length(i) + length(runs_dropped), samples_kept = ncol(y))
@@ -116,9 +120,12 @@ run_qc <- tibble(
   sample_id = colnames(y),
   precursors = depth,
   median_log2 = apply(y$E, 2, median, na.rm = TRUE),
-  pct_missing = 100 * colMeans(is.na(y$E))
+  pct_missing = 100 * (1 - depth / nrow(y))
 )
-stopifnot(all(depth > 0.5 * median(depth)))
+stopifnot(
+  all(depth > 0.5 * median(depth)),
+  all(abs(run_qc$median_log2 - median(run_qc$median_log2)) < 3)
+)
 arrange(run_qc, precursors) |> head(5)
 ```
 
@@ -154,13 +161,20 @@ pct_mentions_crap <- 100 * sum(2^y$E[str_detect(y$genes$Protein.Ids, "cRAP-"), ]
 
 y <- y[!drop, ]
 
+crap_mention <- str_detect(y$genes$Protein.Ids, "cRAP-")
+
 strip_crap <- function(x) {
   str_split(str_remove_all(x, "cRAP-"), ";") |>
     map_chr(\(z) str_c(unique(z), collapse = ";"))
 }
 y$genes <- y$genes |>
-  mutate(across(c(Protein.Group, Protein.Ids, Protein.Names, Genes), strip_crap),
-    Proteotypic = as.integer(!str_detect(Protein.Ids, ";"))
+  mutate(
+    across(c(Protein.Group, Protein.Ids, Protein.Names, Genes), strip_crap),
+    Proteotypic = if_else(
+      crap_mention,
+      as.integer(!str_detect(Protein.Ids, ";")),
+      as.integer(Proteotypic)
+    )
   )
 
 stopifnot(!any(str_detect(unlist(y$genes), "cRAP")))
@@ -180,7 +194,7 @@ vignette is explicit that precursors need no missing-value filtering, and those 
 exactly what `dpc()` recovers.
 
 ```{r limpa-filters}
-tally <- function(y, step) {
+step_summary <- function(y, step, signal_start) {
   tibble(
     step = step,
     precursors = nrow(y),
@@ -188,13 +202,13 @@ tally <- function(y, step) {
     pct_signal = 100 * sum(2^y$E, na.rm = TRUE) / signal_start
   )
 }
-log_start <- tally(y, "0 repaired")
+log_start <- step_summary(y, "0 repaired", signal_start)
 
 y <- filterNonProteotypicPeptides(y)
-log_proteotypic <- tally(y, "1 shared peptides")
+log_proteotypic <- step_summary(y, "1 shared peptides", signal_start)
 
 y <- filterCompoundProteins(y)
-log_compound <- tally(y, "2 compound protein groups")
+log_compound <- step_summary(y, "2 compound protein groups", signal_start)
 ```
 
 ## Contaminants
@@ -214,19 +228,23 @@ members <- str_split(str_to_upper(y$genes$Genes), ";")
 n_multi <- sum(lengths(members) > 1)
 
 flagged <- function(g) g %in% CONTAMINANTS | str_detect(g, CONTAMINANT_FAMILIES)
-contaminant <- vapply(members, \(g) length(g) > 0L && all(flagged(g)), logical(1))
+contaminant <- map_lgl(members, \(g) isTRUE(all(flagged(g))))
 
 removed <- tibble(
   symbol = y$genes$Genes[contaminant],
-  precursors = 1L,
-  signal = rowSums(2^y$E[contaminant, ], na.rm = TRUE)
+  signal = rowSums(2^y$E[contaminant, , drop = FALSE], na.rm = TRUE)
 ) |>
   summarise(precursors = n(), pct_signal = 100 * sum(signal) / signal_start, .by = symbol) |>
-  mutate(matched_by = if_else(symbol %in% CONTAMINANTS, "symbol", "family")) |>
+  mutate(
+    matched_by = if_else(
+      map_lgl(str_split(str_to_upper(symbol), ";"), \(g) all(g %in% CONTAMINANTS)),
+      "symbol", "family"
+    )
+  ) |>
   arrange(desc(pct_signal))
 
 y <- y[!contaminant, ]
-log_contaminants <- tally(y, "3 contaminants")
+log_contaminants <- step_summary(y, "3 contaminants", signal_start)
 
 head(removed, 10)
 ```
