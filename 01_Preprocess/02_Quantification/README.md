@@ -1,59 +1,41 @@
 # 01_Preprocess / 02_Quantification
 
-Learns how missingness relates to abundance, rolls peptides up to proteins, then drops proteins
-nobody detected often enough. This is the slow step.
+Fits the detection curve, rolls peptides up to proteins, filters on detection. The slow step.
 
 | | |
 |---|---|
 | **Script** | `a_script/02_quantify.qmd` |
 | **Reads** | `01_Filtering/c_data/precursors_filtered.rds` |
-| **Writes** | `c_data/proteins.rds`, plus the fitted curve parameters and a per-protein quality table |
-| **Next** | `02_Differential_Expression` |
+| **Writes** | `c_data/proteins.rds`, the curve parameters, a per-protein quality table |
 
 ## The idea
 
-Faint peptides go missing more often than abundant ones. limpa fits that as a curve, so a
-missing value becomes the statement "this was below the detection limit" rather than a blank to
-be filled in. Every protein then gets a value in every sample.
+Faint peptides go missing more often than abundant ones. `dpc()` fits that, so a missing value
+becomes "this was below the detection limit" rather than a blank to fill in. `dpcQuant()` then
+gives every protein a value in every sample.
 
-This is not imputation. limpa estimates each protein's abundance from the peptides it did see
-plus the probability that the ones it did not see were faint, and reports how uncertain the
-answer is.
+This is not imputation. Each protein's abundance is estimated from the peptides that were seen
+plus the probability that the missing ones were faint, and the answer comes with a standard
+error.
 
 ## What comes out
 
-`proteins.rds` carries three matrices:
+`proteins.rds` carries three matrices: abundance, standard error, and how many peptides were
+detected behind each value. The standard errors travel into the statistics as weights, so a
+protein built mostly from missing peptides counts for less than one measured directly.
 
-- **abundance**, one number per protein per sample, no gaps
-- **standard error**, how much to trust each number
-- **detections**, how many peptides were actually seen behind each number
+## The slope
 
-The standard error is why this project uses limpa. It travels into the statistics as a weight, so
-a protein built mostly from missing peptides counts for less than one measured directly. Anything
-that pulls the abundances out into a plain matrix throws that away.
+Reported as fitted, never replaced with a preset. limpa's usable range is 0.1 to 1.0. A shallow
+slope recovers less from missing values, so it errs toward finding nothing.
 
-## Reading the curve
+The curve's plot is not the diagnostic; it compares a fitted curve against proportions computed
+differently. Judge the slope.
 
-The notebook reports the fitted slope and never substitutes a preset. A shallow slope means less
-information is recovered from missing values, which errs toward finding nothing rather than
-finding too much, so it is the safe direction to be wrong in. limpa's guidance puts the usable
-range between 0.1 and 1.0.
+## Detection filter
 
-The curve's plot is not the diagnostic. It compares a fitted curve against proportions computed
-a different way, so some mismatch is expected. Judge the slope.
+Runs after quantification, which is the order limpa specifies. A protein must be detected in at
+least as many samples as the smallest group holds.
 
-## The detection filter
-
-Runs after quantification, which is the order limpa specifies. A protein has to be detected in at
-least as many samples as the smallest group holds. Set it lower and proteins resting on almost
-nothing reach the statistics; set it higher and a protein present in one condition and absent in
-the other gets dropped, which in a training study may be the interesting case.
-
-## Cost
-
-About 100 minutes and 11 GB. The step is cached and keyed to its input file, so it re-runs when
-filtering produces a new matrix and not when the surrounding text changes. Delete
+About 100 minutes and 11 GB. Cached and keyed to its input file. Delete
 `a_script/02_quantify_cache/` to force it.
-
-One protein group holds over three thousand peptides, and cost grows steeply with that count, so
-a handful of very large proteins account for most of the runtime.
