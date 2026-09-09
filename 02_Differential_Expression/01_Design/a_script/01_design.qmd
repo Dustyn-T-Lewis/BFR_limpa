@@ -1,0 +1,130 @@
+---
+title: "01 · Design"
+subtitle: "Design matrix and the five contrasts"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+limpa works with any design limma accepts. This notebook builds one and checks it, separately
+from the fit, so a design problem surfaces in seconds rather than after an hour of modelling.
+
+```{r setup}
+library(here)
+library(limpa)
+library(limma)
+library(dplyr)
+library(readr)
+library(stringr)
+library(tibble)
+library(nanoparquet)
+
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+targets <- proteins$targets
+
+with(targets, table(treatment, timepoint))
+```
+
+## Design
+
+Four cell means, one per treatment-and-timepoint combination, plus participant as a fixed block.
+Fixed rather than random because every contrast the study asks for is within one person, which is
+the paired case of the limma User's Guide §9.4.2. `sex` is constant within participant, so this
+model absorbs it and cannot test it.
+
+```{r design}
+design <- model.matrix(~ 0 + group + participant, data = targets)
+colnames(design) <- sub("^group", "", colnames(design))
+rownames(design) <- targets$sample_id
+
+stopifnot(identical(make.names(colnames(design)), colnames(design)))
+
+c(samples = nrow(design), coefficients = ncol(design),
+  residual_df = nrow(design) - ncol(design))
+```
+
+`makeContrasts()` parses its arguments as R code, so the `sub()` above matters: a column named
+like `2E-T1` would be read as subtraction.
+
+## Is a fixed participant term enough
+
+Samples share a participant, and within that they share a leg. The participant term removes the
+first exactly; the second stays in the residual. If it were large, the within-leg contrasts would
+be tested too conservatively and the between-leg ones too liberally.
+
+```{r correlation-strata}
+leg_id <- paste(targets$participant, targets$leg, sep = "_")
+
+strata <- tibble(
+  level = c("within participant (unweighted)", "within leg / participant fixed (unweighted)"),
+  correlation = c(
+    duplicateCorrelation(proteins$E, model.matrix(~ 0 + group, targets),
+                         block = targets$participant)$consensus.correlation,
+    duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
+  )
+)
+strata
+```
+
+Both are estimated on the bare matrix, so without the precision and sample weights the fit uses.
+They describe the matrix, not the model, which is enough for a near-zero check. On this data the
+second row is near zero, so `02_Differential` calls `dpcDE()` without `block =`. Nothing automates
+that reading, so check the row on a rerun.
+
+## Acquisition order
+
+Nobody recorded when each sample was injected. `report.parquet` carries `Run.Index`, DIA-NN's own
+run counter, which is not alphabetical order here (Spearman against alphabetical rank is 0.207) but
+is not confirmed as acquisition order either. Plotted against PC1 for what it is worth: a trend
+that tracks timepoint would put the two time contrasts in doubt, while the interaction would be
+unaffected because both legs share a session.
+
+```{r acquisition-order}
+#| fig-height: 4
+run_index <- read_parquet(here("00_Input", "report.parquet"),
+                          col_select = c("Run", "Run.Index")) |>
+  distinct() |>
+  mutate(run_lower = str_to_lower(Run))
+idx <- run_index$Run.Index[match(str_to_lower(targets$run), run_index$run_lower)]
+
+pc1 <- prcomp(t(proteins$E), scale. = TRUE)$x[, 1]
+plot(idx, pc1, col = as.factor(targets$timepoint), pch = 16,
+     xlab = "Run.Index", ylab = "PC1")
+```
+
+## Contrasts
+
+```{r contrasts}
+contrasts <- makeContrasts(
+  BFR_post_vs_pre   = BFR_T2 - BFR_T1,
+  HLRT_post_vs_pre  = HLRT_T2 - HLRT_T1,
+  BFR_vs_HLRT_at_T1 = BFR_T1 - HLRT_T1,
+  BFR_vs_HLRT_at_T2 = BFR_T2 - HLRT_T2,
+  interaction       = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
+  levels = design
+)
+contrasts[rowSums(abs(contrasts)) > 0, ]
+```
+
+`BFR_vs_HLRT_at_T1` compares two legs of one person before either was trained, so it is the
+negative control and must find nothing.
+
+```{r write}
+saveRDS(
+  list(design = design, contrasts = contrasts,
+       negative_control = "BFR_vs_HLRT_at_T1"),
+  here("02_Differential_Expression", "01_Design", "c_data", "design.rds")
+)
+write_csv(strata,
+          here("02_Differential_Expression", "01_Design", "c_data",
+               "correlation_strata.csv"))
+```
+
+```{r session}
+sessionInfo()
+```

@@ -15,8 +15,9 @@ Reads the DIA-NN report and removes rows. Drops no sample, filters nothing on mi
 3. Check every retained sample clears half the median depth. Removes nothing.
 4. Repair the search database fault.
 5. Remove peptides mapping to several proteins, then groups holding several proteins.
-6. Remove blood, plasma and skin proteins.
-7. Assert 28 named proteins survived.
+6. Remove blood, plasma and skin proteins, recording each sample's contaminant share by timepoint
+   first, since uneven contamination between visits would land on the two time contrasts.
+7. Assert 28 named proteins survived, and list what left.
 
 ## The repair
 

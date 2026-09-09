@@ -13,7 +13,7 @@ heavy load?
 |---|---|---|
 | `00_Input/` | study data, runs nothing | ready |
 | `01_Preprocess/` | search output to a protein table | ready |
-| `02_Differential_Expression/` | fit the model, test five contrasts | planned |
+| `02_Differential_Expression/` | normalise, fit, test five contrasts | ready |
 | `03_Pathway_Enrichment/` | which processes moved | planned |
 | `04_Network/` | protein groups the data defines | planned |
 | `05_Figures/` | manuscript panels | planned |
@@ -36,7 +36,14 @@ curl -L -o 00_Input/report.parquet \
 ```sh
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd        --output-dir ../b_reports
 quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-dir ../b_reports
+
+quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
+quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 ```
+
+Two scripts sit beside the pipeline and run only when needed: `02b_quantify_slope07.qmd` refits
+quantification at a fixed detection slope, and `02b_normalization_report.qmd` decides which
+normalisation the protein matrix needs.
 
 About two hours, nearly all of it quantification. That step is cached.
 

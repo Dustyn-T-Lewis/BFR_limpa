@@ -26,8 +26,13 @@ protein built mostly from missing peptides counts for less than one measured dir
 
 ## The slope
 
-Reported as fitted, never replaced with a preset. limpa's usable range is 0.1 to 1.0. A shallow
-slope recovers less from missing values, so it errs toward finding nothing.
+Two estimators are reported. The complete-normal model is the one used, and the observed-normal
+model is printed beside it as an independent check; they disagree by about a factor of two on this
+data. Neither is replaced with a preset. limpa's usable range is 0.1 to 1.0, and a shallow slope
+recovers less from missing values, so it errs toward finding nothing.
+
+`a_script/02b_quantify_slope07.qmd` refits at a fixed slope of 0.7 as a sensitivity check. It
+re-runs the slow step, so it keeps its own cache.
 
 The curve's plot is not the diagnostic; it compares a fitted curve against proportions computed
 differently. Judge the slope.
@@ -36,6 +41,9 @@ differently. Judge the slope.
 
 Runs after quantification, which is the order limpa specifies. A protein must be detected in at
 least as many samples as the smallest group holds.
+
+The last line reports the range of per-sample medians. Any normalisation decision rests on that
+number, and limpa places the correction in the next stage, between `dpcQuant()` and `dpcDE()`.
 
 About 100 minutes and 11 GB. Cached and keyed to its input file. Delete
 `a_script/02_quantify_cache/` to force it.

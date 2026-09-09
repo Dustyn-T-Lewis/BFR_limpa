@@ -1,0 +1,67 @@
+---
+title: "02b · Quantification at a fixed DPC slope"
+subtitle: "Sensitivity check against dpc.slope = 0.7"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+The fitted slope sits below the 0.7 to 0.9 band limpa's FAQ calls typical for DIA-NN searched with
+match-between-runs. This refits quantification with the slope held at 0.7 and compares what comes
+out. Separate from `02_quantify.qmd` so it keeps its own cache and cannot invalidate the main run.
+
+```{r setup}
+library(here)
+library(limpa)
+library(limma)
+library(dplyr)
+library(readr)
+library(tibble)
+library(purrr)
+
+y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
+proteins_fitted <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+```
+
+```{r quantify}
+#| cache: true
+proteins_07 <- dpcQuant(y, "Protein.Group", dpc.slope = 0.7)
+proteins_07 <- proteins_07[filterByDetection(
+  proteins_07, n.samples = min(table(proteins_07$targets$group))
+), ]
+```
+
+```{r compare-matrix}
+tibble(
+  slope = c("fitted", "0.7"),
+  proteins = c(nrow(proteins_fitted), nrow(proteins_07)),
+  mean_se = c(mean(proteins_fitted$other$standard.error),
+              mean(proteins_07$other$standard.error))
+)
+```
+
+```{r compare-contrasts}
+fit_07 <- proteins_07 |>
+  dpcDE(d$design, sample.weights = TRUE, plot = FALSE) |>
+  contrasts.fit(d$contrasts) |>
+  eBayes(robust = TRUE)
+
+map(colnames(d$contrasts), \(cn) {
+  tibble(contrast = cn,
+         n_fdr_05 = sum(topTable(fit_07, coef = cn, number = Inf)$adj.P.Val < 0.05))
+}) |>
+  list_rbind() |>
+  left_join(read_csv(here("02_Differential_Expression", "02_Differential", "c_data",
+                          "contrast_summary.csv"), show_col_types = FALSE) |>
+              select(contrast, fitted_slope = n_fdr_05),
+            by = "contrast")
+```
+
+```{r session}
+sessionInfo()
+```

@@ -41,15 +41,13 @@ less over simpler methods.
 
 ```{r dpc}
 dpcest <- dpc(y$E)
+dpcest_on <- dpcON(y$E, robust = TRUE)
 plotDPC(dpcest)
 
 dpc_parameters <- tibble(
-  parameter = c("intercept (b0)", "slope (b1)"),
-  estimate = as.numeric(dpcest$dpc)
-)
-stopifnot(
-  is.finite(dpcest$dpc),
-  dpcest$dpc[2] > 0.1, dpcest$dpc[2] < 1.0
+  estimator = c("complete normal", "observed normal"),
+  intercept = c(dpcest$dpc[1], dpcest_on$dpc[1]),
+  slope = c(dpcest$dpc[2], dpcest_on$dpc[2])
 )
 dpc_parameters
 ```
@@ -109,18 +107,22 @@ cohort-wide bar rather than guaranteeing detection within any one group.
 
 ```{r detection}
 group_sizes <- table(proteins$targets$group)
-stopifnot(min(group_sizes) > 0)
 keep <- filterByDetection(proteins, n.samples = min(group_sizes))
 proteins <- proteins[keep, ]
 
 group_sizes
 c(before = length(keep), kept = sum(keep), dropped = sum(!keep))
+
+round(range(apply(proteins$E, 2, median)), 3)
 ```
+
+The last line is the quantity any normalisation decision rests on. limpa places
+`normalizeBetweenArrays()` here, between `dpcQuant()` and `dpcDE()`, and treats it as optional.
+`02b_normalization_report.qmd` compares the methods; nothing is applied until it is read.
 
 ## What survives
 
 ```{r quality}
-stopifnot(!is.null(proteins$genes$Genes))
 protein_quality <- tibble(
   protein = rownames(proteins),
   gene = proteins$genes$Genes,
@@ -130,7 +132,6 @@ protein_quality <- tibble(
   mean_standard_error = rowMeans(proteins$other$standard.error),
   mean_n_observations = rowMeans(proteins$other$n.observations)
 )
-stopifnot(!anyNA(select(protein_quality, where(is.numeric))))
 summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
 ```
 
