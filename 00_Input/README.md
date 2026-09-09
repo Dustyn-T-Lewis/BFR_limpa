@@ -9,8 +9,17 @@ produces goes in that stage's `c_data/` folder.
 | `metadata.csv` | one MS sample, 131 rows | `01_Preprocess` |
 | `phenotype.csv` | one leg, 70 rows | later stages |
 
-`report.parquet` is the DIA-NN search output, 355 MB, too large for git. It is not in the repo.
-Ask for a copy and put it here before running anything.
+## Get report.parquet first
+
+It is too large for git, so it is attached to a release. From the repo root:
+
+```sh
+curl -L -o 00_Input/report.parquet \
+  https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/download/data-v1/report.parquet
+```
+
+Or click `report.parquet` on the
+[data-v1 release page](https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/tag/data-v1).
 
 `metadata.csv` says which sample is which: participant, leg, treatment, timepoint, sex, and the
 original MS run name.

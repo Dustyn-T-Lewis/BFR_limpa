@@ -87,5 +87,13 @@ to fix text costs seconds.
 
 ## Before you start
 
-`00_Input/report.parquet` is 355 MB and too large for git. Clone this repo and you will not get
-it. Ask for a copy and place it in `00_Input/` by hand.
+`00_Input/report.parquet` is too large for git, so it is attached to a release. From the repo
+root:
+
+```sh
+curl -L -o 00_Input/report.parquet \
+  https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/download/data-v1/report.parquet
+```
+
+Raw instrument files are held at the collaborating site and will be deposited in MassIVE, with
+the accession released on publication.
