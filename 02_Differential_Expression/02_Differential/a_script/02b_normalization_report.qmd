@@ -1,0 +1,90 @@
+---
+title: "02b · Normalisation report"
+subtitle: "Does the protein matrix need correcting, and of what kind"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+limpa performs no normalisation and does not require it: DIA-NN has usually done some already.
+Where it is needed, limpa's stated order puts it between `dpcQuant()` and `dpcDE()`. This report
+decides the question for this matrix; `02_differential.qmd` applies the answer as one line.
+
+The diagnostic is the MA plot. For one sample, every protein is compared against the average of all
+samples: the vertical axis is that difference, the horizontal axis is how abundant the protein is.
+A flat cloud at zero needs nothing. A cloud offset from zero needs a per-sample shift, which
+`scale` supplies. A cloud that tilts or curves needs a correction that varies with abundance, which
+only `cyclicloess` supplies. `quantile` forces samples to share a distribution, which fixes the
+offset but not the tilt.
+
+```{r setup}
+library(here)
+library(limpa)
+library(limma)
+library(dplyr)
+library(purrr)
+library(tibble)
+
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+
+matrices <- map(set_names(c("none", "scale", "quantile", "cyclicloess")), \(m) {
+  if (m == "none") proteins$E else normalizeBetweenArrays(proteins$E, method = m)
+})
+```
+
+## The four most distorted samples, before and after
+
+```{r ma-plots}
+#| fig-height: 8
+curvature <- function(E) {
+  a <- rowMeans(E)
+  apply(E, 2, \(x) diff(range(lowess(a, x - a, f = 0.5)$y)))
+}
+worst <- order(curvature(proteins$E), decreasing = TRUE)[1:4]
+
+par(mfrow = c(4, 2), mar = c(4, 4, 2, 1))
+for (j in worst) {
+  for (m in c("none", "cyclicloess")) {
+    E <- matrices[[m]]
+    plotMA(E, array = j, main = paste(colnames(E)[j], m), ylim = c(-3, 3))
+    lines(lowess(rowMeans(E), E[, j] - rowMeans(E), f = 0.5), col = "red", lwd = 2)
+  }
+}
+par(mfrow = c(1, 1))
+```
+
+The red line is the fitted trend. Left column uncorrected, right column after `cyclicloess`. A line
+that slopes or bends is the distortion this report exists to detect.
+
+## How much curvature every sample carries
+
+```{r curvature}
+boxplot(map(matrices, curvature), ylab = "MA trend width, log2")
+```
+
+One value per sample: how far its red line travels from end to end. Zero means the sample
+disagrees with the cohort by a constant, which a shift fixes. Large means it disagrees more at one
+end of the abundance range, which a shift cannot fix.
+
+## Is the distortion technical or biological
+
+```{r association}
+tibble(
+  curvature = curvature(proteins$E),
+  timepoint = proteins$targets$timepoint,
+  treatment = proteins$targets$treatment
+) |>
+  summarise(median_curvature = round(median(curvature), 3), .by = c(timepoint, treatment))
+```
+
+If curvature tracked treatment or timepoint, correcting it could erase the effect under study, and
+limpa's guidance is to be cautious. If it does not, the distortion is unstructured and correcting
+it removes noise rather than signal.
+
+```{r session}
+sessionInfo()
+```

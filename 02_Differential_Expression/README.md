@@ -1,24 +1,31 @@
 # 02 · Differential Expression
 
-**Planned.** This folder holds READMEs. Pilot code exists offline and is not ready to read.
+Takes `proteins.rds` and asks which proteins changed. Two sub-stages, so a design problem shows up
+before an hour of model fitting does.
 
-Takes `proteins.rds` and asks which proteins changed. Two sub-stages, so a design problem shows
-up before an hour of model fitting does.
+```
+01_Preprocess/02_Quantification/c_data/proteins.rds
+  01_Design       design matrix, five contrasts, one diagnostic  -> design.rds
+  02_Differential normalise, fit, contrasts, results             -> protein_contrasts_long.csv
+```
 
-| Sub-stage | Will do |
-|---|---|
-| `01_Design` | the design matrix, five contrasts, and the assumption underneath them |
-| `02_Differential` | fit, apply contrasts, adjust, write the tables |
+`02_Differential/a_script/02b_normalization_report.qmd` decides which normalisation the protein
+matrix needs. Run it when that matrix changes, not on every render.
+
+```sh
+quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd        --output-dir ../b_reports
+quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
+```
 
 ## The five comparisons
 
 | Name | Compares | Reads as |
 |---|---|---|
-| BFR post vs pre | one leg over time | what restricted training did |
-| HLRT post vs pre | the other leg over time | what conventional training did |
-| BFR vs HLRT at T1 | two legs before training | **control**, must find nothing |
-| BFR vs HLRT at T2 | two legs after training | leg difference at the end |
-| Interaction | difference of the two time effects | **the study question** |
+| `BFR_post_vs_pre` | one leg over time | what restricted training did |
+| `HLRT_post_vs_pre` | the other leg over time | what conventional training did |
+| `BFR_vs_HLRT_at_T1` | two legs before training | **control**, must find nothing |
+| `BFR_vs_HLRT_at_T2` | two legs after training | leg difference at the end |
+| `interaction` | difference of the two time effects | **the study question** |
 
 ## Three things that matter
 
@@ -26,12 +33,20 @@ up before an hour of model fitting does.
 nothing. If they do, the cause is upstream: a mislabelled sample, contamination, annotation. The
 stage asserts it comes back empty and writes results to disk before that check runs.
 
-**Participant goes in the design as a fixed term.** Every comparison happens inside one person,
-so this makes pre-to-post paired. It also means sex cannot be tested, since it does not vary
-within a participant.
+**Participant is a fixed term in the design.** Every comparison happens inside one person, so this
+makes pre-to-post paired. It also means sex cannot be tested, since it does not vary within a
+participant.
 
-**Adjusted within each comparison, never pooled.** The five share participants and the
-interaction is built from two of the others.
+**Adjusted within each comparison, never pooled.** The five share participants and the interaction
+is built from two of the others.
 
-Testing goes through limpa's own function, which reads the standard errors. A plain linear model
-would discard them.
+Testing goes through `dpcDE()`, which reads the standard errors from `proteins.rds`. A plain
+`lmFit()` would discard them.
+
+## What comes out
+
+`protein_contrasts_long.csv` has one row per protein per contrast, sorted by p-value within each
+contrast. `contrast_summary.csv` counts hits per contrast. `fit.rds` is the fitted model.
+
+Hit counts near the FDR boundary move with the normalisation method, so report the two time
+contrasts as approximate. The interaction is empty under every method tried.
