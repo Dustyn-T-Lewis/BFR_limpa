@@ -37,7 +37,7 @@ Samples share a participant, and within that they share a leg. The participant t
 first exactly; the second stays in the residual. If it were large, the within-leg comparisons would
 be tested too conservatively and the between-leg ones too liberally.
 
-`correlation_strata.csv` reports it. On this data the within-leg value is 0.021, so the fixed term
+`correlation_strata.csv` reports it. On this data the within-leg value is 0.027, so the fixed term
 is sufficient and `02_Differential` calls `dpcDE()` without `block =`.
 
 Two caveats. It is estimated on the bare expression matrix, so it carries neither the precision

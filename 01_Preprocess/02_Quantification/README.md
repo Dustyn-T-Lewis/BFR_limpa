@@ -8,18 +8,26 @@ proteins, filters on detection, normalises. This is the slow stage.
 | **Script** | `a_script/02_quantify.qmd` |
 | **Reads** | `01_Filtering/c_data/precursors_filtered.rds` |
 | **Writes** | `c_data/proteins.rds`, the curve parameters, a per-protein quality table |
-| **Beside it** | `a_script/sensitivity_dpc_slope.qmd`, a sensitivity check |
 
 ## The detection curve
 
 Faint precursors go missing more often than abundant ones. `dpc()` fits that, so `dpcQuant()` can
 treat a missing value as evidence the protein was low rather than filling in a number.
 
-Two estimators are reported, complete normal and observed normal. The complete-normal fit is the one
-used; they disagree by about a factor of two on this data. Neither is replaced with a preset. limpa's
-usable range is 0.1 to 1.0, and a shallow slope recovers less from missing values, so it errs toward
-finding nothing. `sensitivity_dpc_slope.qmd` refits at a fixed 0.7 and reports how far the
-estimates move.
+The curve is fitted with `dpc()`, which comes out at 0.488. limpa's FAQ calls 0.1 to 1.0 usable
+and 0.7 to 0.9 typical for DIA-NN searched with match-between-runs, so this data fits below the
+typical band.
+
+Quantification uses a preset slope of **0.7**, the low end of that band, and reports the fitted
+0.488 as a sensitivity check. The choice rests on where the fit sits against the documented
+range, and was made before any downstream count was consulted. Both slopes keep the same 3,042
+proteins; the preset raises the mean standard error from 0.53 to 0.66, which makes it the more
+conservative setting, since `dpcDE()` reads those errors as precision weights.
+
+Abundances differ by 0.237 log2 at the median protein between the two slopes. Refitting confirms
+the conservative direction: the two training contrasts return 60 and 107 proteins under the preset
+against 82 and 114 under the fitted slope, and the negative control and the interaction stay empty
+under both.
 
 The curve's plot is not the diagnostic; it compares a fitted curve against proportions computed
 differently. Judge the slope.
