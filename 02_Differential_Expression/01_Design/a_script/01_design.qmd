@@ -20,9 +20,7 @@ library(limpa)
 library(limma)
 library(dplyr)
 library(readr)
-library(stringr)
 library(tibble)
-library(nanoparquet)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
@@ -61,41 +59,17 @@ be tested too conservatively and the between-leg ones too liberally.
 leg_id <- paste(targets$participant, targets$leg, sep = "_")
 
 strata <- tibble(
-  level = c("within participant (unweighted)", "within leg / participant fixed (unweighted)"),
-  correlation = c(
-    duplicateCorrelation(proteins$E, model.matrix(~ 0 + group, targets),
-                         block = targets$participant)$consensus.correlation,
-    duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
-  )
+  level = "within leg, participant fixed (unweighted matrix correlation)",
+  correlation = duplicateCorrelation(proteins$E, design,
+                                     block = leg_id)$consensus.correlation
 )
 strata
 ```
 
-Both are estimated on the bare matrix, so without the precision and sample weights the fit uses.
-They describe the matrix, not the model, which is enough for a near-zero check. On this data the
-second row is near zero, so `02_Differential` calls `dpcDE()` without `block =`. Nothing automates
-that reading, so check the row on a rerun.
-
-## Acquisition order
-
-Nobody recorded when each sample was injected. `report.parquet` carries `Run.Index`, DIA-NN's own
-run counter, which is not alphabetical order here (Spearman against alphabetical rank is 0.207) but
-is not confirmed as acquisition order either. Plotted against PC1 for what it is worth: a trend
-that tracks timepoint would put the two time contrasts in doubt, while the interaction would be
-unaffected because both legs share a session.
-
-```{r acquisition-order}
-#| fig-height: 4
-run_index <- read_parquet(here("00_Input", "report.parquet"),
-                          col_select = c("Run", "Run.Index")) |>
-  distinct() |>
-  mutate(run_lower = str_to_lower(Run))
-idx <- run_index$Run.Index[match(str_to_lower(targets$run), run_index$run_lower)]
-
-pc1 <- prcomp(t(proteins$E), scale. = TRUE)$x[, 1]
-plot(idx, pc1, col = as.factor(targets$timepoint), pch = 16,
-     xlab = "Run.Index", ylab = "PC1")
-```
+It is estimated on the bare matrix, without the precision and sample weights the fit uses, so it
+describes the matrix rather than the model. That is enough for a near-zero check. On this data it
+comes back near zero, so `02_Differential` calls `dpcDE()` without `block =`. Nothing automates
+that reading, so check the number on a rerun.
 
 ## Contrasts
 

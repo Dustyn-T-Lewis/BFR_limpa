@@ -1,3 +1,2 @@
 level,correlation
-within participant (unweighted),0.24061014810690898
-within leg / participant fixed (unweighted),0.02090500447660773
+"within leg, participant fixed (unweighted matrix correlation)",0.02090500447660773
