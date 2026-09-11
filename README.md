@@ -41,11 +41,8 @@ quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd       
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 ```
 
-`01_Preprocess/02_Quantification/a_script/sensitivity_dpc_slope.qmd` refits quantification at a
-fixed detection-curve slope. It is a sensitivity check, not a pipeline step, and re-runs the slow
-part.
-
-About two hours, nearly all of it quantification. That step is cached.
+About four hours, nearly all of it quantification, which runs twice: once at the fitted
+detection-curve slope and once at a preset 0.7 for comparison. Both runs are cached.
 
 ## Approach
 

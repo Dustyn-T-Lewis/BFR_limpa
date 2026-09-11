@@ -42,13 +42,11 @@ less over simpler methods.
 
 ```{r dpc}
 dpcest <- dpc(y$E)
-dpcest_on <- dpcON(y$E, robust = TRUE)
 plotDPC(dpcest)
 
 dpc_parameters <- tibble(
-  estimator = c("complete normal", "observed normal"),
-  intercept = c(dpcest$dpc[1], dpcest_on$dpc[1]),
-  slope = c(dpcest$dpc[2], dpcest_on$dpc[2])
+  intercept = dpcest$dpc[1],
+  slope = dpcest$dpc[2]
 )
 dpc_parameters
 ```
@@ -59,12 +57,14 @@ default fits on a systematic sample stratified by missingness and mean intensity
 than all `r format(nrow(y), big.mark = ",")` rows. limpa documents `robust` as *"Only used
 if `model='on'"*, so it does nothing here and the subsample supplies the robustness.
 
-We report the slope as fitted and never substitute a preset. The FAQ puts the usable range at
-0.1 to 1.0 and calls 0.7 to 0.9 typical for DIA-NN searched with match-between-runs. The
-vignette adds that the slope comes out low when peptides vary a lot, which is what a
-within-subject design with heavy missingness looks like. limpa's own published DIA-NN case
-study fitted 0.59 and used it. A shallow slope also recovers less from missing values, so it
-errs toward finding nothing rather than finding too much.
+The fit comes out at 0.488, below the 0.7-to-0.9 band the FAQ calls typical for DIA-NN searched
+with match-between-runs, though inside the 0.1-to-1.0 range it calls usable. The vignette notes
+the slope comes out low when peptides vary a lot, which is what a within-subject design with
+heavy missingness looks like.
+
+Quantification therefore uses a preset 0.7, the low end of the documented band, and reports the
+fitted value as a sensitivity check below. The choice was made from the fitted slope's position
+against that band, not from any downstream count.
 
 ::: {.callout-note}
 The visual fit is not the diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
@@ -85,7 +85,7 @@ protein as equally reliable.
 #| cache: true
 #| cache.extra: !expr tools::md5sum(here::here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 elapsed <- system.time(
-  proteins <- dpcQuant(y, "Protein.Group", dpc = dpcest)
+  proteins <- dpcQuant(y, "Protein.Group", dpc.slope = 0.7)
 )
 ```
 
@@ -171,6 +171,41 @@ Samples are not expected to separate by group. Every participant contributes all
 so between-participant variation dominates the leading dimensions and the participant term
 in the design is what removes it. A sample sitting far from everything else is worth
 investigating; a lack of group structure is not.
+
+## Slope sensitivity
+
+Quantification is repeated at the fitted 0.488 and compared against the primary run, with the
+same detection filter and normalisation applied so the slope is the only difference.
+
+Both slopes keep the same 3,042 proteins. The preset raises the mean standard error from 0.53 to
+0.66, so it is the more conservative setting: `dpcDE()` reads those errors as precision weights,
+and larger errors mean less confidence, not more.
+
+The median absolute difference in protein abundance is printed below. It measures how far values
+move, not whether that movement survives a contrast. Every comparison here is within one
+participant, so a shift common to a participant's samples cancels in the subtraction.
+
+```{r slope-fitted}
+#| cache: true
+#| cache.extra: !expr tools::md5sum(here::here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
+fitted <- dpcQuant(y, "Protein.Group", dpc = dpcest)
+```
+
+```{r slope-sensitivity}
+fitted <- fitted[filterByDetection(fitted, n.samples = min(group_sizes)), ]
+fitted$E <- normalizeBetweenArrays(fitted$E, method = "cyclicloess")
+
+shared <- intersect(rownames(proteins), rownames(fitted))
+tibble(
+  slope = c(0.7, round(dpcest$dpc[2], 3)),
+  role = c("primary", "sensitivity"),
+  n_proteins = c(nrow(proteins), nrow(fitted)),
+  mean_standard_error = round(c(mean(proteins$other$standard.error),
+                                mean(fitted$other$standard.error)), 4)
+)
+
+round(median(abs(proteins$E[shared, ] - fitted$E[shared, ])), 4)
+```
 
 ## Outputs
 
