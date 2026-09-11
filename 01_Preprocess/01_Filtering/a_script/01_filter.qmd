@@ -55,10 +55,9 @@ CONTAMINANT_FAMILIES <- str_c(
   ")$"
 )
 
-# Screened on HPA myonuclei single-cell expression rather than whole-muscle tissue,
-# because tissue values are themselves blood-contaminated: haemoglobin reads 544 nTPM in
-# skeletal muscle. See 01_Preprocess/01_Filtering/README.md for the screening and the
-# alternatives rejected.
+# Screened on HPA myonuclei single-cell expression rather than whole-muscle tissue, because
+# tissue values are themselves blood-contaminated: haemoglobin reads 544 nTPM in skeletal
+# muscle.
 CONTAMINANTS <- c(
   "JCHAIN", "HRNR", "DCD", "SBSN", "CSTA", "AHSP",
   "A1BG", "AFM", "AGT", "AHSG", "ALB", "AMBP", "APCS", "APOA1", "APOA2", "APOA4", "APOB",
@@ -77,10 +76,9 @@ CONTAMINANTS <- c(
   "SHBG", "SLC4A1", "SPTA1", "TF", "TTR", "TUBB1", "VTN", "VWF"
 )
 
-# Asserted to survive every filter below. The first two rows are muscle proteins the
-# annotation repair exists to rescue. The rest are blood-abundant but muscle-expressed on
-# HPA myonuclei data: ANK1 is small ankyrin-1, a sarcoplasmic reticulum protein, and the
-# review did flag A2M, BLVRB, STOM and TALDO1, which carry 0.004% of signal between them.
+# Asserted to survive every filter below: muscle proteins the annotation repair rescues, plus
+# proteins that are blood-abundant but muscle-expressed on HPA myonuclei data. ANK1 is small
+# ankyrin-1, a sarcoplasmic reticulum protein.
 MUST_KEEP <- c(
   "MB", "ACTA1", "ALDOA", "TPM2", "ENO1", "GPI", "CKM", "MYH1",
   "MYH2", "MYH7", "TTN", "DES", "PYGM", "CASQ1", "PVALB", "MYH13",
@@ -271,7 +269,7 @@ head(removed, 20)
 ```
 
 
-`r format(n_multi, big.mark = ",")` of the surviving groups list more than one gene symbol,
+`r format(n_multi, big.mark = ",")` of the groups tested list more than one gene symbol,
 which is why the per-member rule is needed. `r nrow(removed)` distinct symbol strings were
 removed, carrying `r round(sum(removed$pct_signal), 2)`% of the starting signal.
 

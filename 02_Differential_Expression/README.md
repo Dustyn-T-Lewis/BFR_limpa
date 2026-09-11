@@ -6,11 +6,8 @@ before an hour of model fitting does.
 ```
 01_Preprocess/02_Quantification/c_data/proteins.rds
   01_Design       design matrix, five contrasts, one diagnostic  -> design.rds
-  02_Differential normalise, fit, contrasts, results             -> protein_contrasts_long.csv
+  02_Differential fit, contrasts, results tables                 -> protein_contrasts_long.csv
 ```
-
-`02_Differential/a_script/02b_normalization_report.qmd` decides which normalisation the protein
-matrix needs. Run it when that matrix changes, not on every render.
 
 ```sh
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd        --output-dir ../b_reports
@@ -48,5 +45,5 @@ Testing goes through `dpcDE()`, which reads the standard errors from `proteins.r
 `protein_contrasts_long.csv` has one row per protein per contrast, sorted by p-value within each
 contrast. `contrast_summary.csv` counts hits per contrast. `fit.rds` is the fitted model.
 
-Hit counts near the FDR boundary move with the normalisation method, so report the two time
-contrasts as approximate. The interaction is empty under every method tried.
+Hit counts near the FDR boundary move with the normalisation applied upstream, so report the two
+time contrasts as approximate. The interaction is empty under every variant tried.

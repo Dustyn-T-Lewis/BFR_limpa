@@ -27,10 +27,14 @@ filters delete real muscle protein.
 Nothing is filtered on missing values **before** quantification, because those gaps are what the
 detection curve is fitted to.
 
-## No normalization step
+## Normalization
 
-limpa ships no normalization function and its own worked examples do not normalize, because the
-DIA-NN column we read is already normalized. An earlier version of this stage added a second
-correction. Removing it changed nothing, which was the answer.
+`readDIANN()` reads DIA-NN's `Precursor.Normalised` column, so a correction has already been
+applied during the search. limpa ships no normalization function and its own worked examples
+perform none at the precursor level.
+
+A further correction belongs on the protein matrix, between `dpcQuant()` and `dpcDE()`.
+`02_Quantification` measures whether one is needed and applies cyclic loess there, so the
+matrix it writes is the one the model is fitted to.
 
 Quantification takes about 100 minutes and 11 GB. It is cached and keyed to its input file.

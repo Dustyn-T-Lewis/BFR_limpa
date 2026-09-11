@@ -22,8 +22,7 @@ people dominate the variation.
 **The database check** asks whether a module's proteins interact more than chance allows, tested
 against a null built by shuffling module membership rather than the database's own background.
 These databases are denser around well-studied proteins, so testing against the raw background
-rewards famous proteins regardless of biology. Pilot work made that mistake and had to withdraw
-the claim.
+rewards famous proteins regardless of biology.
 
 A module that is not enriched is not refuted. It may be proteins nobody has studied together.
 
