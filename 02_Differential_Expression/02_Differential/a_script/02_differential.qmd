@@ -28,17 +28,13 @@ proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "protei
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
 
 stopifnot(identical(rownames(d$design), colnames(proteins$E)))
-
-proteins$E <- normalizeBetweenArrays(proteins$E, method = "cyclicloess")
 ```
 
 The assertion checks the design rows are the same samples in the same order as the matrix columns.
 limma compares only their counts.
 
-limpa places normalisation here, between `dpcQuant()` and `dpcDE()`, and treats it as optional.
-`cyclicloess` is used because most samples disagree with the cohort more at one end of the
-abundance range than the other, which a location shift cannot fix. `02b_normalization_report.qmd`
-makes that case and states its cost.
+`proteins.rds` arrives normalised; `01_Preprocess/02_Quantification` applies cyclic loess and
+reports what it corrected.
 
 ## Fit
 

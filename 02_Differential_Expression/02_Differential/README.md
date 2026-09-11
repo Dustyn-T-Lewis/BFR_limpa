@@ -1,29 +1,22 @@
 # 02_Differential_Expression / 02_Differential
 
-Normalises the protein matrix, fits the model, writes the results.
+Fits the model and writes the results.
 
 | | |
 |---|---|
 | **Script** | `a_script/02_differential.qmd` |
 | **Reads** | `proteins.rds`, `01_Design/c_data/design.rds` |
 | **Writes** | `c_data/protein_contrasts_long.csv`, `contrast_summary.csv`, `fit.rds` |
-| **Beside it** | `a_script/02b_normalization_report.qmd`, run when the input matrix changes |
 
 ## The sequence
 
 ```r
-proteins$E <- normalizeBetweenArrays(proteins$E, method = "cyclicloess")
 fit <- dpcDE(proteins, design, sample.weights = TRUE, plot = TRUE)
 fit <- contrasts.fit(fit, contrasts)
 fit <- eBayes(fit, robust = TRUE)
 ```
 
-limpa places normalisation here, between `dpcQuant()` and `dpcDE()`, and treats it as optional.
-`cyclicloess` is used because most samples disagree with the cohort more at one end of the
-abundance range than the other. A per-sample shift cannot fix that. The report beside this script
-shows the MA plots the choice rests on, and states its cost.
-
-`dpcDE()` reads the standard errors from `proteins.rds` and turns them into precision weights.
+`proteins.rds` arrives normalised. `dpcDE()` reads the standard errors from `proteins.rds` and turns them into precision weights.
 `sample.weights` estimates one quality weight per sample, because biopsies differed in how much
 blood they carried. Contrasts are applied before moderation, which is why `eBayes` comes last.
 

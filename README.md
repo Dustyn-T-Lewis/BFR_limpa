@@ -41,9 +41,9 @@ quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd       
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 ```
 
-Two scripts sit beside the pipeline and run only when needed: `02b_quantify_slope07.qmd` refits
-quantification at a fixed detection slope, and `02b_normalization_report.qmd` decides which
-normalisation the protein matrix needs.
+`01_Preprocess/02_Quantification/a_script/sensitivity_dpc_slope.qmd` refits quantification at a
+fixed detection-curve slope. It is a sensitivity check, not a pipeline step, and re-runs the slow
+part.
 
 About two hours, nearly all of it quantification. That step is cached.
 

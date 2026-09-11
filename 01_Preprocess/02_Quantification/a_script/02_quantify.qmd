@@ -1,6 +1,6 @@
 ---
 title: "02 · Quantification"
-subtitle: "Detection probability curve, protein roll-up, detection filter"
+subtitle: "Detection probability curve, protein roll-up, detection filter, normalisation"
 format:
   html:
     toc: true
@@ -19,6 +19,7 @@ vignette's own sequence, unaltered.
 ```{r setup}
 library(here)
 library(limpa)
+library(limma)
 library(dplyr)
 library(readr)
 library(tibble)
@@ -82,7 +83,6 @@ protein as equally reliable.
 
 ```{r quantify}
 #| cache: true
-#| dependson: "dpc"
 #| cache.extra: !expr tools::md5sum(here::here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 elapsed <- system.time(
   proteins <- dpcQuant(y, "Protein.Group", dpc = dpcest)
@@ -112,13 +112,33 @@ proteins <- proteins[keep, ]
 
 group_sizes
 c(before = length(keep), kept = sum(keep), dropped = sum(!keep))
-
-round(range(apply(proteins$E, 2, median)), 3)
 ```
 
-The last line is the quantity any normalisation decision rests on. limpa places
-`normalizeBetweenArrays()` here, between `dpcQuant()` and `dpcDE()`, and treats it as optional.
-`02b_normalization_report.qmd` compares the methods; nothing is applied until it is read.
+## Normalisation
+
+limpa places normalisation after `dpcQuant()` and before `dpcDE()` and performs none itself, because
+DIA-NN has usually normalised the precursors already. What matters is which kind is needed. Comparing
+a sample against the average of all samples gives a difference per protein; fitting that against
+abundance gives a curve. A flat curve means the sample disagrees by a constant, which a per-sample
+shift corrects. A curve that travels means the disagreement depends on abundance, and only cyclic
+loess corrects that.
+
+Here the curve travels 0.45 log2 in the median sample against 0.13 for the spread in per-sample
+medians, and the curvature is unrelated to treatment or timepoint.
+
+```{r normalise}
+ma_width <- function(E) {
+  a <- rowMeans(E)
+  apply(E, 2, \(x) diff(range(lowess(a, x - a, f = 0.5)$y)))
+}
+
+before <- median(ma_width(proteins$E))
+proteins$E <- normalizeBetweenArrays(proteins$E, method = "cyclicloess")
+
+c(before = round(before, 3), after = round(median(ma_width(proteins$E)), 3))
+```
+
+`proteins.rds` is written after this, so it is the matrix the model is fitted to.
 
 ## What survives
 
