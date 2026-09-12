@@ -2305,7 +2305,7 @@ treatment T1 T2
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">correlation =</span> <span class="fu">duplicateCorrelation</span>(proteins<span class="sc">$</span>E, design,</span>
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">block =</span> leg_id)<span class="sc">$</span>consensus.correlation</span>
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>strata</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(strata, <span class="at">correlation =</span> <span class="fu">round</span>(correlation, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2322,7 +2322,7 @@ treatment T1 T2
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">within leg, participant fixed (unweighted matrix correlation)</td>
-<td style="text-align: right;">0.0272095</td>
+<td style="text-align: right;">0.027</td>
 </tr>
 </tbody>
 </table>
@@ -2358,7 +2358,7 @@ Levels    interaction
   HLRT_T2          -1</code></pre>
 </div>
 </div>
-<p><code>BFR_vs_HLRT_at_T1</code> compares two legs of one person before either was trained, so it is the negative control and must find nothing.</p>
+<p>The five carry three different roles, and the manuscript should read them that way. <code>interaction</code> is the <strong>primary</strong> comparison and the question the study was designed to answer. <code>BFR_vs_HLRT_at_T1</code> is the <strong>negative control</strong>: two legs of one person before either was trained, so it must find nothing. The remaining three are <strong>descriptive</strong>. Note that <code>interaction</code> equals <code>BFR_vs_HLRT_at_T2</code> minus <code>BFR_vs_HLRT_at_T1</code> exactly, so the five contrasts are not five independent questions.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">design =</span> design, <span class="at">contrasts =</span> contrasts,</span>

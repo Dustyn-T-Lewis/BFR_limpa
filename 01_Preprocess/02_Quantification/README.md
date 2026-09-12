@@ -18,16 +18,21 @@ The curve is fitted with `dpc()`, which comes out at 0.488. limpa's FAQ calls 0.
 and 0.7 to 0.9 typical for DIA-NN searched with match-between-runs, so this data fits below the
 typical band.
 
-Quantification uses a preset slope of **0.7**, the low end of that band, and reports the fitted
-0.488 as a sensitivity check. The choice rests on where the fit sits against the documented
-range, and was made before any downstream count was consulted. Both slopes keep the same 3,042
+Quantification uses a preset slope of **0.7** and reports the fitted 0.488 as a sensitivity check.
+This is the rule limpa's FAQ states for this exact case: "If `dpcCN()` doesn't give a value in that
+range, it would be reasonable to run `dpcQuant()` with a preset value `dpc.slope=0.7`." The choice
+follows the documented rule and was made before any downstream count was consulted. Both slopes keep the same 3,042
 proteins; the preset raises the mean standard error from 0.53 to 0.66, which makes it the more
 conservative setting, since `dpcDE()` reads those errors as precision weights.
 
-Abundances differ by 0.237 log2 at the median protein between the two slopes. Refitting confirms
-the conservative direction: the two training contrasts return 60 and 107 proteins under the preset
-against 82 and 114 under the fitted slope, and the negative control and the interaction stay empty
-under both.
+Abundances differ by 0.237 log2 at the median protein between the two slopes. Refitting gives 60
+and 107 proteins on the two training contrasts under the preset against 82 and 114 under the
+fitted slope, with the negative control and the interaction empty under both.
+
+The direction is worth recording, because it is not the one the documentation predicts. limpa's
+FAQ says a slope set too low makes the analysis more conservative; here the lower fitted slope
+gave the smaller standard errors and the larger hit counts. The preset is still the documented
+setting and the cautious one on this data.
 
 The curve's plot is not the diagnostic; it compares a fitted curve against proportions computed
 differently. Judge the slope.
@@ -42,8 +47,16 @@ protein built mostly from missing precursors counts for less than one measured d
 
 ## Detection filter
 
-Runs after quantification, which is the order limpa specifies. A protein must be detected in at
-least as many samples as the smallest group holds.
+Runs after quantification, which is the order `filterByDetection()`'s help specifies. A protein
+must be detected in at least as many samples as the smallest group holds, 32 here, which is the
+setting that help page suggests for a small experiment.
+
+It drops 409 of 3,451 proteins. Those 409 are not borderline: they carry a mean standard error of
+1.56 against 0.66 for the proteins kept, and 0.15 detected precursors per sample against 7.48, so
+the typical sample measures nothing at all for them. Relaxing the threshold to limpa's default of
+3 would keep 371 of them, and exactly one reaches BH < 0.05 in any contrast while the extra tests
+cost 14 and 29 proteins on the two training contrasts. The filter loses no usable signal and the
+looser setting would cost some.
 
 ## Normalisation
 
@@ -63,5 +76,6 @@ The matrix is normalised before it is written, so `proteins.rds` is what the mod
 
 ## Cost
 
-About 100 minutes and 11 GB. The quantification chunk is cached and keyed to the md5 of its input
-file. Delete `a_script/02_quantify_cache/` to force it.
+About four hours and 11 GB, because `dpcQuant()` runs twice: once at the preset slope and once at
+the fitted one. Both chunks are cached and keyed to the md5 of the input file. Delete
+`a_script/02_quantify_cache/` to force them.

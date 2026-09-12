@@ -48,7 +48,7 @@ dpc_parameters <- tibble(
   intercept = dpcest$dpc[1],
   slope = dpcest$dpc[2]
 )
-dpc_parameters
+round(dpc_parameters, 3)
 ```
 
 `dpc()` defaults to `model = "cn"` and its help says it then returns `dpcCN()`, the
@@ -62,9 +62,15 @@ with match-between-runs, though inside the 0.1-to-1.0 range it calls usable. The
 the slope comes out low when peptides vary a lot, which is what a within-subject design with
 heavy missingness looks like.
 
-Quantification therefore uses a preset 0.7, the low end of the documented band, and reports the
-fitted value as a sensitivity check below. The choice was made from the fitted slope's position
-against that band, not from any downstream count.
+Quantification therefore uses a preset 0.7, which is the rule limpa's FAQ gives for this exact
+situation: "If `dpcCN()` doesn't give a value in that range, it would be reasonable to run
+`dpcQuant()` with a preset value `dpc.slope=0.7`." The fitted value is reported as a sensitivity
+check below. The choice follows the documented rule, not any downstream count.
+
+One caveat belongs on the record. The FAQ says a slope set too low makes the analysis more
+conservative. Here the reverse happened: the lower fitted slope produced smaller standard errors
+and more hits than the preset. The preset remains both the documented setting and the cautious one
+on this data, but the direction is not what the documentation predicts.
 
 ::: {.callout-note}
 The visual fit is not the diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
@@ -162,15 +168,16 @@ rather than on data.
 ```{r mds}
 #| fig-height: 5
 plotMDSUsingSEs(proteins,
-  labels = proteins$targets$group,
-  col = as.integer(factor(proteins$targets$group))
+  pch = 16,
+  col = as.integer(factor(proteins$targets$participant))
 )
 ```
 
-Samples are not expected to separate by group. Every participant contributes all four cells,
-so between-participant variation dominates the leading dimensions and the participant term
-in the design is what removes it. A sample sitting far from everything else is worth
-investigating; a lack of group structure is not.
+One colour per participant, because that is what structures the plot: participant accounts for
+52% of the leading dimension against 3% for group. Every participant contributes all four cells,
+so between-participant variation dominates and the participant term in the design is what removes
+it. A sample sitting far from its own participant is worth investigating; an absence of group
+structure is not.
 
 ## Slope sensitivity
 
@@ -200,8 +207,9 @@ tibble(
   slope = c(0.7, round(dpcest$dpc[2], 3)),
   role = c("primary", "sensitivity"),
   n_proteins = c(nrow(proteins), nrow(fitted)),
-  mean_standard_error = round(c(mean(proteins$other$standard.error),
-                                mean(fitted$other$standard.error)), 4)
+  n_shared = length(shared),
+  mean_standard_error = round(c(mean(proteins$other$standard.error[shared, ]),
+                                mean(fitted$other$standard.error[shared, ])), 3)
 )
 
 round(median(abs(proteins$E[shared, ] - fitted$E[shared, ])), 4)

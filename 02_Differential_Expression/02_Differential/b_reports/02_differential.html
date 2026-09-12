@@ -2294,13 +2294,60 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <div class="cell-output cell-output-stderr">
 <pre><code>Final sample weights (min/max) 0.08897381/3.62043513</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">contrasts.fit</span>(fit, d<span class="sc">$</span>contrasts)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit, <span class="at">robust =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>sample_weights <span class="ot">&lt;-</span> fit<span class="sc">$</span>targets<span class="sc">$</span>sample.weight</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">contrasts.fit</span>(fit, d<span class="sc">$</span>contrasts)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit, <span class="at">robust =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Weights downweight a sample in proportion to how noisy it looks; none is dropped. What matters is whether the downweighting falls evenly across the four cells, because uneven weighting would act like a covariate nobody declared.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">group =</span> proteins<span class="sc">$</span>targets<span class="sc">$</span>group, <span class="at">weight =</span> sample_weights) <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">median_weight =</span> <span class="fu">round</span>(<span class="fu">median</span>(weight), <span class="dv">2</span>),</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">lowest_weight =</span> <span class="fu">round</span>(<span class="fu">min</span>(weight), <span class="dv">2</span>), <span class="at">.by =</span> group)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">group</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: right;">median_weight</th>
+<th style="text-align: right;">lowest_weight</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">HLRT_T1</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">1.05</td>
+<td style="text-align: right;">0.16</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">HLRT_T2</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">1.12</td>
+<td style="text-align: right;">0.28</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">BFR_T1</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">1.17</td>
+<td style="text-align: right;">0.09</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BFR_T2</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">0.98</td>
+<td style="text-align: right;">0.29</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 </div>
 <p>Effect size the interaction could detect at 80% power, two-sided 0.05. Without this, “null” says nothing.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> fit<span class="sc">$</span>stdev.unscaled[, <span class="st">&quot;interaction&quot;</span>] <span class="sc">*</span> <span class="fu">sqrt</span>(fit<span class="sc">$</span>s2.post)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">quantile</span>(se <span class="sc">*</span> (<span class="fu">qt</span>(<span class="fl">0.975</span>, fit<span class="sc">$</span>df.total) <span class="sc">+</span> <span class="fu">qt</span>(<span class="fl">0.80</span>, fit<span class="sc">$</span>df.total)), <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.9</span>)), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> fit<span class="sc">$</span>stdev.unscaled[, <span class="st">&quot;interaction&quot;</span>] <span class="sc">*</span> <span class="fu">sqrt</span>(fit<span class="sc">$</span>s2.post)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">quantile</span>(se <span class="sc">*</span> (<span class="fu">qt</span>(<span class="fl">0.975</span>, fit<span class="sc">$</span>df.total) <span class="sc">+</span> <span class="fu">qt</span>(<span class="fl">0.80</span>, fit<span class="sc">$</span>df.total)), <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.9</span>)), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  50%   90% 
 0.521 0.916 </code></pre>
@@ -2311,21 +2358,21 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="results">Results</h2>
 <p>Benjamini-Hochberg runs within each contrast and never across them. The five share participants and the interaction is a difference of two of the others, so pooling them would not control anything that can be stated.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), \(cn) {</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topTable</span>(fit, <span class="at">coef =</span> cn, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">adjust.method =</span> <span class="st">&quot;BH&quot;</span>, <span class="at">sort.by =</span> <span class="st">&quot;p&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">contrast =</span> cn, <span class="at">.before =</span> <span class="dv">1</span>)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pi_score =</span> P.Value<span class="sc">^</span><span class="fu">abs</span>(logFC))</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>contrast_summary <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n_tested =</span> <span class="fu">n</span>(),</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_fdr_05 =</span> <span class="fu">sum</span>(adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_fdr_10 =</span> <span class="fu">sum</span>(adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.10</span>),</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">min_adj_p =</span> <span class="fu">min</span>(adj.P.Val),</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>            <span class="at">.by =</span> contrast)</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>contrast_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), \(cn) {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topTable</span>(fit, <span class="at">coef =</span> cn, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">adjust.method =</span> <span class="st">&quot;BH&quot;</span>, <span class="at">sort.by =</span> <span class="st">&quot;p&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">contrast =</span> cn, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pi_score =</span> P.Value<span class="sc">^</span><span class="fu">abs</span>(logFC))</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>contrast_summary <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n_tested =</span> <span class="fu">n</span>(),</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_fdr_05 =</span> <span class="fu">sum</span>(adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_fdr_10 =</span> <span class="fu">sum</span>(adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.10</span>),</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">min_adj_p =</span> <span class="fu">min</span>(adj.P.Val),</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>            <span class="at">.by =</span> contrast)</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(contrast_summary, <span class="at">min_adj_p =</span> <span class="fu">signif</span>(min_adj_p, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2344,35 +2391,35 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <td style="text-align: right;">3042</td>
 <td style="text-align: right;">60</td>
 <td style="text-align: right;">132</td>
-<td style="text-align: right;">0.0000262</td>
+<td style="text-align: right;">2.62e-05</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">HLRT_post_vs_pre</td>
 <td style="text-align: right;">3042</td>
 <td style="text-align: right;">107</td>
 <td style="text-align: right;">177</td>
-<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">0.00e+00</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">BFR_vs_HLRT_at_T1</td>
 <td style="text-align: right;">3042</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.9994333</td>
+<td style="text-align: right;">9.99e-01</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
 <td style="text-align: right;">3042</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.9996913</td>
+<td style="text-align: right;">1.00e+00</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">interaction</td>
 <td style="text-align: right;">3042</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">0.9999093</td>
+<td style="text-align: right;">1.00e+00</td>
 </tr>
 </tbody>
 </table>
@@ -2386,10 +2433,10 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <p>Three numbers together, because each misleads alone. <code>propTrueNull()</code> estimates the null proportion from the p-value distribution. Median |t| is 0.674 under a calibrated null, so a value below that means the tests are conservative. <code>p_below_0.2</code> is 0.2 under a uniform null, so a value below that means the distribution rises toward 1 rather than being flat.</p>
 <p>Read the between-leg contrasts against <code>BFR_vs_HLRT_at_T1</code>, not against theory. That contrast is a true null by construction, and whatever it returns is what a null looks like in this design.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">prop_true_null =</span> <span class="fu">round</span>(<span class="fu">propTrueNull</span>(P.Value), <span class="dv">3</span>),</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">median_abs_t =</span> <span class="fu">round</span>(<span class="fu">median</span>(<span class="fu">abs</span>(t)), <span class="dv">3</span>),</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">p_below_0.2 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(P.Value <span class="sc">&lt;</span> <span class="fl">0.2</span>), <span class="dv">3</span>), <span class="at">.by =</span> contrast)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">prop_true_null =</span> <span class="fu">round</span>(<span class="fu">propTrueNull</span>(P.Value), <span class="dv">3</span>),</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">median_abs_t =</span> <span class="fu">round</span>(<span class="fu">median</span>(<span class="fu">abs</span>(t)), <span class="dv">3</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">p_below_0.2 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(P.Value <span class="sc">&lt;</span> <span class="fl">0.2</span>), <span class="dv">3</span>), <span class="at">.by =</span> contrast)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2440,15 +2487,15 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="significant-and-large-enough" class="level2">
 <h2 class="anchored" data-anchor-id="significant-and-large-enough">Significant and large enough</h2>
-<p><code>treat()</code> tests against a fold-change floor rather than against zero, and unlike filtering on logFC afterwards it controls an error rate. It is stringent by construction: <code>lfc = log2(1.2)</code> tests the null that |logFC| is at most 0.263, against a median interaction effect of 0.087. Three floors are reported so the counts are read as a property of the threshold, not of the data.</p>
+<p><code>treat()</code> tests against a fold-change floor rather than against zero, and unlike filtering on logFC afterwards it controls an error rate. It is stringent by construction: <code>lfc = log2(1.2)</code> tests the null that |logFC| is at most 0.263, against a median interaction effect of 0.087. Three floors are fixed in advance and reported together so the counts read as a property of the threshold rather than of the data, and none of them selects anything. <code>robust = TRUE</code> matches the moderation used for the main fit.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(<span class="fu">c</span>(<span class="fl">1.1</span>, <span class="fl">1.15</span>, <span class="fl">1.2</span>), \(fc) {</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  ft <span class="ot">&lt;-</span> <span class="fu">treat</span>(fit, <span class="at">lfc =</span> <span class="fu">log2</span>(fc))</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">fold_change =</span> fc, <span class="at">contrast =</span> <span class="fu">colnames</span>(fit<span class="sc">$</span>coefficients),</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">n_q_05 =</span> <span class="fu">map_int</span>(<span class="fu">colnames</span>(fit<span class="sc">$</span>coefficients),</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>                          \(cn) <span class="fu">sum</span>(<span class="fu">topTreat</span>(ft, <span class="at">coef =</span> cn, <span class="at">number =</span> <span class="cn">Inf</span>)<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)))</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(<span class="fu">c</span>(<span class="fl">1.1</span>, <span class="fl">1.15</span>, <span class="fl">1.2</span>), \(fc) {</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  ft <span class="ot">&lt;-</span> <span class="fu">treat</span>(fit, <span class="at">lfc =</span> <span class="fu">log2</span>(fc), <span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">fold_change =</span> fc, <span class="at">contrast =</span> <span class="fu">colnames</span>(fit<span class="sc">$</span>coefficients),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">n_q_05 =</span> <span class="fu">map_int</span>(<span class="fu">colnames</span>(fit<span class="sc">$</span>coefficients),</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>                          \(cn) <span class="fu">sum</span>(<span class="fu">topTreat</span>(ft, <span class="at">coef =</span> cn, <span class="at">number =</span> <span class="cn">Inf</span>)<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2545,19 +2592,31 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="the-pi-score">The pi score</h2>
 <p><code>pi_score</code> is <code>P.Value^abs(logFC)</code>, equal to <code>10^(-pi)</code> for the score of Xiao et al. (2014, PMID 22321699), so it ranks as the published <code>-log10(p) * |log2FC|</code> does. It controls no error rate, so it ranks within a contrast and selects nothing.</p>
 <p>It rewards large <code>|logFC|</code>, and here the largest fold changes come from the proteins with the fewest detected precursors, whose values lean on DPC recovery. The observation count is reported alongside so that is visible.</p>
+<p>It is applied to the two contrasts that carry signal. Ranking the interaction would produce a table of the twenty largest fold changes in a contrast whose <code>propTrueNull</code> sits at its ceiling, which invites reading structure into noise no matter what the caption says.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>mean_obs <span class="ot">&lt;-</span> <span class="fu">rowMeans</span>(proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations)</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(contrast <span class="sc">==</span> <span class="st">&quot;interaction&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(pi_score, <span class="at">n =</span> <span class="dv">20</span>) <span class="sc">|&gt;</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">mean_obs =</span> <span class="fu">round</span>(mean_obs[protein], <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>mean_obs <span class="ot">&lt;-</span> <span class="fu">rowMeans</span>(proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(contrast <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;BFR_post_vs_pre&quot;</span>, <span class="st">&quot;HLRT_post_vs_pre&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(pi_score, <span class="at">n =</span> <span class="dv">10</span>, <span class="at">by =</span> contrast) <span class="sc">|&gt;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">mean_obs =</span> <span class="fu">round</span>(mean_obs[protein], <span class="dv">2</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 13%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 7%">
+<col style="width: 11%">
+</colgroup>
 <thead>
 <tr class="header">
+<th style="text-align: left;">contrast</th>
 <th style="text-align: left;">protein</th>
 <th style="text-align: left;">Genes</th>
 <th style="text-align: right;">logFC</th>
@@ -2569,184 +2628,204 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">Q9Y3U8</td>
-<td style="text-align: left;">RPL36</td>
-<td style="text-align: right;">-1.0076874</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0014758</td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">1.05</td>
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">P09455</td>
+<td style="text-align: left;">RBP1</td>
+<td style="text-align: right;">1.3902069</td>
+<td style="text-align: right;">0.0050156</td>
+<td style="text-align: right;">0.0000002</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0.85</td>
 </tr>
 <tr class="even">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">P04216</td>
+<td style="text-align: left;">THY1</td>
+<td style="text-align: right;">1.2962574</td>
+<td style="text-align: right;">0.0050156</td>
+<td style="text-align: right;">0.0000007</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">1.81</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">Q9ULX7</td>
+<td style="text-align: left;">CA14</td>
+<td style="text-align: right;">0.9661005</td>
+<td style="text-align: right;">0.0022270</td>
+<td style="text-align: right;">0.0000067</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1.35</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">Q9H1R3</td>
+<td style="text-align: left;">MYLK2</td>
+<td style="text-align: right;">-0.6051789</td>
+<td style="text-align: right;">0.0000262</td>
+<td style="text-align: right;">0.0000132</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">23.15</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">P43490</td>
+<td style="text-align: left;">NAMPT</td>
+<td style="text-align: right;">0.7134107</td>
+<td style="text-align: right;">0.0002400</td>
+<td style="text-align: right;">0.0000140</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">14.85</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">Q99584</td>
+<td style="text-align: left;">S100A13</td>
+<td style="text-align: right;">0.8685499</td>
+<td style="text-align: right;">0.0083332</td>
+<td style="text-align: right;">0.0001816</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">4.16</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">Q16658</td>
+<td style="text-align: left;">FSCN1</td>
+<td style="text-align: right;">0.5912282</td>
+<td style="text-align: right;">0.0050156</td>
+<td style="text-align: right;">0.0017672</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">5.02</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">Q9Y6H1</td>
+<td style="text-align: left;">CHCHD2</td>
+<td style="text-align: right;">0.7983604</td>
+<td style="text-align: right;">0.0329187</td>
+<td style="text-align: right;">0.0025832</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.81</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">Q02252</td>
+<td style="text-align: left;">ALDH6A1</td>
+<td style="text-align: right;">-0.4279224</td>
+<td style="text-align: right;">0.0007556</td>
+<td style="text-align: right;">0.0026993</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">10.43</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">BFR_post_vs_pre</td>
+<td style="text-align: left;">A8MU46</td>
+<td style="text-align: left;">SMTNL1</td>
+<td style="text-align: right;">-0.6262683</td>
+<td style="text-align: right;">0.0108571</td>
+<td style="text-align: right;">0.0029826</td>
+<td style="text-align: right;">40</td>
+<td style="text-align: right;">18.44</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">HLRT_post_vs_pre</td>
 <td style="text-align: left;">Q05707</td>
 <td style="text-align: left;">COL14A1</td>
-<td style="text-align: right;">-1.4215272</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0061079</td>
+<td style="text-align: right;">2.3437940</td>
+<td style="text-align: right;">0.0004465</td>
+<td style="text-align: right;">0.0000000</td>
 <td style="text-align: right;">41</td>
 <td style="text-align: right;">2.30</td>
 </tr>
-<tr class="odd">
-<td style="text-align: left;">Q0D2K2</td>
-<td style="text-align: left;">KLHL30</td>
-<td style="text-align: right;">0.5074836</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0301058</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">0.50</td>
-</tr>
 <tr class="even">
-<td style="text-align: left;">O60240</td>
-<td style="text-align: left;">PLIN1</td>
-<td style="text-align: right;">-1.2168211</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0355030</td>
-<td style="text-align: right;">43</td>
-<td style="text-align: right;">4.49</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Q96AG4</td>
-<td style="text-align: left;">LRRC59</td>
-<td style="text-align: right;">-0.7927025</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0443186</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">Q9ULX7</td>
+<td style="text-align: left;">CA14</td>
+<td style="text-align: right;">1.3006324</td>
+<td style="text-align: right;">0.0000024</td>
+<td style="text-align: right;">0.0000000</td>
 <td style="text-align: right;">3</td>
-<td style="text-align: right;">0.75</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">O75844</td>
-<td style="text-align: left;">ZMPSTE24</td>
-<td style="text-align: right;">-0.5112983</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0756930</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">0.47</td>
+<td style="text-align: right;">1.35</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">P35580</td>
-<td style="text-align: left;">MYH10</td>
-<td style="text-align: right;">-0.6241618</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0806227</td>
-<td style="text-align: right;">18</td>
-<td style="text-align: right;">2.72</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">P43490</td>
+<td style="text-align: left;">NAMPT</td>
+<td style="text-align: right;">0.9825865</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">14.85</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">P16070</td>
-<td style="text-align: left;">CD44</td>
-<td style="text-align: right;">-0.8662928</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0824279</td>
-<td style="text-align: right;">8</td>
-<td style="text-align: right;">1.05</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">P04216</td>
+<td style="text-align: left;">THY1</td>
+<td style="text-align: right;">1.4811188</td>
+<td style="text-align: right;">0.0003139</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">1.81</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">P21810</td>
-<td style="text-align: left;">BGN</td>
-<td style="text-align: right;">-1.0036453</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0863533</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">P30837</td>
+<td style="text-align: left;">ALDH1B1</td>
+<td style="text-align: right;">0.8947991</td>
+<td style="text-align: right;">0.0000024</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">14.06</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">Q99584</td>
+<td style="text-align: left;">S100A13</td>
+<td style="text-align: right;">1.1005533</td>
+<td style="text-align: right;">0.0002352</td>
+<td style="text-align: right;">0.0000001</td>
 <td style="text-align: right;">7</td>
-<td style="text-align: right;">0.54</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">O43681</td>
-<td style="text-align: left;">ASNA1</td>
-<td style="text-align: right;">0.4679333</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.0935630</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">4.21</td>
+<td style="text-align: right;">4.16</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">P11498</td>
-<td style="text-align: left;">PC</td>
-<td style="text-align: right;">-0.8946848</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1007118</td>
-<td style="text-align: right;">16</td>
-<td style="text-align: right;">0.79</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">P35443</td>
+<td style="text-align: left;">THBS4</td>
+<td style="text-align: right;">1.6659596</td>
+<td style="text-align: right;">0.0242937</td>
+<td style="text-align: right;">0.0000041</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">3.01</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">P49327</td>
-<td style="text-align: left;">FASN</td>
-<td style="text-align: right;">-0.8798190</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1082503</td>
-<td style="text-align: right;">98</td>
-<td style="text-align: right;">3.64</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">P09455</td>
+<td style="text-align: left;">RBP1</td>
+<td style="text-align: right;">1.2486543</td>
+<td style="text-align: right;">0.0106788</td>
+<td style="text-align: right;">0.0000155</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">0.85</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">Q96L96</td>
-<td style="text-align: left;">ALPK3</td>
-<td style="text-align: right;">-0.3554471</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1195384</td>
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">Q9Y2Q3</td>
+<td style="text-align: left;">GSTK1</td>
+<td style="text-align: right;">0.6087920</td>
+<td style="text-align: right;">0.0000184</td>
+<td style="text-align: right;">0.0000256</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">10.30</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">HLRT_post_vs_pre</td>
+<td style="text-align: left;">Q9H1R3</td>
+<td style="text-align: left;">MYLK2</td>
+<td style="text-align: right;">-0.5791702</td>
+<td style="text-align: right;">0.0000184</td>
+<td style="text-align: right;">0.0000441</td>
 <td style="text-align: right;">37</td>
-<td style="text-align: right;">14.38</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">O94925</td>
-<td style="text-align: left;">GLS</td>
-<td style="text-align: right;">0.5493755</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1262997</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">0.37</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">O14832</td>
-<td style="text-align: left;">PHYH</td>
-<td style="text-align: right;">0.5922355</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1324283</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">0.56</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">P51572</td>
-<td style="text-align: left;">BCAP31</td>
-<td style="text-align: right;">-0.4655187</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1336849</td>
-<td style="text-align: right;">16</td>
-<td style="text-align: right;">4.11</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Q9UN86</td>
-<td style="text-align: left;">G3BP2</td>
-<td style="text-align: right;">-0.6766364</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1357579</td>
-<td style="text-align: right;">6</td>
-<td style="text-align: right;">0.90</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Q8IVN3</td>
-<td style="text-align: left;">MUSTN1</td>
-<td style="text-align: right;">-0.5367331</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1507912</td>
-<td style="text-align: right;">8</td>
-<td style="text-align: right;">5.32</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">P37840</td>
-<td style="text-align: left;">SNCA</td>
-<td style="text-align: right;">0.7639216</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1569310</td>
-<td style="text-align: right;">6</td>
-<td style="text-align: right;">3.51</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Q14728</td>
-<td style="text-align: left;">MFSD10</td>
-<td style="text-align: right;">-0.3968774</td>
-<td style="text-align: right;">0.9999093</td>
-<td style="text-align: right;">0.1573726</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.29</td>
+<td style="text-align: right;">23.15</td>
 </tr>
 </tbody>
 </table>
@@ -2758,24 +2837,24 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
 <p>Written before the negative control is checked, so a failure leaves the evidence on disk.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(results, <span class="fu">file.path</span>(out, <span class="st">&quot;protein_contrasts_long.csv&quot;</span>))</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(contrast_summary, <span class="fu">file.path</span>(out, <span class="st">&quot;contrast_summary.csv&quot;</span>))</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit, <span class="fu">file.path</span>(out, <span class="st">&quot;fit.rds&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(results, <span class="fu">file.path</span>(out, <span class="st">&quot;protein_contrasts_long.csv&quot;</span>))</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(contrast_summary, <span class="fu">file.path</span>(out, <span class="st">&quot;contrast_summary.csv&quot;</span>))</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit, <span class="fu">file.path</span>(out, <span class="st">&quot;fit.rds&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="negative-control" class="level2">
 <h2 class="anchored" data-anchor-id="negative-control">Negative control</h2>
 <p>Two untrained legs of the same person should not differ. If they do, the cause is upstream and the failure is the finding.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>nc <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> d<span class="sc">$</span>negative_control)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(nc) <span class="sc">==</span> <span class="fu">nrow</span>(proteins))</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(nc<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>nc <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> d<span class="sc">$</span>negative_control)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(nc) <span class="sc">==</span> <span class="fu">nrow</span>(proteins))</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(nc<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_head</span>(nc, <span class="at">n =</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, logFC, P.Value, adj.P.Val)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_head</span>(nc, <span class="at">n =</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, logFC, P.Value, adj.P.Val)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2831,7 +2910,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </div>
 <p><code>nrow(nc)</code> is asserted because <code>sum(logical(0))</code> is zero, so a contrast name matching nothing would look like a clean control. The hit count is printed rather than asserted: if two untrained legs of one person ever differ, that is the most informative result this pipeline can produce and it belongs in the report, not in a halted render.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
