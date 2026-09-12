@@ -1,6 +1,7 @@
 # 01_Preprocess / 02_Quantification
 
-Fits the detection curve, rolls peptides up to proteins, filters on detection. The slow step.
+Produces the analysis-ready protein matrix: fits the detection curve, rolls precursors up to
+proteins, filters on detection, normalises. This is the slow stage.
 
 | | |
 |---|---|
@@ -8,34 +9,73 @@ Fits the detection curve, rolls peptides up to proteins, filters on detection. T
 | **Reads** | `01_Filtering/c_data/precursors_filtered.rds` |
 | **Writes** | `c_data/proteins.rds`, the curve parameters, a per-protein quality table |
 
-## The idea
+## The detection curve
 
-Faint peptides go missing more often than abundant ones. `dpc()` fits that, so a missing value
-becomes "this was below the detection limit" rather than a blank to fill in. `dpcQuant()` then
-gives every protein a value in every sample.
+Faint precursors go missing more often than abundant ones. `dpc()` fits that, so `dpcQuant()` can
+treat a missing value as evidence the protein was low rather than filling in a number.
 
-This is not imputation. Each protein's abundance is estimated from the peptides that were seen
-plus the probability that the missing ones were faint, and the answer comes with a standard
-error.
+The curve is fitted with `dpc()`, which comes out at 0.488. limpa's FAQ calls 0.1 to 1.0 usable
+and 0.7 to 0.9 typical for DIA-NN searched with match-between-runs, so this data fits below the
+typical band.
 
-## What comes out
+Quantification uses a preset slope of **0.7** and reports the fitted 0.488 as a sensitivity check.
+This is the rule limpa's FAQ states for this exact case: "If `dpcCN()` doesn't give a value in that
+range, it would be reasonable to run `dpcQuant()` with a preset value `dpc.slope=0.7`." The choice
+follows the documented rule and was made before any downstream count was consulted. Both slopes keep the same 3,042
+proteins; the preset raises the mean standard error from 0.53 to 0.66, which makes it the more
+conservative setting, since `dpcDE()` reads those errors as precision weights.
 
-`proteins.rds` carries three matrices: abundance, standard error, and how many peptides were
-detected behind each value. The standard errors travel into the statistics as weights, so a
-protein built mostly from missing peptides counts for less than one measured directly.
+Abundances differ by 0.237 log2 at the median protein between the two slopes. Refitting gives 60
+and 107 proteins on the two training contrasts under the preset against 82 and 114 under the
+fitted slope, with the negative control and the interaction empty under both.
 
-## The slope
-
-Reported as fitted, never replaced with a preset. limpa's usable range is 0.1 to 1.0. A shallow
-slope recovers less from missing values, so it errs toward finding nothing.
+The direction is worth recording, because it is not the one the documentation predicts. limpa's
+FAQ says a slope set too low makes the analysis more conservative; here the lower fitted slope
+gave the smaller standard errors and the larger hit counts. The preset is still the documented
+setting and the cautious one on this data.
 
 The curve's plot is not the diagnostic; it compares a fitted curve against proportions computed
 differently. Judge the slope.
 
+## What comes out
+
+`proteins.rds` carries three matrices: abundance, standard error, and how many precursors were
+detected behind each value. The standard errors travel into `dpcDE()` as precision weights, so a
+protein built mostly from missing precursors counts for less than one measured directly.
+
+`NPrec` is what the installed version writes; the help page calls it `NPeptides`.
+
 ## Detection filter
 
-Runs after quantification, which is the order limpa specifies. A protein must be detected in at
-least as many samples as the smallest group holds.
+Runs after quantification, which is the order `filterByDetection()`'s help specifies. A protein
+must be detected in at least as many samples as the smallest group holds, 32 here, which is the
+setting that help page suggests for a small experiment.
 
-About 100 minutes and 11 GB. Cached and keyed to its input file. Delete
-`a_script/02_quantify_cache/` to force it.
+It drops 409 of 3,451 proteins. Those 409 are not borderline: they carry a mean standard error of
+1.56 against 0.66 for the proteins kept, and 0.15 detected precursors per sample against 7.48, so
+the typical sample measures nothing at all for them. Relaxing the threshold to limpa's default of
+3 would keep 371 of them, and exactly one reaches BH < 0.05 in any contrast while the extra tests
+cost 14 and 29 proteins on the two training contrasts. The filter loses no usable signal and the
+looser setting would cost some.
+
+## Normalisation
+
+limpa places this after `dpcQuant()` and before `dpcDE()`, and performs none itself, because DIA-NN
+has usually normalised the precursors already.
+
+The diagnostic is the MA curve: each sample is compared against the average of all samples, and the
+difference is fitted against abundance. A flat curve means a sample disagrees by a constant, which a
+shift corrects. A curve that travels means the disagreement depends on abundance.
+
+Here the curve travels 0.45 log2 in the median sample, against 0.13 for the spread in per-sample
+medians, and the curvature is unrelated to treatment or timepoint. Cyclic loess is therefore applied:
+it is the only available method that corrects an abundance-dependent difference. It also has the most
+freedom of the available methods, so it can absorb real biology that tracks abundance.
+
+The matrix is normalised before it is written, so `proteins.rds` is what the model is fitted to.
+
+## Cost
+
+About four hours and 11 GB, because `dpcQuant()` runs twice: once at the preset slope and once at
+the fitted one. Both chunks are cached and keyed to the md5 of the input file. Delete
+`a_script/02_quantify_cache/` to force them.

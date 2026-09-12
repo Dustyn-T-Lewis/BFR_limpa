@@ -1,0 +1,108 @@
+---
+title: "01 · Design"
+subtitle: "Design matrix and the five contrasts"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+limpa works with any design limma accepts. This notebook builds one and checks it, separately
+from the fit, so a design problem surfaces in seconds rather than after an hour of modelling.
+
+```{r setup}
+library(here)
+library(limpa)
+library(limma)
+library(dplyr)
+library(readr)
+library(tibble)
+
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+targets <- proteins$targets
+
+with(targets, table(treatment, timepoint))
+```
+
+## Design
+
+Four cell means, one per treatment-and-timepoint combination, plus participant as a fixed block.
+Fixed rather than random because every contrast the study asks for is within one person, which is
+the paired case of the limma User's Guide §9.4.2. `sex` is constant within participant, so this
+model absorbs it and cannot test it.
+
+```{r design}
+design <- model.matrix(~ 0 + group + participant, data = targets)
+colnames(design) <- sub("^group", "", colnames(design))
+rownames(design) <- targets$sample_id
+
+stopifnot(identical(make.names(colnames(design)), colnames(design)))
+
+c(samples = nrow(design), coefficients = ncol(design),
+  residual_df = nrow(design) - ncol(design))
+```
+
+`makeContrasts()` parses its arguments as R code, so the `sub()` above matters: a column named
+like `2E-T1` would be read as subtraction.
+
+## Is a fixed participant term enough
+
+Samples share a participant, and within that they share a leg. The participant term removes the
+first exactly; the second stays in the residual. If it were large, the within-leg contrasts would
+be tested too conservatively and the between-leg ones too liberally.
+
+```{r correlation-strata}
+leg_id <- paste(targets$participant, targets$leg, sep = "_")
+
+strata <- tibble(
+  level = "within leg, participant fixed (unweighted matrix correlation)",
+  correlation = duplicateCorrelation(proteins$E, design,
+                                     block = leg_id)$consensus.correlation
+)
+mutate(strata, correlation = round(correlation, 3))
+```
+
+It is estimated on the bare matrix, without the precision and sample weights the fit uses, so it
+describes the matrix rather than the model. That is enough for a near-zero check. On this data it
+comes back near zero, so `02_Differential` calls `dpcDE()` without `block =`. Nothing automates
+that reading, so check the number on a rerun.
+
+## Contrasts
+
+```{r contrasts}
+contrasts <- makeContrasts(
+  BFR_post_vs_pre   = BFR_T2 - BFR_T1,
+  HLRT_post_vs_pre  = HLRT_T2 - HLRT_T1,
+  BFR_vs_HLRT_at_T1 = BFR_T1 - HLRT_T1,
+  BFR_vs_HLRT_at_T2 = BFR_T2 - HLRT_T2,
+  interaction       = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
+  levels = design
+)
+contrasts[rowSums(abs(contrasts)) > 0, ]
+```
+
+The five carry three different roles, and the manuscript should read them that way.
+`interaction` is the **primary** comparison and the question the study was designed to answer.
+`BFR_vs_HLRT_at_T1` is the **negative control**: two legs of one person before either was trained,
+so it must find nothing. The remaining three are **descriptive**. Note that `interaction` equals
+`BFR_vs_HLRT_at_T2` minus `BFR_vs_HLRT_at_T1` exactly, so the five contrasts are not five
+independent questions.
+
+```{r write}
+saveRDS(
+  list(design = design, contrasts = contrasts,
+       negative_control = "BFR_vs_HLRT_at_T1"),
+  here("02_Differential_Expression", "01_Design", "c_data", "design.rds")
+)
+write_csv(strata,
+          here("02_Differential_Expression", "01_Design", "c_data",
+               "correlation_strata.csv"))
+```
+
+```{r session}
+sessionInfo()
+```

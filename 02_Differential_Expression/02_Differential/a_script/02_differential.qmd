@@ -1,0 +1,191 @@
+---
+title: "02 · Differential expression"
+subtitle: "Five contrasts on the protein matrix"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+limpa's sequence for a contrast-based analysis is `dpcDE`, `contrasts.fit`, `eBayes`, `topTable`.
+`dpcDE()` is the only entry point that reads the standard errors `dpcQuant()` produced, so it
+replaces `lmFit()` and nothing else may stand in for it.
+
+```{r setup}
+library(here)
+library(limpa)
+library(limma)
+library(dplyr)
+library(purrr)
+library(readr)
+library(tibble)
+
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+
+stopifnot(identical(rownames(d$design), colnames(proteins$E)))
+```
+
+The assertion checks the design rows are the same samples in the same order as the matrix columns.
+limma compares only their counts.
+
+`proteins.rds` arrives normalised; `01_Preprocess/02_Quantification` applies cyclic loess and
+reports what it corrected.
+
+## Fit
+
+`sample.weights = TRUE` estimates one quality weight per sample. Biopsies differed in how much
+blood they carried, and removing the contaminant rows does not undo what that did to the sample
+underneath.
+
+```{r fit}
+#| fig-height: 4
+fit <- dpcDE(proteins, d$design, sample.weights = TRUE, plot = TRUE)
+sample_weights <- fit$targets$sample.weight
+fit <- contrasts.fit(fit, d$contrasts)
+fit <- eBayes(fit, robust = TRUE)
+```
+
+Weights downweight a sample in proportion to how noisy it looks; none is dropped. What matters is
+whether the downweighting falls evenly across the four cells, because uneven weighting would act
+like a covariate nobody declared.
+
+```{r sample-weights}
+tibble(group = proteins$targets$group, weight = sample_weights) |>
+  summarise(n = n(), median_weight = round(median(weight), 2),
+            lowest_weight = round(min(weight), 2), .by = group)
+```
+
+Effect size the interaction could detect at 80% power, two-sided 0.05. Without this, "null" says
+nothing.
+
+```{r detectable-effect}
+se <- fit$stdev.unscaled[, "interaction"] * sqrt(fit$s2.post)
+round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
+```
+
+## Results
+
+Benjamini-Hochberg runs within each contrast and never across them. The five share participants
+and the interaction is a difference of two of the others, so pooling them would not control
+anything that can be stated.
+
+```{r results}
+results <- map(colnames(d$contrasts), \(cn) {
+  topTable(fit, coef = cn, number = Inf, adjust.method = "BH", sort.by = "p") |>
+    rownames_to_column("protein") |>
+    mutate(contrast = cn, .before = 1)
+}) |>
+  list_rbind() |>
+  mutate(pi_score = P.Value^abs(logFC))
+
+contrast_summary <- results |>
+  summarise(n_tested = n(),
+            n_fdr_05 = sum(adj.P.Val < 0.05),
+            n_fdr_10 = sum(adj.P.Val < 0.10),
+            min_adj_p = min(adj.P.Val),
+            .by = contrast)
+mutate(contrast_summary, min_adj_p = signif(min_adj_p, 3))
+```
+
+`sort.by = "p"` is passed because `topTable()` defaults to sorting on the B statistic, which
+orders differently.
+
+## Is a contrast empty, or is it being tested conservatively
+
+Three numbers together, because each misleads alone. `propTrueNull()` estimates the null
+proportion from the p-value distribution. Median |t| is 0.674 under a calibrated null, so a value
+below that means the tests are conservative. `p_below_0.2` is 0.2 under a uniform null, so a value
+below that means the distribution rises toward 1 rather than being flat.
+
+Read the between-leg contrasts against `BFR_vs_HLRT_at_T1`, not against theory. That contrast is a
+true null by construction, and whatever it returns is what a null looks like in this design.
+
+```{r null-calibration}
+results |>
+  summarise(prop_true_null = round(propTrueNull(P.Value), 3),
+            median_abs_t = round(median(abs(t)), 3),
+            p_below_0.2 = round(mean(P.Value < 0.2), 3), .by = contrast)
+```
+
+
+## Significant and large enough
+
+`treat()` tests against a fold-change floor rather than against zero, and unlike filtering on
+logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.2)`
+tests the null that |logFC| is at most 0.263, against a median interaction effect of 0.087. Three
+floors are fixed in advance and reported together so the counts read as a property of the
+threshold rather than of the data, and none of them selects anything. `robust = TRUE` matches the
+moderation used for the main fit.
+
+```{r treat}
+map(c(1.1, 1.15, 1.2), \(fc) {
+  ft <- treat(fit, lfc = log2(fc), robust = TRUE)
+  tibble(fold_change = fc, contrast = colnames(fit$coefficients),
+         n_q_05 = map_int(colnames(fit$coefficients),
+                          \(cn) sum(topTreat(ft, coef = cn, number = Inf)$adj.P.Val < 0.05)))
+}) |>
+  list_rbind()
+```
+
+## The pi score
+
+`pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID
+22321699), so it ranks as the published `-log10(p) * |log2FC|` does. It controls no error rate, so
+it ranks within a contrast and selects nothing.
+
+It rewards large `|logFC|`, and here the largest fold changes come from the proteins with the
+fewest detected precursors, whose values lean on DPC recovery. The observation count is reported
+alongside so that is visible.
+
+It is applied to the two contrasts that carry signal. Ranking the interaction would produce a
+table of the twenty largest fold changes in a contrast whose `propTrueNull` sits at its ceiling,
+which invites reading structure into noise no matter what the caption says.
+
+```{r pi-ranking}
+mean_obs <- rowMeans(proteins$other$n.observations)
+
+results |>
+  filter(contrast %in% c("BFR_post_vs_pre", "HLRT_post_vs_pre")) |>
+  slice_min(pi_score, n = 10, by = contrast) |>
+  mutate(mean_obs = round(mean_obs[protein], 2)) |>
+  select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
+```
+
+## Outputs
+
+Written before the negative control is checked, so a failure leaves the evidence on disk.
+
+```{r write}
+out <- here("02_Differential_Expression", "02_Differential", "c_data")
+write_csv(results, file.path(out, "protein_contrasts_long.csv"))
+write_csv(contrast_summary, file.path(out, "contrast_summary.csv"))
+saveRDS(fit, file.path(out, "fit.rds"))
+```
+
+## Negative control
+
+Two untrained legs of the same person should not differ. If they do, the cause is upstream and
+the failure is the finding.
+
+```{r negative-control}
+nc <- filter(results, contrast == d$negative_control)
+stopifnot(nrow(nc) == nrow(proteins))
+sum(nc$adj.P.Val < 0.05)
+
+slice_head(nc, n = 5) |>
+  select(protein, Genes, logFC, P.Value, adj.P.Val)
+```
+
+`nrow(nc)` is asserted because `sum(logical(0))` is zero, so a contrast name matching nothing
+would look like a clean control. The hit count is printed rather than asserted: if two untrained
+legs of one person ever differ, that is the most informative result this pipeline can produce and
+it belongs in the report, not in a halted render.
+
+```{r session}
+sessionInfo()
+```
