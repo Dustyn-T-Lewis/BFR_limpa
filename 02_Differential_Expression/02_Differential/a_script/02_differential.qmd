@@ -45,8 +45,19 @@ underneath.
 ```{r fit}
 #| fig-height: 4
 fit <- dpcDE(proteins, d$design, sample.weights = TRUE, plot = TRUE)
+sample_weights <- fit$targets$sample.weight
 fit <- contrasts.fit(fit, d$contrasts)
 fit <- eBayes(fit, robust = TRUE)
+```
+
+Weights downweight a sample in proportion to how noisy it looks; none is dropped. What matters is
+whether the downweighting falls evenly across the four cells, because uneven weighting would act
+like a covariate nobody declared.
+
+```{r sample-weights}
+tibble(group = proteins$targets$group, weight = sample_weights) |>
+  summarise(n = n(), median_weight = round(median(weight), 2),
+            lowest_weight = round(min(weight), 2), .by = group)
 ```
 
 Effect size the interaction could detect at 80% power, two-sided 0.05. Without this, "null" says
@@ -78,7 +89,7 @@ contrast_summary <- results |>
             n_fdr_10 = sum(adj.P.Val < 0.10),
             min_adj_p = min(adj.P.Val),
             .by = contrast)
-contrast_summary
+mutate(contrast_summary, min_adj_p = signif(min_adj_p, 3))
 ```
 
 `sort.by = "p"` is passed because `topTable()` defaults to sorting on the B statistic, which
@@ -107,11 +118,13 @@ results |>
 `treat()` tests against a fold-change floor rather than against zero, and unlike filtering on
 logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.2)`
 tests the null that |logFC| is at most 0.263, against a median interaction effect of 0.087. Three
-floors are reported so the counts are read as a property of the threshold, not of the data.
+floors are fixed in advance and reported together so the counts read as a property of the
+threshold rather than of the data, and none of them selects anything. `robust = TRUE` matches the
+moderation used for the main fit.
 
 ```{r treat}
 map(c(1.1, 1.15, 1.2), \(fc) {
-  ft <- treat(fit, lfc = log2(fc))
+  ft <- treat(fit, lfc = log2(fc), robust = TRUE)
   tibble(fold_change = fc, contrast = colnames(fit$coefficients),
          n_q_05 = map_int(colnames(fit$coefficients),
                           \(cn) sum(topTreat(ft, coef = cn, number = Inf)$adj.P.Val < 0.05)))
@@ -129,14 +142,18 @@ It rewards large `|logFC|`, and here the largest fold changes come from the prot
 fewest detected precursors, whose values lean on DPC recovery. The observation count is reported
 alongside so that is visible.
 
+It is applied to the two contrasts that carry signal. Ranking the interaction would produce a
+table of the twenty largest fold changes in a contrast whose `propTrueNull` sits at its ceiling,
+which invites reading structure into noise no matter what the caption says.
+
 ```{r pi-ranking}
 mean_obs <- rowMeans(proteins$other$n.observations)
 
 results |>
-  filter(contrast == "interaction") |>
-  slice_min(pi_score, n = 20) |>
+  filter(contrast %in% c("BFR_post_vs_pre", "HLRT_post_vs_pre")) |>
+  slice_min(pi_score, n = 10, by = contrast) |>
   mutate(mean_obs = round(mean_obs[protein], 2)) |>
-  select(protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
+  select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
 ```
 
 ## Outputs

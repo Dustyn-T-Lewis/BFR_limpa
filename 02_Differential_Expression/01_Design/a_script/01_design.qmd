@@ -63,7 +63,7 @@ strata <- tibble(
   correlation = duplicateCorrelation(proteins$E, design,
                                      block = leg_id)$consensus.correlation
 )
-strata
+mutate(strata, correlation = round(correlation, 3))
 ```
 
 It is estimated on the bare matrix, without the precision and sample weights the fit uses, so it
@@ -85,8 +85,12 @@ contrasts <- makeContrasts(
 contrasts[rowSums(abs(contrasts)) > 0, ]
 ```
 
-`BFR_vs_HLRT_at_T1` compares two legs of one person before either was trained, so it is the
-negative control and must find nothing.
+The five carry three different roles, and the manuscript should read them that way.
+`interaction` is the **primary** comparison and the question the study was designed to answer.
+`BFR_vs_HLRT_at_T1` is the **negative control**: two legs of one person before either was trained,
+so it must find nothing. The remaining three are **descriptive**. Note that `interaction` equals
+`BFR_vs_HLRT_at_T2` minus `BFR_vs_HLRT_at_T1` exactly, so the five contrasts are not five
+independent questions.
 
 ```{r write}
 saveRDS(

@@ -16,13 +16,17 @@ quarto render 02_Differential_Expression/02_Differential/a_script/02_differentia
 
 ## The five comparisons
 
-| Name | Compares | Reads as |
-|---|---|---|
-| `BFR_post_vs_pre` | one leg over time | what restricted training did |
-| `HLRT_post_vs_pre` | the other leg over time | what conventional training did |
-| `BFR_vs_HLRT_at_T1` | two legs before training | **control**, must find nothing |
-| `BFR_vs_HLRT_at_T2` | two legs after training | leg difference at the end |
-| `interaction` | difference of the two time effects | **the study question** |
+| Name | Role | Compares | Reads as |
+|---|---|---|---|
+| `interaction` | **primary** | difference of the two time effects | the study question |
+| `BFR_vs_HLRT_at_T1` | **control** | two legs before training | must find nothing |
+| `BFR_post_vs_pre` | descriptive | one leg over time | what restricted training did |
+| `HLRT_post_vs_pre` | descriptive | the other leg over time | what conventional training did |
+| `BFR_vs_HLRT_at_T2` | descriptive | two legs after training | leg difference at the end |
+
+`interaction` equals `BFR_vs_HLRT_at_T2` minus `BFR_vs_HLRT_at_T1` exactly, so these are not five
+independent questions. Report the primary and the control as the result; the other three describe
+what happened on the way.
 
 ## Three things that matter
 
