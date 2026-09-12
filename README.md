@@ -2,7 +2,8 @@
 
 DIA mass-spectrometry proteomics from a unilateral resistance training trial. Each participant
 trained one leg with blood-flow restriction and the other with conventional high load, with a
-biopsy from both legs before and after. 131 MS runs, 33 participants, four samples each.
+biopsy from both legs before and after. 33 participants and 131 MS runs: four samples each,
+except one participant whose post-training biopsy on one leg was never acquired.
 
 The question is the interaction: does restriction change the muscle proteome differently from
 heavy load?
@@ -54,5 +55,5 @@ plus a standard error, and that uncertainty carries into the statistics.
 Two rules follow. Never filter on missing values before quantification, and never hand the
 protein matrix to an ordinary linear model.
 
-Packages: `limpa`, `limma`, `nanoparquet`, and `dplyr`/`stringr`/`purrr`/`readr`/`tibble`.
+Packages: `limpa`, `limma`, `here`, `nanoparquet`, and `dplyr`/`stringr`/`purrr`/`readr`/`tibble`.
 Versions are not pinned.
