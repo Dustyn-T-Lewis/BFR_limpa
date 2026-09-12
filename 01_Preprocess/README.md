@@ -37,4 +37,5 @@ A further correction belongs on the protein matrix, between `dpcQuant()` and `dp
 `02_Quantification` measures whether one is needed and applies cyclic loess there, so the
 matrix it writes is the one the model is fitted to.
 
-Quantification takes about 100 minutes and 11 GB. It is cached and keyed to its input file.
+Quantification runs twice, at the preset slope and at the fitted one, so the stage takes about
+four hours and 11 GB. Both runs are cached and keyed to the input file.
