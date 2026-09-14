@@ -12,16 +12,16 @@ Reads the DIA-NN report and removes rows. Drops no sample, filters nothing on mi
 
 1. Read the report with `readDIANN()`.
 2. Rename columns from MS run names to our sample IDs, dropping one discarded injection.
-3. Check every retained sample clears half the median depth. Removes nothing.
-4. Repair the search database fault.
-5. Remove peptides mapping to several proteins, then groups holding several proteins.
-6. Remove blood, plasma and skin proteins.
-7. Assert 28 named proteins survived.
+3. Repair the search database fault.
+4. Remove peptides mapping to several proteins, then groups holding several proteins.
+5. Remove blood, plasma and skin proteins, recording each sample's contaminant share by timepoint
+   first, since uneven contamination between visits would land on the two time contrasts.
+6. Assert 28 named proteins survived, and list what left.
 
 ## The repair
 
 The search FASTA listed every protein twice, once tagged as a contaminant, which makes creatine
-kinase and myoglobin look ambiguous. Left alone, step 5 deletes them along with most of the
+kinase and myoglobin look ambiguous. Left alone, step 4 deletes them along with most of the
 muscle. So we drop only the entries that are contaminant-only, then strip the tag from the rest.
 The order matters: once the tag is gone, a contaminant-only entry looks real.
 

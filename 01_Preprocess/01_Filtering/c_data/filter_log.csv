@@ -1,0 +1,5 @@
+step,precursors,protein_groups,pct_signal
+repaired,53760,3736,99.727650709977965
+shared peptides removed,49801,3664,85.94764178778486
+compound groups removed,49788,3662,85.9473614700676
+contaminants removed,47133,3451,57.995774549560714

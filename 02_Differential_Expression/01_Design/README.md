@@ -1,26 +1,46 @@
 # 02_Differential_Expression / 01_Design
 
-**Planned.** This folder holds this README.
+Builds the design matrix and the five contrasts, and measures the assumption they rest on.
+Separate from the fit so a design problem surfaces in seconds.
 
-Builds the design matrix and the five contrasts, and checks the assumption they rest on. Separate
-from the fit so a design problem surfaces in seconds.
+| | |
+|---|---|
+| **Script** | `a_script/01_design.qmd` |
+| **Reads** | `01_Preprocess/02_Quantification/c_data/proteins.rds` |
+| **Writes** | `c_data/design.rds`, `c_data/correlation_strata.csv` |
 
 ## The design
 
-Four groups, one per treatment-and-timepoint combination, entered so each column is a group
-average. Participant enters as a fixed term.
+```r
+model.matrix(~ 0 + group + participant, data = targets)
+```
 
-Fixed, not random, because every comparison happens inside one person. With participant in the
-design, treatments are only compared within the same person, which is what makes pre-to-post
+131 rows by 36 columns: four group means, one per treatment-and-timepoint cell, plus 32 participant
+dummies. Full rank, 95 residual degrees of freedom.
+
+Participant is fixed, not random, because every comparison happens inside one person. With the term
+in the design, treatments are only compared within the same person, which is what makes pre-to-post
 paired. A random participant effect is for designs that also compare between people.
 
-## The assumption to check
+One participant contributes three cells rather than four, so the group columns are
+participant-adjusted cell means rather than raw ones. The design is full rank regardless.
+
+## Two assertions before anything is fitted
+
+The design must be full rank, or the contrasts are not estimable. And every column name must survive
+`make.names()`, because `makeContrasts()` parses its arguments as R code and a level named like
+`2E-T1` would be read as subtraction.
+
+## The correlation diagnostic
 
 Samples share a participant, and within that they share a leg. The participant term removes the
-first exactly; the second stays in the noise. This stage measures that leftover correlation on
-the real data rather than assuming it is small. If it turns out large, the fix is one argument.
+first exactly; the second stays in the residual. If it were large, the within-leg comparisons would
+be tested too conservatively and the between-leg ones too liberally.
 
-## Two checks before anything is fitted
+`correlation_strata.csv` reports it. On this data the within-leg value is 0.027, so the fixed term
+is sufficient and `02_Differential` calls `dpcDE()` without `block =`.
 
-The design must be full rank, or the comparisons are not estimable. And the group names must
-survive being read as R code, because the contrast function parses its arguments.
+Two caveats. It is estimated on the bare expression matrix, so it carries neither the precision
+weights nor the sample weights the real fit uses; it describes the matrix, not the model. And
+nothing automates the decision. If that number ever rose, the fix is `block = leg_id` in the next
+notebook, but there is no branch, `leg_id` is not saved, and nothing would warn you. Read the row.
