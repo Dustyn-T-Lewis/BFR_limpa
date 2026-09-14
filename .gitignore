@@ -1,0 +1,21 @@
+# Study data too large for git. Fetched from the data-v1 release, see 00_Input/README.md.
+00_Input/report.parquet
+
+# Quarto build products. The rendered HTML in b_reports/ is tracked; these are not.
+/.quarto/
+*_cache/
+*_files/
+*.html.md
+
+# R session state. Machine-local, never part of a result.
+.Rproj.user/
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj.user
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
