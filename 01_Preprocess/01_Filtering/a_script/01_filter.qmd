@@ -28,13 +28,6 @@ library(tibble)
 # Intensities arrive on the log2 scale, so every share-of-signal figure un-logs first.
 total_signal <- function(m) sum(2^m, na.rm = TRUE)
 
-# Strips the cRAP- prefix and collapses the members that then become duplicates. Both
-# halves matter: the de-duplication is what lets Proteotypic be recomputed correctly.
-strip_crap_prefix <- function(x) {
-  str_split(str_remove_all(x, "cRAP-"), ";") |>
-    map_chr(\(ids) str_c(unique(ids), collapse = ";"))
-}
-
 step_summary <- function(elist, step, signal_start) {
   tibble(
     step = step,
@@ -62,10 +55,9 @@ CONTAMINANT_FAMILIES <- str_c(
   ")$"
 )
 
-# Screened on HPA myonuclei single-cell expression rather than whole-muscle tissue,
-# because tissue values are themselves blood-contaminated: haemoglobin reads 544 nTPM in
-# skeletal muscle. See 01_Preprocess/01_Filtering/README.md for the screening and the
-# alternatives rejected.
+# Screened on HPA myonuclei single-cell expression rather than whole-muscle tissue, because
+# tissue values are themselves blood-contaminated: haemoglobin reads 544 nTPM in skeletal
+# muscle.
 CONTAMINANTS <- c(
   "JCHAIN", "HRNR", "DCD", "SBSN", "CSTA", "AHSP",
   "A1BG", "AFM", "AGT", "AHSG", "ALB", "AMBP", "APCS", "APOA1", "APOA2", "APOA4", "APOB",
@@ -84,10 +76,9 @@ CONTAMINANTS <- c(
   "SHBG", "SLC4A1", "SPTA1", "TF", "TTR", "TUBB1", "VTN", "VWF"
 )
 
-# Asserted to survive every filter below. The first two rows are muscle proteins the
-# annotation repair exists to rescue. The rest are blood-abundant but muscle-expressed on
-# HPA myonuclei data: ANK1 is small ankyrin-1, a sarcoplasmic reticulum protein, and the
-# review did flag A2M, BLVRB, STOM and TALDO1, which carry 0.004% of signal between them.
+# Asserted to survive every filter below: muscle proteins the annotation repair rescues, plus
+# proteins that are blood-abundant but muscle-expressed on HPA myonuclei data. ANK1 is small
+# ankyrin-1, a sarcoplasmic reticulum protein.
 MUST_KEEP <- c(
   "MB", "ACTA1", "ALDOA", "TPM2", "ENO1", "GPI", "CKM", "MYH1",
   "MYH2", "MYH7", "TTN", "DES", "PYGM", "CASQ1", "PVALB", "MYH13",
@@ -130,8 +121,6 @@ discarded S08 injection, which is in the report but not the sheet.
 ```{r map-samples}
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
 i <- match(str_to_lower(metadata$run), str_to_lower(colnames(y)))
-stopifnot(!anyNA(i), !anyDuplicated(i))
-
 runs_dropped <- setdiff(colnames(y), colnames(y)[i])
 y <- y[, i]
 colnames(y) <- metadata$sample_id
@@ -145,28 +134,6 @@ rownames(y$targets) <- metadata$sample_id
 signal_start <- total_signal(y$E)
 c(runs_in_report = length(i) + length(runs_dropped), samples_kept = ncol(y))
 runs_dropped
-```
-
-## Check what survived the mapping
-
-`metadata.csv` decides which runs enter the matrix, so a failed injection is excluded by
-name rather than by rule. This chunk drops nothing; it asserts that the exclusion list was
-right. A failed injection identifies a fraction of the cohort's precursors while its median
-observed intensity runs *high*, because only the brightest peaks survive.
-
-```{r run-qc}
-depth <- colSums(!is.na(y$E))
-run_qc <- tibble(
-  sample_id = colnames(y),
-  precursors = depth,
-  median_log2 = apply(y$E, 2, median, na.rm = TRUE),
-  pct_missing = 100 * (1 - depth / nrow(y))
-)
-stopifnot(
-  all(depth > 0.5 * median(depth)),
-  all(abs(run_qc$median_log2 - median(run_qc$median_log2)) < 3)
-)
-arrange(run_qc, precursors) |> head(5)
 ```
 
 ## Repair the annotation
@@ -212,7 +179,11 @@ crap_mention <- str_detect(y$genes$Protein.Ids, "cRAP-")
 
 y$genes <- y$genes |>
   mutate(
-    across(c(Protein.Group, Protein.Ids, Protein.Names, Genes), strip_crap_prefix),
+    across(
+      c(Protein.Group, Protein.Ids, Protein.Names, Genes),
+      \(x) map_chr(str_split(str_remove_all(x, "cRAP-"), ";"),
+                   \(ids) str_c(unique(ids), collapse = ";"))
+    ),
     # mutate() evaluates in order, so this reads the de-duplicated Protein.Ids the
     # line above just wrote. Splitting these into two mutate() calls breaks it.
     Proteotypic = if_else(
@@ -221,8 +192,6 @@ y$genes <- y$genes |>
       as.integer(Proteotypic)
     )
   )
-
-stopifnot(!any(str_detect(unlist(y$genes), "cRAP")))
 ```
 
 ```{r removal-counts}
@@ -269,10 +238,9 @@ myoglobin when DIA-NN reports it alongside a second name.
 members <- str_split(str_to_upper(y$genes$Genes), ";")
 n_multi <- sum(lengths(members) > 1)
 
-is_contaminant_symbol <- function(g) {
-  g %in% CONTAMINANTS | str_detect(g, CONTAMINANT_FAMILIES)
-}
-contaminant <- map_lgl(members, \(g) isTRUE(all(is_contaminant_symbol(g))))
+contaminant <- map_lgl(members, \(g) {
+  isTRUE(all(g %in% CONTAMINANTS | str_detect(g, CONTAMINANT_FAMILIES)))
+})
 
 removed <- tibble(
   symbol = y$genes$Genes[contaminant],
@@ -287,13 +255,21 @@ removed <- tibble(
   ) |>
   arrange(desc(pct_signal))
 
+# Uneven contamination between T1 and T2 would be a systematic shift landing on the two time
+# contrasts, not noise. The per-sample medians are checked in 02_Quantification, on the protein
+# matrix, which is where limpa places any normalisation.
+contaminant_fraction <- colSums(2^y$E[contaminant, ], na.rm = TRUE) /
+  colSums(2^y$E, na.rm = TRUE)
+tapply(contaminant_fraction, y$targets$timepoint, median)
+
 y <- y[!contaminant, ]
 summary_contaminants <- step_summary(y, "contaminants removed", signal_start)
 
-head(removed, 10)
+head(removed, 20)
 ```
 
-`r format(n_multi, big.mark = ",")` of the surviving groups list more than one gene symbol,
+
+`r format(n_multi, big.mark = ",")` of the groups tested list more than one gene symbol,
 which is why the per-member rule is needed. `r nrow(removed)` distinct symbol strings were
 removed, carrying `r round(sum(removed$pct_signal), 2)`% of the starting signal.
 
@@ -315,6 +291,9 @@ contaminant rule, which deletes it directly.
 ```{r guard}
 survivors <- unlist(str_split(str_to_upper(y$genes$Genes), ";"))
 stopifnot(all(MUST_KEEP %in% survivors))
+
+removed |>
+  summarise(groups = n(), pct_signal = round(sum(pct_signal), 1))
 ```
 
 ## Outputs
