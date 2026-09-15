@@ -28,23 +28,21 @@ execute:
   cache: false
 ---
 
-This stage freezes pathway membership, matches it to the measured proteome,
-and prepares the matrix and model for set testing. The volcanoes describe the
-**existing protein-level results**. Pathways have not been tested here, so
-there are no enrichment arcs or pathway p-values yet.
+This stage pins down which genes belong to which pathway, matches that list against the proteins
+actually measured, and packages the matrix and the fitted model for whatever tests come next. The
+volcanoes it draws show the protein results from `02_Differential`, unchanged. No pathway is
+tested here, so no plot carries an enrichment arc or a pathway p-value.
 
-## Inputs and alignment
+## Inputs
 
 ```{r setup}
 required <- c(
   "here", "limma", "limpa", "dplyr", "tibble", "tidyr", "purrr", "readr",
   "writexl", "digest", "Matrix", "ggplot2", "enrichVolcano", "knitr"
 )
-missing <- required[!vapply(required, requireNamespace, logical(1),
-  quietly = TRUE
-)]
-if (length(missing)) {
-  stop("Install required R packages: ", paste(missing, collapse = ", "))
+absent <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
+if (length(absent)) {
+  stop("Install required R packages: ", paste(absent, collapse = ", "))
 }
 library(here)
 library(dplyr)
@@ -67,8 +65,10 @@ input_paths <- c(
   design = here("02_Differential_Expression/01_Design/c_data/design.rds")
 )
 if (!all(file.exists(input_paths))) {
-  stop("Run the upstream stages first. Missing: ",
-    paste(input_paths[!file.exists(input_paths)], collapse = ", "))
+  stop(
+    "Run the upstream stages first. Missing: ",
+    paste(input_paths[!file.exists(input_paths)], collapse = ", ")
+  )
 }
 proteins <- readRDS(input_paths[["proteins"]])
 fit <- readRDS(input_paths[["fit"]])
@@ -96,8 +96,10 @@ stopifnot(
   all(training_contrasts %in% contrast_names)
 )
 if (!"volc_sig_col" %in% names(formals(enrichVolcano::volcano_ring))) {
-  stop("enrichVolcano with volcano_ring(volc_sig_col = ...) is required. ",
-    "Install the current Dustyn-T-Lewis/enrichVolcano package.")
+  stop(
+    "enrichVolcano with volcano_ring(volc_sig_col = ...) is required. ",
+    "Install the current Dustyn-T-Lewis/enrichVolcano package."
+  )
 }
 stopifnot(
   is.numeric(params$min_set_size), params$min_set_size >= 1,
@@ -117,21 +119,20 @@ tibble(
 )
 ```
 
-The matrix is the normalised log2 abundance matrix used by `dpcDE()`. The
-handoff also preserves the complete EList, its standard errors and observation
-counts, the weighted fit, and the fixed-participant design. This stage fits
-no new model. The upstream approximation still applies: cyclic loess changes
-abundances while the stored standard errors remain on the pre-normalisation
-scale.
+The matrix is the one `dpcDE()` fitted, normalised and unaltered. The handoff carries the whole
+EList with it: standard errors, observation counts, the weighted fit and the fixed-participant
+design. Nothing is refitted here. The upstream approximation travels along too, since cyclic loess
+moved the abundances and left the stored standard errors on the pre-normalisation scale.
 
-## Frozen gene-set cache
+## Freezing the gene sets
 
-The source is human MSigDB, retrieved through
-[msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr.html).
-The database release is pinned separately from the R package version. A
-project-local RDS and checksum are sufficient for subsequent offline renders;
-`msigdbr` is needed only when that snapshot is absent. Changing size or
-overlap parameters never downloads a different release.
+Set membership comes from human MSigDB through
+[msigdbr](https://igordot.github.io/msigdbr/reference/msigdbr.html). The database release is
+pinned on its own, separately from the version of the R package that fetches it, because the two
+move independently. The first render writes a project-local RDS and an md5 beside it; every render
+after that reads the snapshot and verifies the checksum, so it needs neither the network nor
+`msigdbr`. Changing a size or overlap parameter re-filters the snapshot and never downloads a
+different release.
 
 ```{r frozen-cache}
 collection_specs <- list(
@@ -160,8 +161,10 @@ checksum_file <- paste0(cache_file, ".md5")
 
 if (!file.exists(cache_file)) {
   if (!requireNamespace("msigdbr", quietly = TRUE)) {
-    stop("The frozen cache is absent. Install msigdbr or restore ",
-      "the matching RDS and .md5 files under c_data/cache/.")
+    stop(
+      "The frozen cache is absent. Install msigdbr or restore ",
+      "the matching RDS and .md5 files under c_data/cache/."
+    )
   }
   fetched <- imap(collection_specs[collections], function(spec, database) {
     df <- msigdbr::msigdbr(
@@ -169,13 +172,16 @@ if (!file.exists(cache_file)) {
       collection = spec$collection, subcollection = spec$subcollection
     )
     if (!identical(unique(df$db_version), params$msigdb_version)) {
-      stop("Requested MSigDB ", params$msigdb_version,
+      stop(
+        "Requested MSigDB ", params$msigdb_version,
         " but msigdbr returned ", paste(unique(df$db_version), collapse = ", "),
-        ". Restore the requested snapshot or explicitly change the version.")
+        ". Restore the requested snapshot or explicitly change the version."
+      )
     }
     df |>
       transmute(
-        database, pathway = gs_name, set_id = paste(database, gs_name, sep = "|"),
+        database,
+        pathway = gs_name, set_id = paste(database, gs_name, sep = "|"),
         gene = gene_symbol, msigdb_id = gs_id, source_id = gs_exact_source,
         description = gs_description, url = gs_url, db_version
       ) |>
@@ -199,8 +205,10 @@ if (!file.exists(cache_file)) {
 if (!file.exists(checksum_file) || !identical(
   unname(tools::md5sum(cache_file)), readLines(checksum_file, warn = FALSE)
 )) {
-  stop("MSigDB cache checksum is missing or mismatched. Restore the RDS ",
-    "and its matching .md5; do not reuse an unverified snapshot.")
+  stop(
+    "MSigDB cache checksum is missing or mismatched. Restore the RDS ",
+    "and its matching .md5; do not reuse an unverified snapshot."
+  )
 }
 frozen <- readRDS(cache_file)
 stopifnot(identical(frozen$request, cache_request))
@@ -218,15 +226,18 @@ tibble(
 )
 ```
 
-## Protein-to-gene mapping
+## One protein per gene
 
-Every protein remains in the protein matrix and volcano data. For gene-set
-testing, rows with missing or multiple gene symbols are excluded rather than
-expanded into independent genes. Symbols are matched exactly; aliases are
-not silently rewritten. If several protein rows share one gene, the row
-with the most observed precursors per sample is the representative, with
-`NPrec` then accession breaking ties. This choice is made once across all
-contrasts, without using fold changes or p-values.
+Set testing needs one row per gene, and the protein matrix does not supply that cleanly: some rows
+carry no gene symbol, some carry several, and some genes appear on more than one row. Every
+protein stays in the matrix and in the volcano data regardless. Only the gene-level view drops
+them.
+
+A row with no symbol, or with several, is left out rather than split into separate genes, since
+splitting would invent measurements that were never made. Symbols match exactly and no alias is
+rewritten behind your back. Where several rows share a gene, the row with the most observed
+precursors per sample represents it, with `NPrec` and then accession breaking ties. That choice is
+made once for all five contrasts and reads no fold change and no p-value.
 
 ```{r gene-map}
 protein_map <- proteins$genes |>
@@ -259,7 +270,8 @@ protein_map <- protein_map |>
     label = if_else(
       is.na(gene), protein,
       if_else(duplicated(gene) | duplicated(gene, fromLast = TRUE),
-        paste0(gene, " (", protein, ")"), gene)
+        paste0(gene, " (", protein, ")"), gene
+      )
     )
   )
 gene_map <- filter(protein_map, selected)
@@ -270,24 +282,24 @@ rownames(gene_matrix) <- gene_universe
 count(protein_map, mapping_status, annotated, name = "proteins")
 ```
 
-An unannotated representative stays in the measured gene universe and the
-gene matrix. Collection-specific annotated universes are also exported, so
-a later enrichment test can state its background explicitly.
+A representative that no database annotates still counts as measured and still sits in the gene
+matrix. Alongside it the stage exports one annotated background per collection, so a later
+enrichment test can name the universe it tested against instead of assuming one.
 
-## Size and overlap filters
+## Which sets are kept
 
-The source-size bounds are `r params$min_set_size`–`r params$max_set_size`
-unique genes, with at least `r params$min_measured` measured representatives.
-The second filter uses the current matrix, not a genome-wide database size.
-Both the eligible collection and a reduced collection are exported.
+A set qualifies on two counts. Its source membership must fall between `r params$min_set_size` and
+`r params$max_set_size` unique genes, and at least `r params$min_measured` of those genes must have
+a representative in this matrix. The second bar reads the proteins actually measured here, which is
+the number that governs power, rather than the set's size in the database.
 
-Within each database, the reduced collection greedily removes sets whose
-Jaccard overlap with an already retained set is at least
-`r params$jaccard_cutoff`. Overlap uses measured members. Larger measured
-sets take priority, then larger source sets, then the set ID. Every removed
-set records its retained representative and overlap. Databases are reduced
-separately so a GO term cannot erase a Hallmark set. Reduction limits
-redundancy; it does not make the surviving sets independent.
+Many sets then say almost the same thing. Within each database the stage walks the qualifying sets
+from largest measured membership down and drops any whose Jaccard overlap with a set already kept
+reaches `r params$jaccard_cutoff`, measuring overlap on measured members only. Ties break on source
+size, then on set ID, so the result does not depend on row order. Each dropped set records which
+set displaced it and by how much. Databases reduce separately, which stops a GO term from erasing a
+Hallmark set that covers the same biology. Both the qualifying collection and the reduced one are
+exported. Reduction cuts redundancy; it does not make what survives independent.
 
 ```{r filter-sets}
 set_members <- membership |> distinct(set_id, gene)
@@ -341,7 +353,7 @@ reduce_sets <- function(catalog) {
 }
 reduced_catalog <- set_catalog |>
   filter(status == "eligible") |>
-  split(~ database) |>
+  split(~database) |>
   map(reduce_sets) |>
   list_rbind()
 set_catalog <- bind_rows(
@@ -359,28 +371,34 @@ annotated_universes <- setNames(map(collections, function(database) {
 set_summary <- set_catalog |>
   summarise(
     downloaded = n(),
-    source_size_pass = sum(source_size >= params$min_set_size &
-      source_size <= params$max_set_size),
+    source_size_pass = sum(
+      source_size >= params$min_set_size & source_size <= params$max_set_size
+    ),
     measured_size_pass = sum(status %in% c("retained", "redundant")),
     retained = sum(status == "retained"), .by = database
   )
 set_summary
 ```
 
-## Protein statistics and scores
+## Protein statistics
 
-`topTable()` reconstructs all five contrasts from the saved fit, preserving
-the original BH family of all tested proteins within each contrast. FDR is
-**not recalculated after gene mapping**. The inverted pi-score is
-`P.Value^abs(logFC)` (smaller ranks higher); the equivalent published pi-value
-is `abs(logFC) * -log10(P.Value)` (larger ranks higher). Neither is an
-adjusted p-value. We export both, plus signed pi-values and moderated t
-statistics, with their definitions in the handoff.
+`topTable()` rebuilds all five contrasts from the saved fit. The BH family stays as it was
+upstream, one adjustment across every tested protein within each contrast, and gene mapping does
+not trigger a recalculation. Adjusting again on the mapped subset would quietly change what every
+FDR in this stage means.
+
+Two forms of the pi score appear because the literature uses both. `pi_score` is
+`P.Value^abs(logFC)`, where smaller ranks higher; `pi_value` is `abs(logFC) * -log10(P.Value)`,
+where larger ranks higher. They order proteins identically. Neither is an adjusted p-value, and
+neither controls anything. Both are exported, along with signed pi and the moderated t statistics,
+and the handoff carries their definitions so a later stage cannot mistake one for an FDR.
 
 ```{r protein-statistics}
 protein_results <- map(contrast_names, function(contrast) {
-  limma::topTable(fit, coef = contrast, number = Inf,
-    adjust.method = "BH", sort.by = "none") |>
+  limma::topTable(fit,
+    coef = contrast, number = Inf,
+    adjust.method = "BH", sort.by = "none"
+  ) |>
     rownames_to_column("protein") |>
     select(protein, logFC, AveExpr, t, P.Value, adj.P.Val, B) |>
     mutate(contrast = contrast, .before = 1)
@@ -433,25 +451,24 @@ contrast_summary <- protein_results |>
 contrast_summary |> mutate(min_fdr = signif(min_fdr, 3))
 ```
 
-The negative control, `r d$negative_control`, has
-**`r with(filter(contrast_summary, contrast == d$negative_control), fdr_up + fdr_down)`**
-proteins below BH FDR `r params$protein_fdr`. This is the reference for later
-set tests, not a reason to relax thresholds when a contrast is empty.
+The negative control, `r d$negative_control`, returns
+`r with(filter(contrast_summary, contrast == d$negative_control), fdr_up + fdr_down)`
+proteins below BH FDR `r params$protein_fdr`. That count is the reference a later set test should
+read its own null against. It is not licence to lower a threshold because some other contrast came
+back empty.
 
-## Protein volcanoes: BH FDR
+## Volcanoes by FDR
 
-[enrichVolcano](https://github.com/Dustyn-T-Lewis/enrichVolcano) draws these
-protein volcanoes using an empty enrichment table. The x-axis is log2 fold
-change and the y-axis is −log10(raw p). Colours and count badges use
-**BH FDR < `r params$protein_fdr`**, with no added fold-change threshold.
-Labels identify the lowest-FDR proteins among those passing that rule.
-The package rescales each contrast to its own plotting area; cloud heights
-and widths must not be compared across panels. Exact values are in the
-workbook and CSV.
+[enrichVolcano](https://github.com/Dustyn-T-Lewis/enrichVolcano) draws these, handed an empty
+enrichment table. Fold change runs along x and −log10 of the raw p-value up y. Colours and the
+count badges read BH FDR < `r params$protein_fdr`, with no fold-change floor added on top. Labels
+mark the lowest-FDR proteins among those that clear it.
+
+One thing these plots cannot do is support a comparison between panels. The package rescales each
+contrast to fill its own plotting area, so one cloud looking taller or wider than its neighbour
+says nothing. Read the exact values from the workbook and the CSV.
 
 ```{r plot-functions}
-# Visual specification: all proteins; raw-p height; BH colours; no pathway
-# claims. One 7 x 6.5 inch panel per contrast, PNG and vector PDF exports.
 empty_enrichment <- tibble(
   pathway = character(), NES = double(), padj = double(), size = integer(),
   leading_edge = character()
@@ -522,7 +539,8 @@ save_volcano <- function(plot, name) {
   for (extension in c("png", "pdf")) {
     ggsave(file.path(figure_dir, paste0(name, ".", extension)),
       plot = plot, width = 7, height = 6.5, units = "in", dpi = 300,
-      bg = "white")
+      bg = "white"
+    )
   }
 }
 ```
@@ -531,8 +549,10 @@ save_volcano <- function(plot, name) {
 
 ```{r fdr-volcanoes, results='asis'}
 # Control first, then the primary interaction and descriptive contrasts.
-plot_order <- c(d$negative_control, "interaction", training_contrasts,
-  "BFR_vs_HLRT_at_T2")
+plot_order <- c(
+  d$negative_control, "interaction", training_contrasts,
+  "BFR_vs_HLRT_at_T2"
+)
 for (contrast in plot_order) {
   cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
   plot <- make_volcano(contrast)
@@ -544,14 +564,15 @@ for (contrast in plot_order) {
 
 :::
 
-## Training volcanoes: pi-ranked labels
+## The same plots, ranked by pi
 
-These views use the same coordinates, FDR colours, and FDR counts. Only the
-labels change: the top `r params$label_n` proteins by pi-value are labelled,
-whether or not they pass FDR. **A pi label is a ranking, not a discovery.**
-Pi-ranked views are limited to the two training contrasts, following the
-differential-stage policy. Their tables include mean observed precursors
-per sample because large fold changes can be driven by sparse detection.
+Same coordinates, same FDR colours, same counts. Only the labels move: here the top
+`r params$label_n` proteins by pi-value are named, whether or not they pass FDR. A pi label ranks a
+protein and selects nothing, so nothing labelled here has been discovered.
+
+These views cover only the two training contrasts, which follows what `02_Differential` does and
+for the same reason. Their tables report mean observed precursors per sample, because a protein
+detected in almost no samples can post a large fold change on very little evidence.
 
 ::: {.panel-tabset}
 
@@ -569,8 +590,10 @@ for (contrast in training_contrasts) {
   displayed <- pi_top |>
     filter(.data$contrast == .env$contrast) |>
     select(protein, Genes, logFC, padj, pi_score, pi_value, mean_obs) |>
-    mutate(across(c(logFC, pi_value, mean_obs), ~ round(.x, 2)),
-      across(c(padj, pi_score), ~ signif(.x, 3)))
+    mutate(
+      across(c(logFC, pi_value, mean_obs), ~ round(.x, 2)),
+      across(c(padj, pi_score), ~ signif(.x, 3))
+    )
   print(knitr::kable(displayed, row.names = FALSE))
   cat("\n\n")
 }
@@ -578,14 +601,16 @@ for (contrast in training_contrasts) {
 
 :::
 
-## Outputs and handoff
+## Outputs
 
-All derived data are rebuilt on every render from the current inputs. The
-source cache remains frozen. The workbook provides the protein matrix,
-sample metadata, all protein and representative-gene statistics, the
-mapping decisions, set catalog, and summaries. CSV exports retain full
-precision. The RDS handoff keeps the model and uncertainty-bearing objects
-that flat files cannot represent.
+Every derived file is rebuilt from the current inputs on each render, so no stale overlap filter or
+old score can survive a parameter change. The frozen source cache is the one exception, which is
+the point of freezing it.
+
+The workbook is the readable copy: protein matrix, sample metadata, protein and gene statistics,
+the mapping decisions, the set catalog and the summary tables. The CSVs carry the same numbers at
+full precision for anything that needs to load rather than read them. The two RDS files hold what a
+flat file cannot, namely the fit, the standard errors and the set indices.
 
 ```{r write-outputs}
 input_manifest <- tibble(
@@ -608,18 +633,23 @@ provenance <- list(
   cache_file = file.path("cache", basename(cache_file)),
   cache_md5 = unname(tools::md5sum(cache_file)),
   cache_request = frozen$request, packages = package_versions,
-  mapping = paste("Exact single symbols; highest mean observed precursors,",
-    "then NPrec, then accession; independent of differential statistics."),
+  mapping = paste(
+    "Exact single symbols; highest mean observed precursors,",
+    "then NPrec, then accession; independent of differential statistics."
+  ),
   fdr = "BH across all tested proteins separately within each contrast",
   pi_score = "P.Value^abs(logFC); smaller ranks higher; no error control",
-  pi_value = paste("abs(logFC) * -log10(max(P.Value, double.xmin));",
-    "zero logFC gives zero; larger ranks higher; plotting bound only"),
+  pi_value = paste(
+    "abs(logFC) * -log10(max(P.Value, double.xmin));",
+    "zero logFC gives zero; larger ranks higher; plotting bound only"
+  ),
   signed_pi = "sign(logFC) * pi_value; exploratory training ranks only",
   reduction = "Within database, measured-member Jaccard; deterministic greedy",
   pathway_tests_run = FALSE,
   plotting_adapter = "Private empty-enrichment validation adapter; namespace unchanged",
   enrichvolcano_renderer_sha256 = digest::digest(
-    body(enrichVolcano::volcano_ring), algo = "sha256"
+    body(enrichVolcano::volcano_ring),
+    algo = "sha256"
   )
 )
 gene_sets <- list(
@@ -665,18 +695,21 @@ writexl::write_xlsx(list(
   package_versions = package_versions
 ), file.path(out, "01_gene_sets.xlsx"))
 tibble(
-  output = c("01_gene_sets.xlsx", "protein_matrix.rds", "gene_sets.rds",
-    "pathway_inputs.rds", "protein_statistics.csv", "gene_set_catalog.csv"),
+  output = c(
+    "01_gene_sets.xlsx", "protein_matrix.rds", "gene_sets.rds",
+    "pathway_inputs.rds", "protein_statistics.csv", "gene_set_catalog.csv"
+  ),
   size_mb = round(file.info(file.path(out, output))$size / 1024^2, 2)
 )
 ```
 
-`pathway_inputs$set_indices` refers to rows of
-`pathway_inputs$proteins$E`, **not** rows of the gene matrix. Later set tests
-must use the participant design and limpa's uncertainty/weights and report
-the baseline-control result before interpreting the interaction. The rank
-vectors are an input convenience, not an endorsement of a test that assumes
-independent proteins. No ORA hit list is selected by pi-score here.
+One trap to note before the next stage. `pathway_inputs$set_indices` indexes rows of
+`pathway_inputs$proteins$E`, never rows of the gene matrix, and the two have different row counts.
+
+A set test reading this handoff has to keep the participant design and limpa's weights, and it
+should report the baseline control before anyone reads the interaction. The ranked vectors are here
+because some tools want them, not because a test assuming independent proteins is appropriate for
+this design. No hit list is selected by pi score at this stage.
 
 ```{r session}
 sessionInfo()

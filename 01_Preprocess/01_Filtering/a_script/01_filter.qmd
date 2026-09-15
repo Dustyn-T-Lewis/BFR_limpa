@@ -182,10 +182,12 @@ y$genes <- y$genes |>
   mutate(
     across(
       c(Protein.Group, Protein.Ids, Protein.Names, Genes),
-      \(x) map_chr(
-        str_split(str_remove_all(x, "cRAP-"), ";"),
-        \(ids) str_c(unique(ids), collapse = ";")
-      )
+      \(x) {
+        map_chr(
+          str_split(str_remove_all(x, "cRAP-"), ";"),
+          \(ids) str_c(unique(ids), collapse = ";")
+        )
+      }
     ),
     # mutate() evaluates in order, so this reads the de-duplicated Protein.Ids the
     # line above just wrote. Splitting these into two mutate() calls breaks it.

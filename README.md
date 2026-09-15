@@ -44,10 +44,10 @@ quarto render 02_Differential_Expression/02_Differential/a_script/02_differentia
 quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
 ```
 
-Minutes, not hours. No notebook computes anything slow: the one expensive step, `dpcQuant()` at
-about 100 minutes, lives in `01_Preprocess/02_Quantification/a_script/dpc_quant.R` and its output
-is committed, so these renders load it. Run that script by hand only when the precursor matrix
-changes.
+Minutes, not hours. No notebook computes anything slow. The one expensive step is `dpcQuant()` at
+about 100 minutes, and it lives in `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`.
+Its output is committed, so these renders load it. Run that script by hand only when the precursor
+matrix changes.
 
 ## Approach
 

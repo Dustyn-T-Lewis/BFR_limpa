@@ -33,14 +33,15 @@ cache files together when a checksum fails. To intentionally rebuild a
 snapshot, move its RDS and checksum aside first. To adopt a new release,
 change `msigdb_version`; the previous snapshot remains on disk.
 
-Size/overlap settings are Quarto parameters. Defaults are 15–500 source genes,
-at least 15 measured gene representatives, and Jaccard < 0.5 among retained
-sets **within each database**. The larger measured set wins, then the larger
-source set, then the lexical set ID. The catalog records size exclusions,
-redundancy exclusions, and the retained representative for every collision.
-`gene_sets.rds` keeps the full, eligible, and retained collections. This is
-a prespecified structural reduction, not a significance filter or a claim
-that surviving sets are independent.
+Both size bars and the overlap cutoff are Quarto parameters. By default a set
+needs 15 to 500 source genes and at least 15 measured representatives, and
+sets overlapping an already retained set at Jaccard 0.5 or more are dropped
+within each database. Ties go to the larger measured set, then the larger
+source set, then the set ID. The catalog records every size exclusion, every
+redundancy exclusion, and which set displaced each casualty. `gene_sets.rds`
+keeps all three collections: full, eligible and retained. This reduction is
+structural and fixed in advance. It filters nothing on significance and makes
+no claim that the survivors are independent.
 
 For example, to change the measured-membership floor:
 
@@ -63,13 +64,14 @@ observation counts, sample metadata, weighted differential fit, and participant
 design remain in `pathway_inputs.rds`. The stage checks that the saved fit
 actually contains the same matrix, uncertainty, annotations, and design.
 
-For gene-set inputs, single gene symbols match exactly. Missing/multi-symbol
-annotations are excluded rather than expanded; no alias mapping is inferred.
-Duplicate symbols use the protein with the highest mean observed precursor
-count, then `NPrec`, then accession. That choice is shared across all contrasts
-and never uses a p-value or fold change. All decisions are exported in the
-workbook's `protein_gene_map`. Unannotated single-gene representatives remain
-in the measured universe; annotated backgrounds are exported per collection.
+Gene-set inputs match on a single symbol, exactly. A protein annotated with no
+symbol, or with several, is left out rather than split into separate genes, and
+no alias is inferred. Where several proteins share a symbol, the one with the
+highest mean observed precursor count represents it, with `NPrec` and then
+accession breaking ties. That choice holds across all five contrasts and reads
+no p-value and no fold change. The workbook's `protein_gene_map` sheet records
+every decision. A representative no database annotates still counts as measured,
+and one annotated background per collection is exported beside it.
 
 ## FDR and pi-score volcanoes
 
@@ -87,9 +89,10 @@ The package version and renderer-body checksum are recorded in provenance.
 All five contrasts use raw-p height, log2-fold-change x, and **BH FDR < 0.05**
 for colours and counts. No fold-change floor is added. The two training
 contrasts also have a view whose labels are ranked by pi-value. Those views
-keep the same FDR colours/counts; pi-ranked labels can include proteins that
-are not FDR-significant. The package rescales coordinates per panel, so compare
-exact values in the tables rather than cloud size across contrasts.
+keep the same FDR colours and counts, and a pi-ranked label can land on a
+protein that never passed FDR. The package rescales coordinates for each panel,
+so read exact values from the tables rather than comparing cloud size between
+contrasts.
 
 - `padj` / `adj.P.Val`: BH adjustment across all tested proteins within each
   contrast, preserved after gene mapping.
@@ -98,10 +101,11 @@ exact values in the tables rather than cloud size across contrasts.
   larger ranks higher. Zero p-values are bounded only for the logarithm.
 - `signed_pi = sign(logFC) * pi_value`: a directional ranking, without error control.
 
-Pi selects no discovery or ORA hit list. All protein scores are exported;
-pi-ranked plots, top tables, and signed rank vectors are limited to the two
-training contrasts. Detection counts accompany the scores. Null/control and
-interaction results remain visible in the FDR plots and complete exports.
+Pi selects no hit list, for discovery or for ORA. Every protein score is
+exported, while the pi-ranked plots, top tables and signed rank vectors cover
+only the two training contrasts. Detection counts travel with the scores. The
+negative control and the interaction stay visible in the FDR plots and in the
+full exports.
 
 ## Next-stage contract
 
@@ -122,11 +126,13 @@ x$annotated_universes # Measured background per collection
 x$provenance      # Input checksums, settings, package versions, source-cache checksum
 ```
 
-Whole-set tests must preserve the participant design and limpa uncertainty;
-the rank vectors do not justify an independence-based enrichment method.
-Report the baseline control first. Per-sample pathway scoring and ORA belong
-to the later stages. The normalisation/standard-error approximation documented
-upstream also carries forward.
+A whole-set test reading this handoff has to keep the participant design and
+limpa's uncertainty. The rank vectors are here because some tools want them,
+not as a licence to run a method that assumes independent proteins. Report the
+baseline control before anyone reads the interaction. Per-sample pathway
+scoring and ORA belong to the later stages. The approximation documented
+upstream, where cyclic loess moves the abundances and leaves the standard
+errors behind, carries forward into all of this.
 
 Dependencies are checked, never auto-installed. Use an enrichVolcano version
 with `volcano_ring()` and its `volc_sig_col` argument (verified here with

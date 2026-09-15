@@ -34,7 +34,7 @@ detection curve is fitted to.
 ## Cost
 
 Both notebooks render in seconds. `dpcQuant()` costs about 100 minutes per call, so it does not
-live in a notebook at all: `02_Quantification/a_script/dpc_quant.R` computes it, you run that by
-hand, and `02_quantify.qmd` only loads the result from `c_data/dpcQuant/`. That output is
+live in a notebook at all. `02_Quantification/a_script/02_quantify_run.R` computes it, you run
+that by hand, and `02_quantify.qmd` loads the result from `c_data/quant_runs/`. That output is
 committed, so a fresh clone renders without computing anything. No stage uses knitr caching, so
 no `_cache/` directory is ever created.
