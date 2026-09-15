@@ -15,7 +15,10 @@ execute:
   message: false
 ---
 
-limpa's sequence for a contrast-based analysis is `dpcDE`, `contrasts.fit`, `eBayes`, `topTable`. `dpcDE()` is the only entry point that reads the standard errors `dpcQuant()` produced, so it replaces `lmFit()`. `proteins.rds` arrives already normalised, from `01_Preprocess/02_Quantification`.
+limpa's sequence for a contrast-based analysis is `dpcDE`, `contrasts.fit`, `eBayes`, `topTable`.
+`dpcDE()` is the only entry point that reads the standard errors `dpcQuant()` produced, so it
+replaces `lmFit()`. `proteins.rds` arrives already normalised, from
+`01_Preprocess/02_Quantification`.
 
 ```{r setup}
 library(here)
@@ -38,7 +41,9 @@ stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 
 ## Fit
 
-`sample.weights = TRUE` estimates one quality weight per sample. Biopsies differed in how much blood they carried, and removing the contaminant rows does not undo what that did to the sample underneath.
+`sample.weights = TRUE` estimates one quality weight per sample. Biopsies differed in how much
+blood they carried, and removing the contaminant rows does not undo what that did to the sample
+underneath.
 
 ```{r fit}
 fit <- dpcDE(proteins, d$design, sample.weights = TRUE, plot = TRUE)
@@ -48,7 +53,9 @@ fit <- contrasts.fit(fit, d$contrasts)
 fit <- eBayes(fit, robust = TRUE)
 ```
 
-Weights downweight a sample in proportion to how noisy it looks; none is dropped. What matters is whether the downweighting falls evenly across the four cells, because uneven weighting would act like a covariate nobody declared.
+Weights downweight a sample in proportion to how noisy it looks; none is dropped. What matters is
+whether the downweighting falls evenly across the four cells, because uneven weighting would act
+like a covariate nobody declared.
 
 ```{r sample-weights}
 tibble(group = proteins$targets$group, weight = sample_weights) |>
@@ -58,7 +65,8 @@ tibble(group = proteins$targets$group, weight = sample_weights) |>
   )
 ```
 
-Effect size the interaction could detect at 80% power, two-sided 0.05. Without this, "null" says nothing: a contrast returning no hits is uninformative about effects smaller than this number.
+Effect size the interaction could detect at 80% power, two-sided 0.05. Without this, "null" says
+nothing: a contrast returning no hits is uninformative about effects smaller than this number.
 
 ```{r detectable-effect}
 se <- fit$stdev.unscaled[, "interaction"] * sqrt(fit$s2.post)
@@ -67,7 +75,9 @@ round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0
 
 ## Results
 
-Benjamini-Hochberg runs within each contrast and never across them. The five share participants and the interaction is a difference of two of the others, so pooling them would not control anything that can be stated.
+Benjamini-Hochberg runs within each contrast and never across them. The five share participants
+and the interaction is a difference of two of the others, so pooling them would not control
+anything that can be stated.
 
 ```{r results}
 results <- map(colnames(d$contrasts), \(cn) {
@@ -94,9 +104,14 @@ contrast_summary |>
 
 ## Is a contrast empty, or is it being tested conservatively
 
-Three numbers together, because each misleads alone. `propTrueNull()` estimates the null proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null from a conservative one. Median \|t\| is 0.674 under a calibrated null, so a value below that means the tests are conservative. `p_below_0.2` is 0.2 under a uniform null, so a value below that means the distribution rises toward 1 rather than being flat.
+Three numbers together, because each misleads alone. `propTrueNull()` estimates the null
+proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null
+from a conservative one. Median \|t\| is 0.674 under a calibrated null, so a value below that
+means the tests are conservative. `p_below_0.2` is 0.2 under a uniform null, so a value below that
+means the distribution rises toward 1 rather than being flat.
 
-Read the between-leg contrasts against `BFR_vs_HLRT_at_T1`, not against theory. That contrast is a true null by construction, and whatever it returns is what a null looks like in this design.
+Read the between-leg contrasts against `BFR_vs_HLRT_at_T1`, not against theory. That contrast is a
+true null by construction, and whatever it returns is what a null looks like in this design.
 
 ```{r null-calibration}
 results |>
@@ -107,7 +122,8 @@ results |>
   )
 ```
 
-All three numbers read the same histogram, so it is drawn directly. A spike at zero on a flat background is signal; a distribution sloping up toward 1 is a test running conservative.
+All three numbers read the same histogram, so it is drawn directly. A spike at zero on a flat
+background is signal; a distribution sloping up toward 1 is a test running conservative.
 
 ```{r p-histogram}
 #| fig-height: 5
@@ -123,11 +139,20 @@ ggplot(results, aes(P.Value)) +
   theme_minimal()
 ```
 
-The two within-leg contrasts spike at zero against a roughly flat background. The three between-leg contrasts slope upward instead, the negative control among them, and that control is a true null by construction. So the interaction returning nothing says that no between-modality difference is detectable under a test that is under-calling, which is a weaker claim than the two training modes producing equivalent proteomes.
+The two within-leg contrasts spike at zero against a roughly flat background. The three
+between-leg contrasts slope upward instead, the negative control among them, and that control is a
+true null by construction. So the interaction returning nothing says that no between-modality
+difference is detectable under a test that is under-calling, which is a weaker claim than the two
+training modes producing equivalent proteomes.
 
 ## Significant and large enough
 
-`treat()` tests against a fold-change floor rather than against zero, and unlike filtering on logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.15)` tests the null that \|logFC\| is at most 0.202. One floor is fixed in advance rather than swept, so the count reads as a property of that threshold rather than of the data. `robust = TRUE` matches the moderation used for the main fit, and is passed explicitly because `treat()` defaults to `FALSE`.
+`treat()` tests against a fold-change floor rather than against zero, and unlike filtering on
+logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.15)`
+tests the null that \|logFC\| is at most 0.202. One floor is fixed in advance rather than swept,
+so the count reads as a property of that threshold rather than of the data. `robust = TRUE`
+matches the moderation used for the main fit, and is passed explicitly because `treat()` defaults
+to `FALSE`.
 
 ```{r treat}
 ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
@@ -144,11 +169,17 @@ tibble(
 
 ## The pi score
 
-`pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID 22321699), so it ranks as the published `-log10(p) * |log2FC|` does. It controls no error rate, so it ranks within a contrast and selects nothing.
+`pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID
+22321699), so it ranks as the published `-log10(p) * |log2FC|` does. It controls no error rate, so
+it ranks within a contrast and selects nothing.
 
-It rewards large `|logFC|`, and here the largest fold changes come from the proteins with the fewest detected precursors, whose values lean on DPC recovery. The observation count is reported alongside so that is visible.
+It rewards large `|logFC|`, and here the largest fold changes come from the proteins with the
+fewest detected precursors, whose values lean on DPC recovery. The observation count is reported
+alongside so that is visible.
 
-It is applied to the two contrasts that carry signal. Ranking the interaction would produce a table of its largest fold changes in a contrast whose `propTrueNull` sits at its ceiling, which invites reading structure into noise no matter what the caption says.
+It is applied to the two contrasts that carry signal. Ranking the interaction would produce a
+table of its largest fold changes in a contrast whose `propTrueNull` sits at its ceiling, which
+invites reading structure into noise no matter what the caption says.
 
 ```{r pi-ranking}
 obs_per_sample <- rowMeans(proteins$other$n.observations)
@@ -162,9 +193,12 @@ results |>
 
 ## Outputs
 
-`DEP_matrix` is one row per protein and three columns per contrast, which is the shape for reading across contrasts and for handing to a later stage. The long form it is built from is not written: `fit.rds` holds the complete fit, so nothing is lost by dropping it.
+`DEP_matrix` is one row per protein and three columns per contrast, which is the shape for reading
+across contrasts and for handing to a later stage. The long form it is built from is not written:
+`fit.rds` holds the complete fit, so nothing is lost by dropping it.
 
-Written before the negative control is checked, so a failure leaves the evidence on disk. The workbook carries full precision; only the tables printed above are rounded.
+Written before the negative control is checked, so a failure leaves the evidence on disk. The
+workbook carries full precision; only the tables printed above are rounded.
 
 ```{r write}
 dep_matrix <- results |>
@@ -187,7 +221,8 @@ dim(dep_matrix)
 
 ## Negative control
 
-Two untrained legs of the same person should not differ. If they do, the cause is upstream and the failure is the finding.
+Two untrained legs of the same person should not differ. If they do, the cause is upstream and the
+failure is the finding.
 
 ```{r negative-control}
 nc <- filter(results, contrast == d$negative_control)
@@ -199,7 +234,9 @@ slice_min(nc, P.Value, n = 5) |>
   select(protein, Genes, logFC, P.Value, adj.P.Val)
 ```
 
-The hit count is printed rather than asserted. If two untrained legs of one person ever differ, that is the most informative result this pipeline can produce and it belongs in the report, not in a halted render.
+The hit count is printed rather than asserted. If two untrained legs of one person ever differ,
+that is the most informative result this pipeline can produce and it belongs in the report, not in
+a halted render.
 
 ```{r session}
 sessionInfo()
