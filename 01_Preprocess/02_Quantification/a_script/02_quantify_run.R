@@ -1,14 +1,14 @@
 # Run by hand when the precursor matrix changes; about 100 minutes per dpcQuant() call.
 # 02_quantify.qmd only loads what this writes, so a render can never start one.
-#   Rscript 01_Preprocess/02_Quantification/a_script/dpc_quant.R
-#   Rscript 01_Preprocess/02_Quantification/a_script/dpc_quant.R --sensitivity
+#   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R
+#   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 
 library(here)
 library(limpa)
 
 precursors_file <- here("01_Preprocess", "01_Filtering", "c_data",
                         "precursors_filtered.rds")
-out <- here("01_Preprocess", "02_Quantification", "c_data", "dpcQuant")
+out <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
 y <- readRDS(precursors_file)
