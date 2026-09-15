@@ -6,11 +6,11 @@ before an hour of model fitting does.
 ```
 01_Preprocess/02_Quantification/c_data/proteins.rds
   01_Design       design matrix, five contrasts, one diagnostic  -> design.rds
-  02_Differential fit, contrasts, results tables                 -> protein_contrasts_long.csv
+  02_Differential fit, contrasts, results tables                 -> fit.rds
 ```
 
 ```sh
-quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd        --output-dir ../b_reports
+quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 ```
 
@@ -31,8 +31,9 @@ what happened on the way.
 ## Three things that matter
 
 **The control is the most important one.** Two untrained legs of the same person should differ in
-nothing. If they do, the cause is upstream: a mislabelled sample, contamination, annotation. The
-stage asserts it comes back empty and writes results to disk before that check runs.
+nothing. If they do, the cause is upstream: a mislabelled sample, contamination, annotation.
+`02_Differential` writes results to disk before it checks, and prints the count rather than
+asserting on it, so a failure lands in the report instead of halting the render.
 
 **Participant is a fixed term in the design.** Every comparison happens inside one person, so this
 makes pre-to-post paired. It also means sex cannot be tested, since it does not vary within a
@@ -46,8 +47,14 @@ Testing goes through `dpcDE()`, which reads the standard errors from `proteins.r
 
 ## What comes out
 
-`protein_contrasts_long.csv` has one row per protein per contrast, sorted by p-value within each
-contrast. `contrast_summary.csv` counts hits per contrast. `fit.rds` is the fitted model.
+`02_differential.xlsx` holds two sheets: `DEP_matrix`, one row per protein with `logFC`,
+`P.Value` and `adj.P.Val` for each contrast, and `contrast_summary`, the hit counts. `fit.rds`
+is the complete fitted model. All carry full precision; rounding happens only in the report.
 
-Hit counts near the FDR boundary move with the normalisation applied upstream, so report the two
-time contrasts as approximate. The interaction is empty under every variant tried.
+## Reading the counts
+
+Hit counts near the FDR boundary move with the normalisation applied upstream, so treat the two
+time contrasts as approximate. The interaction has returned no hits under every variant tried,
+which is a statement about what this study could detect, not a demonstration that the two
+training modes act alike. `02_Differential` prints the effect size it had 80% power to find, and
+that number is what bounds the claim.

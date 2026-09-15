@@ -13,9 +13,9 @@ heavy load?
 | Stage | Does | State |
 |---|---|---|
 | `00_Input/` | study data, runs nothing | ready |
-| `01_Preprocess/` | search output to a protein table | ready |
-| `02_Differential_Expression/` | normalise, fit, test five contrasts | ready |
-| `03_Pathway_Enrichment/` | which processes moved | planned |
+| `01_Preprocess/` | search output to a normalised protein table | ready |
+| `02_Differential_Expression/` | fit the model, test five contrasts | ready |
+| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, then which processes moved | gene-set/input stage ready; tests planned |
 | `04_Network/` | protein groups the data defines | planned |
 | `05_Figures/` | manuscript panels | planned |
 
@@ -40,10 +40,14 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
+
+quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
 ```
 
-About four hours, nearly all of it quantification, which runs twice: once at the fitted
-detection-curve slope and once at a preset 0.7 for comparison. Both runs are cached.
+Minutes, not hours. No notebook computes anything slow: the one expensive step, `dpcQuant()` at
+about 100 minutes, lives in `01_Preprocess/02_Quantification/a_script/dpc_quant.R` and its output
+is committed, so these renders load it. Run that script by hand only when the precursor matrix
+changes.
 
 ## Approach
 

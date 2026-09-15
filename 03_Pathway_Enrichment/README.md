@@ -1,17 +1,32 @@
 # 03 · Pathway Enrichment
 
-**Planned.** This folder holds this README.
+`01_Gene_Sets` is implemented. Whole-set tests, sample scores and hit-list
+enrichment remain planned.
 
 Testing protein by protein asks three thousand separate questions. Pathway analysis asks whether
 a group of proteins that work together moved together. A small shift shared across forty
 mitochondrial proteins is invisible one protein at a time and obvious as a set, which is why this
 is the right stage when the protein-level result is thin.
 
-| Sub-stage | Will do |
+| Sub-stage | Does / will do |
 |---|---|
-| `01_Gene_Sets` | download and freeze a gene-set collection, filtered on size and overlap |
+| [`01_Gene_Sets`](01_Gene_Sets/README.md) | freeze human MSigDB; filter on size and measured overlap; export the protein matrix, model and FDR/pi scores; draw enrichVolcano protein plots |
 | `02_Set_Tests` | test each set as a whole, and score every set in every sample |
 | `03_Enrichment` | for comparisons with hits, ask which processes those hits belong to |
+
+```sh
+quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
+```
+
+The first stage writes `b_reports/01_gene_sets.html`, PNG/PDF protein volcanoes,
+and `c_data/` workbooks/RDS/CSV outputs. Its source cache pins human MSigDB
+2026.1.Hs (Hallmark, Reactome, GO Biological Process) and supports offline
+rerenders. The handoff includes the full limpa EList, weighted fit, and
+participant design alongside the plain matrix.
+
+Protein significance uses BH FDR. Pi-scores rank training-contrast labels;
+they do not select hits. enrichVolcano draws the protein plots with no pathway
+arcs until a later stage supplies valid enrichment results.
 
 ## What each would tell us
 

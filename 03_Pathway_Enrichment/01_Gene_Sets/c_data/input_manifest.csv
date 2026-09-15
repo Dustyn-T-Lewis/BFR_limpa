@@ -1,0 +1,4 @@
+input,path,md5
+proteins,01_Preprocess/02_Quantification/c_data/proteins.rds,4af1bf7be32a371f7182ea1e1e4f42d6
+fit,02_Differential_Expression/02_Differential/c_data/fit.rds,9b1cfc4c1726f607a6706523da4f73ee
+design,02_Differential_Expression/01_Design/c_data/design.rds,24a71281b2fa84d0bf7e1aa7ce7f8451

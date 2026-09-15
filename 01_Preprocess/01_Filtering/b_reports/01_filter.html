@@ -2268,23 +2268,23 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tibble)</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Intensities arrive on the log2 scale, so every share-of-signal figure un-logs first.</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>total_signal <span class="ot">&lt;-</span> <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="dv">2</span><span class="sc">^</span>m, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>step_summary <span class="ot">&lt;-</span> <span class="cf">function</span>(elist, step, signal_start) {</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">step =</span> step,</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">precursors =</span> <span class="fu">nrow</span>(elist),</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_groups =</span> <span class="fu">n_distinct</span>(elist<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group),</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">total_signal</span>(elist<span class="sc">$</span>E) <span class="sc">/</span> signal_start</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Four gene families, each anchored at both ends. Anchoring matters: an unanchored</span></span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co"># IGH/IGK/IGL/KRT/SPRR prefix also matches IGHMBP2, IGLON5 and KRTCAP2, which muscle</span></span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="co"># expresses. Built from a vector so a dropped &quot;|&quot; at a line wrap cannot silently</span></span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># change the pattern.</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(writexl)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Intensities arrive on the log2 scale, so every share-of-signal figure un-logs first.</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>total_signal <span class="ot">&lt;-</span> <span class="cf">function</span>(m) <span class="fu">sum</span>(<span class="dv">2</span><span class="sc">^</span>m, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>step_summary <span class="ot">&lt;-</span> <span class="cf">function</span>(elist, step, signal_start) {</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">step =</span> step,</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">precursors =</span> <span class="fu">nrow</span>(elist),</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_groups =</span> <span class="fu">n_distinct</span>(elist<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group),</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">total_signal</span>(elist<span class="sc">$</span>E) <span class="sc">/</span> signal_start</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Four gene families, each anchored at both ends: an unanchored IGH/IGK/IGL/KRT/SPRR prefix</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="co"># also matches IGHMBP2, IGLON5 and KRTCAP2, which muscle expresses. Built from a vector so a</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># &quot;|&quot; dropped at a line wrap cannot silently widen the pattern.</span></span>
 <span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>CONTAMINANT_FAMILIES <span class="ot">&lt;-</span> <span class="fu">str_c</span>(</span>
 <span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;^(&quot;</span>,</span>
 <span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_c</span>(</span>
@@ -2300,40 +2300,39 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Screened on HPA myonuclei single-cell expression rather than whole-muscle tissue, because</span></span>
-<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="co"># tissue values are themselves blood-contaminated: haemoglobin reads 544 nTPM in skeletal</span></span>
-<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co"># muscle.</span></span>
-<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>CONTAMINANTS <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;JCHAIN&quot;</span>, <span class="st">&quot;HRNR&quot;</span>, <span class="st">&quot;DCD&quot;</span>, <span class="st">&quot;SBSN&quot;</span>, <span class="st">&quot;CSTA&quot;</span>, <span class="st">&quot;AHSP&quot;</span>,</span>
-<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A1BG&quot;</span>, <span class="st">&quot;AFM&quot;</span>, <span class="st">&quot;AGT&quot;</span>, <span class="st">&quot;AHSG&quot;</span>, <span class="st">&quot;ALB&quot;</span>, <span class="st">&quot;AMBP&quot;</span>, <span class="st">&quot;APCS&quot;</span>, <span class="st">&quot;APOA1&quot;</span>, <span class="st">&quot;APOA2&quot;</span>, <span class="st">&quot;APOA4&quot;</span>, <span class="st">&quot;APOB&quot;</span>,</span>
-<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;APOC1&quot;</span>, <span class="st">&quot;APOC2&quot;</span>, <span class="st">&quot;APOC3&quot;</span>, <span class="st">&quot;APOD&quot;</span>, <span class="st">&quot;APOE&quot;</span>, <span class="st">&quot;APOF&quot;</span>, <span class="st">&quot;APOH&quot;</span>, <span class="st">&quot;APOL1&quot;</span>, <span class="st">&quot;APOL2&quot;</span>, <span class="st">&quot;APOM&quot;</span>,</span>
-<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ARHGDIB&quot;</span>, <span class="st">&quot;AZGP1&quot;</span>, <span class="st">&quot;BCAM&quot;</span>, <span class="st">&quot;BTD&quot;</span>, <span class="st">&quot;C1QB&quot;</span>, <span class="st">&quot;C1QC&quot;</span>, <span class="st">&quot;C1R&quot;</span>, <span class="st">&quot;C1RL&quot;</span>, <span class="st">&quot;C1S&quot;</span>, <span class="st">&quot;C2&quot;</span>, <span class="st">&quot;C3&quot;</span>,</span>
-<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;C4A&quot;</span>, <span class="st">&quot;C4B&quot;</span>, <span class="st">&quot;C4BPA&quot;</span>, <span class="st">&quot;C4BPB&quot;</span>, <span class="st">&quot;C5&quot;</span>, <span class="st">&quot;C6&quot;</span>, <span class="st">&quot;C7&quot;</span>, <span class="st">&quot;C8A&quot;</span>, <span class="st">&quot;C8B&quot;</span>, <span class="st">&quot;C8G&quot;</span>, <span class="st">&quot;C9&quot;</span>, <span class="st">&quot;CA1&quot;</span>,</span>
-<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CFB&quot;</span>, <span class="st">&quot;CFD&quot;</span>, <span class="st">&quot;CFH&quot;</span>, <span class="st">&quot;CFHR2&quot;</span>, <span class="st">&quot;CFHR5&quot;</span>, <span class="st">&quot;CFI&quot;</span>, <span class="st">&quot;CLEC3B&quot;</span>, <span class="st">&quot;CLU&quot;</span>, <span class="st">&quot;CP&quot;</span>, <span class="st">&quot;CPB2&quot;</span>, <span class="st">&quot;CPN1&quot;</span>,</span>
-<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CPN2&quot;</span>, <span class="st">&quot;CTSG&quot;</span>, <span class="st">&quot;DEFA1&quot;</span>, <span class="st">&quot;DMTN&quot;</span>, <span class="st">&quot;ELANE&quot;</span>, <span class="st">&quot;EPB42&quot;</span>, <span class="st">&quot;F10&quot;</span>, <span class="st">&quot;F11&quot;</span>, <span class="st">&quot;F12&quot;</span>, <span class="st">&quot;F13A1&quot;</span>, <span class="st">&quot;F13B&quot;</span>,</span>
-<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;F2&quot;</span>, <span class="st">&quot;F9&quot;</span>, <span class="st">&quot;FCN3&quot;</span>, <span class="st">&quot;FERMT3&quot;</span>, <span class="st">&quot;FETUB&quot;</span>, <span class="st">&quot;FGA&quot;</span>, <span class="st">&quot;FGB&quot;</span>, <span class="st">&quot;FGG&quot;</span>, <span class="st">&quot;FYB1&quot;</span>, <span class="st">&quot;GC&quot;</span>, <span class="st">&quot;GIMAP1&quot;</span>,</span>
-<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;GIMAP4&quot;</span>, <span class="st">&quot;GMFG&quot;</span>, <span class="st">&quot;GP1BA&quot;</span>, <span class="st">&quot;GPLD1&quot;</span>, <span class="st">&quot;GYPC&quot;</span>, <span class="st">&quot;HABP2&quot;</span>, <span class="st">&quot;HP&quot;</span>, <span class="st">&quot;HPR&quot;</span>, <span class="st">&quot;HPX&quot;</span>, <span class="st">&quot;HRG&quot;</span>,</span>
-<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;IGFALS&quot;</span>, <span class="st">&quot;ITIH1&quot;</span>, <span class="st">&quot;ITIH3&quot;</span>, <span class="st">&quot;KEL&quot;</span>, <span class="st">&quot;KLKB1&quot;</span>, <span class="st">&quot;KNG1&quot;</span>, <span class="st">&quot;LBP&quot;</span>, <span class="st">&quot;LCAT&quot;</span>, <span class="st">&quot;LCP1&quot;</span>, <span class="st">&quot;LPA&quot;</span>,</span>
-<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;LRG1&quot;</span>, <span class="st">&quot;LTF&quot;</span>, <span class="st">&quot;LYZ&quot;</span>, <span class="st">&quot;MASP1&quot;</span>, <span class="st">&quot;MPO&quot;</span>, <span class="st">&quot;MPP1&quot;</span>, <span class="st">&quot;NCF1&quot;</span>, <span class="st">&quot;ORM1&quot;</span>, <span class="st">&quot;ORM2&quot;</span>, <span class="st">&quot;PF4&quot;</span>, <span class="st">&quot;PGLYRP2&quot;</span>,</span>
-<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;PLG&quot;</span>, <span class="st">&quot;PLTP&quot;</span>, <span class="st">&quot;PON1&quot;</span>, <span class="st">&quot;PPBP&quot;</span>, <span class="st">&quot;PROS1&quot;</span>, <span class="st">&quot;PRTN3&quot;</span>, <span class="st">&quot;PZP&quot;</span>, <span class="st">&quot;RBP4&quot;</span>, <span class="st">&quot;RHCE&quot;</span>, <span class="st">&quot;RNASE3&quot;</span>,</span>
-<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;S100A8&quot;</span>, <span class="st">&quot;S100A9&quot;</span>, <span class="st">&quot;SAA1&quot;</span>, <span class="st">&quot;SAA4&quot;</span>, <span class="st">&quot;SELENOP&quot;</span>, <span class="st">&quot;SERPINA1&quot;</span>, <span class="st">&quot;SERPINA3&quot;</span>, <span class="st">&quot;SERPINA4&quot;</span>,</span>
-<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SERPINA5&quot;</span>, <span class="st">&quot;SERPINA6&quot;</span>, <span class="st">&quot;SERPINA7&quot;</span>, <span class="st">&quot;SERPINC1&quot;</span>, <span class="st">&quot;SERPIND1&quot;</span>, <span class="st">&quot;SERPINF2&quot;</span>, <span class="st">&quot;SERPING1&quot;</span>,</span>
-<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SHBG&quot;</span>, <span class="st">&quot;SLC4A1&quot;</span>, <span class="st">&quot;SPTA1&quot;</span>, <span class="st">&quot;TF&quot;</span>, <span class="st">&quot;TTR&quot;</span>, <span class="st">&quot;TUBB1&quot;</span>, <span class="st">&quot;VTN&quot;</span>, <span class="st">&quot;VWF&quot;</span></span>
-<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="co"># Asserted to survive every filter below: muscle proteins the annotation repair rescues, plus</span></span>
-<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="co"># proteins that are blood-abundant but muscle-expressed on HPA myonuclei data. ANK1 is small</span></span>
-<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="co"># ankyrin-1, a sarcoplasmic reticulum protein.</span></span>
-<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>MUST_KEEP <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;MB&quot;</span>, <span class="st">&quot;ACTA1&quot;</span>, <span class="st">&quot;ALDOA&quot;</span>, <span class="st">&quot;TPM2&quot;</span>, <span class="st">&quot;ENO1&quot;</span>, <span class="st">&quot;GPI&quot;</span>, <span class="st">&quot;CKM&quot;</span>, <span class="st">&quot;MYH1&quot;</span>,</span>
-<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;MYH2&quot;</span>, <span class="st">&quot;MYH7&quot;</span>, <span class="st">&quot;TTN&quot;</span>, <span class="st">&quot;DES&quot;</span>, <span class="st">&quot;PYGM&quot;</span>, <span class="st">&quot;CASQ1&quot;</span>, <span class="st">&quot;PVALB&quot;</span>, <span class="st">&quot;MYH13&quot;</span>,</span>
-<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ANK1&quot;</span>, <span class="st">&quot;SPTB&quot;</span>, <span class="st">&quot;ITIH2&quot;</span>, <span class="st">&quot;ITIH4&quot;</span>, <span class="st">&quot;SERPINF1&quot;</span>, <span class="st">&quot;CAT&quot;</span>, <span class="st">&quot;CA2&quot;</span>, <span class="st">&quot;CA3&quot;</span>,</span>
-<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A2M&quot;</span>, <span class="st">&quot;BLVRB&quot;</span>, <span class="st">&quot;STOM&quot;</span>, <span class="st">&quot;TALDO1&quot;</span></span>
-<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="co"># tissue values are themselves blood-contaminated: haemoglobin reads 544 nTPM in skeletal muscle.</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>CONTAMINANTS <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;JCHAIN&quot;</span>, <span class="st">&quot;HRNR&quot;</span>, <span class="st">&quot;DCD&quot;</span>, <span class="st">&quot;SBSN&quot;</span>, <span class="st">&quot;CSTA&quot;</span>, <span class="st">&quot;AHSP&quot;</span>,</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A1BG&quot;</span>, <span class="st">&quot;AFM&quot;</span>, <span class="st">&quot;AGT&quot;</span>, <span class="st">&quot;AHSG&quot;</span>, <span class="st">&quot;ALB&quot;</span>, <span class="st">&quot;AMBP&quot;</span>, <span class="st">&quot;APCS&quot;</span>, <span class="st">&quot;APOA1&quot;</span>, <span class="st">&quot;APOA2&quot;</span>, <span class="st">&quot;APOA4&quot;</span>, <span class="st">&quot;APOB&quot;</span>,</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;APOC1&quot;</span>, <span class="st">&quot;APOC2&quot;</span>, <span class="st">&quot;APOC3&quot;</span>, <span class="st">&quot;APOD&quot;</span>, <span class="st">&quot;APOE&quot;</span>, <span class="st">&quot;APOF&quot;</span>, <span class="st">&quot;APOH&quot;</span>, <span class="st">&quot;APOL1&quot;</span>, <span class="st">&quot;APOL2&quot;</span>, <span class="st">&quot;APOM&quot;</span>,</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ARHGDIB&quot;</span>, <span class="st">&quot;AZGP1&quot;</span>, <span class="st">&quot;BCAM&quot;</span>, <span class="st">&quot;BTD&quot;</span>, <span class="st">&quot;C1QB&quot;</span>, <span class="st">&quot;C1QC&quot;</span>, <span class="st">&quot;C1R&quot;</span>, <span class="st">&quot;C1RL&quot;</span>, <span class="st">&quot;C1S&quot;</span>, <span class="st">&quot;C2&quot;</span>, <span class="st">&quot;C3&quot;</span>,</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;C4A&quot;</span>, <span class="st">&quot;C4B&quot;</span>, <span class="st">&quot;C4BPA&quot;</span>, <span class="st">&quot;C4BPB&quot;</span>, <span class="st">&quot;C5&quot;</span>, <span class="st">&quot;C6&quot;</span>, <span class="st">&quot;C7&quot;</span>, <span class="st">&quot;C8A&quot;</span>, <span class="st">&quot;C8B&quot;</span>, <span class="st">&quot;C8G&quot;</span>, <span class="st">&quot;C9&quot;</span>, <span class="st">&quot;CA1&quot;</span>,</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CFB&quot;</span>, <span class="st">&quot;CFD&quot;</span>, <span class="st">&quot;CFH&quot;</span>, <span class="st">&quot;CFHR2&quot;</span>, <span class="st">&quot;CFHR5&quot;</span>, <span class="st">&quot;CFI&quot;</span>, <span class="st">&quot;CLEC3B&quot;</span>, <span class="st">&quot;CLU&quot;</span>, <span class="st">&quot;CP&quot;</span>, <span class="st">&quot;CPB2&quot;</span>, <span class="st">&quot;CPN1&quot;</span>,</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CPN2&quot;</span>, <span class="st">&quot;CTSG&quot;</span>, <span class="st">&quot;DEFA1&quot;</span>, <span class="st">&quot;DMTN&quot;</span>, <span class="st">&quot;ELANE&quot;</span>, <span class="st">&quot;EPB42&quot;</span>, <span class="st">&quot;F10&quot;</span>, <span class="st">&quot;F11&quot;</span>, <span class="st">&quot;F12&quot;</span>, <span class="st">&quot;F13A1&quot;</span>, <span class="st">&quot;F13B&quot;</span>,</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;F2&quot;</span>, <span class="st">&quot;F9&quot;</span>, <span class="st">&quot;FCN3&quot;</span>, <span class="st">&quot;FERMT3&quot;</span>, <span class="st">&quot;FETUB&quot;</span>, <span class="st">&quot;FGA&quot;</span>, <span class="st">&quot;FGB&quot;</span>, <span class="st">&quot;FGG&quot;</span>, <span class="st">&quot;FYB1&quot;</span>, <span class="st">&quot;GC&quot;</span>, <span class="st">&quot;GIMAP1&quot;</span>,</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;GIMAP4&quot;</span>, <span class="st">&quot;GMFG&quot;</span>, <span class="st">&quot;GP1BA&quot;</span>, <span class="st">&quot;GPLD1&quot;</span>, <span class="st">&quot;GYPC&quot;</span>, <span class="st">&quot;HABP2&quot;</span>, <span class="st">&quot;HP&quot;</span>, <span class="st">&quot;HPR&quot;</span>, <span class="st">&quot;HPX&quot;</span>, <span class="st">&quot;HRG&quot;</span>,</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;IGFALS&quot;</span>, <span class="st">&quot;ITIH1&quot;</span>, <span class="st">&quot;ITIH3&quot;</span>, <span class="st">&quot;KEL&quot;</span>, <span class="st">&quot;KLKB1&quot;</span>, <span class="st">&quot;KNG1&quot;</span>, <span class="st">&quot;LBP&quot;</span>, <span class="st">&quot;LCAT&quot;</span>, <span class="st">&quot;LCP1&quot;</span>, <span class="st">&quot;LPA&quot;</span>,</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;LRG1&quot;</span>, <span class="st">&quot;LTF&quot;</span>, <span class="st">&quot;LYZ&quot;</span>, <span class="st">&quot;MASP1&quot;</span>, <span class="st">&quot;MPO&quot;</span>, <span class="st">&quot;MPP1&quot;</span>, <span class="st">&quot;NCF1&quot;</span>, <span class="st">&quot;ORM1&quot;</span>, <span class="st">&quot;ORM2&quot;</span>, <span class="st">&quot;PF4&quot;</span>, <span class="st">&quot;PGLYRP2&quot;</span>,</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;PLG&quot;</span>, <span class="st">&quot;PLTP&quot;</span>, <span class="st">&quot;PON1&quot;</span>, <span class="st">&quot;PPBP&quot;</span>, <span class="st">&quot;PROS1&quot;</span>, <span class="st">&quot;PRTN3&quot;</span>, <span class="st">&quot;PZP&quot;</span>, <span class="st">&quot;RBP4&quot;</span>, <span class="st">&quot;RHCE&quot;</span>, <span class="st">&quot;RNASE3&quot;</span>,</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;S100A8&quot;</span>, <span class="st">&quot;S100A9&quot;</span>, <span class="st">&quot;SAA1&quot;</span>, <span class="st">&quot;SAA4&quot;</span>, <span class="st">&quot;SELENOP&quot;</span>, <span class="st">&quot;SERPINA1&quot;</span>, <span class="st">&quot;SERPINA3&quot;</span>, <span class="st">&quot;SERPINA4&quot;</span>,</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SERPINA5&quot;</span>, <span class="st">&quot;SERPINA6&quot;</span>, <span class="st">&quot;SERPINA7&quot;</span>, <span class="st">&quot;SERPINC1&quot;</span>, <span class="st">&quot;SERPIND1&quot;</span>, <span class="st">&quot;SERPINF2&quot;</span>, <span class="st">&quot;SERPING1&quot;</span>,</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SHBG&quot;</span>, <span class="st">&quot;SLC4A1&quot;</span>, <span class="st">&quot;SPTA1&quot;</span>, <span class="st">&quot;TF&quot;</span>, <span class="st">&quot;TTR&quot;</span>, <span class="st">&quot;TUBB1&quot;</span>, <span class="st">&quot;VTN&quot;</span>, <span class="st">&quot;VWF&quot;</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Asserted to survive every filter below: muscle proteins the annotation repair rescues, plus</span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="co"># proteins that are blood-abundant but muscle-expressed on HPA myonuclei data. ANK1 is small</span></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="co"># ankyrin-1, a sarcoplasmic reticulum protein.</span></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a>MUST_KEEP <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;MB&quot;</span>, <span class="st">&quot;ACTA1&quot;</span>, <span class="st">&quot;ALDOA&quot;</span>, <span class="st">&quot;TPM2&quot;</span>, <span class="st">&quot;ENO1&quot;</span>, <span class="st">&quot;GPI&quot;</span>, <span class="st">&quot;CKM&quot;</span>, <span class="st">&quot;MYH1&quot;</span>,</span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;MYH2&quot;</span>, <span class="st">&quot;MYH7&quot;</span>, <span class="st">&quot;TTN&quot;</span>, <span class="st">&quot;DES&quot;</span>, <span class="st">&quot;PYGM&quot;</span>, <span class="st">&quot;CASQ1&quot;</span>, <span class="st">&quot;PVALB&quot;</span>, <span class="st">&quot;MYH13&quot;</span>,</span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ANK1&quot;</span>, <span class="st">&quot;SPTB&quot;</span>, <span class="st">&quot;ITIH2&quot;</span>, <span class="st">&quot;ITIH4&quot;</span>, <span class="st">&quot;SERPINF1&quot;</span>, <span class="st">&quot;CAT&quot;</span>, <span class="st">&quot;CA2&quot;</span>, <span class="st">&quot;CA3&quot;</span>,</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A2M&quot;</span>, <span class="st">&quot;BLVRB&quot;</span>, <span class="st">&quot;STOM&quot;</span>, <span class="st">&quot;TALDO1&quot;</span></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <section id="read" class="level2">
 <h2 class="anchored" data-anchor-id="read">Read</h2>
 <p><code>Protein.Ids</code> is not one of <code>readDIANN()</code>’s default <code>annotation.columns</code>, and the repair below cannot run without it. It is added to the defaults, not substituted for them, so <code>Protein.Names</code> still comes through for later annotation.</p>
-<p>Everything else stays as shipped. <code>q.cutoffs = 0.01</code> over <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code> is the set the vignette recommends for a match-between-runs search. <code>intensity.column = &quot;Precursor.Normalised&quot;</code> is DIA-NN’s normalized column, which is why nothing here normalizes again. <code>log = TRUE</code> means <code>y$E</code> arrives on the log2 scale, so never log it a second time.</p>
+<p>Everything else stays as shipped. <code>q.cutoffs = 0.01</code> over <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code> is the set the vignette recommends for a match-between-runs search. <code>intensity.column = &quot;Precursor.Normalised&quot;</code> is DIA-NN’s normalised column, which is why nothing here normalises again. <code>log = TRUE</code> means <code>y$E</code> arrives on the log2 scale, so never log it twice.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">readDIANN</span>(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;report.parquet&quot;</span>),</span>
@@ -2357,18 +2356,20 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">str_to_lower</span>(metadata<span class="sc">$</span>run), <span class="fu">str_to_lower</span>(<span class="fu">colnames</span>(y)))</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>runs_dropped <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">colnames</span>(y), <span class="fu">colnames</span>(y)[i])</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[, i]</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(y) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># as.data.frame, not the tibble: limma&#39;s EList subsetting uses drop-style indexing on</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># $targets, which a tibble does not honour.</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>targets <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(metadata)</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(y<span class="sc">$</span>targets) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="co"># The denominator for every percentage below. Captured after sample mapping, so dropped</span></span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co"># runs never count, and never recomputed, so the step percentages stay comparable.</span></span>
-<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>signal_start <span class="ot">&lt;-</span> <span class="fu">total_signal</span>(y<span class="sc">$</span>E)</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">runs_in_report =</span> <span class="fu">length</span>(i) <span class="sc">+</span> <span class="fu">length</span>(runs_dropped), <span class="at">samples_kept =</span> <span class="fu">ncol</span>(y))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># An unmatched run would index as NA and produce a silent all-NA sample column.</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(i))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>runs_dropped <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">colnames</span>(y), <span class="fu">colnames</span>(y)[i])</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[, i]</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(y) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co"># as.data.frame, not the tibble: limma&#39;s EList subsetting uses drop-style indexing on</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># $targets, which a tibble does not honour.</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>targets <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(metadata)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(y<span class="sc">$</span>targets) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="co"># The denominator for every percentage below. Captured after sample mapping, so dropped</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="co"># runs never count, and never recomputed, so the step percentages stay comparable.</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>signal_start <span class="ot">&lt;-</span> <span class="fu">total_signal</span>(y<span class="sc">$</span>E)</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">runs_in_report =</span> <span class="fu">length</span>(i) <span class="sc">+</span> <span class="fu">length</span>(runs_dropped), <span class="at">samples_kept =</span> <span class="fu">ncol</span>(y))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>runs_in_report   samples_kept 
            132            131 </code></pre>
@@ -2381,9 +2382,9 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="repair-the-annotation" class="level2">
 <h2 class="anchored" data-anchor-id="repair-the-annotation">Repair the annotation</h2>
-<p>The search FASTA held every protein twice, plain and <code>cRAP-</code>-prefixed, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. What is wanted is to drop only the groups where <em>every</em> member is cRAP, then strip the prefix from the rest.</p>
-<p>The order matters, because <code>Genes</code> carries the prefix too. Six cRAP-only symbols appear here, and one of them is <code>cRAP-MB</code>. Strip the prefix first and it becomes <code>MB</code>, which <code>MUST_KEEP</code> requires to survive, so ten precursors of a contaminant standard would merge into human myoglobin and nobody would see it. <code>cRAP-CSN1S1</code> is not in <code>CONTAMINANTS</code> either, and two cRAP-only rows carry no gene symbol at all, so they match nothing and would survive as a group standing for no real protein. The contaminant list cannot do this job.</p>
-<p>Stripping also repairs <code>Proteotypic</code>, which is the whole reason the muscle survives: <code>filterNonProteotypicPeptides()</code> believes the flag, and on the unrepaired annotation it deletes 13 of the 28 <code>MUST_KEEP</code> symbols.</p>
+<p>The search FASTA held every protein twice, plain and <code>cRAP-</code>-prefixed, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where <em>every</em> member is cRAP should go; the rest need the prefix stripped.</p>
+<p>Order matters, because <code>Genes</code> carries the prefix too. One of the six cRAP-only symbols here is <code>cRAP-MB</code>: strip first and it becomes <code>MB</code>, which <code>MUST_KEEP</code> requires to survive, so precursors of a contaminant standard would merge into human myoglobin unnoticed. Two more cRAP-only rows carry no gene symbol at all, so no symbol list could catch them either.</p>
+<p>Stripping also repairs <code>Proteotypic</code>, which is why the muscle survives at all. <code>filterNonProteotypicPeptides()</code> believes the flag, and on the unrepaired annotation it deleted 13 of the <code>MUST_KEEP</code> symbols when that was last measured.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">str_split</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Ids, <span class="st">&quot;;&quot;</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>crap_only <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(members, \(m) <span class="fu">all</span>(<span class="fu">str_starts</span>(m, <span class="st">&quot;cRAP-&quot;</span>)))</span>
@@ -2403,28 +2404,29 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>drop, ]</span>
 <span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Captured before the across() below overwrites Protein.Ids. Once the prefix is gone</span></span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="co"># there is no way to tell which rows the repair touched.</span></span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>crap_mention <span class="ot">&lt;-</span> <span class="fu">str_detect</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Ids, <span class="st">&quot;cRAP-&quot;</span>)</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Which surviving rows the repair touched. Taken from the flag computed above, because</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="co"># the across() below strips the prefix and the information is then gone.</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>crap_mention <span class="ot">&lt;-</span> mentions_crap[<span class="sc">!</span>drop]</span>
 <span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes <span class="ot">&lt;-</span> y<span class="sc">$</span>genes <span class="sc">|&gt;</span></span>
 <span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(</span>
 <span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(Protein.Group, Protein.Ids, Protein.Names, Genes),</span>
-<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>      \(x) <span class="fu">map_chr</span>(<span class="fu">str_split</span>(<span class="fu">str_remove_all</span>(x, <span class="st">&quot;cRAP-&quot;</span>), <span class="st">&quot;;&quot;</span>),</span>
-<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>                   \(ids) <span class="fu">str_c</span>(<span class="fu">unique</span>(ids), <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>))</span>
-<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mutate() evaluates in order, so this reads the de-duplicated Protein.Ids the</span></span>
-<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># line above just wrote. Splitting these into two mutate() calls breaks it.</span></span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">Proteotypic =</span> <span class="fu">if_else</span>(</span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>      crap_mention,</span>
-<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(<span class="sc">!</span><span class="fu">str_detect</span>(Protein.Ids, <span class="st">&quot;;&quot;</span>)),</span>
-<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(Proteotypic)</span>
-<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>removal_counts</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>      \(x) <span class="fu">map_chr</span>(</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>        <span class="fu">str_split</span>(<span class="fu">str_remove_all</span>(x, <span class="st">&quot;cRAP-&quot;</span>), <span class="st">&quot;;&quot;</span>),</span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>        \(ids) <span class="fu">str_c</span>(<span class="fu">unique</span>(ids), <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>)</span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mutate() evaluates in order, so this reads the de-duplicated Protein.Ids the</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># line above just wrote. Splitting these into two mutate() calls breaks it.</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">Proteotypic =</span> <span class="fu">if_else</span>(</span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>      crap_mention,</span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(<span class="sc">!</span><span class="fu">str_detect</span>(Protein.Ids, <span class="st">&quot;;&quot;</span>)),</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(Proteotypic)</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>removal_counts</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2456,59 +2458,60 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </div>
 </div>
 </div>
-<p>Two separate problems share this chunk. Most groups mentioning <code>cRAP</code> keep a human accession and are repaired rather than removed. Only the cRAP-only ones go. Reversed decoy sequences are a different fault: the search FASTA already contained them, so DIA-NN scored them as targets and its own decoy column reads zero for every row. They carry almost no signal, but they inflate the protein count and would appear as nonsense identifiers in any enrichment.</p>
+<p>Two faults share this chunk. Most groups mentioning <code>cRAP</code> keep a human accession and are repaired rather than removed, so only the cRAP-only ones go. Reversed decoys are separate: the search FASTA already contained them, so DIA-NN scored them as targets and its own decoy column reads zero for every row. They carry almost no signal, but they inflate the protein count and would surface as nonsense identifiers in any enrichment.</p>
 </section>
 <section id="limpas-precursor-filters" class="level2">
 <h2 class="anchored" data-anchor-id="limpas-precursor-filters">limpa’s precursor filters</h2>
 <p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is deliberately skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum information. Nothing here filters on missingness either, because the vignette is explicit that precursors need no missing-value filtering, and those gaps are exactly what <code>dpc()</code> recovers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>summary_repaired <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>, signal_start)</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterNonProteotypicPeptides</span>(y)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>summary_proteotypic <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;shared peptides removed&quot;</span>, signal_start)</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterCompoundProteins</span>(y)</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>summary_compound <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;compound groups removed&quot;</span>, signal_start)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>summary_repaired <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>, signal_start)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterNonProteotypicPeptides</span>(y)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>summary_proteotypic <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;shared peptides removed&quot;</span>, signal_start)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterCompoundProteins</span>(y)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>summary_compound <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;compound groups removed&quot;</span>, signal_start)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="contaminants" class="level2">
 <h2 class="anchored" data-anchor-id="contaminants">Contaminants</h2>
-<p>A needle biopsy bleeds and passes through skin, so a large share of signal here is blood, plasma, skin and antibody protein that muscle fibres do not express. It goes before quantification because <code>dpc()</code> fits one curve across every precursor and <code>dpcQuant()</code> estimates its prior from the global data, so contaminants left in place shape the missing-value model that every muscle protein is then quantified through. <code>filterCompoundProteins()</code> removes groups holding several <em>proteins</em>, but a single protein can still be annotated with several <em>gene symbols</em>, so a plain symbol test is not enough. A group counts as contamination only when every one of its symbols does, which is what keeps myoglobin when DIA-NN reports it alongside a second name.</p>
+<p>A needle biopsy bleeds and passes through skin, so a large share of signal here is blood, plasma, skin and antibody protein that muscle fibres do not express. Removal happens before quantification because <code>dpc()</code> fits one curve across every precursor and <code>dpcQuant()</code> estimates its prior from the global data, so contaminants left in place would shape the missing-value model that every muscle protein is then quantified through.</p>
+<p><code>filterCompoundProteins()</code> removes groups holding several <em>proteins</em>, but a single protein can still be annotated with several <em>gene symbols</em>, so a plain symbol test is not enough. A group counts as contamination only when every one of its symbols does, which is what keeps myoglobin when DIA-NN reports it alongside a second name.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>n_multi <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">lengths</span>(members) <span class="sc">&gt;</span> <span class="dv">1</span>)</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>contaminant <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(members, \(g) {</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">isTRUE</span>(<span class="fu">all</span>(g <span class="sc">%in%</span> CONTAMINANTS <span class="sc">|</span> <span class="fu">str_detect</span>(g, CONTAMINANT_FAMILIES)))</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>removed <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">symbol =</span> y<span class="sc">$</span>genes<span class="sc">$</span>Genes[contaminant],</span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">signal =</span> <span class="fu">rowSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">precursors =</span> <span class="fu">n</span>(), <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">sum</span>(signal) <span class="sc">/</span> signal_start, <span class="at">.by =</span> symbol) <span class="sc">|&gt;</span></span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">matched_by =</span> <span class="fu">if_else</span>(</span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">map_lgl</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(symbol), <span class="st">&quot;;&quot;</span>), \(g) <span class="fu">all</span>(g <span class="sc">%in%</span> CONTAMINANTS)),</span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;family&quot;</span></span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(pct_signal))</span>
-<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Uneven contamination between T1 and T2 would be a systematic shift landing on the two time</span></span>
-<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a><span class="co"># contrasts, not noise. The per-sample medians are checked in 02_Quantification, on the protein</span></span>
-<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a><span class="co"># matrix, which is where limpa places any normalisation.</span></span>
-<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>contaminant_fraction <span class="ot">&lt;-</span> <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, ], <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span></span>
-<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a><span class="fu">tapply</span>(contaminant_fraction, y<span class="sc">$</span>targets<span class="sc">$</span>timepoint, median)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>n_multi <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">lengths</span>(members) <span class="sc">&gt;</span> <span class="dv">1</span>)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>contaminant <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(members, \(g) {</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">isTRUE</span>(<span class="fu">all</span>(g <span class="sc">%in%</span> CONTAMINANTS <span class="sc">|</span> <span class="fu">str_detect</span>(g, CONTAMINANT_FAMILIES)))</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>removed <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">symbol =</span> y<span class="sc">$</span>genes<span class="sc">$</span>Genes[contaminant],</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">signal =</span> <span class="fu">rowSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">precursors =</span> <span class="fu">n</span>(), <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">sum</span>(signal) <span class="sc">/</span> signal_start, <span class="at">.by =</span> symbol) <span class="sc">|&gt;</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">matched_by =</span> <span class="fu">if_else</span>(</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">map_lgl</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(symbol), <span class="st">&quot;;&quot;</span>), \(g) <span class="fu">all</span>(g <span class="sc">%in%</span> CONTAMINANTS)),</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;family&quot;</span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(pct_signal))</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Contamination heavier in one cell than another would be a systematic shift landing on a</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="co"># contrast, not noise. Summarised over the four treatment-by-timepoint cells so an imbalance</span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a><span class="co"># by treatment shows up as well as one by visit.</span></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>contaminant_fraction <span class="ot">&lt;-</span> <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">tapply</span>(contaminant_fraction, y<span class="sc">$</span>targets<span class="sc">$</span>group, median), <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       T1        T2 
-0.2685500 0.3012824 </code></pre>
+<pre><code> BFR_T1  BFR_T2 HLRT_T1 HLRT_T2 
+ 0.2607  0.3020  0.2939  0.2966 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>contaminant, ]</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>summary_contaminants <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;contaminants removed&quot;</span>, signal_start)</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(removed, <span class="dv">20</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>contaminant, ]</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>summary_contaminants <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;contaminants removed&quot;</span>, signal_start)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(removed, <span class="dv">20</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2653,11 +2656,11 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>Blood index, not computed
+<span class="screen-reader-only">Note</span>What the contaminant fraction does and does not settle
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Nothing here measures how much of each sample’s signal was blood. Biopsy technique varies between legs and between visits, and blood takes MS duty cycle away from muscle protein, so the amount could differ between groups and confound the comparison. Someone should check whether it does before write-up. The haemoglobin rows are still in the matrix at this point in the notebook, which is where that measurement would have to be taken.</p>
+<p>The medians above compare the four cells, so a gross imbalance in how bloody the biopsies were would be visible. Nothing adjusts for the fraction, and no test is run on it, so a difference too small to see here could still tilt a contrast: blood takes MS duty cycle away from muscle protein, and biopsy technique varies between legs and between visits. <code>02_Differential</code> estimates one quality weight per sample, which absorbs some of this but is not aimed at it.</p>
 </div>
 </div>
 </section>
@@ -2665,11 +2668,11 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="guard">Guard</h2>
 <p>One assertion, run after every filter. It exists in order to fail: it catches a broken repair, which deletes muscle through the <code>Proteotypic</code> flag, and an over-reaching contaminant rule, which deletes it directly.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>))</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(MUST_KEEP <span class="sc">%in%</span> survivors))</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>removed <span class="sc">|&gt;</span></span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">groups =</span> <span class="fu">n</span>(), <span class="at">pct_signal =</span> <span class="fu">round</span>(<span class="fu">sum</span>(pct_signal), <span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>))</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(MUST_KEEP <span class="sc">%in%</span> survivors))</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>removed <span class="sc">|&gt;</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">groups =</span> <span class="fu">n</span>(), <span class="at">pct_signal =</span> <span class="fu">round</span>(<span class="fu">sum</span>(pct_signal), <span class="dv">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2692,17 +2695,20 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="outputs" class="level2">
 <h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
-<p><code>precursors_filtered.rds</code> is read by <code>01_Preprocess/02_Quantification</code>. Nothing reads the two csv files; they are the record of what this stage did.</p>
+<p><code>precursors_filtered.rds</code> is read by <code>01_Preprocess/02_Quantification</code>. Nothing reads <code>01_filter.xlsx</code>; its two sheets are the record of what this stage did.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  summary_repaired, summary_proteotypic, summary_compound, summary_contaminants</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(y, <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;01_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;precursors_filtered.rds&quot;</span>))</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(filter_log, <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;01_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;filter_log.csv&quot;</span>))</span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(removed, <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;01_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;contaminants_removed.csv&quot;</span>))</span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>filter_log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  summary_repaired, summary_proteotypic, summary_compound, summary_contaminants</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;01_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(y, <span class="fu">file.path</span>(out, <span class="st">&quot;precursors_filtered.rds&quot;</span>))</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">filter_log =</span> filter_log, <span class="at">contaminants_removed =</span> removed),</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_filter.xlsx&quot;</span>)</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>filter_log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2745,7 +2751,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
@@ -2758,26 +2764,27 @@ LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dy
 locale:
 [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
 
-time zone: America/New_York
+time zone: America/Chicago
 tzcode source: internal
 
 attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] tibble_3.3.1  readr_2.2.0   purrr_1.2.2   stringr_1.6.0 dplyr_1.2.1  
-[6] limpa_1.4.0   limma_3.68.1  here_1.0.2   
+[1] writexl_1.5.4 tibble_3.3.1  readr_2.2.0   purrr_1.2.2   stringr_1.6.0
+[6] dplyr_1.2.1   limpa_1.4.0   limma_3.68.1  here_1.0.2   
 
 loaded via a namespace (and not attached):
  [1] bit_4.6.0         jsonlite_2.0.0    crayon_1.5.3      compiler_4.6.0   
  [5] tidyselect_1.2.1  parallel_4.6.0    yaml_2.3.12       fastmap_1.2.0    
  [9] statmod_1.5.1     R6_2.6.1          generics_0.1.4    knitr_1.51       
 [13] htmlwidgets_1.6.4 rprojroot_2.1.1   pillar_1.11.1     tzdb_0.5.0       
-[17] rlang_1.2.0       stringi_1.8.7     xfun_0.57         bit64_4.8.0      
-[21] otel_0.2.0        cli_3.6.6         withr_3.0.2       magrittr_2.0.5   
-[25] digest_0.6.39     vroom_1.7.1       hms_1.1.4         lifecycle_1.0.5  
-[29] vctrs_0.7.3       evaluate_1.0.5    glue_1.8.1        data.table_1.18.4
-[33] rmarkdown_2.31    tools_4.6.0       pkgconfig_2.0.3   htmltools_0.5.9  </code></pre>
+[17] rlang_1.2.0       nanoparquet_0.5.1 stringi_1.8.7     xfun_0.57        
+[21] bit64_4.8.0       otel_0.2.0        cli_3.6.6         withr_3.0.2      
+[25] magrittr_2.0.5    digest_0.6.39     vroom_1.7.1       hms_1.1.4        
+[29] lifecycle_1.0.5   vctrs_0.7.3       evaluate_1.0.5    glue_1.8.1       
+[33] data.table_1.18.4 rmarkdown_2.31    tools_4.6.0       pkgconfig_2.0.3  
+[37] htmltools_0.5.9  </code></pre>
 </div>
 </div>
 </section>

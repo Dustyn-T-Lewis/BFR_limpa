@@ -7,7 +7,11 @@ Separate from the fit so a design problem surfaces in seconds.
 |---|---|
 | **Script** | `a_script/01_design.qmd` |
 | **Reads** | `01_Preprocess/02_Quantification/c_data/proteins.rds` |
-| **Writes** | `c_data/design.rds`, `c_data/correlation_strata.csv` |
+| **Writes** | `c_data/design.rds`, `c_data/01_design.xlsx` |
+
+```sh
+quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd --output-dir ../b_reports
+```
 
 ## The design
 
@@ -27,18 +31,18 @@ participant-adjusted cell means rather than raw ones. The design is full rank re
 
 ## Two assertions before anything is fitted
 
-The design must be full rank, or the contrasts are not estimable. And every column name must survive
-`make.names()`, because `makeContrasts()` parses its arguments as R code and a level named like
-`2E-T1` would be read as subtraction.
+The design must be full rank, or the contrasts are not estimable and come back as silent NAs. And
+every column name must survive `make.names()`, because `makeContrasts()` parses its arguments as R
+code and a level named like `2E-T1` would be read as subtraction.
 
 ## The correlation diagnostic
 
 Samples share a participant, and within that they share a leg. The participant term removes the
 first exactly; the second stays in the residual. If it were large, the within-leg comparisons would
-be tested too conservatively and the between-leg ones too liberally.
-
-`correlation_strata.csv` reports it. On this data the within-leg value is 0.027, so the fixed term
-is sufficient and `02_Differential` calls `dpcDE()` without `block =`.
+be tested too conservatively and the between-leg ones too liberally. The workbook
+reports it in the `correlation_strata` sheet; it has been near zero on this data, which is why
+`02_Differential` calls `dpcDE()`
+without `block =`.
 
 Two caveats. It is estimated on the bare expression matrix, so it carries neither the precision
 weights nor the sample weights the real fit uses; it describes the matrix, not the model. And
