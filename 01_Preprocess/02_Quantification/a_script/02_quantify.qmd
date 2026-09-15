@@ -33,7 +33,7 @@ precursors_file <- here("01_Preprocess", "01_Filtering", "c_data",
 y <- readRDS(precursors_file)
 dim(y)
 
-checkpoints <- here("01_Preprocess", "02_Quantification", "c_data", "dpcQuant")
+checkpoints <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
 primary_file <- file.path(checkpoints, "proteins_slope_0.7.rds")
 sensitivity_file <- file.path(checkpoints, "proteins_slope_fitted.rds")
 ```
@@ -77,10 +77,10 @@ situation: "If `dpcCN()` doesn't give a value in that range, it would be reasona
 `dpcQuant()` with a preset value `dpc.slope=0.7`." The fitted value is carried into a sensitivity
 run at the end. The choice follows the documented rule, not any downstream count.
 
-One caveat belongs on the record. The FAQ says a slope set too low makes the analysis more
-conservative. On this data the reverse held when it was last measured: the lower fitted slope gave
-smaller standard errors and more hits than the preset. The preset is still both the documented
-setting and the cautious one here, but the direction is not what the documentation predicts.
+The FAQ says a slope set too low makes the analysis more conservative. On this data the reverse
+held when it was last measured: the lower fitted slope gave smaller standard errors and more hits
+than the preset. The preset remains both the documented setting and the cautious one here, but the
+direction runs against what the documentation predicts.
 
 ::: {.callout-note}
 The visual fit is not the diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
@@ -97,14 +97,16 @@ reads it as a precision weight, so a protein reconstructed largely from missing 
 gets a value and a wide one. Handing `$E` to `lmFit()` discards that and treats every
 protein as equally reliable.
 
-The call itself lives in `a_script/dpc_quant.R`, not here, because it costs about 100 minutes.
-This notebook only loads what that script wrote, so rendering is always cheap and can never
-start a long run by accident. Rerun the script by hand when the precursor matrix changes.
+That call costs about 100 minutes, so it lives in `a_script/02_quantify_run.R` rather than here.
+This notebook loads what the script wrote and nothing more, so a render stays cheap and cannot
+begin a long run by accident. Rerun the script by hand when the precursor matrix changes.
 
 ```{r quantify}
 if (!file.exists(primary_file)) {
-  stop("No dpcQuant checkpoint. Run:\n",
-    "  Rscript 01_Preprocess/02_Quantification/a_script/dpc_quant.R")
+  stop(
+    "No dpcQuant checkpoint. Run:\n",
+    "  Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R"
+  )
 }
 proteins <- readRDS(primary_file)$object
 ```
@@ -169,12 +171,12 @@ The curvature is unrelated to treatment or timepoint, so cyclic loess is not abs
 being tested. `proteins.rds` is written after this, so it is the matrix the model is fitted to.
 
 ::: {.callout-warning}
-## An approximation, stated plainly
+## The standard errors stay on the old scale
 
-Cyclic loess remaps `$E` non-linearly while `$other$standard.error` is left untouched. After
-normalisation the stored errors describe the unnormalised scale and `dpcDE()` reads them as though
+Cyclic loess remaps `$E` non-linearly and leaves `$other$standard.error` untouched. After
+normalisation the stored errors describe the unnormalised scale, and `dpcDE()` reads them as though
 they described the new one. Smyth recommends quantile and cyclic loess for this data regardless,
-and the mapping is close enough to linear that the discrepancy is small, but it is an
+and the mapping is close enough to linear that the discrepancy is small. It is still an
 approximation rather than an exact correspondence.
 :::
 
@@ -199,9 +201,9 @@ rather than on data.
 
 Points are coloured by participant, and the variance each factor explains in the leading dimension
 is printed below the plot. Thirty-two of the 33 participants contribute all four cells, so
-between-participant variation dominates and the participant term in the design is what removes
-it. A sample sitting
-far from its own participant is worth investigating; an absence of group structure is not.
+between-participant variation dominates, and the participant term in the design is what removes it.
+A sample sitting far from its own participant is worth investigating. Seeing no group structure
+here is expected, not a warning sign.
 
 ```{r mds}
 #| fig-height: 5
@@ -253,14 +255,14 @@ tibble(
 round(median(abs(proteins$E[shared, ] - sensitivity$E[shared, ])), 4)
 ```
 
-This section renders only when `c_data/dpcQuant/proteins_slope_fitted.rds` is present, since
+This section renders only when `c_data/quant_runs/proteins_slope_fitted.rds` is present, since
 computing it costs about another 100 minutes. To produce it once:
 
 ```sh
-Rscript 01_Preprocess/02_Quantification/a_script/dpc_quant.R --sensitivity
+Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 ```
 
-Afterwards it loads like the primary run does.
+After that it loads exactly as the primary run does.
 
 Refitting the contrasts under each slope is a separate exercise and is not done here; the counts
 it produced are recorded in this stage's README.

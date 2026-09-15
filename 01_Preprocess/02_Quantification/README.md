@@ -5,9 +5,9 @@ proteins, filters on detection, normalises. This is the slow stage.
 
 | | |
 |---|---|
-| **Scripts** | `a_script/dpc_quant.R` computes, `a_script/02_quantify.qmd` reports |
+| **Scripts** | `a_script/02_quantify_run.R` computes, `a_script/02_quantify.qmd` reports |
 | **Reads** | `01_Filtering/c_data/precursors_filtered.rds` |
-| **Writes** | `c_data/proteins.rds`, `c_data/02_quantify.xlsx`, `c_data/dpcQuant/` |
+| **Writes** | `c_data/proteins.rds`, `c_data/02_quantify.xlsx`, `c_data/quant_runs/` |
 
 Two files, because `dpcQuant()` costs about 100 minutes per call and a render should not.
 
@@ -15,20 +15,20 @@ Two files, because `dpcQuant()` costs about 100 minutes per call and a render sh
 quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-dir ../b_reports
 ```
 
-The notebook **only loads**. It reads `c_data/dpcQuant/proteins_slope_0.7.rds` and stops with the
+The notebook **only loads**. It reads `c_data/quant_runs/proteins_slope_0.7.rds` and stops with the
 command below if that file is absent. It cannot start a long run, whatever you pass it.
 
 The long run is yours to start, by hand, when the precursor matrix changes:
 
 ```sh
-Rscript 01_Preprocess/02_Quantification/a_script/dpc_quant.R
-Rscript 01_Preprocess/02_Quantification/a_script/dpc_quant.R --sensitivity
+Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R
+Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 ```
 
 The first writes the primary run at the preset slope; the second adds the fitted-slope
 sensitivity run, another 100 minutes. Each file records the md5 of the precursor matrix it came
-from, as provenance. Nothing checks it, so if you rerun `01_Filtering` you must rerun this too —
-the notebook will happily load a checkpoint built from older precursors.
+from, as provenance. Nothing checks that md5, so rerunning `01_Filtering` means rerunning this
+too. The notebook will happily load a checkpoint built from older precursors.
 
 `proteins_slope_0.7.rds` is committed, so a fresh clone renders without running anything.
 
