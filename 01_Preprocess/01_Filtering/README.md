@@ -24,7 +24,6 @@ and `contaminants_removed`, recording what this stage did.
 4. Remove peptides mapping to several proteins, then groups holding several proteins.
 5. Remove blood, plasma, skin and antibody proteins, reporting each cell's contaminant share
    first, since uneven contamination would land on a contrast.
-6. Assert 28 named proteins survived, and list what left.
 
 ## The repair
 
