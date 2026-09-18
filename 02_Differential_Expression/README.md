@@ -39,22 +39,9 @@ asserting on it, so a failure lands in the report instead of halting the render.
 makes pre-to-post paired. It also means sex cannot be tested, since it does not vary within a
 participant.
 
-**Adjusted within each comparison, never pooled.** The five share participants and the interaction
-is built from two of the others.
+**The interaction has returned no hits under every variant tried.** That is a statement about what
+this study could detect, not a demonstration that the two training modes act alike. `02_Differential`
+prints the effect size it had 80% power to find, and the two numbers have to be quoted together.
 
-Testing goes through `dpcDE()`, which reads the standard errors from `proteins.rds`. A plain
-`lmFit()` would discard them.
-
-## What comes out
-
-`02_differential.xlsx` holds two sheets: `DEP_matrix`, one row per protein with `logFC`,
-`P.Value` and `adj.P.Val` for each contrast, and `contrast_summary`, the hit counts. `fit.rds`
-is the complete fitted model. All carry full precision; rounding happens only in the report.
-
-## Reading the counts
-
-Hit counts near the FDR boundary move with the normalisation applied upstream, so treat the two
-time contrasts as approximate. The interaction has returned no hits under every variant tried,
-which is a statement about what this study could detect, not a demonstration that the two
-training modes act alike. `02_Differential` prints the effect size it had 80% power to find, and
-that number is what bounds the claim.
+`02_Differential/README.md` covers what comes out, how the null contrasts are read, and why
+Benjamini-Hochberg runs within each contrast rather than across the five.
