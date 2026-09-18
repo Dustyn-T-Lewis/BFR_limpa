@@ -20,7 +20,7 @@ and `contaminants_removed`, recording what this stage did.
 1. Read the report with `readDIANN()`.
 2. Rename columns from MS run names to our sample IDs, dropping one discarded injection. Every
    metadata run must match a report column, or the sample would silently become all-NA.
-3. Repair the search database fault.
+3. Repair the search database fault and drop reversed decoys.
 4. Remove peptides mapping to several proteins, then groups holding several proteins.
 5. Remove blood, plasma, skin and antibody proteins, reporting each cell's contaminant share
    first, since uneven contamination would land on a contrast.
@@ -28,10 +28,11 @@ and `contaminants_removed`, recording what this stage did.
 
 ## The repair
 
-The search FASTA listed every protein twice, once tagged as a contaminant, which makes creatine
-kinase and myoglobin look ambiguous. Left alone, step 4 deletes them along with most of the
-muscle. So we drop only the entries that are contaminant-only, then strip the tag from the rest.
-The order matters: once the tag is gone, a contaminant-only entry looks real.
+The contaminant database appended to the search FASTA repeats proteins the human FASTA already
+lists, so creatine kinase and myoglobin arrive tagged as contaminants and look ambiguous. Left
+alone, step 4 deletes them along with most of the muscle. So we drop only the entries that are
+contaminant-only, then strip the tag from the rest. The order matters: once the tag is gone, a
+contaminant-only entry looks real.
 
 ## Contaminants
 
