@@ -1,0 +1,8 @@
+# Quarto injects `params` at render and dplyr resolves column names in the data mask,
+# so object_usage_linter reports both as undefined globals inside notebook functions.
+# Every hit it produced here was one of those two. The rest of the defaults apply.
+linters: linters_with_defaults(
+    line_length_linter(98L),
+    object_name_linter(styles = c("snake_case", "SNAKE_CASE")),
+    object_usage_linter = NULL
+  )
