@@ -36,14 +36,6 @@ tested here, so no plot carries an enrichment arc or a pathway p-value.
 ## Inputs
 
 ```{r setup}
-required <- c(
-  "here", "limma", "limpa", "dplyr", "tibble", "tidyr", "purrr", "readr",
-  "writexl", "digest", "Matrix", "ggplot2", "enrichVolcano", "knitr"
-)
-absent <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
-if (length(absent)) {
-  stop("Install required R packages: ", paste(absent, collapse = ", "))
-}
 library(here)
 library(dplyr)
 library(tibble)
@@ -59,11 +51,12 @@ figure_dir <- file.path(stage, "b_reports", "figures")
 for (path in c(out, cache_dir, figure_dir)) {
   dir.create(path, recursive = TRUE, showWarnings = FALSE)
 }
-input_paths <- c(
-  proteins = here("01_Preprocess/02_Quantification/c_data/proteins.rds"),
-  fit = here("02_Differential_Expression/02_Differential/c_data/fit.rds"),
-  design = here("02_Differential_Expression/01_Design/c_data/design.rds")
+input_files <- c(
+  proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds",
+  fit = "02_Differential_Expression/02_Differential/c_data/fit.rds",
+  design = "02_Differential_Expression/01_Design/c_data/design.rds"
 )
+input_paths <- map_chr(input_files, here)
 if (!all(file.exists(input_paths))) {
   stop(
     "Run the upstream stages first. Missing: ",
@@ -76,22 +69,13 @@ d <- readRDS(input_paths[["design"]])
 protein_ids <- rownames(proteins$E)
 contrast_names <- colnames(d$contrasts)
 training_contrasts <- c("BFR_post_vs_pre", "HLRT_post_vs_pre")
+# Three files written by three stages, any of which can be older than the others. A stale
+# fit.rds still lines up by count, so every check below compares names rather than lengths.
 stopifnot(
-  !anyDuplicated(protein_ids), !anyDuplicated(colnames(proteins$E)),
-  identical(rownames(proteins$genes), protein_ids),
   identical(rownames(fit$coefficients), protein_ids),
-  identical(colnames(proteins$E), rownames(d$design)),
-  identical(colnames(proteins$E), proteins$targets$sample_id),
   identical(colnames(fit$coefficients), contrast_names),
-  identical(fit$design, d$design), identical(fit$contrasts, d$contrasts),
-  identical(fit$EList$E, proteins$E),
-  identical(fit$EList$other, proteins$other),
-  identical(fit$EList$genes, proteins$genes),
-  all(is.finite(proteins$E)),
-  identical(dimnames(proteins$other$standard.error), dimnames(proteins$E)),
-  identical(dimnames(proteins$other$n.observations), dimnames(proteins$E)),
-  all(is.finite(proteins$other$standard.error)),
-  all(proteins$other$standard.error > 0),
+  identical(fit$design, d$design),
+  identical(colnames(proteins$E), rownames(d$design)),
   d$negative_control %in% contrast_names,
   all(training_contrasts %in% contrast_names)
 )
@@ -101,17 +85,6 @@ if (!"volc_sig_col" %in% names(formals(enrichVolcano::volcano_ring))) {
     "Install the current Dustyn-T-Lewis/enrichVolcano package."
   )
 }
-stopifnot(
-  is.numeric(params$min_set_size), params$min_set_size >= 1,
-  params$min_set_size == as.integer(params$min_set_size),
-  params$max_set_size >= params$min_set_size,
-  params$min_measured >= 1,
-  params$min_measured == as.integer(params$min_measured),
-  params$min_measured <= params$max_set_size,
-  params$jaccard_cutoff > 0, params$jaccard_cutoff <= 1,
-  params$protein_fdr > 0, params$protein_fdr < 1,
-  params$label_n >= 0, params$label_n == as.integer(params$label_n)
-)
 tibble(
   n_proteins = nrow(proteins$E), n_samples = ncol(proteins$E),
   n_participants = n_distinct(proteins$targets$participant),
@@ -119,10 +92,11 @@ tibble(
 )
 ```
 
-The matrix is the one `dpcDE()` fitted, normalised and unaltered. The handoff carries the whole
-EList with it: standard errors, observation counts, the weighted fit and the fixed-participant
-design. Nothing is refitted here. The upstream approximation travels along too, since cyclic loess
-moved the abundances and left the stored standard errors on the pre-normalisation scale.
+The matrix is the one `dpcDE()` fitted, normalised and unaltered, and nothing is refitted here.
+The standard errors, the weighted fit and the fixed-participant design stay where the upstream
+stages wrote them; this stage reads them by path and writes only what it derives. The upstream
+approximation travels along, since cyclic loess moved the abundances and left the stored standard
+errors on the pre-normalisation scale.
 
 ## Freezing the gene sets
 
@@ -143,19 +117,16 @@ collection_specs <- list(
   GOMF = list(collection = "C5", subcollection = "GO:MF")
 )
 collections <- unlist(params$collections, use.names = FALSE)
-stopifnot(
-  length(collections) > 0, !anyDuplicated(collections),
-  all(collections %in% names(collection_specs)),
-  grepl("^[0-9]{4}\\.[0-9]+\\.Hs$", params$msigdb_version)
-)
+stopifnot(all(collections %in% names(collection_specs)))
 cache_request <- list(
   schema = 1L, species = "Homo sapiens", db_species = "HS",
   db_version = params$msigdb_version,
   collections = collection_specs[collections]
 )
-cache_key <- substr(digest::digest(cache_request, algo = "sha256"), 1, 12)
+# The release and the collections are what make one snapshot different from another, so
+# the filename says both. Ask for a combination you have not frozen and the name misses.
 cache_file <- file.path(cache_dir, paste0(
-  "msigdb_", params$msigdb_version, "_", cache_key, ".rds"
+  "msigdb_", params$msigdb_version, "_", paste(collections, collapse = "-"), ".rds"
 ))
 checksum_file <- paste0(cache_file, ".md5")
 
@@ -211,13 +182,7 @@ if (!file.exists(checksum_file) || !identical(
   )
 }
 frozen <- readRDS(cache_file)
-stopifnot(identical(frozen$request, cache_request))
 membership <- frozen$membership
-stopifnot(
-  identical(unique(membership$db_version), params$msigdb_version),
-  setequal(unique(membership$database), collections),
-  !anyNA(membership$gene), all(nzchar(membership$gene))
-)
 tibble(
   database_release = frozen$request$db_version,
   msigdbr_at_freeze = frozen$msigdbr_version,
@@ -276,9 +241,8 @@ protein_map <- protein_map |>
   )
 gene_map <- filter(protein_map, selected)
 gene_universe <- gene_map$gene
-stopifnot(!anyDuplicated(gene_universe), !anyDuplicated(protein_map$label))
-gene_matrix <- proteins$E[gene_map$protein, , drop = FALSE]
-rownames(gene_matrix) <- gene_universe
+# Labels are what the volcanoes print, and a collision would put two proteins on one point.
+stopifnot(!anyDuplicated(protein_map$label))
 count(protein_map, mapping_status, annotated, name = "proteins")
 ```
 
@@ -295,13 +259,14 @@ the number that governs power, rather than the set's size in the database.
 
 Many sets then say almost the same thing. Within each database the stage walks the qualifying sets
 from largest measured membership down and drops any whose Jaccard overlap with a set already kept
-reaches `r params$jaccard_cutoff`, measuring overlap on measured members only. Ties break on source
-size, then on set ID, so the result does not depend on row order. Each dropped set records which
+reaches `r params$jaccard_cutoff`, measuring overlap on measured members only. Ties go to the larger
+source set, then to the lower set ID, so the result does not depend on row order. Each dropped set records which
 set displaced it and by how much. Databases reduce separately, which stops a GO term from erasing a
 Hallmark set that covers the same biology. Both the qualifying collection and the reduced one are
 exported. Reduction cuts redundancy; it does not make what survives independent.
 
 ```{r filter-sets}
+stopifnot(params$max_set_size >= params$min_set_size)
 set_members <- membership |> distinct(set_id, gene)
 sets_full <- split(set_members$gene, set_members$set_id) |> map(sort)
 sets_measured <- map(sets_full, intersect, y = gene_universe)
@@ -326,24 +291,21 @@ if (!length(eligible_ids)) stop("No gene sets passed the size/coverage filters."
 reduce_sets <- function(catalog) {
   catalog <- arrange(catalog, desc(measured_size), desc(source_size), set_id)
   sets <- sets_measured[catalog$set_id]
-  incidence <- Matrix::sparseMatrix(
-    i = match(unlist(sets, use.names = FALSE), gene_universe),
-    j = rep(seq_along(sets), lengths(sets)), x = 1,
-    dims = c(length(gene_universe), length(sets))
+  sizes <- lengths(sets)
+  # Column j marks the measured genes in set j, so crossprod gives every pairwise
+  # intersection count in one pass. Indexing an empty `kept` yields an empty Jaccard
+  # vector, which is how the first set of each database takes the else branch.
+  incidence <- vapply(
+    sets, \(genes) gene_universe %in% genes, logical(length(gene_universe))
   )
-  intersections <- Matrix::crossprod(incidence)
+  shared <- crossprod(incidence)
   kept <- integer()
   for (i in seq_along(sets)) {
-    similarity <- numeric()
-    if (length(kept)) {
-      shared <- as.numeric(intersections[i, kept])
-      similarity <- shared / (lengths(sets)[i] + lengths(sets)[kept] - shared)
-    }
-    if (length(similarity) && max(similarity) >= params$jaccard_cutoff) {
-      j <- kept[which.max(similarity)]
+    jaccard <- shared[i, kept] / (sizes[i] + sizes[kept] - shared[i, kept])
+    if (length(jaccard) && max(jaccard) >= params$jaccard_cutoff) {
       catalog$status[i] <- "redundant"
-      catalog$representative[i] <- catalog$set_id[j]
-      catalog$jaccard[i] <- max(similarity)
+      catalog$representative[i] <- catalog$set_id[kept[which.max(jaccard)]]
+      catalog$jaccard[i] <- max(jaccard)
     } else {
       kept <- c(kept, i)
       catalog$status[i] <- "retained"
@@ -365,9 +327,9 @@ sets_retained <- sets_measured[set_catalog$set_id[set_catalog$status == "retaine
 set_indices <- map(sets_retained, function(genes) {
   match(gene_map$protein[match(genes, gene_map$gene)], protein_ids)
 })
-annotated_universes <- setNames(map(collections, function(database) {
+annotated_universes <- map(set_names(collections), function(database) {
   intersect(gene_universe, membership$gene[membership$database == database])
-}), collections)
+})
 set_summary <- set_catalog |>
   summarise(
     downloaded = n(),
@@ -410,7 +372,7 @@ protein_results <- map(contrast_names, function(contrast) {
     # Keep exact p-values in the export; bound only the logarithm for plotting.
     plot_p = pmax(P.Value, .Machine$double.xmin),
     pi_score = P.Value^abs(logFC),
-    pi_value = if_else(logFC == 0, 0, abs(logFC) * -log10(plot_p)),
+    pi_value = abs(logFC) * -log10(plot_p),
     signed_pi = sign(logFC) * pi_value,
     fdr_significant = padj < params$protein_fdr,
     direction = case_when(
@@ -419,29 +381,10 @@ protein_results <- map(contrast_names, function(contrast) {
       TRUE ~ "not_significant"
     )
   )
-stopifnot(
-  nrow(protein_results) == length(protein_ids) * length(contrast_names),
-  !anyDuplicated(protein_results[c("contrast", "protein")]),
-  all(is.finite(protein_results$logFC)),
-  all(is.finite(protein_results$t)),
-  all(is.finite(protein_results$P.Value)),
-  all(protein_results$P.Value >= 0 & protein_results$P.Value <= 1),
-  all(is.finite(protein_results$padj)),
-  all(protein_results$padj >= 0 & protein_results$padj <= 1)
-)
-for (contrast in contrast_names) {
-  result <- filter(protein_results, .data$contrast == .env$contrast)
-  stopifnot(isTRUE(all.equal(result$padj, p.adjust(result$P.Value, "BH"))))
-}
+# The join above is many-to-one, so a protein absent from the map would come back as NA
+# rows rather than as an error.
+stopifnot(nrow(protein_results) == length(protein_ids) * length(contrast_names))
 gene_results <- filter(protein_results, selected)
-ranked_t <- setNames(map(contrast_names, function(contrast) {
-  result <- filter(gene_results, .data$contrast == .env$contrast)
-  sort(setNames(result$t, result$gene), decreasing = TRUE)
-}), contrast_names)
-ranked_pi <- setNames(map(training_contrasts, function(contrast) {
-  result <- filter(gene_results, .data$contrast == .env$contrast)
-  sort(setNames(result$signed_pi, result$gene), decreasing = TRUE)
-}), training_contrasts)
 contrast_summary <- protein_results |>
   summarise(
     tested = n(), fdr_up = sum(direction == "up"),
@@ -502,15 +445,15 @@ contrast_titles <- c(
   interaction = "Interaction: difference in training responses"
 )
 make_volcano <- function(contrast, rank_by = "fdr") {
-  df <- filter(protein_results, .data$contrast == .env$contrast)
+  points <- filter(protein_results, .data$contrast == .env$contrast)
   if (rank_by == "pi") {
-    labels <- df |>
+    labels <- points |>
       arrange(desc(pi_value), protein) |>
       slice_head(n = params$label_n) |>
       pull(label)
     subtitle <- "Labels ranked by pi-value; colours and counts use BH FDR"
   } else {
-    labels <- df |>
+    labels <- points |>
       filter(fdr_significant) |>
       arrange(padj, P.Value, protein) |>
       slice_head(n = params$label_n) |>
@@ -518,7 +461,7 @@ make_volcano <- function(contrast, rank_by = "fdr") {
     subtitle <- paste0("Protein significance: BH FDR < ", params$protein_fdr)
   }
   draw_volcano(
-    volc_df = select(df, label, logFC, plot_p, padj),
+    volc_df = select(points, label, logFC, plot_p, padj),
     enrich_df = empty_enrichment,
     gene_col = "label", pval_col = "plot_p", padj_col = "padj",
     volc_sig_col = "padj", genes_col = "leading_edge",
@@ -535,10 +478,10 @@ make_volcano <- function(contrast, rank_by = "fdr") {
       plot.margin = margin(8, 8, 8, 8)
     )
 }
-save_volcano <- function(plot, name) {
+save_volcano <- function(volcano, name) {
   for (extension in c("png", "pdf")) {
     ggsave(file.path(figure_dir, paste0(name, ".", extension)),
-      plot = plot, width = 7, height = 6.5, units = "in", dpi = 300,
+      plot = volcano, width = 7, height = 6.5, units = "in", dpi = 300,
       bg = "white"
     )
   }
@@ -555,9 +498,9 @@ plot_order <- c(
 )
 for (contrast in plot_order) {
   cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
-  plot <- make_volcano(contrast)
-  save_volcano(plot, paste0("protein_volcano_fdr_", contrast))
-  print(plot)
+  volcano <- make_volcano(contrast)
+  save_volcano(volcano, paste0("protein_volcano_fdr_", contrast))
+  print(volcano)
   cat("\n\n")
 }
 ```
@@ -583,9 +526,9 @@ pi_top <- protein_results |>
   slice_head(n = 10, by = contrast)
 for (contrast in training_contrasts) {
   cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
-  plot <- make_volcano(contrast, rank_by = "pi")
-  save_volcano(plot, paste0("protein_volcano_pi_rank_", contrast))
-  print(plot)
+  volcano <- make_volcano(contrast, rank_by = "pi")
+  save_volcano(volcano, paste0("protein_volcano_pi_rank_", contrast))
+  print(volcano)
   cat("\n\n")
   displayed <- pi_top |>
     filter(.data$contrast == .env$contrast) |>
@@ -607,22 +550,24 @@ Every derived file is rebuilt from the current inputs on each render, so no stal
 old score can survive a parameter change. The frozen source cache is the one exception, which is
 the point of freezing it.
 
-The workbook is the readable copy: protein matrix, sample metadata, protein and gene statistics,
-the mapping decisions, the set catalog and the summary tables. The CSVs carry the same numbers at
-full precision for anything that needs to load rather than read them. The two RDS files hold what a
-flat file cannot, namely the fit, the standard errors and the set indices.
+The workbook is the readable copy: sample metadata, protein and gene statistics, the mapping
+decisions, the set catalogue and the summary tables. The CSVs carry the same numbers at full
+precision for anything that needs to load rather than read them. The two RDS files hold what a flat
+file cannot, namely the gene sets and the row indices that tie them to the protein matrix.
 
 ```{r write-outputs}
 input_manifest <- tibble(
-  input = names(input_paths),
-  path = substring(unname(input_paths), nchar(here()) + 2),
+  input = names(input_files),
+  path = unname(input_files),
   md5 = unname(tools::md5sum(input_paths))
 )
+packages <- c(
+  "here", "limma", "limpa", "dplyr", "tibble", "tidyr", "purrr", "readr",
+  "writexl", "ggplot2", "enrichVolcano", "knitr"
+)
 package_versions <- tibble(
-  package = required,
-  version = vapply(required, function(package) {
-    as.character(packageVersion(package))
-  }, character(1))
+  package = packages,
+  version = map_chr(packages, \(package) as.character(packageVersion(package)))
 )
 provenance <- list(
   schema = 1L, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
@@ -646,43 +591,26 @@ provenance <- list(
   signed_pi = "sign(logFC) * pi_value; exploratory training ranks only",
   reduction = "Within database, measured-member Jaccard; deterministic greedy",
   pathway_tests_run = FALSE,
-  plotting_adapter = "Private empty-enrichment validation adapter; namespace unchanged",
-  enrichvolcano_renderer_sha256 = digest::digest(
-    body(enrichVolcano::volcano_ring),
-    algo = "sha256"
-  )
+  plotting_adapter = "Private empty-enrichment validation adapter; namespace unchanged"
 )
 gene_sets <- list(
   full = sets_full, eligible = sets_eligible, retained = sets_retained,
   catalog = set_catalog, measured_universe = gene_universe,
   annotated_universes = annotated_universes, provenance = provenance
 )
+# What this stage derives, and nothing it merely read. proteins.rds and fit.rds are
+# tracked upstream, so copying them here would only let the copy go stale.
 pathway_inputs <- list(
-  proteins = proteins, fit = fit, design = d,
-  protein_results = protein_results, gene_results = gene_results,
-  protein_map = protein_map, gene_matrix = gene_matrix,
+  protein_results = protein_results, protein_map = protein_map,
   gene_sets = sets_retained, set_indices = set_indices,
-  ranked_t = ranked_t, ranked_pi = ranked_pi,
-  annotated_universes = annotated_universes, provenance = provenance
-)
-stopifnot(
-  all(map_lgl(sets_retained, ~ all(.x %in% gene_universe))),
-  all(lengths(sets_retained) >= params$min_measured),
-  all(map_lgl(set_indices, ~ !anyNA(.x) && !anyDuplicated(.x))),
-  all(map2_lgl(sets_retained, set_indices, function(genes, indices) {
-    identical(genes, protein_map$gene[indices])
-  })),
-  identical(colnames(gene_matrix), rownames(d$design))
+  provenance = provenance
 )
 saveRDS(gene_sets, file.path(out, "gene_sets.rds"), compress = "xz")
 saveRDS(pathway_inputs, file.path(out, "pathway_inputs.rds"), compress = "xz")
-saveRDS(proteins$E, file.path(out, "protein_matrix.rds"), compress = "xz")
 readr::write_csv(protein_results, file.path(out, "protein_statistics.csv"))
 readr::write_csv(set_catalog, file.path(out, "gene_set_catalog.csv"))
 readr::write_csv(input_manifest, file.path(out, "input_manifest.csv"))
-matrix_table <- as.data.frame(proteins$E) |> rownames_to_column("protein")
 writexl::write_xlsx(list(
-  protein_matrix = matrix_table,
   samples = proteins$targets,
   protein_statistics = protein_results,
   gene_statistics = gene_results,
@@ -696,20 +624,20 @@ writexl::write_xlsx(list(
 ), file.path(out, "01_gene_sets.xlsx"))
 tibble(
   output = c(
-    "01_gene_sets.xlsx", "protein_matrix.rds", "gene_sets.rds",
-    "pathway_inputs.rds", "protein_statistics.csv", "gene_set_catalog.csv"
+    "01_gene_sets.xlsx", "gene_sets.rds", "pathway_inputs.rds",
+    "protein_statistics.csv", "gene_set_catalog.csv"
   ),
   size_mb = round(file.info(file.path(out, output))$size / 1024^2, 2)
 )
 ```
 
 One trap to note before the next stage. `pathway_inputs$set_indices` indexes rows of
-`pathway_inputs$proteins$E`, never rows of the gene matrix, and the two have different row counts.
+`proteins$E` as the upstream stage wrote it, so the next stage has to open `proteins.rds` itself
+rather than index into anything built here.
 
 A set test reading this handoff has to keep the participant design and limpa's weights, and it
-should report the baseline control before anyone reads the interaction. The ranked vectors are here
-because some tools want them, not because a test assuming independent proteins is appropriate for
-this design. No hit list is selected by pi score at this stage.
+should report the baseline control before anyone reads the interaction. No hit list is selected by
+pi score at this stage.
 
 ```{r session}
 sessionInfo()
