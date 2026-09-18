@@ -1,7 +1,7 @@
 # 02 · Differential Expression
 
-Takes `proteins.rds` and asks which proteins changed. Two sub-stages, so a design problem shows up
-before an hour of model fitting does.
+Takes `proteins.rds` and asks which proteins changed. Two sub-stages, so a design problem surfaces
+before anything is fitted.
 
 ```
 01_Preprocess/02_Quantification/c_data/proteins.rds
