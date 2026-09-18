@@ -15,7 +15,7 @@ heavy load?
 | `00_Input/` | study data, runs nothing | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
 | `02_Differential_Expression/` | fit the model, test five contrasts | ready |
-| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, then which processes moved | gene-set/input stage ready; tests planned |
+| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, then which processes moved | first sub-stage ready; tests planned |
 | `04_Network/` | protein groups the data defines | planned |
 | `05_Figures/` | manuscript panels | planned |
 
@@ -59,5 +59,6 @@ plus a standard error, and that uncertainty carries into the statistics.
 Two rules follow. Never filter on missing values before quantification, and never hand the
 protein matrix to an ordinary linear model.
 
-Packages: `limpa`, `limma`, `here`, `nanoparquet`, and `dplyr`/`stringr`/`purrr`/`readr`/`tibble`.
-Versions are not pinned.
+Packages: `limpa`, `limma`, `here`, `nanoparquet`, `writexl`, and `dplyr`, `stringr`, `purrr`,
+`readr`, `tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` adds `msigdbr`, `enrichVolcano`,
+`digest` and `Matrix`, and checks for them itself. Versions are not pinned.
