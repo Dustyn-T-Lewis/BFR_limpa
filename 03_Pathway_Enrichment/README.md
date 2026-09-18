@@ -10,7 +10,7 @@ is the right stage when the protein-level result is thin.
 
 | Sub-stage | Does / will do |
 |---|---|
-| [`01_Gene_Sets`](01_Gene_Sets/README.md) | freeze human MSigDB; filter on size and measured overlap; export the protein matrix, model and FDR/pi scores; draw enrichVolcano protein plots |
+| [`01_Gene_Sets`](01_Gene_Sets/README.md) | freeze human MSigDB, filter on size and measured overlap, export the protein matrix with its fitted model and scores, draw the protein volcanoes |
 | `02_Set_Tests` | test each set as a whole, and score every set in every sample |
 | `03_Enrichment` | for comparisons with hits, ask which processes those hits belong to |
 
@@ -18,15 +18,14 @@ is the right stage when the protein-level result is thin.
 quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
 ```
 
-The first stage writes `b_reports/01_gene_sets.html`, PNG/PDF protein volcanoes,
-and `c_data/` workbooks/RDS/CSV outputs. Its source cache pins human MSigDB
-2026.1.Hs (Hallmark, Reactome, GO Biological Process) and supports offline
-rerenders. The handoff includes the full limpa EList, weighted fit, and
-participant design alongside the plain matrix.
+That stage runs no pathway test. It freezes the gene sets, hands the next stage the protein
+matrix together with the fitted model and the participant design, and draws the protein
+volcanoes. The frozen snapshot is human MSigDB 2026.1.Hs, covering Hallmark, Reactome and GO
+Biological Process, and every later render reads it from disk rather than the network.
 
-Protein significance uses BH FDR. Pi-scores rank training-contrast labels;
-they do not select hits. enrichVolcano draws the protein plots with no pathway
-arcs until a later stage supplies valid enrichment results.
+Proteins are called on BH FDR. The pi score ranks labels on the two training contrasts and
+selects nothing. The volcanoes carry no pathway ring until a later stage has a tested result to
+put in one.
 
 ## What each would tell us
 
