@@ -6,18 +6,23 @@
 library(here)
 library(limpa)
 
-precursors_file <- here("01_Preprocess", "01_Filtering", "c_data",
-                        "precursors_filtered.rds")
+precursors_file <- here(
+  "01_Preprocess", "01_Filtering", "c_data",
+  "precursors_filtered.rds"
+)
 out <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
 y <- readRDS(precursors_file)
-# Recorded, not enforced. The notebook loads whatever is here; this says which precursor
-# matrix it came from, for anyone reconstructing a run after the fact.
+# Recorded, not enforced. The notebook loads whatever is here; these say which precursor
+# matrix and which limpa it came from, for anyone reconstructing a run after the fact.
 stamp <- unname(tools::md5sum(precursors_file))
+limpa_version <- as.character(packageVersion("limpa"))
 
 write_run <- function(object, file) {
-  saveRDS(list(object = object, input_md5 = stamp), file)
+  saveRDS(
+    list(object = object, input_md5 = stamp, limpa_version = limpa_version), file
+  )
   message("wrote ", file)
 }
 

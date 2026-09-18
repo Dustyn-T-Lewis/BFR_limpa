@@ -221,10 +221,12 @@ round(c(
 
 ## Slope sensitivity
 
-Quantification is repeated at the fitted slope and compared against the primary run, with the same
-detection filter and normalisation applied so the slope is the only difference. `dpcDE()` reads
-the standard errors as precision weights, so whichever run carries the larger mean is the more
-conservative setting.
+Quantification is repeated against the fitted curve and compared with the primary run, with the
+same detection filter and normalisation applied to both. The two differ by more than a slope: the
+primary run passes `dpc.slope = 0.7` and lets limpa fit the rest, while the sensitivity run hands
+`dpcQuant()` the whole curve `dpc()` estimated, intercept included. `dpcDE()` reads the standard
+errors as precision weights, so whichever run carries the larger mean is the more conservative
+setting.
 
 The median absolute difference in protein abundance follows the table. It measures how far values
 move, not whether that movement survives a contrast: every comparison here is within one
