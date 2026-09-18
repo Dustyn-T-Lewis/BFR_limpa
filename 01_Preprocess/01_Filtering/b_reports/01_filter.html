@@ -2382,7 +2382,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="repair-the-annotation" class="level2">
 <h2 class="anchored" data-anchor-id="repair-the-annotation">Repair the annotation</h2>
-<p>The search FASTA held every protein twice, plain and <code>cRAP-</code>-prefixed, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where <em>every</em> member is cRAP should go; the rest need the prefix stripped.</p>
+<p>The contaminant database appended to the search FASTA repeats proteins the human FASTA already lists, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where <em>every</em> member is cRAP should go; the rest need the prefix stripped.</p>
 <p>Order matters, because <code>Genes</code> carries the prefix too. One of the six cRAP-only symbols here is <code>cRAP-MB</code>: strip first and it becomes <code>MB</code>, which <code>MUST_KEEP</code> requires to survive, so precursors of a contaminant standard would merge into human myoglobin unnoticed. Two more cRAP-only rows carry no gene symbol at all, so no symbol list could catch them either.</p>
 <p>Stripping also repairs <code>Proteotypic</code>, which is why the muscle survives at all. <code>filterNonProteotypicPeptides()</code> believes the flag, and on the unrepaired annotation it deleted 13 of the <code>MUST_KEEP</code> symbols when that was last measured.</p>
 <div class="cell">

@@ -141,10 +141,10 @@ runs_dropped
 
 ## Repair the annotation
 
-The search FASTA held every protein twice, plain and `cRAP-`-prefixed, so myoglobin is reported
-as `P02144;cRAP-P02144` with `Proteotypic = 0`. Dropping every group that mentions `cRAP` would
-take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where *every* member is cRAP
-should go; the rest need the prefix stripped.
+The contaminant database appended to the search FASTA repeats proteins the human FASTA already
+lists, so myoglobin is reported as `P02144;cRAP-P02144` with `Proteotypic = 0`. Dropping every
+group that mentions `cRAP` would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups
+where *every* member is cRAP should go; the rest need the prefix stripped.
 
 Order matters, because `Genes` carries the prefix too. One of the six cRAP-only symbols here is
 `cRAP-MB`: strip first and it becomes `MB`, which `MUST_KEEP` requires to survive, so precursors
