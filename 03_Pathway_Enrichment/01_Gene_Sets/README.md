@@ -1,14 +1,12 @@
 # 03_Pathway_Enrichment / 01_Gene_Sets
 
-Freezes human gene sets, maps proteins onto genes, and draws the protein volcanoes. It runs no
-pathway test.
+Freezes human gene sets, maps proteins onto genes, and runs fgsea on each database.
 
 | | |
 |---|---|
 | **Script** | `a_script/01_gene_sets.qmd` |
 | **Reads** | `proteins.rds`, `fit.rds`, `design.rds` |
-| **Writes** | `c_data/gene_sets.rds`, `pathway_inputs.rds`, `01_gene_sets.xlsx`, three CSVs |
-| **Figures** | `b_reports/figures/`: five FDR volcanoes and two pi-ranked views, PNG and PDF |
+| **Writes** | `c_data/gene_sets.rds`, `pathway_inputs.rds`, `01_gene_sets.xlsx`, four CSVs |
 | **Frozen source** | `c_data/cache/msigdb_2026.1.Hs_Hallmark-Reactome-GOBP.rds` and its `.md5` |
 
 ```sh
@@ -47,20 +45,33 @@ measurements nobody made. Where several proteins share a symbol, the one with th
 precursors per sample represents it. That choice is made once, for all five contrasts, and reads no
 fold change and no p-value.
 
-Every protein stays in the matrix and in the volcanoes regardless. Only the gene-level view drops
-them, and the `protein_gene_map` sheet records every decision.
+Every protein stays in the matrix and in the volcano data regardless. Only the gene-level view
+drops them, and the `protein_gene_map` sheet records every decision.
 
-## The volcanoes
+## fgsea, and why its control matters
 
-[enrichVolcano](https://github.com/Dustyn-T-Lewis/enrichVolcano) draws them from an empty
-enrichment table, so the protein volcano appears and no untested pathway is presented as enriched.
+fgsea walks the proteins ordered by moderated t and asks whether a set clusters at one end. It is
+fast, needs no per-sample data, and is what `enrichVolcano` consumes, which is why it runs here.
+It also assumes the ranked proteins are exchangeable, and they are not.
 
-All five contrasts colour on BH FDR < 0.05, with no fold-change floor added. The two training
-contrasts also get a view whose labels are ranked by pi, keeping the same FDR colours and counts —
-so a pi label can land on a protein that never passed FDR. Pi ranks and selects nothing.
+That costs something measurable. On `BFR_vs_HLRT_at_T1` — two legs of one person before either
+was trained, so no signal is possible — fgsea calls one set significant on the combined
+collection and two on Reactome. It calls 59 on `BFR_vs_HLRT_at_T2`, where `02_Set_Tests` finds
+none. The negative-control count therefore prints before any other result in the report, and
+every other count should be read against it rather than against zero.
 
-The package rescales each panel to its own data, so one cloud looking taller than its neighbour
-means nothing. Read the numbers from the tables.
+`02_Set_Tests` runs `fry()`, which takes the design and the participant structure and returns
+nothing on both null contrasts. That is the test to quote.
+
+## Excluding sets by name
+
+`exclude_disease: true` drops sets whose names mention a disease, infection or tumour. This is a
+judgement, not a statistic: `REACTOME_INFLUENZA_INFECTION` is largely ribosome and translation
+machinery under a misleading label, so the filter removes real biology along with the label.
+
+It is therefore built to be reversible and visible. The unfiltered table is exported beside the
+filtered one, `excluded_terms` lists every removal with the pattern that caught it, and setting
+the parameter to `false` reproduces the unfiltered result exactly.
 
 ## Next-stage contract
 
@@ -72,6 +83,8 @@ x$protein_results # All tested proteins, all contrasts, FDR and pi scores
 x$protein_map     # Gene representative chosen per protein
 x$gene_sets       # Retained sets of gene symbols
 x$set_indices     # Row indices into proteins$E, not into anything built here
+x$set_lists       # Per database and pooled, as load_sets() returned them
+x$fgsea_results   # All collections, all contrasts, leadingEdge as a list column
 x$provenance      # Input checksums, settings, package versions, cache checksum
 ```
 
@@ -80,10 +93,11 @@ The matrix and the fitted model stay where the upstream stages wrote them. A set
 `02_Differential_Expression/02_Differential/c_data/fit.rds` itself, the way every stage in this
 repo reads its upstream. Copying them here would only let the copies go stale.
 
+`fgsea_results` is keyed on gene symbols, which is what lets `03_Volcanoes` match `leadingEdge`
+against its point labels. Rank on anything else and the tick lines vanish without a warning.
+
 Whatever runs next has to keep the participant design and limpa's uncertainty, and it should report
 the baseline control before anyone reads the interaction. The upstream approximation carries
 forward: cyclic loess moved the abundances and left the standard errors behind.
 
-Dependencies are the repo's usual set plus `enrichVolcano`, which needs `volcano_ring()` and its
-`volc_sig_col` argument (verified with 0.3.0.9000). `msigdbr` is needed only to create a missing
-snapshot.
+`msigdbr` is needed only to create a missing snapshot.

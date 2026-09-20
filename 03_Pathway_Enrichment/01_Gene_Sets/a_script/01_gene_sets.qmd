@@ -1,6 +1,6 @@
 ---
-title: "01 · Gene sets and protein volcanoes"
-subtitle: "Frozen human pathways and the inputs for set testing"
+title: "01 · Gene sets and fgsea"
+subtitle: "Frozen human pathways, and a ranked enrichment test on each"
 params:
   msigdb_version: "2026.1.Hs"
   collections: [Hallmark, Reactome, GOBP]
@@ -9,7 +9,8 @@ params:
   min_measured: 15
   jaccard_cutoff: 0.5
   protein_fdr: 0.05
-  label_n: 5
+  set_fdr: 0.05
+  exclude_disease: true
 format:
   html:
     toc: true
@@ -43,12 +44,12 @@ library(tidyr)
 library(purrr)
 library(ggplot2)
 here::i_am("03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd")
+source(here("03_Pathway_Enrichment", "00_Functions", "00_functions.R"))
 
 stage <- here("03_Pathway_Enrichment", "01_Gene_Sets")
 out <- file.path(stage, "c_data")
 cache_dir <- file.path(out, "cache")
-figure_dir <- file.path(stage, "b_reports", "figures")
-for (path in c(out, cache_dir, figure_dir)) {
+for (path in c(out, cache_dir)) {
   dir.create(path, recursive = TRUE, showWarnings = FALSE)
 }
 input_files <- c(
@@ -79,12 +80,6 @@ stopifnot(
   d$negative_control %in% contrast_names,
   all(training_contrasts %in% contrast_names)
 )
-if (!"volc_sig_col" %in% names(formals(enrichVolcano::volcano_ring))) {
-  stop(
-    "enrichVolcano with volcano_ring(volc_sig_col = ...) is required. ",
-    "Install the current Dustyn-T-Lewis/enrichVolcano package."
-  )
-}
 tibble(
   n_proteins = nrow(proteins$E), n_samples = ncol(proteins$E),
   n_participants = n_distinct(proteins$targets$participant),
@@ -288,35 +283,10 @@ stopifnot(!anyDuplicated(set_catalog$set_id))
 eligible_ids <- set_catalog$set_id[set_catalog$status == "eligible"]
 if (!length(eligible_ids)) stop("No gene sets passed the size/coverage filters.")
 
-reduce_sets <- function(catalog) {
-  catalog <- arrange(catalog, desc(measured_size), desc(source_size), set_id)
-  sets <- sets_measured[catalog$set_id]
-  sizes <- lengths(sets)
-  # Column j marks the measured genes in set j, so crossprod gives every pairwise
-  # intersection count in one pass. Indexing an empty `kept` yields an empty Jaccard
-  # vector, which is how the first set of each database takes the else branch.
-  incidence <- vapply(
-    sets, \(genes) gene_universe %in% genes, logical(length(gene_universe))
-  )
-  shared <- crossprod(incidence)
-  kept <- integer()
-  for (i in seq_along(sets)) {
-    jaccard <- shared[i, kept] / (sizes[i] + sizes[kept] - shared[i, kept])
-    if (length(jaccard) && max(jaccard) >= params$jaccard_cutoff) {
-      catalog$status[i] <- "redundant"
-      catalog$representative[i] <- catalog$set_id[kept[which.max(jaccard)]]
-      catalog$jaccard[i] <- max(jaccard)
-    } else {
-      kept <- c(kept, i)
-      catalog$status[i] <- "retained"
-    }
-  }
-  catalog
-}
 reduced_catalog <- set_catalog |>
   filter(status == "eligible") |>
   split(~database) |>
-  map(reduce_sets) |>
+  map(\(part) reduce_sets(part, sets_measured, gene_universe, params$jaccard_cutoff)) |>
   list_rbind()
 set_catalog <- bind_rows(
   filter(set_catalog, status != "eligible"), reduced_catalog
@@ -400,160 +370,127 @@ proteins below BH FDR `r params$protein_fdr`. That count is the reference a late
 read its own null against. It is not licence to lower a threshold because some other contrast came
 back empty.
 
-## Volcanoes by FDR
+## Ranked enrichment
 
-[enrichVolcano](https://github.com/Dustyn-T-Lewis/enrichVolcano) draws these, handed an empty
-enrichment table. Fold change runs along x and −log10 of the raw p-value up y. Colours and the
-count badges read BH FDR < `r params$protein_fdr`, with no fold-change floor added on top. Labels
-mark the lowest-FDR proteins among those that clear it.
+`fgsea()` walks the proteins ordered by moderated t and asks whether a set's members cluster
+toward one end. It is fast, it needs no per-sample data, and it is what `enrichVolcano` consumes,
+which is why it runs here. It also assumes the ranked proteins are exchangeable, and they are
+not: mitochondrial and ribosomal sets move together by construction, and every participant
+contributed four samples.
 
-One thing these plots cannot do is support a comparison between panels. The package rescales each
-contrast to fill its own plotting area, so one cloud looking taller or wider than its neighbour
-says nothing. Read the exact values from the workbook and the CSV.
+That assumption has a measurable cost on this data, so the negative control is reported before
+any other result. `02_Set_Tests` runs `fry()`, which takes the design and the participant
+structure, and that is the test to quote.
 
-```{r plot-functions}
-empty_enrichment <- tibble(
-  pathway = character(), NES = double(), padj = double(), size = integer(),
-  leading_edge = character()
+```{r ranks}
+# One vector per contrast, representative proteins only, keyed by gene symbol so fgsea's
+# leadingEdge comes back in the same namespace the volcanoes label with.
+ranked <- protein_results |>
+  filter(selected, !is.na(gene)) |>
+  split(~contrast) |>
+  map(\(result) set_names(result$t, result$gene))
+ranked <- ranked[contrast_names]
+
+gene_sets <- list(
+  full = sets_full, eligible = sets_eligible, retained = sets_retained,
+  catalog = set_catalog, measured_universe = gene_universe,
+  annotated_universes = annotated_universes
 )
-# 0.3.0.9000 rejects zero enrichment rows at validation, even though the
-# renderer handles them. Override that one check in a private function
-# environment; leave the installed namespace and nonempty validation intact.
-draw_volcano <- local({
-  draw <- enrichVolcano::volcano_ring
-  package_env <- environment(draw)
-  validate <- get("validate_enrich_df", envir = package_env)
-  adapter_env <- new.env(parent = package_env)
-  adapter_env$validate_enrich_df <- function(enrich_df, cols, ...) {
-    if (is.data.frame(enrich_df) && nrow(enrich_df) == 0L) {
-      return(invisible(enrich_df))
-    }
-    validate(enrich_df, cols, ...)
-  }
-  environment(draw) <- adapter_env
-  draw
+# Per database, reduced within it, plus one pooled run where a Hallmark set and its GO twin
+# compete. Pooling is what you want when several databases feed one figure.
+per_database <- map(set_names(collections), \(db) {
+  load_sets(gene_sets, db, scope = "within", cutoff = params$jaccard_cutoff)$sets
 })
-plot_theme <- enrichVolcano::volcano_ring_theme(
-  base_size = 12, base_family = "sans", palette = "okabe",
-  ns = "#777777"
-)
-contrast_titles <- c(
-  BFR_post_vs_pre = "BFR: post vs pre",
-  HLRT_post_vs_pre = "High load: post vs pre",
-  BFR_vs_HLRT_at_T1 = "BFR vs high load: pre-training control",
-  BFR_vs_HLRT_at_T2 = "BFR vs high load: post-training",
-  interaction = "Interaction: difference in training responses"
-)
-make_volcano <- function(contrast, rank_by = "fdr") {
-  points <- filter(protein_results, .data$contrast == .env$contrast)
-  if (rank_by == "pi") {
-    labels <- points |>
-      arrange(desc(pi_value), protein) |>
-      slice_head(n = params$label_n) |>
-      pull(label)
-    subtitle <- "Labels ranked by pi-value; colours and counts use BH FDR"
-  } else {
-    labels <- points |>
-      filter(fdr_significant) |>
-      arrange(padj, P.Value, protein) |>
-      slice_head(n = params$label_n) |>
-      pull(label)
-    subtitle <- paste0("Protein significance: BH FDR < ", params$protein_fdr)
-  }
-  draw_volcano(
-    volc_df = select(points, label, logFC, plot_p, padj),
-    enrich_df = empty_enrichment,
-    gene_col = "label", pval_col = "plot_p", padj_col = "padj",
-    volc_sig_col = "padj", genes_col = "leading_edge",
-    p_threshold = params$protein_fdr, logfc_threshold = 0,
-    title = unname(contrast_titles[contrast]), subtitle = subtitle,
-    label_mode = if (length(labels)) "by_genes" else "none",
-    label_genes = labels, label_n = params$label_n,
-    label_size = 3.1, axis_size = 3.1, count_size = 3.3,
-    point_size = 1.2, theme = plot_theme
-  ) +
-    theme(
-      plot.title = element_text(size = 13, face = "bold"),
-      plot.subtitle = element_text(size = 10, face = "plain"),
-      plot.margin = margin(8, 8, 8, 8)
-    )
-}
-save_volcano <- function(volcano, name) {
-  for (extension in c("png", "pdf")) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)),
-      plot = volcano, width = 7, height = 6.5, units = "in", dpi = 300,
-      bg = "white"
-    )
-  }
-}
+pooled <- load_sets(gene_sets, collections, scope = "across", cutoff = params$jaccard_cutoff)
+set_lists <- c(per_database, list(combined = pooled$sets))
+map_int(set_lists, length)
 ```
 
-::: {.panel-tabset}
+```{r fgsea}
+# fgseaMultilevel samples internally, so the seed is what makes a rerun reproduce.
+set.seed(1)
+fgsea_raw <- map(set_lists, \(sets) {
+  map(ranked, \(stats) {
+    as.data.frame(fgsea::fgsea(
+      pathways = sets, stats = stats,
+      minSize = params$min_measured, maxSize = params$max_set_size
+    ))
+  }) |>
+    list_rbind(names_to = "contrast")
+}) |>
+  list_rbind(names_to = "collection")
 
-```{r fdr-volcanoes, results='asis'}
-# Control first, then the primary interaction and descriptive contrasts.
-plot_order <- c(
-  d$negative_control, "interaction", training_contrasts,
-  "BFR_vs_HLRT_at_T2"
+# as.data.frame() above is not tidiness. volcano_ring() splits an enrichment table on the
+# sign of NES and rbinds the halves back; when one half is empty, data.table's rbindlist
+# refuses the column mismatch that base rbind tolerates.
+filtered <- drop_disease_terms(
+  fgsea_raw,
+  patterns = if (isTRUE(params$exclude_disease)) DISEASE_PATTERNS else NULL
 )
-for (contrast in plot_order) {
-  cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
-  volcano <- make_volcano(contrast)
-  save_volcano(volcano, paste0("protein_volcano_fdr_", contrast))
-  print(volcano)
-  cat("\n\n")
-}
+fgsea_results <- filtered$kept
+excluded_terms <- filtered$excluded
+c(tested = nrow(fgsea_raw), kept = nrow(fgsea_results), excluded = nrow(excluded_terms))
 ```
 
-:::
+## The negative control, first
 
-## The same plots, ranked by pi
+`r d$negative_control` compares two legs of the same person before either was trained, so it
+cannot contain signal. Whatever fgsea calls significant here is what its independence assumption
+costs on this data. Read every other count in this notebook against this number, not against zero.
 
-Same coordinates, same FDR colours, same counts. Only the labels move: here the top
-`r params$label_n` proteins by pi-value are named, whether or not they pass FDR. A pi label ranks a
-protein and selects nothing, so nothing labelled here has been discovered.
-
-These views cover only the two training contrasts, which follows what `02_Differential` does and
-for the same reason. Their tables report mean observed precursors per sample, because a protein
-detected in almost no samples can post a large fold change on very little evidence.
-
-::: {.panel-tabset}
-
-```{r pi-volcanoes, results='asis'}
-pi_top <- protein_results |>
-  filter(contrast %in% training_contrasts) |>
-  arrange(contrast, desc(pi_value), protein) |>
-  slice_head(n = 10, by = contrast)
-for (contrast in training_contrasts) {
-  cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
-  volcano <- make_volcano(contrast, rank_by = "pi")
-  save_volcano(volcano, paste0("protein_volcano_pi_rank_", contrast))
-  print(volcano)
-  cat("\n\n")
-  displayed <- pi_top |>
-    filter(.data$contrast == .env$contrast) |>
-    select(protein, Genes, logFC, padj, pi_score, pi_value, mean_obs) |>
-    mutate(
-      across(c(logFC, pi_value, mean_obs), ~ round(.x, 2)),
-      across(c(padj, pi_score), ~ signif(.x, 3))
-    )
-  print(knitr::kable(displayed, row.names = FALSE))
-  cat("\n\n")
-}
+```{r fgsea-control}
+fgsea_results |>
+  filter(contrast == d$negative_control) |>
+  summarise(
+    sets_tested = n(),
+    fdr_significant = sum(padj < params$set_fdr),
+    min_padj = signif(min(padj), 3), .by = collection
+  )
 ```
 
-:::
+## Counts
+
+```{r fgsea-counts}
+fgsea_results |>
+  summarise(
+    tested = n(),
+    up = sum(padj < params$set_fdr & NES > 0),
+    down = sum(padj < params$set_fdr & NES < 0),
+    .by = c(collection, contrast)
+  ) |>
+  tidyr::pivot_wider(
+    names_from = collection, values_from = c(up, down), values_fill = 0
+  )
+```
+
+## What the name filter removed
+
+Excluding a set because its name mentions a disease is a judgement, not a statistic. A set called
+`REACTOME_INFLUENZA_INFECTION` is largely ribosome and translation machinery under a misleading
+label, so removing it takes real biology with it. Every removal is listed here with the pattern
+that caught it, the unfiltered table is exported beside the filtered one, and setting
+`exclude_disease: false` reproduces the unfiltered result exactly.
+
+```{r disease-excluded}
+if (nrow(excluded_terms)) {
+  excluded_terms |>
+    distinct(collection, pathway, matched_pattern) |>
+    count(collection, matched_pattern, name = "sets") |>
+    arrange(desc(sets))
+} else {
+  tibble(note = "No name filter applied")
+}
+```
 
 ## Outputs
 
-Every derived file is rebuilt from the current inputs on each render, so no stale overlap filter or
-old score can survive a parameter change. The frozen source cache is the one exception, which is
+Everything derived is rebuilt from the current inputs on each render, so no stale overlap filter
+or old score survives a parameter change. The frozen source cache is the one exception, which is
 the point of freezing it.
 
-The workbook is the readable copy: sample metadata, protein and gene statistics, the mapping
-decisions, the set catalogue and the summary tables. The CSVs carry the same numbers at full
-precision for anything that needs to load rather than read them. The two RDS files hold what a flat
-file cannot, namely the gene sets and the row indices that tie them to the protein matrix.
+The workbook carries the fgsea results three ways: unfiltered, name-filtered, and pooled across
+databases. The protein-level tables stay, since `03_Volcanoes` draws its points and its labels
+from them.
 
 ```{r write-outputs}
 input_manifest <- tibble(
@@ -563,14 +500,14 @@ input_manifest <- tibble(
 )
 packages <- c(
   "here", "limma", "limpa", "dplyr", "tibble", "tidyr", "purrr", "readr",
-  "writexl", "ggplot2", "enrichVolcano", "knitr"
+  "writexl", "fgsea", "knitr"
 )
 package_versions <- tibble(
   package = packages,
   version = map_chr(packages, \(package) as.character(packageVersion(package)))
 )
 provenance <- list(
-  schema = 1L, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+  schema = 2L, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
   inputs = input_manifest, parameters = params,
   script_md5 = unname(tools::md5sum(file.path(
     stage, "a_script", "01_gene_sets.qmd"
@@ -589,20 +526,28 @@ provenance <- list(
     "zero logFC gives zero; larger ranks higher; plotting bound only"
   ),
   signed_pi = "sign(logFC) * pi_value; exploratory training ranks only",
-  reduction = "Within database, measured-member Jaccard; deterministic greedy",
-  pathway_tests_run = FALSE,
-  plotting_adapter = "Private empty-enrichment validation adapter; namespace unchanged"
+  reduction = paste(
+    "Measured-member Jaccard, deterministic greedy; within database per",
+    "collection, across databases for `combined`"
+  ),
+  set_test = paste(
+    "fgsea on moderated t, seed 1; assumes exchangeable proteins,",
+    "so read its negative control"
+  ),
+  disease_filter = if (isTRUE(params$exclude_disease)) {
+    paste("Sets excluded by name on:", paste(DISEASE_PATTERNS, collapse = ", "))
+  } else {
+    "None"
+  },
+  pathway_tests_run = TRUE
 )
-gene_sets <- list(
-  full = sets_full, eligible = sets_eligible, retained = sets_retained,
-  catalog = set_catalog, measured_universe = gene_universe,
-  annotated_universes = annotated_universes, provenance = provenance
-)
+gene_sets$provenance <- provenance
 # What this stage derives, and nothing it merely read. proteins.rds and fit.rds are
 # tracked upstream, so copying them here would only let the copy go stale.
 pathway_inputs <- list(
   protein_results = protein_results, protein_map = protein_map,
   gene_sets = sets_retained, set_indices = set_indices,
+  set_lists = set_lists, fgsea_results = fgsea_results,
   provenance = provenance
 )
 saveRDS(gene_sets, file.path(out, "gene_sets.rds"), compress = "xz")
@@ -610,7 +555,17 @@ saveRDS(pathway_inputs, file.path(out, "pathway_inputs.rds"), compress = "xz")
 readr::write_csv(protein_results, file.path(out, "protein_statistics.csv"))
 readr::write_csv(set_catalog, file.path(out, "gene_set_catalog.csv"))
 readr::write_csv(input_manifest, file.path(out, "input_manifest.csv"))
+# leadingEdge is a list column, which no flat format holds. Collapse for the readable
+# copies and keep the list form in the RDS.
+flatten_edges <- function(df) {
+  mutate(df, leadingEdge = map_chr(leadingEdge, paste, collapse = ";"))
+}
+readr::write_csv(flatten_edges(fgsea_results), file.path(out, "fgsea_results.csv"))
 writexl::write_xlsx(list(
+  fgsea_unfiltered = flatten_edges(fgsea_raw),
+  fgsea_filtered = flatten_edges(fgsea_results),
+  fgsea_combined = flatten_edges(filter(fgsea_results, collection == "combined")),
+  excluded_terms = flatten_edges(excluded_terms),
   samples = proteins$targets,
   protein_statistics = protein_results,
   gene_statistics = gene_results,
@@ -618,26 +573,23 @@ writexl::write_xlsx(list(
   gene_set_catalog = set_catalog,
   set_summary = set_summary,
   contrast_summary = contrast_summary,
-  pi_top_training = pi_top,
   input_manifest = input_manifest,
   package_versions = package_versions
 ), file.path(out, "01_gene_sets.xlsx"))
 tibble(
   output = c(
     "01_gene_sets.xlsx", "gene_sets.rds", "pathway_inputs.rds",
-    "protein_statistics.csv", "gene_set_catalog.csv"
+    "fgsea_results.csv", "protein_statistics.csv", "gene_set_catalog.csv"
   ),
   size_mb = round(file.info(file.path(out, output))$size / 1024^2, 2)
 )
 ```
 
-One trap to note before the next stage. `pathway_inputs$set_indices` indexes rows of
-`proteins$E` as the upstream stage wrote it, so the next stage has to open `proteins.rds` itself
-rather than index into anything built here.
-
-A set test reading this handoff has to keep the participant design and limpa's weights, and it
-should report the baseline control before anyone reads the interaction. No hit list is selected by
-pi score at this stage.
+Two traps before the next stage. `pathway_inputs$set_indices` indexes rows of `proteins$E` as the
+upstream stage wrote it, so `02_Set_Tests` opens `proteins.rds` itself rather than indexing into
+anything built here. And `fgsea_results` is keyed on gene symbols, which is what lets
+`03_Volcanoes` match `leadingEdge` against its point labels; rank on anything else and the tick
+lines vanish without a warning.
 
 ```{r session}
 sessionInfo()
