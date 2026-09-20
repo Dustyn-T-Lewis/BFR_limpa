@@ -1,0 +1,189 @@
+---
+title: "03 · Volcanoes"
+subtitle: "Protein volcanoes with the enriched pathways ringed"
+params:
+  collection: combined
+  protein_fdr: 0.05
+  set_fdr: 0.05
+  label_n: 5
+  ring_n: 8
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    code-fold: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 6.5
+    fig-dpi: 150
+    fig-align: center
+execute:
+  message: false
+  error: false
+---
+
+These were drawn in `01_Gene_Sets` when this repo had no pathway test, which meant handing
+`enrichVolcano` an empty enrichment table and overriding the check that refuses one. Now that
+`01_` runs fgsea there is a real table to pass, the package is called as written, and the
+override is gone.
+
+Fold change runs along x and −log10 of the raw p-value up y. Point colours and the count badges
+read protein-level BH FDR; the ring reads set-level fgsea FDR. The two are separate claims on one
+figure, and the ring is the weaker of them — `02_Set_Tests` is where the set p-value you would
+quote comes from.
+
+```{r setup}
+library(here)
+library(dplyr)
+library(tibble)
+library(purrr)
+library(ggplot2)
+here::i_am("03_Pathway_Enrichment/03_Volcanoes/a_script/03_volcanoes.qmd")
+
+stage <- here("03_Pathway_Enrichment", "03_Volcanoes")
+figure_dir <- file.path(stage, "b_reports", "figures")
+dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
+
+input_files <- c(
+  pathway = "03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds",
+  design = "02_Differential_Expression/01_Design/c_data/design.rds"
+)
+input_paths <- map_chr(input_files, here)
+if (!all(file.exists(input_paths))) {
+  stop("Run 01_Gene_Sets first. Missing: ", paste(input_files, collapse = ", "))
+}
+pathway <- readRDS(input_paths[["pathway"]])
+d <- readRDS(input_paths[["design"]])
+
+protein_results <- pathway$protein_results
+fgsea_results <- filter(pathway$fgsea_results, collection == params$collection)
+training_contrasts <- c("BFR_post_vs_pre", "HLRT_post_vs_pre")
+stopifnot(nrow(fgsea_results) > 0, !is.null(protein_results$label))
+
+# volcano_ring() matches leading-edge genes against the point labels, and a label carries its
+# accession when the symbol appears on more than one protein. Translate the edges into label
+# space or the tick lines silently draw nothing.
+gene_to_label <- with(
+  filter(protein_results, contrast == contrast[1], !is.na(gene)),
+  set_names(label, gene)
+)
+fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) {
+  unname(gene_to_label[genes[genes %in% names(gene_to_label)]])
+})
+
+plot_theme <- enrichVolcano::volcano_ring_theme(
+  base_size = 12, base_family = "sans", palette = "okabe", ns = "#777777"
+)
+contrast_titles <- c(
+  BFR_post_vs_pre = "BFR: post vs pre",
+  HLRT_post_vs_pre = "High load: post vs pre",
+  BFR_vs_HLRT_at_T1 = "BFR vs high load: pre-training control",
+  BFR_vs_HLRT_at_T2 = "BFR vs high load: post-training",
+  interaction = "Interaction: difference in training responses"
+)
+count(fgsea_results, contrast, significant = padj < params$set_fdr)
+```
+
+```{r plot-functions}
+make_volcano <- function(contrast, rank_by = "fdr") {
+  points <- filter(protein_results, .data$contrast == .env$contrast)
+  ring <- fgsea_results |>
+    filter(.data$contrast == .env$contrast, padj < params$set_fdr) |>
+    slice_min(padj, n = params$ring_n) |>
+    mutate(pathway = sub("^[^|]*\\|", "", pathway))
+  if (rank_by == "pi") {
+    labels <- points |>
+      arrange(desc(pi_value), protein) |>
+      slice_head(n = params$label_n) |>
+      pull(label)
+    subtitle <- "Labels ranked by pi-value; colours and counts use BH FDR"
+  } else {
+    labels <- points |>
+      filter(fdr_significant) |>
+      arrange(padj, P.Value, protein) |>
+      slice_head(n = params$label_n) |>
+      pull(label)
+    subtitle <- paste0("Protein significance: BH FDR < ", params$protein_fdr)
+  }
+  enrichVolcano::volcano_ring(
+    volc_df = select(points, label, logFC, plot_p, padj),
+    enrich_df = ring,
+    gene_col = "label", pval_col = "plot_p", padj_col = "padj",
+    volc_sig_col = "padj", genes_col = "leadingEdge",
+    p_threshold = params$protein_fdr, logfc_threshold = 0,
+    title = unname(contrast_titles[contrast]), subtitle = subtitle,
+    label_mode = if (length(labels)) "by_genes" else "none",
+    label_genes = labels, label_n = params$label_n,
+    label_size = 3.1, axis_size = 3.1, count_size = 3.3,
+    point_size = 1.2, theme = plot_theme
+  ) +
+    theme(
+      plot.title = element_text(size = 13, face = "bold"),
+      plot.subtitle = element_text(size = 10, face = "plain"),
+      plot.margin = margin(8, 8, 8, 8)
+    )
+}
+save_volcano <- function(volcano, name) {
+  for (extension in c("png", "pdf")) {
+    ggsave(file.path(figure_dir, paste0(name, ".", extension)),
+      plot = volcano, width = 7, height = 6.5, units = "in", dpi = 300,
+      bg = "white"
+    )
+  }
+}
+```
+
+## By FDR
+
+A ringed pathway is one fgsea called significant on this contrast, and the ticks mark its
+leading-edge proteins. The control panel is the one to read first: rings there are what the test
+produces on a comparison that cannot contain signal.
+
+::: {.panel-tabset}
+
+```{r fdr-volcanoes, results='asis'}
+# Control first, then the primary interaction and descriptive contrasts.
+plot_order <- c(
+  d$negative_control, "interaction", training_contrasts, "BFR_vs_HLRT_at_T2"
+)
+for (contrast in plot_order) {
+  cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
+  volcano <- make_volcano(contrast)
+  save_volcano(volcano, paste0("protein_volcano_fdr_", contrast))
+  print(volcano)
+  cat("\n\n")
+}
+```
+
+:::
+
+## The same plots, ranked by pi
+
+Same points, same colours, same rings. Only the labels move: the top `r params$label_n` proteins
+by pi-value are named whether or not they pass FDR. A pi label ranks a protein and selects
+nothing, so nothing named here has been discovered.
+
+::: {.panel-tabset}
+
+```{r pi-volcanoes, results='asis'}
+for (contrast in training_contrasts) {
+  cat("\n\n### ", contrast_titles[[contrast]], "\n\n", sep = "")
+  volcano <- make_volcano(contrast, rank_by = "pi")
+  save_volcano(volcano, paste0("protein_volcano_pi_rank_", contrast))
+  print(volcano)
+  cat("\n\n")
+}
+```
+
+:::
+
+## What was drawn
+
+```{r figure-manifest}
+tibble(file = sort(basename(list.files(figure_dir, pattern = "\\.png$"))))
+```
+
+```{r session}
+sessionInfo()
+```
