@@ -15,7 +15,7 @@ heavy load?
 | `00_Input/` | study data, runs nothing | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
 | `02_Differential_Expression/` | fit the model, test five contrasts | ready |
-| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, then which processes moved | first sub-stage ready; tests planned |
+| `03_Pathway_Enrichment/` | frozen gene sets, then which processes moved | ready |
 | `04_Network/` | protein groups the data defines | planned |
 | `05_Figures/` | manuscript panels | planned |
 
@@ -41,7 +41,9 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 
-quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd   --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/02_Set_Tests/a_script/02_set_tests.qmd   --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/03_Volcanoes/a_script/03_volcanoes.qmd   --output-dir ../b_reports
 ```
 
 Minutes, not hours. No notebook computes anything slow. The one expensive step is `dpcQuant()` at
@@ -60,5 +62,5 @@ Two rules follow. Never filter on missing values before quantification, and neve
 protein matrix to an ordinary linear model.
 
 Packages: `limpa`, `limma`, `here`, `nanoparquet`, `writexl`, and `dplyr`, `stringr`, `purrr`,
-`readr`, `tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` adds `msigdbr`, `enrichVolcano`,
-`digest` and `Matrix`, and checks for them itself. Versions are not pinned.
+`readr`, `tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` adds `fgsea`, `singscore`,
+`msigdbr` and `enrichVolcano`. Versions are not pinned.

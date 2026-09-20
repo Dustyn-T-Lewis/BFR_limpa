@@ -8,14 +8,17 @@ a group of proteins that work together moved together. A small shift shared acro
 mitochondrial proteins is invisible one protein at a time and obvious as a set, which is why this
 is the right stage when the protein-level result is thin.
 
-| Sub-stage | Does / will do |
+| Sub-stage | Does |
 |---|---|
-| [`01_Gene_Sets`](01_Gene_Sets/README.md) | freeze human MSigDB, filter on size and measured overlap, export the protein matrix with its fitted model and scores, draw the protein volcanoes |
-| `02_Set_Tests` | test each set as a whole, and score every set in every sample |
-| `03_Enrichment` | for comparisons with hits, ask which processes those hits belong to |
+| [`00_Functions`](00_Functions/README.md) | the loader, the overlap reduction and the name filter the other three share |
+| [`01_Gene_Sets`](01_Gene_Sets/README.md) | freeze human MSigDB, filter on size and measured overlap, run fgsea on each database |
+| [`02_Set_Tests`](02_Set_Tests/README.md) | fry for significance, singscore for where each sample sits |
+| [`03_Volcanoes`](03_Volcanoes/README.md) | protein volcanoes with the enriched pathways ringed |
 
 ```sh
-quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd   --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/02_Set_Tests/a_script/02_set_tests.qmd   --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/03_Volcanoes/a_script/03_volcanoes.qmd   --output-dir ../b_reports
 ```
 
 That stage runs no pathway test. It freezes the gene sets, hands the next stage the protein
