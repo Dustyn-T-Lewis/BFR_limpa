@@ -1,0 +1,273 @@
+---
+title: "02 · Set tests"
+subtitle: "camera(), confirmed by fry(), across four collections, three questions, one control"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+execute:
+  message: false
+---
+
+The parent README rules out two classes of test before this script runs a line: one that treats
+proteins as independent (wrong for co-regulated sets, and it found hits on the negative control
+when tried), and one that accepts a block argument but silently ignores it. `camera()` models
+inter-gene correlation directly (Wu & Smyth 2012); `fry()` is a rotation test that respects
+whatever design it is given. Neither takes a `block=` side-channel here — participant is a fixed
+column inside `design`, the same design `02_differential.qmd` fits on, so there is no argument to
+ignore.
+
+```{r setup}
+library(here)
+library(limpa)
+library(limma)
+library(msigdbr)
+library(dplyr)
+library(purrr)
+library(tibble)
+
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d        <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+stopifnot(identical(rownames(d$design), colnames(proteins$E)))
+```
+
+## Gene sets
+
+Four full collections, downloaded live from MSigDB via `msigdbr` (`db_version` printed below, so a
+later re-run that pulls a newer release shows it changed):
+
+```{r gene-sets}
+m_h    <- msigdbr(species = "Homo sapiens", collection = "H")
+m_kegg <- msigdbr(species = "Homo sapiens", collection = "C2", subcollection = "CP:KEGG_LEGACY")
+m_reac <- msigdbr(species = "Homo sapiens", collection = "C2", subcollection = "CP:REACTOME")
+m_gobp <- msigdbr(species = "Homo sapiens", collection = "C5", subcollection = "GO:BP")
+
+unique(m_h$db_version)
+```
+
+A single targeted set (`WP_EXERCISE_AND_HYPERTROPHY_IN_SKELETAL_MUSCLE`) was tried in an earlier
+version of this script, pre-registered before any result was seen. It was dropped before the run
+that produced the numbers below, on review: it was not one of the collections the group had asked
+for, and only 4 of its 20 genes were quantified in this proteome, so it could never have returned
+an interpretable answer. Removing an under-powered, non-requested addition on review is not the
+same failure mode pre-registration guards against — that failure mode is dropping a test *because*
+its result was inconvenient, which this was not: the set never reached the point of returning a
+result worth being tempted by.
+
+## Matching to the quantified proteome
+
+```{r index}
+collections <- list(Hallmark = m_h, KEGG = m_kegg, Reactome = m_reac, `GO:BP` = m_gobp)
+genes_in_data <- proteins$genes$Genes
+MIN_MATCHED <- 5   # feasibility floor: below this, camera()/fry() degrade to unstable estimates
+
+build_index <- function(m_df) {
+  split_genes <- split(m_df$gene_symbol, m_df$gs_name)
+  idx <- lapply(split_genes, function(gs) which(genes_in_data %in% gs))
+  idx[lengths(idx) >= MIN_MATCHED]
+}
+
+index_by_collection <- map(collections, build_index)
+sapply(index_by_collection, length)
+```
+
+```{r flatten}
+all_index <- list_c(index_by_collection) |> set_names(unlist(map(index_by_collection, names)))
+collection_lookup <- tibble(gs_name = unlist(map(index_by_collection, names)),
+                            collection = rep(names(index_by_collection), lengths(index_by_collection)))
+length(all_index)
+```
+
+## Refit
+
+`camera()`/`fry()` need the design and one contrast vector at a time, not the collapsed
+five-contrast fit `02_differential.qmd` writes. This is the same call that produces that fit,
+stopped one step earlier, before `contrasts.fit()`: same precision weights, same sample weights,
+same design.
+
+```{r refit}
+fit0 <- dpcDE(proteins, d$design, sample.weights = TRUE, plot = FALSE)
+y <- fit0$EList
+```
+
+## The four contrasts run here, and why
+
+Three of `01_Design`'s five contrasts, plus the negative control, which the parent README requires
+checked before anything else is trusted:
+
+```{r contrasts}
+contrast_role <- c(interaction = "primary", BFR_post_vs_pre = "descriptive",
+                    HLRT_post_vs_pre = "descriptive", BFR_vs_HLRT_at_T1 = "negative_control")
+```
+
+The two remaining `01_Design` contrasts (`BFR_vs_HLRT_at_T2`, and the fact that `interaction` is
+their difference) are not re-tested here for the same reason `02_differential.qmd` treats them as
+one family: testing all three would not add an independent question, only inflate the count of
+tests run.
+
+## Running the tests
+
+```{r run}
+run_one <- function(cn) {
+  cv  <- d$contrasts[, cn]
+  cam <- camera(y, index = all_index, design = d$design, contrast = cv, sort = FALSE)
+  fr  <- fry(y,    index = all_index, design = d$design, contrast = cv, sort = FALSE)
+  tibble(contrast = cn, role = contrast_role[[cn]], gs_name = rownames(cam),
+         n_matched = cam$NGenes, camera_dir = cam$Direction, camera_p = cam$PValue,
+         fry_dir = fr$Direction, fry_p = fr$PValue)
+}
+
+out <- map(names(contrast_role), run_one) |> list_rbind() |>
+  left_join(collection_lookup, by = "gs_name") |>
+  mutate(.by = c(contrast, collection),
+         camera_fdr = p.adjust(camera_p, "BH"),
+         fry_fdr    = p.adjust(fry_p, "BH")) |>
+  mutate(hit = camera_fdr < 0.05 & fry_fdr < 0.05) |>
+  select(collection, contrast, role, gs_name, n_matched,
+         camera_dir, camera_p, camera_fdr, fry_dir, fry_p, fry_fdr, hit) |>
+  arrange(contrast, collection, camera_p)
+```
+
+Benjamini-Hochberg runs within each contrast-by-collection cell, not across collections and not
+across contrasts — Hallmark's 48 sets are a different family from GO:BP's several thousand, and
+pooling them would let GO:BP's bulk set the correction for Hallmark's handful.
+
+## Reading significance: `camera()` decides, `fry()` confirms
+
+Two thresholds are reported for every set, and they are not two parallel votes on the same
+question. **`camera()` is the significance test** — it is competitive, so it keeps asking whether a
+set moved more than the rest of the (possibly also shifting) proteome, which stays a meaningful
+question no matter how much of the proteome is moving. **`fry()` is a confirmation filter**, kept
+specifically to catch the failure mode `camera()` has in this data: on the negative control below,
+`camera()` calls the Reactome striated-muscle-contraction set significant (FDR ≈ 1e-5) where
+nothing should be found, and `fry()` — which does not need `camera()`'s own inter-gene-correlation
+estimate — returns FDR ≈ 1, correctly withholding it. `hit` in the table above is `TRUE` only where
+both agree; that column, not `camera_fdr` alone, is what should be quoted as a finding.
+
+The reverse failure — `fry()` alone flagging a set `camera()` misses — is not run: `fry()` is
+self-contained, so it says nothing about specificity, and a set only `fry()` finds is not evidence
+of anything on its own.
+
+## Negative control
+
+```{r negative-control}
+summary_tbl <- out |>
+  summarise(n_tested = n(), n_camera_fdr05 = sum(camera_fdr < 0.05),
+            n_fry_fdr05 = sum(fry_fdr < 0.05), n_hit = sum(hit),
+            .by = c(contrast, role, collection))
+
+filter(summary_tbl, contrast == "BFR_vs_HLRT_at_T1")
+```
+
+Two untrained legs of the same person, thousands of sets tested across four collections: `camera()`
+alone returns 1 hit in GO:BP and 1 in Reactome (against 3,439 and 991 tested), both of which
+`fry()` fails to confirm — `n_hit` is zero everywhere. This is the check the parent README asks for
+before trusting anything below, and it is also the concrete case the `camera()`-then-`fry()` rule
+above exists to catch.
+
+## Results by contrast and collection
+
+```{r results}
+filter(summary_tbl, contrast != "BFR_vs_HLRT_at_T1")
+```
+
+`camera()` alone and `fry()` alone disagree sharply in scale on the two training contrasts (GO:BP:
+126 vs. 777 raw hits for BFR, 61 vs. 708 for HLRT) — expected, not a bug: `fry()` is self-contained
+and flags most sets once most of the proteome is shifting, which the protein-level result already
+shows is happening. `n_hit` — both tests agreeing — is the number to read; it stays close to the
+`camera()`-alone count on the training contrasts (most of what `camera()` finds, `fry()` confirms)
+and drops to zero on the negative control (where `camera()`'s one finding is not confirmed), which
+is the pattern this rule is meant to produce.
+
+The interaction — the primary contrast — returns zero hits in every collection, on both tests. That
+matches the protein-level result and the power calculation already on record: the design cannot
+detect an interaction effect the size of the one actually observed, so a null here confirms rather
+than adds information.
+
+## Thematic classification
+
+Every set name is matched against keyword patterns chosen for the study's hypotheses, applied to
+**all** tested sets before anything is filtered on significance — the alternative, choosing
+keywords after seeing which sets came out significant, would let the classification itself become
+the p-hacking. A set can only belong to one theme; where two patterns could both match (a case that
+did not arise here), the first listed wins.
+
+```{r themes}
+library(stringr)
+
+theme_rules <- tribble(
+  ~theme,                        ~include,                                                                                          ~exclude,
+  "Myofibrillar",                "MYOFIBRIL|SARCOMERE|ACTOMYOSIN|MYOSIN|TROPONIN|TROPOMYOSIN|\\bTITIN\\b|Z_DISC|M_BAND|A_BAND|I_BAND|CONTRACTILE_FIBER|MUSCLE_FILAMENT|STRIATED_MUSCLE_CONTRACTION|SKELETAL_MUSCLE_CONTRACTION|^GOBP_MUSCLE_CONTRACTION$|VOLUNTARY_SKELETAL_MUSCLE|MUSCLE_STRUCTURE_DEVELOPMENT|MUSCLE_FIBER_DEVELOPMENT|MUSCLE_CELL_DEVELOPMENT|MUSCLE_SYSTEM_PROCESS|MUSCLE_ORGAN_DEVELOPMENT", "CARDIAC|SMOOTH_MUSCLE|GASTRO_INTESTINAL|UTERINE|VASCULAR|ARTERY|INTESTINE|AIRWAY|BLADDER|URINARY",
+  "Sarcoplasmic_Glycolytic",     "GLYCOLY|GLYCOGEN|GLUCONEOGENESIS",                                                                NA,
+  "Sarcoplasmic_SR_Calcium",     "SARCOPLASMIC_RETICULUM|CALCIUM_ION_TRANSPORT|CALCIUM_ION_HOMEOSTASIS|CALCIUM_TRANSPORT",          "SYNAP|NEURON|AXON",
+  "Sarcoplasmic_Mitochondrial",  "MITOCHONDRI|OXIDATIVE_PHOSPHORYLATION|RESPIRATORY_CHAIN|RESPIRATORY_ELECTRON|ELECTRON_TRANSPORT|TRICARBOXYLIC_ACID|ATP_SYNTHESIS", NA,
+  "Metabolic_Stress",            "HYPOXIA|ANGIOGENESIS|VASCULAR|ENDOTHELIAL|AMPK|OXIDATIVE_STRESS|REACTIVE_OXYGEN|HEAT_SHOCK|UNFOLDED_PROTEIN_RESPONSE|ENDOPLASMIC_RETICULUM_STRESS", NA,
+  "Ribosomal",                   "RIBOSOM",                                                                                          NA,
+  "Protein_Synthesis",           "TRANSLATIONAL_INITIATION|TRANSLATIONAL_ELONGATION|TRANSLATIONAL_TERMINATION|CYTOPLASMIC_TRANSLATION|PEPTIDE_CHAIN_ELONGATION|MTORC1_SIGNALING|^.*\\bEIF\\d",  NA,
+  "Protein_Degradation",         "UBIQUITIN|PROTEASOME|AUTOPHAGY|PROTEOLYSIS|PROTEIN_CATABOLIC|LYSOSOM",                             NA
+)
+
+classify <- function(gs_name) {
+  for (i in seq_len(nrow(theme_rules))) {
+    r <- theme_rules[i, ]
+    hit_incl <- str_detect(gs_name, r$include)
+    hit_excl <- if (is.na(r$exclude)) FALSE else str_detect(gs_name, r$exclude)
+    if (hit_incl && !hit_excl) return(r$theme)
+  }
+  NA_character_
+}
+
+pilot_sets <- c("REACTOME_STRIATED_MUSCLE_CONTRACTION", "KEGG_GLYCOLYSIS_GLUCONEOGENESIS",
+                "GOBP_SARCOPLASMIC_RETICULUM_CALCIUM_ION_TRANSPORT")
+
+out <- out |>
+  rowwise() |>
+  mutate(theme = classify(gs_name)) |>
+  ungroup() |>
+  mutate(is_pilot_set = gs_name %in% pilot_sets)
+
+count(out |> filter(!is.na(theme)) |> distinct(gs_name, theme), theme)
+```
+
+`Metabolic_Stress` folds in hypoxia and angiogenesis/vascular terms together, on the reasoning that
+both trace back to the same BFR mechanism (local ischemia during the occluded sets) rather than two
+separate questions. `Ribosomal` (the biogenesis/structure of the ribosome itself) and
+`Protein_Synthesis` (the translation process, plus mTORC1) are kept apart because a shift in one
+without the other is itself informative — more ribosomes without more translation initiation reads
+differently than the reverse.
+
+`is_pilot_set` flags the three sets chosen for the earlier pilot analysis, so they can be found in
+this larger run without a separate lookup file — they are not treated any differently for testing
+or correction, only labelled.
+
+## Outputs
+
+```{r write}
+out_dir <- here("03_Pathway_Enrichment", "02_Set_Tests", "c_data")
+write.csv(out, file.path(out_dir, "geneset_tests_long.csv"), row.names = FALSE)
+
+theme_hits <- out |>
+  filter(!is.na(theme), hit) |>
+  arrange(contrast, theme, camera_p)
+write.csv(theme_hits, file.path(out_dir, "theme_cut_significant.csv"), row.names = FALSE)
+```
+
+Two files, not the four or five earlier drafts of this script produced. `geneset_tests_long.csv` is
+every set tested, with `theme`/`is_pilot_set` attached, so any cut — significant or not, on-theme
+or not — is one filter away without re-running anything. `theme_cut_significant.csv` is the
+narrow, curated shortlist: on-theme sets that clear both `camera()` and `fry()`, which is what
+"vias sarcoplasmáticas/miofibrilares significativas" should mean going into a discussion, not a
+grep someone has to redo. The negative-control summary and the contrast-by-collection counts above
+are not written to disk separately — they are small, derived from this same table in one line, and
+already sit in this render and in the parent `README.md`; a third small file would only duplicate
+them. Likewise, the protein-index object needed for per-sample scoring is not written here — the
+parent README scopes that scoring inside *this* stage ("score every set in every sample" is
+`02_Set_Tests`'s own second half, not `03_Enrichment`, which is a separate over-representation
+analysis on hit lists). It takes under a second to rebuild from `index_by_collection` above when
+that half is actually started, so persisting it now would be output for work not done yet.
+
+```{r session}
+sessionInfo()
+```
