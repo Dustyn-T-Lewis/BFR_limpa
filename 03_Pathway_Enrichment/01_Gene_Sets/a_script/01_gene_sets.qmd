@@ -52,21 +52,14 @@ cache_dir <- file.path(out, "cache")
 for (path in c(out, cache_dir)) {
   dir.create(path, recursive = TRUE, showWarnings = FALSE)
 }
-input_files <- c(
+inputs <- stage_inputs(
   proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds",
   fit = "02_Differential_Expression/02_Differential/c_data/fit.rds",
   design = "02_Differential_Expression/01_Design/c_data/design.rds"
 )
-input_paths <- map_chr(input_files, here)
-if (!all(file.exists(input_paths))) {
-  stop(
-    "Run the upstream stages first. Missing: ",
-    paste(input_paths[!file.exists(input_paths)], collapse = ", ")
-  )
-}
-proteins <- readRDS(input_paths[["proteins"]])
-fit <- readRDS(input_paths[["fit"]])
-d <- readRDS(input_paths[["design"]])
+proteins <- inputs$proteins
+fit <- inputs$fit
+d <- inputs$design
 protein_ids <- rownames(proteins$E)
 contrast_names <- colnames(d$contrasts)
 training_contrasts <- c("BFR_post_vs_pre", "HLRT_post_vs_pre")
@@ -407,22 +400,10 @@ map_int(set_lists, length)
 ```
 
 ```{r fgsea}
-# fgseaMultilevel samples internally, so the seed is what makes a rerun reproduce.
-set.seed(1)
-fgsea_raw <- map(set_lists, \(sets) {
-  map(ranked, \(stats) {
-    as.data.frame(fgsea::fgsea(
-      pathways = sets, stats = stats,
-      minSize = params$min_measured, maxSize = params$max_set_size
-    ))
-  }) |>
-    list_rbind(names_to = "contrast")
-}) |>
-  list_rbind(names_to = "collection")
-
-# as.data.frame() above is not tidiness. volcano_ring() splits an enrichment table on the
-# sign of NES and rbinds the halves back; when one half is empty, data.table's rbindlist
-# refuses the column mismatch that base rbind tolerates.
+fgsea_raw <- run_fgsea_all(
+  ranked, set_lists,
+  min_size = params$min_measured, max_size = params$max_set_size
+)
 filtered <- drop_disease_terms(
   fgsea_raw,
   patterns = if (isTRUE(params$exclude_disease)) DISEASE_PATTERNS else NULL
@@ -493,95 +474,72 @@ databases. The protein-level tables stay, since `03_Volcanoes` draws its points 
 from them.
 
 ```{r write-outputs}
-input_manifest <- tibble(
-  input = names(input_files),
-  path = unname(input_files),
-  md5 = unname(tools::md5sum(input_paths))
-)
-packages <- c(
-  "here", "limma", "limpa", "dplyr", "tibble", "tidyr", "purrr", "readr",
-  "writexl", "fgsea", "knitr"
-)
-package_versions <- tibble(
-  package = packages,
-  version = map_chr(packages, \(package) as.character(packageVersion(package)))
-)
-provenance <- list(
-  schema = 2L, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-  inputs = input_manifest, parameters = params,
-  script_md5 = unname(tools::md5sum(file.path(
-    stage, "a_script", "01_gene_sets.qmd"
-  ))),
-  cache_file = file.path("cache", basename(cache_file)),
-  cache_md5 = unname(tools::md5sum(cache_file)),
-  cache_request = frozen$request, packages = package_versions,
-  mapping = paste(
-    "Exact single symbols; highest mean observed precursors,",
-    "then NPrec, then accession; independent of differential statistics."
-  ),
-  fdr = "BH across all tested proteins separately within each contrast",
-  pi_score = "P.Value^abs(logFC); smaller ranks higher; no error control",
-  pi_value = paste(
-    "abs(logFC) * -log10(max(P.Value, double.xmin));",
-    "zero logFC gives zero; larger ranks higher; plotting bound only"
-  ),
-  signed_pi = "sign(logFC) * pi_value; exploratory training ranks only",
-  reduction = paste(
-    "Measured-member Jaccard, deterministic greedy; within database per",
-    "collection, across databases for `combined`"
-  ),
-  set_test = paste(
-    "fgsea on moderated t, seed 1; assumes exchangeable proteins,",
-    "so read its negative control"
-  ),
-  disease_filter = if (isTRUE(params$exclude_disease)) {
-    paste("Sets excluded by name on:", paste(DISEASE_PATTERNS, collapse = ", "))
-  } else {
-    "None"
-  },
-  pathway_tests_run = TRUE
-)
-gene_sets$provenance <- provenance
-# What this stage derives, and nothing it merely read. proteins.rds and fit.rds are
-# tracked upstream, so copying them here would only let the copy go stale.
-pathway_inputs <- list(
-  protein_results = protein_results, protein_map = protein_map,
-  gene_sets = sets_retained, set_indices = set_indices,
-  set_lists = set_lists, fgsea_results = fgsea_results,
-  provenance = provenance
-)
-saveRDS(gene_sets, file.path(out, "gene_sets.rds"), compress = "xz")
-saveRDS(pathway_inputs, file.path(out, "pathway_inputs.rds"), compress = "xz")
-readr::write_csv(protein_results, file.path(out, "protein_statistics.csv"))
-readr::write_csv(set_catalog, file.path(out, "gene_set_catalog.csv"))
-readr::write_csv(input_manifest, file.path(out, "input_manifest.csv"))
-# leadingEdge is a list column, which no flat format holds. Collapse for the readable
-# copies and keep the list form in the RDS.
+# leadingEdge is a list column, which no flat format holds. Collapse for the readable copies
+# and keep the list form in the RDS.
 flatten_edges <- function(df) {
   mutate(df, leadingEdge = map_chr(leadingEdge, paste, collapse = ";"))
 }
-readr::write_csv(flatten_edges(fgsea_results), file.path(out, "fgsea_results.csv"))
-writexl::write_xlsx(list(
-  fgsea_unfiltered = flatten_edges(fgsea_raw),
-  fgsea_filtered = flatten_edges(fgsea_results),
-  fgsea_combined = flatten_edges(filter(fgsea_results, collection == "combined")),
-  excluded_terms = flatten_edges(excluded_terms),
-  samples = proteins$targets,
-  protein_statistics = protein_results,
-  gene_statistics = gene_results,
-  protein_gene_map = protein_map,
-  gene_set_catalog = set_catalog,
-  set_summary = set_summary,
-  contrast_summary = contrast_summary,
-  input_manifest = input_manifest,
-  package_versions = package_versions
-), file.path(out, "01_gene_sets.xlsx"))
-tibble(
-  output = c(
-    "01_gene_sets.xlsx", "gene_sets.rds", "pathway_inputs.rds",
-    "fgsea_results.csv", "protein_statistics.csv", "gene_set_catalog.csv"
+gene_sets$provenance <- NULL
+write_stage_outputs(
+  out, "01_gene_sets",
+  sheets = list(
+    fgsea_unfiltered = flatten_edges(fgsea_raw),
+    fgsea_filtered = flatten_edges(fgsea_results),
+    fgsea_combined = flatten_edges(filter(fgsea_results, collection == "combined")),
+    excluded_terms = flatten_edges(excluded_terms),
+    samples = proteins$targets,
+    protein_statistics = protein_results,
+    gene_statistics = gene_results,
+    protein_gene_map = protein_map,
+    gene_set_catalog = set_catalog,
+    set_summary = set_summary,
+    contrast_summary = contrast_summary
   ),
-  size_mb = round(file.info(file.path(out, output))$size / 1024^2, 2)
+  # What this stage derives, and nothing it merely read. proteins.rds and fit.rds are tracked
+  # upstream, so copying them here would only let the copy go stale.
+  rds = list(
+    gene_sets = gene_sets,
+    pathway_inputs = list(
+      protein_results = protein_results, protein_map = protein_map,
+      gene_sets = sets_retained, set_indices = set_indices,
+      set_lists = set_lists, fgsea_results = fgsea_results
+    )
+  ),
+  csv = list(
+    fgsea_results = flatten_edges(fgsea_results),
+    protein_statistics = protein_results,
+    gene_set_catalog = set_catalog
+  ),
+  manifest = inputs$manifest, parameters = params,
+  packages = c(
+    "here", "limma", "limpa", "dplyr", "tibble", "tidyr", "purrr", "readr",
+    "writexl", "fgsea", "knitr"
+  ),
+  notes = list(
+    cache_file = file.path("cache", basename(cache_file)),
+    cache_md5 = unname(tools::md5sum(cache_file)),
+    cache_request = frozen$request,
+    mapping = paste(
+      "Exact single symbols; highest mean observed precursors,",
+      "then NPrec, then accession; independent of differential statistics."
+    ),
+    fdr = "BH across all tested proteins separately within each contrast",
+    pi_score = "P.Value^abs(logFC); smaller ranks higher; no error control",
+    reduction = paste(
+      "Measured-member Jaccard, deterministic greedy; within database per",
+      "collection, across databases for `combined`"
+    ),
+    set_test = paste(
+      "fgsea on moderated t, seed 1; assumes exchangeable proteins,",
+      "so read its negative control"
+    ),
+    disease_filter = if (isTRUE(params$exclude_disease)) {
+      paste("Sets excluded by name on:", paste(DISEASE_PATTERNS, collapse = ", "))
+    } else {
+      "None"
+    },
+    pathway_tests_run = TRUE
+  )
 )
 ```
 

@@ -44,24 +44,17 @@ stage <- here("03_Pathway_Enrichment", "02_Set_Tests")
 out <- file.path(stage, "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
-input_files <- c(
+inputs <- stage_inputs(
   proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds",
   fit = "02_Differential_Expression/02_Differential/c_data/fit.rds",
   design = "02_Differential_Expression/01_Design/c_data/design.rds",
   pathway = "03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds",
   phenotype = "00_Input/phenotype.csv"
 )
-input_paths <- map_chr(input_files, here)
-if (!all(file.exists(input_paths))) {
-  stop(
-    "Run the upstream stages first. Missing: ",
-    paste(input_files[!file.exists(input_paths)], collapse = ", ")
-  )
-}
-proteins <- readRDS(input_paths[["proteins"]])
-fit <- readRDS(input_paths[["fit"]])
-d <- readRDS(input_paths[["design"]])
-pathway <- readRDS(input_paths[["pathway"]])
+proteins <- inputs$proteins
+fit <- inputs$fit
+d <- inputs$design
+pathway <- inputs$pathway
 
 protein_ids <- rownames(proteins$E)
 contrast_names <- colnames(d$contrasts)
@@ -110,15 +103,10 @@ One call per contrast: `fry()` takes a single contrast vector, not a matrix. It 
 reconstructed largely from missing precursors counts for less here too.
 
 ```{r fry}
-fry_results <- map(set_names(contrast_names), \(contrast) {
-  fry(
-    y = proteins$E, index = set_indices, design = d$design,
-    contrast = d$contrasts[, contrast], weights = fit$EList$weights,
-    sort = "none"
-  ) |>
-    rownames_to_column("set_id")
-}) |>
-  list_rbind(names_to = "contrast") |>
+fry_results <- run_fry_all(
+  proteins$E, set_indices, d$design, d$contrasts,
+  weights = fit$EList$weights
+) |>
   mutate(collection = params$collection, .before = 1)
 
 fry_results |>
@@ -151,12 +139,7 @@ thousand re-scorings each, answering a per-sample question that never sees the c
 scores are the useful output, and fry above supplies the significance.
 
 ```{r singscore}
-gene_map <- filter(pathway$protein_map, selected)
-gene_matrix <- proteins$E[gene_map$protein, ]
-rownames(gene_matrix) <- gene_map$gene
-
-ranks <- singscore::rankGenes(gene_matrix)
-scores <- singscore::multiScore(ranks, upSetColc = sets)$Scores
+scores <- score_samples(proteins$E, pathway$protein_map, sets)
 dim(scores)
 ```
 
@@ -176,8 +159,6 @@ on sample. Each leg contributes two samples, so the change in a set's score acro
 timepoints is what pairs with a change in cross-sectional area.
 
 ```{r phenotype}
-phenotype <- readr::read_csv(input_paths[["phenotype"]], show_col_types = FALSE)
-
 score_change <- scores |>
   as.data.frame() |>
   rownames_to_column("set_id") |>
@@ -186,7 +167,7 @@ score_change <- scores |>
   select(set_id, participant, leg, timepoint, score) |>
   pivot_wider(names_from = timepoint, values_from = score) |>
   mutate(score_change = T2 - T1) |>
-  inner_join(phenotype, by = c("participant", "leg")) |>
+  inner_join(inputs$phenotype, by = c("participant", "leg")) |>
   mutate(csa_change = vl_csa_post_cm2 - vl_csa_pre_cm2)
 
 # Every set against the same outcome, so the ranking is the point, not any single p-value.
@@ -257,8 +238,11 @@ Every sample also gets a score on that signature, up and down together, so the r
 plotted per participant rather than read only as a p-value.
 
 ```{r signature-scores}
+gene_map <- filter(pathway$protein_map, selected)
+signature_matrix <- proteins$E[gene_map$protein, ]
+rownames(signature_matrix) <- gene_map$gene
 signature_score <- singscore::simpleScore(
-  ranks,
+  singscore::rankGenes(signature_matrix),
   upSet = signature$gene[signature$direction == "up"],
   downSet = signature$gene[signature$direction == "down"]
 ) |>
@@ -279,23 +263,24 @@ ggplot(signature_score, aes(timepoint, TotalScore, group = participant)) +
 ## Outputs
 
 ```{r write}
-input_manifest <- tibble(
-  input = names(input_files),
-  path = unname(input_files),
-  md5 = unname(tools::md5sum(input_paths))
-)
-packages <- c("here", "limma", "limpa", "singscore", "dplyr", "tibble", "tidyr", "purrr")
-package_versions <- tibble(
-  package = packages,
-  version = map_chr(packages, \(package) as.character(packageVersion(package)))
-)
-set_tests <- list(
-  fry = fry_results, scores = scores, score_change = score_change,
-  csa_correlation = csa_correlation, signature = signature,
-  signature_score = signature_score,
-  provenance = list(
-    schema = 1L, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-    inputs = input_manifest, parameters = params, packages = package_versions,
+write_stage_outputs(
+  out, "02_set_tests",
+  sheets = list(
+    fry = fry_results,
+    set_scores = rownames_to_column(as.data.frame(scores), "set_id"),
+    score_vs_csa = csa_correlation,
+    signature = signature,
+    signature_scores = signature_score
+  ),
+  rds = list(set_tests = list(
+    fry = fry_results, scores = scores, score_change = score_change,
+    csa_correlation = csa_correlation, signature = signature,
+    signature_score = signature_score
+  )),
+  csv = list(fry_results = fry_results),
+  manifest = inputs$manifest, parameters = params,
+  packages = c("here", "limma", "limpa", "singscore", "dplyr", "tibble", "tidyr", "purrr"),
+  notes = list(
     protein_correlation = rho, set_score_correlation = rho_sets,
     block = paste(
       "fry run without block: participant is fixed in the design and the",
@@ -303,21 +288,6 @@ set_tests <- list(
     ),
     signature = "Defined on HLRT_post_vs_pre, tested on BFR_post_vs_pre and the negative control"
   )
-)
-saveRDS(set_tests, file.path(out, "set_tests.rds"), compress = "xz")
-readr::write_csv(fry_results, file.path(out, "fry_results.csv"))
-writexl::write_xlsx(list(
-  fry = fry_results,
-  set_scores = rownames_to_column(as.data.frame(scores), "set_id"),
-  score_vs_csa = csa_correlation,
-  signature = signature,
-  signature_scores = signature_score,
-  input_manifest = input_manifest,
-  package_versions = package_versions
-), file.path(out, "02_set_tests.xlsx"))
-tibble(
-  output = c("02_set_tests.xlsx", "set_tests.rds", "fry_results.csv"),
-  size_mb = round(file.info(file.path(out, output))$size / 1024^2, 2)
 )
 ```
 

@@ -2275,48 +2275,46 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </div>
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_Volcanoes&quot;</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>figure_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;figures&quot;</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(figure_dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>input_files <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">pathway =</span> <span class="st">&quot;03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds&quot;</span>,</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> <span class="st">&quot;02_Differential_Expression/01_Design/c_data/design.rds&quot;</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>input_paths <span class="ot">&lt;-</span> <span class="fu">map_chr</span>(input_files, here)</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(<span class="fu">file.exists</span>(input_paths))) {</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">&quot;Run 01_Gene_Sets first. Missing: &quot;</span>, <span class="fu">paste</span>(input_files, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>))</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>pathway <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(input_paths[[<span class="st">&quot;pathway&quot;</span>]])</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(input_paths[[<span class="st">&quot;design&quot;</span>]])</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>protein_results <span class="ot">&lt;-</span> pathway<span class="sc">$</span>protein_results</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>fgsea_results <span class="ot">&lt;-</span> <span class="fu">filter</span>(pathway<span class="sc">$</span>fgsea_results, collection <span class="sc">==</span> params<span class="sc">$</span>collection)</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>training_contrasts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_post_vs_pre&quot;</span>, <span class="st">&quot;HLRT_post_vs_pre&quot;</span>)</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(fgsea_results) <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="sc">!</span><span class="fu">is.null</span>(protein_results<span class="sc">$</span>label))</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># volcano_ring() matches leading-edge genes against the point labels, and a label carries its</span></span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co"># accession when the symbol appears on more than one protein. Translate the edges into label</span></span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co"># space or the tick lines silently draw nothing.</span></span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>gene_to_label <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(protein_results, contrast <span class="sc">==</span> contrast[<span class="dv">1</span>], <span class="sc">!</span><span class="fu">is.na</span>(gene)),</span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_names</span>(label, gene)</span>
-<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>fgsea_results<span class="sc">$</span>leadingEdge <span class="ot">&lt;-</span> <span class="fu">map</span>(fgsea_results<span class="sc">$</span>leadingEdge, \(genes) {</span>
-<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unname</span>(gene_to_label[genes[genes <span class="sc">%in%</span> <span class="fu">names</span>(gene_to_label)]])</span>
-<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>plot_theme <span class="ot">&lt;-</span> enrichVolcano<span class="sc">::</span><span class="fu">volcano_ring_theme</span>(</span>
-<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>  <span class="at">base_size =</span> <span class="dv">12</span>, <span class="at">base_family =</span> <span class="st">&quot;sans&quot;</span>, <span class="at">palette =</span> <span class="st">&quot;okabe&quot;</span>, <span class="at">ns =</span> <span class="st">&quot;#777777&quot;</span></span>
-<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>contrast_titles <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_post_vs_pre =</span> <span class="st">&quot;BFR: post vs pre&quot;</span>,</span>
-<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">HLRT_post_vs_pre =</span> <span class="st">&quot;High load: post vs pre&quot;</span>,</span>
-<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_vs_HLRT_at_T1 =</span> <span class="st">&quot;BFR vs high load: pre-training control&quot;</span>,</span>
-<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_vs_HLRT_at_T2 =</span> <span class="st">&quot;BFR vs high load: post-training&quot;</span>,</span>
-<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>  <span class="at">interaction =</span> <span class="st">&quot;Interaction: difference in training responses&quot;</span></span>
-<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(fgsea_results, contrast, <span class="at">significant =</span> padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_Functions&quot;</span>, <span class="st">&quot;00_functions.R&quot;</span>))</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_Volcanoes&quot;</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>figure_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;figures&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(figure_dir, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">stage_inputs</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">pathway =</span> <span class="st">&quot;03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds&quot;</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> <span class="st">&quot;02_Differential_Expression/01_Design/c_data/design.rds&quot;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>pathway <span class="ot">&lt;-</span> inputs<span class="sc">$</span>pathway</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> inputs<span class="sc">$</span>design</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>protein_results <span class="ot">&lt;-</span> pathway<span class="sc">$</span>protein_results</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>fgsea_results <span class="ot">&lt;-</span> <span class="fu">filter</span>(pathway<span class="sc">$</span>fgsea_results, collection <span class="sc">==</span> params<span class="sc">$</span>collection)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>training_contrasts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_post_vs_pre&quot;</span>, <span class="st">&quot;HLRT_post_vs_pre&quot;</span>)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(fgsea_results) <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="sc">!</span><span class="fu">is.null</span>(protein_results<span class="sc">$</span>label))</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co"># volcano_ring() matches leading-edge genes against the point labels, and a label carries its</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="co"># accession when the symbol appears on more than one protein. Translate the edges into label</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># space or the tick lines silently draw nothing.</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>gene_to_label <span class="ot">&lt;-</span> <span class="fu">with</span>(</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(protein_results, contrast <span class="sc">==</span> contrast[<span class="dv">1</span>], <span class="sc">!</span><span class="fu">is.na</span>(gene)),</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_names</span>(label, gene)</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>fgsea_results<span class="sc">$</span>leadingEdge <span class="ot">&lt;-</span> <span class="fu">map</span>(fgsea_results<span class="sc">$</span>leadingEdge, \(genes) {</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unname</span>(gene_to_label[genes[genes <span class="sc">%in%</span> <span class="fu">names</span>(gene_to_label)]])</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>plot_theme <span class="ot">&lt;-</span> enrichVolcano<span class="sc">::</span><span class="fu">volcano_ring_theme</span>(</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">base_size =</span> <span class="dv">12</span>, <span class="at">base_family =</span> <span class="st">&quot;sans&quot;</span>, <span class="at">palette =</span> <span class="st">&quot;okabe&quot;</span>, <span class="at">ns =</span> <span class="st">&quot;#777777&quot;</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>contrast_titles <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_post_vs_pre =</span> <span class="st">&quot;BFR: post vs pre&quot;</span>,</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">HLRT_post_vs_pre =</span> <span class="st">&quot;High load: post vs pre&quot;</span>,</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_vs_HLRT_at_T1 =</span> <span class="st">&quot;BFR vs high load: pre-training control&quot;</span>,</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_vs_HLRT_at_T2 =</span> <span class="st">&quot;BFR vs high load: post-training&quot;</span>,</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">interaction =</span> <span class="st">&quot;Interaction: difference in training responses&quot;</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(fgsea_results, contrast, <span class="at">significant =</span> padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">

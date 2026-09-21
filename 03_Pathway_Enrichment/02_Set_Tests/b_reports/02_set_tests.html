@@ -2276,43 +2276,36 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>input_files <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">stage_inputs</span>(</span>
 <span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">proteins =</span> <span class="st">&quot;01_Preprocess/02_Quantification/c_data/proteins.rds&quot;</span>,</span>
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">fit =</span> <span class="st">&quot;02_Differential_Expression/02_Differential/c_data/fit.rds&quot;</span>,</span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> <span class="st">&quot;02_Differential_Expression/01_Design/c_data/design.rds&quot;</span>,</span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">pathway =</span> <span class="st">&quot;03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds&quot;</span>,</span>
 <span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">phenotype =</span> <span class="st">&quot;00_Input/phenotype.csv&quot;</span></span>
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>input_paths <span class="ot">&lt;-</span> <span class="fu">map_chr</span>(input_files, here)</span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">all</span>(<span class="fu">file.exists</span>(input_paths))) {</span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Run the upstream stages first. Missing: &quot;</span>,</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste</span>(input_files[<span class="sc">!</span><span class="fu">file.exists</span>(input_paths)], <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(input_paths[[<span class="st">&quot;proteins&quot;</span>]])</span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(input_paths[[<span class="st">&quot;fit&quot;</span>]])</span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(input_paths[[<span class="st">&quot;design&quot;</span>]])</span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>pathway <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(input_paths[[<span class="st">&quot;pathway&quot;</span>]])</span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>protein_ids <span class="ot">&lt;-</span> <span class="fu">rownames</span>(proteins<span class="sc">$</span>E)</span>
-<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>contrast_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(d<span class="sc">$</span>contrasts)</span>
-<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>training_contrasts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_post_vs_pre&quot;</span>, <span class="st">&quot;HLRT_post_vs_pre&quot;</span>)</span>
-<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> pathway<span class="sc">$</span>set_lists[[params<span class="sc">$</span>collection]]</span>
-<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>set_indices <span class="ot">&lt;-</span> <span class="fu">set_row_indices</span>(sets, pathway<span class="sc">$</span>protein_map, protein_ids)</span>
-<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="co"># set_indices is rebuilt here rather than taken from the handoff, because it must index the</span></span>
-<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="co"># matrix this notebook actually passes to fry. A mismatch would test the wrong rows silently.</span></span>
-<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
-<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">colnames</span>(proteins<span class="sc">$</span>E), <span class="fu">rownames</span>(d<span class="sc">$</span>design)),</span>
-<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), protein_ids),</span>
-<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">dim</span>(fit<span class="sc">$</span>EList<span class="sc">$</span>weights), <span class="fu">dim</span>(proteins<span class="sc">$</span>E)),</span>
-<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>  <span class="sc">!</span><span class="fu">any</span>(<span class="fu">map_lgl</span>(set_indices, anyNA))</span>
-<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
-<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection =</span> params<span class="sc">$</span>collection, <span class="at">n_sets =</span> <span class="fu">length</span>(sets),</span>
-<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_proteins =</span> <span class="fu">nrow</span>(proteins<span class="sc">$</span>E), <span class="at">n_samples =</span> <span class="fu">ncol</span>(proteins<span class="sc">$</span>E)</span>
-<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> inputs<span class="sc">$</span>proteins</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> inputs<span class="sc">$</span>fit</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> inputs<span class="sc">$</span>design</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>pathway <span class="ot">&lt;-</span> inputs<span class="sc">$</span>pathway</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>protein_ids <span class="ot">&lt;-</span> <span class="fu">rownames</span>(proteins<span class="sc">$</span>E)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>contrast_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(d<span class="sc">$</span>contrasts)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>training_contrasts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_post_vs_pre&quot;</span>, <span class="st">&quot;HLRT_post_vs_pre&quot;</span>)</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> pathway<span class="sc">$</span>set_lists[[params<span class="sc">$</span>collection]]</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>set_indices <span class="ot">&lt;-</span> <span class="fu">set_row_indices</span>(sets, pathway<span class="sc">$</span>protein_map, protein_ids)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co"># set_indices is rebuilt here rather than taken from the handoff, because it must index the</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="co"># matrix this notebook actually passes to fry. A mismatch would test the wrong rows silently.</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">colnames</span>(proteins<span class="sc">$</span>E), <span class="fu">rownames</span>(d<span class="sc">$</span>design)),</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), protein_ids),</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">dim</span>(fit<span class="sc">$</span>EList<span class="sc">$</span>weights), <span class="fu">dim</span>(proteins<span class="sc">$</span>E)),</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>  <span class="sc">!</span><span class="fu">any</span>(<span class="fu">map_lgl</span>(set_indices, anyNA))</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection =</span> params<span class="sc">$</span>collection, <span class="at">n_sets =</span> <span class="fu">length</span>(sets),</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_proteins =</span> <span class="fu">nrow</span>(proteins<span class="sc">$</span>E), <span class="at">n_samples =</span> <span class="fu">ncol</span>(proteins<span class="sc">$</span>E)</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2355,24 +2348,19 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="fry">fry</h2>
 <p>One call per contrast: <code>fry()</code> takes a single contrast vector, not a matrix. It reads <code>fit$EList$weights</code>, which is what limpa’s per-observation standard errors became, so a protein reconstructed largely from missing precursors counts for less here too.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fry_results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(contrast_names), \(contrast) {</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> proteins<span class="sc">$</span>E, <span class="at">index =</span> set_indices, <span class="at">design =</span> d<span class="sc">$</span>design,</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrast =</span> d<span class="sc">$</span>contrasts[, contrast], <span class="at">weights =</span> fit<span class="sc">$</span>EList<span class="sc">$</span>weights,</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">sort =</span> <span class="st">&quot;none&quot;</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>)</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">collection =</span> params<span class="sc">$</span>collection, <span class="at">.before =</span> <span class="dv">1</span>)</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>fry_results <span class="sc">|&gt;</span></span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">tested =</span> <span class="fu">n</span>(),</span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">up =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr <span class="sc">&amp;</span> Direction <span class="sc">==</span> <span class="st">&quot;Up&quot;</span>),</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">down =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr <span class="sc">&amp;</span> Direction <span class="sc">==</span> <span class="st">&quot;Down&quot;</span>),</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_fdr =</span> <span class="fu">signif</span>(<span class="fu">min</span>(FDR), <span class="dv">3</span>), <span class="at">.by =</span> contrast</span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fry_results <span class="ot">&lt;-</span> <span class="fu">run_fry_all</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>E, set_indices, d<span class="sc">$</span>design, d<span class="sc">$</span>contrasts,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">weights =</span> fit<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">collection =</span> params<span class="sc">$</span>collection, <span class="at">.before =</span> <span class="dv">1</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>fry_results <span class="sc">|&gt;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">tested =</span> <span class="fu">n</span>(),</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">up =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr <span class="sc">&amp;</span> Direction <span class="sc">==</span> <span class="st">&quot;Up&quot;</span>),</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">down =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr <span class="sc">&amp;</span> Direction <span class="sc">==</span> <span class="st">&quot;Down&quot;</span>),</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_fdr =</span> <span class="fu">signif</span>(<span class="fu">min</span>(FDR), <span class="dv">3</span>), <span class="at">.by =</span> contrast</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2500,13 +2488,8 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="where-each-sample-sits">Where each sample sits</h2>
 <p><code>singscore</code> ranks each sample’s proteins and scores every set against those ranks, giving one number per set per sample. It carries no p-value and no design; <code>simpleScore()</code> returns a score and a dispersion, and the permutation route in <code>generateNull()</code> handles one set per call at a thousand re-scorings each, answering a per-sample question that never sees the contrast. The scores are the useful output, and fry above supplies the significance.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gene_map <span class="ot">&lt;-</span> <span class="fu">filter</span>(pathway<span class="sc">$</span>protein_map, selected)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>gene_matrix <span class="ot">&lt;-</span> proteins<span class="sc">$</span>E[gene_map<span class="sc">$</span>protein, ]</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(gene_matrix) <span class="ot">&lt;-</span> gene_map<span class="sc">$</span>gene</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>ranks <span class="ot">&lt;-</span> singscore<span class="sc">::</span><span class="fu">rankGenes</span>(gene_matrix)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>scores <span class="ot">&lt;-</span> singscore<span class="sc">::</span><span class="fu">multiScore</span>(ranks, <span class="at">upSetColc =</span> sets)<span class="sc">$</span>Scores</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(scores)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>scores <span class="ot">&lt;-</span> <span class="fu">score_samples</span>(proteins<span class="sc">$</span>E, pathway<span class="sc">$</span>protein_map, sets)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(scores)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 1032  131</code></pre>
 </div>
@@ -2525,29 +2508,27 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <h2 class="anchored" data-anchor-id="scores-against-the-phenotype">Scores against the phenotype</h2>
 <p><code>phenotype.csv</code> is one row per leg, which is why it is joined on participant and leg rather than on sample. Each leg contributes two samples, so the change in a set’s score across the two timepoints is what pairs with a change in cross-sectional area.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_csv</span>(input_paths[[<span class="st">&quot;phenotype&quot;</span>]], <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>score_change <span class="ot">&lt;-</span> scores <span class="sc">|&gt;</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>set_id, <span class="at">names_to =</span> <span class="st">&quot;sample_id&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;score&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(proteins<span class="sc">$</span>targets, <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, participant, leg, timepoint, score) <span class="sc">|&gt;</span></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> timepoint, <span class="at">values_from =</span> score) <span class="sc">|&gt;</span></span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">score_change =</span> T2 <span class="sc">-</span> T1) <span class="sc">|&gt;</span></span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(phenotype, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">csa_change =</span> vl_csa_post_cm2 <span class="sc">-</span> vl_csa_pre_cm2)</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Every set against the same outcome, so the ranking is the point, not any single p-value.</span></span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>csa_correlation <span class="ot">&lt;-</span> score_change <span class="sc">|&gt;</span></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(csa_change), <span class="sc">!</span><span class="fu">is.na</span>(score_change)) <span class="sc">|&gt;</span></span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">legs =</span> <span class="fu">n</span>(),</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">r =</span> <span class="fu">cor</span>(score_change, csa_change, <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>), <span class="at">.by =</span> set_id</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(<span class="fu">abs</span>(r)))</span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_head</span>(csa_correlation, <span class="at">n =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>score_change <span class="ot">&lt;-</span> scores <span class="sc">|&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>set_id, <span class="at">names_to =</span> <span class="st">&quot;sample_id&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;score&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(proteins<span class="sc">$</span>targets, <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, participant, leg, timepoint, score) <span class="sc">|&gt;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> timepoint, <span class="at">values_from =</span> score) <span class="sc">|&gt;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">score_change =</span> T2 <span class="sc">-</span> T1) <span class="sc">|&gt;</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(inputs<span class="sc">$</span>phenotype, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">csa_change =</span> vl_csa_post_cm2 <span class="sc">-</span> vl_csa_pre_cm2)</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Every set against the same outcome, so the ranking is the point, not any single p-value.</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>csa_correlation <span class="ot">&lt;-</span> score_change <span class="sc">|&gt;</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(csa_change), <span class="sc">!</span><span class="fu">is.na</span>(score_change)) <span class="sc">|&gt;</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">legs =</span> <span class="fu">n</span>(),</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">r =</span> <span class="fu">cor</span>(score_change, csa_change, <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>), <span class="at">.by =</span> set_id</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(<span class="fu">abs</span>(r)))</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_head</span>(csa_correlation, <span class="at">n =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2726,23 +2707,26 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <p>The fixed sets above do not share the problem, since they were defined before any contrast was seen, and fry returns nothing on the control across all of them.</p>
 <p>Every sample also gets a score on that signature, up and down together, so the response can be plotted per participant rather than read only as a p-value.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>signature_score <span class="ot">&lt;-</span> singscore<span class="sc">::</span><span class="fu">simpleScore</span>(</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  ranks,</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">upSet =</span> signature<span class="sc">$</span>gene[signature<span class="sc">$</span>direction <span class="sc">==</span> <span class="st">&quot;up&quot;</span>],</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">downSet =</span> signature<span class="sc">$</span>gene[signature<span class="sc">$</span>direction <span class="sc">==</span> <span class="st">&quot;down&quot;</span>]</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames_to_column</span>(<span class="st">&quot;sample_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(proteins<span class="sc">$</span>targets, <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>)</span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(signature_score, <span class="fu">aes</span>(timepoint, TotalScore, <span class="at">group =</span> participant)) <span class="sc">+</span></span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>treatment) <span class="sc">+</span></span>
-<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;high-load signature score&quot;</span>,</span>
-<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">&quot;signature defined on HLRT_post_vs_pre; each line is one participant&#39;s leg&quot;</span></span>
-<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>gene_map <span class="ot">&lt;-</span> <span class="fu">filter</span>(pathway<span class="sc">$</span>protein_map, selected)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>signature_matrix <span class="ot">&lt;-</span> proteins<span class="sc">$</span>E[gene_map<span class="sc">$</span>protein, ]</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(signature_matrix) <span class="ot">&lt;-</span> gene_map<span class="sc">$</span>gene</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>signature_score <span class="ot">&lt;-</span> singscore<span class="sc">::</span><span class="fu">simpleScore</span>(</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  singscore<span class="sc">::</span><span class="fu">rankGenes</span>(signature_matrix),</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">upSet =</span> signature<span class="sc">$</span>gene[signature<span class="sc">$</span>direction <span class="sc">==</span> <span class="st">&quot;up&quot;</span>],</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">downSet =</span> signature<span class="sc">$</span>gene[signature<span class="sc">$</span>direction <span class="sc">==</span> <span class="st">&quot;down&quot;</span>]</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames_to_column</span>(<span class="st">&quot;sample_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(proteins<span class="sc">$</span>targets, <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>)</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(signature_score, <span class="fu">aes</span>(timepoint, TotalScore, <span class="at">group =</span> participant)) <span class="sc">+</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>treatment) <span class="sc">+</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;high-load signature score&quot;</span>,</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">&quot;signature defined on HLRT_post_vs_pre; each line is one participant&#39;s leg&quot;</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -2755,46 +2739,32 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 <section id="outputs" class="level2">
 <h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>input_manifest <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">input =</span> <span class="fu">names</span>(input_files),</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="fu">unname</span>(input_files),</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">md5 =</span> <span class="fu">unname</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(input_paths))</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>packages <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;here&quot;</span>, <span class="st">&quot;limma&quot;</span>, <span class="st">&quot;limpa&quot;</span>, <span class="st">&quot;singscore&quot;</span>, <span class="st">&quot;dplyr&quot;</span>, <span class="st">&quot;tibble&quot;</span>, <span class="st">&quot;tidyr&quot;</span>, <span class="st">&quot;purrr&quot;</span>)</span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>package_versions <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">package =</span> packages,</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">version =</span> <span class="fu">map_chr</span>(packages, \(package) <span class="fu">as.character</span>(<span class="fu">packageVersion</span>(package)))</span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>set_tests <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">fry =</span> fry_results, <span class="at">scores =</span> scores, <span class="at">score_change =</span> score_change,</span>
-<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">csa_correlation =</span> csa_correlation, <span class="at">signature =</span> signature,</span>
-<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">signature_score =</span> signature_score,</span>
-<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">provenance =</span> <span class="fu">list</span>(</span>
-<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">schema =</span> <span class="dv">1</span>L, <span class="at">created_utc =</span> <span class="fu">format</span>(<span class="fu">Sys.time</span>(), <span class="at">tz =</span> <span class="st">&quot;UTC&quot;</span>, <span class="at">usetz =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">inputs =</span> input_manifest, <span class="at">parameters =</span> params, <span class="at">packages =</span> package_versions,</span>
-<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_correlation =</span> rho, <span class="at">set_score_correlation =</span> rho_sets,</span>
-<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">block =</span> <span class="fu">paste</span>(</span>
-<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;fry run without block: participant is fixed in the design and the&quot;</span>,</span>
-<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;residual within-leg correlation is near zero&quot;</span></span>
-<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">signature =</span> <span class="st">&quot;Defined on HLRT_post_vs_pre, tested on BFR_post_vs_pre and the negative control&quot;</span></span>
-<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(set_tests, <span class="fu">file.path</span>(out, <span class="st">&quot;set_tests.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
-<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>readr<span class="sc">::</span><span class="fu">write_csv</span>(fry_results, <span class="fu">file.path</span>(out, <span class="st">&quot;fry_results.csv&quot;</span>))</span>
-<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>writexl<span class="sc">::</span><span class="fu">write_xlsx</span>(<span class="fu">list</span>(</span>
-<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">fry =</span> fry_results,</span>
-<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>),</span>
-<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">score_vs_csa =</span> csa_correlation,</span>
-<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">signature =</span> signature,</span>
-<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>  <span class="at">signature_scores =</span> signature_score,</span>
-<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>  <span class="at">input_manifest =</span> input_manifest,</span>
-<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">package_versions =</span> package_versions</span>
-<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a>), <span class="fu">file.path</span>(out, <span class="st">&quot;02_set_tests.xlsx&quot;</span>))</span>
-<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
-<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>  <span class="at">output =</span> <span class="fu">c</span>(<span class="st">&quot;02_set_tests.xlsx&quot;</span>, <span class="st">&quot;set_tests.rds&quot;</span>, <span class="st">&quot;fry_results.csv&quot;</span>),</span>
-<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a>  <span class="at">size_mb =</span> <span class="fu">round</span>(<span class="fu">file.info</span>(<span class="fu">file.path</span>(out, output))<span class="sc">$</span>size <span class="sc">/</span> <span class="dv">1024</span><span class="sc">^</span><span class="dv">2</span>, <span class="dv">2</span>)</span>
-<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_stage_outputs</span>(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  out, <span class="st">&quot;02_set_tests&quot;</span>,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheets =</span> <span class="fu">list</span>(</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">fry =</span> fry_results,</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">score_vs_csa =</span> csa_correlation,</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">signature =</span> signature,</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">signature_scores =</span> signature_score</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">rds =</span> <span class="fu">list</span>(<span class="at">set_tests =</span> <span class="fu">list</span>(</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">fry =</span> fry_results, <span class="at">scores =</span> scores, <span class="at">score_change =</span> score_change,</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">csa_correlation =</span> csa_correlation, <span class="at">signature =</span> signature,</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">signature_score =</span> signature_score</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  )),</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">csv =</span> <span class="fu">list</span>(<span class="at">fry_results =</span> fry_results),</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">manifest =</span> inputs<span class="sc">$</span>manifest, <span class="at">parameters =</span> params,</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">packages =</span> <span class="fu">c</span>(<span class="st">&quot;here&quot;</span>, <span class="st">&quot;limma&quot;</span>, <span class="st">&quot;limpa&quot;</span>, <span class="st">&quot;singscore&quot;</span>, <span class="st">&quot;dplyr&quot;</span>, <span class="st">&quot;tibble&quot;</span>, <span class="st">&quot;tidyr&quot;</span>, <span class="st">&quot;purrr&quot;</span>),</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">notes =</span> <span class="fu">list</span>(</span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_correlation =</span> rho, <span class="at">set_score_correlation =</span> rho_sets,</span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">block =</span> <span class="fu">paste</span>(</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;fry run without block: participant is fixed in the design and the&quot;</span>,</span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;residual within-leg correlation is near zero&quot;</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">signature =</span> <span class="st">&quot;Defined on HLRT_post_vs_pre, tested on BFR_post_vs_pre and the negative control&quot;</span></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
@@ -2856,8 +2826,8 @@ loaded via a namespace (and not attached):
 [13] RSQLite_2.4.6               magrittr_2.0.5             
 [15] compiler_4.6.0              rlang_1.2.0                
 [17] tools_4.6.0                 yaml_2.3.12                
-[19] knitr_1.51                  labeling_0.4.3             
-[21] S4Arrays_1.12.0             htmlwidgets_1.6.4          
+[19] knitr_1.51                  S4Arrays_1.12.0            
+[21] labeling_0.4.3              htmlwidgets_1.6.4          
 [23] bit_4.6.0                   DelayedArray_0.38.1        
 [25] plyr_1.8.9                  RColorBrewer_1.1-3         
 [27] abind_1.4-8                 withr_3.0.2                

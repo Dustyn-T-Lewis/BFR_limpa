@@ -40,21 +40,18 @@ library(tibble)
 library(purrr)
 library(ggplot2)
 here::i_am("03_Pathway_Enrichment/03_Volcanoes/a_script/03_volcanoes.qmd")
+source(here("03_Pathway_Enrichment", "00_Functions", "00_functions.R"))
 
 stage <- here("03_Pathway_Enrichment", "03_Volcanoes")
 figure_dir <- file.path(stage, "b_reports", "figures")
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
 
-input_files <- c(
+inputs <- stage_inputs(
   pathway = "03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds",
   design = "02_Differential_Expression/01_Design/c_data/design.rds"
 )
-input_paths <- map_chr(input_files, here)
-if (!all(file.exists(input_paths))) {
-  stop("Run 01_Gene_Sets first. Missing: ", paste(input_files, collapse = ", "))
-}
-pathway <- readRDS(input_paths[["pathway"]])
-d <- readRDS(input_paths[["design"]])
+pathway <- inputs$pathway
+d <- inputs$design
 
 protein_results <- pathway$protein_results
 fgsea_results <- filter(pathway$fgsea_results, collection == params$collection)

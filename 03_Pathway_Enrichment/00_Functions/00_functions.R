@@ -120,3 +120,112 @@ set_row_indices <- function(sets, protein_map, protein_ids) {
     match(gene_map$protein[match(genes, gene_map$gene)], protein_ids)
   })
 }
+
+#' Resolve a stage's inputs, stop if any is absent, and read them all.
+#'
+#' Takes repo-relative paths, returns the loaded objects by name plus a `manifest` tibble of
+#' path and md5 for provenance. Keeping the relative strings means the manifest needs no path
+#' arithmetic later.
+stage_inputs <- function(...) {
+  files <- c(...)
+  paths <- map_chr(files, here::here)
+  if (!all(file.exists(paths))) {
+    stop(
+      "Run the upstream stages first. Missing: ",
+      paste(files[!file.exists(paths)], collapse = ", ")
+    )
+  }
+  objects <- map(set_names(paths, names(files)), \(path) {
+    if (grepl("\\.csv$", path)) readr::read_csv(path, show_col_types = FALSE) else readRDS(path)
+  })
+  c(objects, list(
+    manifest = tibble::tibble(
+      input = names(files), path = unname(files),
+      md5 = unname(tools::md5sum(paths))
+    )
+  ))
+}
+
+#' Write a stage's workbook, RDS files and CSVs, and stamp them with one provenance record.
+#'
+#' `name` is the workbook stem, matching the stage's script. `notes` carries whatever the
+#' stage needs a later reader not to misunderstand — what a score means, which test ran, what
+#' was excluded. Returns a tibble of what was written.
+write_stage_outputs <- function(out, name, sheets, rds = list(), csv = list(),
+                                manifest, parameters, packages, notes = list()) {
+  dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  versions <- tibble::tibble(
+    package = packages,
+    version = map_chr(packages, \(p) as.character(utils::packageVersion(p)))
+  )
+  provenance <- c(
+    list(
+      schema = 2L, created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+      inputs = manifest, parameters = parameters, packages = versions
+    ),
+    notes
+  )
+  # Every workbook ends with the same two sheets, so a reader never has to open the RDS to
+  # find out which inputs and which package versions produced the numbers above them.
+  sheets <- c(sheets, list(input_manifest = manifest, package_versions = versions))
+  iwalk(rds, \(object, name) {
+    saveRDS(c(object, list(provenance = provenance)), file.path(out, paste0(name, ".rds")),
+      compress = "xz"
+    )
+  })
+  iwalk(csv, \(table, name) readr::write_csv(table, file.path(out, paste0(name, ".csv"))))
+  writexl::write_xlsx(sheets, file.path(out, paste0(name, ".xlsx")))
+  written <- c(paste0(name, ".xlsx"), paste0(names(rds), ".rds"), paste0(names(csv), ".csv"))
+  tibble::tibble(
+    output = written,
+    size_mb = round(file.info(file.path(out, written))$size / 1024^2, 2)
+  )
+}
+
+#' Run fgsea for every set collection against every contrast.
+#'
+#' `ranked` is a named list of named numeric vectors, one per contrast; `collections` a named
+#' list of set lists. fgseaMultilevel samples internally, so `seed` is what makes a rerun
+#' reproduce. Returns one long data.frame with `leadingEdge` still a list column, and
+#' `as.data.frame()` applied per run because volcano_ring() cannot take a data.table.
+run_fgsea_all <- function(ranked, collections, min_size, max_size, seed = 1) {
+  set.seed(seed)
+  map(collections, \(sets) {
+    map(ranked, \(stats) {
+      as.data.frame(fgsea::fgsea(
+        pathways = sets, stats = stats, minSize = min_size, maxSize = max_size
+      ))
+    }) |>
+      list_rbind(names_to = "contrast")
+  }) |>
+    list_rbind(names_to = "collection")
+}
+
+#' Run fry for every contrast.
+#'
+#' fry takes one contrast vector at a time, never a matrix. `weights` carries limpa's
+#' per-observation precision into the set test. Pass `block` and `correlation` through `...`
+#' only when the residual within-block correlation is far enough from zero to matter.
+run_fry_all <- function(expression, index, design, contrasts, weights = NULL, ...) {
+  map(set_names(colnames(contrasts)), \(contrast) {
+    limma::fry(
+      y = expression, index = index, design = design,
+      contrast = contrasts[, contrast], weights = weights, sort = "none", ...
+    ) |>
+      tibble::rownames_to_column("set_id")
+  }) |>
+    list_rbind(names_to = "contrast")
+}
+
+#' Score every sample on every set with singscore.
+#'
+#' Rank-based and sample-independent: a sample's score does not change with cohort
+#' composition, which is what a paired within-participant design needs. Measured on this
+#' matrix, dropping 51 of 131 samples moves a singscore value by 0 and a GSVA value by up to
+#' 0.34 on a range of 1.5. Returns sets in rows, samples in columns.
+score_samples <- function(expression, protein_map, sets) {
+  gene_map <- filter(protein_map, selected)
+  gene_matrix <- expression[gene_map$protein, ]
+  rownames(gene_matrix) <- gene_map$gene
+  singscore::multiScore(singscore::rankGenes(gene_matrix), upSetColc = sets)$Scores
+}
