@@ -1,0 +1,47 @@
+# Study-wide settings for the pathway analysis. Both notebooks in 03_Pathway_Enrichment
+# read this file, so a threshold is written once and cannot drift between stages.
+
+# MSigDB release, pinned separately from the msigdbr package version. Changing it
+# invalidates the frozen cache under 01_Pathways/c_data/cache/ by filename.
+msigdb_version: 2026.1.Hs
+
+# Every canonical-pathway and GO collection msigdbr offers for human. Names here are
+# the keys of `collection_specs` in 01_pathways.qmd and appear in the cache filename.
+collections:
+  - Hallmark
+  - KEGG_Legacy
+  - KEGG_Medicus
+  - Reactome
+  - WikiPathways
+  - PID
+  - BioCarta
+  - GOBP
+  - GOCC
+  - GOMF
+
+# A set qualifies on source membership and on how much of it this experiment measured.
+# The measured floor is what governs power; the source bounds keep out single-gene
+# stubs and whole-ontology umbrellas.
+min_set_size: 15
+max_set_size: 500
+min_measured: 15
+
+# BH thresholds. protein_fdr colours the volcanoes and counts protein hits; set_fdr
+# decides which pathways are significant and which enter collapsePathways.
+protein_fdr: 0.05
+set_fdr: 0.05
+
+# fgsea::collapsePathways prunes a significant set whose signal is already explained
+# by a more significant one. Applied per contrast, to significant sets only.
+collapse_pval: 0.05
+
+# Smallest GO ancestor allowed to name a theme, in source genes. Lower gives more,
+# narrower themes; higher gives fewer, broader ones.
+theme_min_size: 300
+
+# fgseaMultilevel samples internally, so this is what makes a rerun reproduce.
+seed: 1
+
+# Volcano figures: how many pathway rings and how many protein labels per panel.
+volcano_ring_n: 8
+volcano_label_n: 5

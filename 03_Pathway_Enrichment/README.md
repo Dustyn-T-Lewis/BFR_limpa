@@ -1,51 +1,84 @@
 # 03 · Pathway Enrichment
 
-`01_Gene_Sets` is implemented. Whole-set tests, sample scores and hit-list
-enrichment remain planned.
-
 Testing protein by protein asks three thousand separate questions. Pathway analysis asks whether
-a group of proteins that work together moved together. A small shift shared across forty
-mitochondrial proteins is invisible one protein at a time and obvious as a set, which is why this
-is the right stage when the protein-level result is thin.
+a group of proteins that work together moved together, which is the right question when the
+protein-level result is thin.
 
-| Sub-stage | Does / will do |
-|---|---|
-| [`01_Gene_Sets`](01_Gene_Sets/README.md) | freeze human MSigDB, filter on size and measured overlap, export the protein matrix with its fitted model and scores, draw the protein volcanoes |
-| `02_Set_Tests` | test each set as a whole, and score every set in every sample |
-| `03_Enrichment` | for comparisons with hits, ask which processes those hits belong to |
+Five steps, each named for what it runs, each one job. Data passes through disk, so any step can
+re-run alone.
+
+| Step | Runs | Writes |
+|---|---|---|
+| [`00_build_gene_sets`](00_build_gene_sets/README.md) | freeze MSigDB, map proteins to genes, filter on size | `gene_sets.rds` |
+| [`01_run_fgsea`](01_run_fgsea/README.md) | topTable, fgsea, collapsePathways, GO themes | `fgsea.rds` |
+| [`02_run_singscore`](02_run_singscore/README.md) | score every sample on every set | `singscore.rds` |
+| [`03_enrich_volcano_fgsea`](03_enrich_volcano_fgsea/README.md) | volcano figures with fgsea rings | 6 PNG + 6 PDF |
+| [`04_singscore_pheno_associations`](04_singscore_pheno_associations/README.md) | pathway scores against the phenotype | `pheno_associations.rds` |
 
 ```sh
-quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
+Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R
+Rscript 03_Pathway_Enrichment/01_run_fgsea/a_script/01_run_fgsea.R
+Rscript 03_Pathway_Enrichment/02_run_singscore/a_script/02_run_singscore.R
+Rscript 03_Pathway_Enrichment/03_enrich_volcano_fgsea/a_script/03_enrich_volcano_fgsea.R
+Rscript 03_Pathway_Enrichment/04_singscore_pheno_associations/a_script/04_singscore_pheno_associations.R
 ```
 
-That stage runs no pathway test. It freezes the gene sets, hands the next stage the protein
-matrix together with the fitted model and the participant design, and draws the protein
-volcanoes. The frozen snapshot is human MSigDB 2026.1.Hs, covering Hallmark, Reactome and GO
-Biological Process, and every later render reads it from disk rather than the network.
+About a minute end to end. Settings live in `config.yml` at the repo root, so a threshold is
+written once and cannot drift between steps.
 
-Proteins are called on BH FDR. The pi score ranks labels on the two training contrasts and
-selects nothing. The volcanoes carry no pathway ring until a later stage has a tested result to
-put in one.
+## Two questions, two methods
 
-## What each would tell us
+**Did a pathway move?** `fgsea`, in `01_run_fgsea`. Ranks proteins by moderated t and asks whether
+a set piles up at one end. Fast, needs no per-sample data, and it is what `enrichVolcano` consumes.
 
-**The frozen collection** is not a result. Set membership changes between database releases, so
-it gets cached and stamped with the version used. Without an overlap filter, one finding reappears
-under six names.
+**Where does each sample sit?** `singscore`, in `02_run_singscore`. One number per set per sample,
+rank-based and sample-independent. No p-value, never sees the contrast. That 2,732 x 131 matrix is
+what the phenotype analysis consumes.
 
-**Testing whole sets** needs no single protein to be significant, so it is the analysis most
-likely to say something about the interaction.
+Neither replaces the other. A rotation test (`limma::fry`) that takes the participant design was
+tried and removed by an explicit decision to run a single set test.
 
-**Scoring sets per sample** gives one number per set per sample, which can be plotted against the
-muscle measurements in `00_Input/phenotype.csv`. A set tracking the change in cross-sectional area
-is worth more than a set with a small p-value.
+## What fgsea's assumption costs
 
-**Enrichment on hit lists** only works where there are hits, and lowering a threshold to
-manufacture one is not an option.
+`fgsea` assumes the ranked proteins are exchangeable. They are not — mitochondrial and ribosomal
+proteins move together, and every participant contributed four samples.
 
-## Two tests we will not use
+**On `BFR_vs_HLRT_at_T1`, two legs of one person before either was trained, fgsea calls 14 sets
+significant and 6 survive collapse**, at adjusted p down to 5e-6, and they are actin, thin-filament
+and contractile sets. They look exactly like a training effect. Read every count against that six.
 
-One assumes proteins vary independently, which mitochondrial and ribosomal sets do not, and it
-reported significant sets on the negative control. Another handles correlation but silently
-ignores the argument saying participants contributed four samples each. Whatever runs here must
-accept the repeated-measures structure and be checked against the control first.
+| Contrast | Significant | After collapse | Shared with the control |
+|---|---:|---:|---:|
+| BFR_post_vs_pre | 466 | 114 | 1 |
+| HLRT_post_vs_pre | 375 | 88 | 1 |
+| BFR_vs_HLRT_at_T1 *(control)* | 14 | 6 | 6 |
+| BFR_vs_HLRT_at_T2 | 202 | 60 | 4 |
+| interaction | 39 | 15 | 0 |
+
+The artifact is specific to the between-leg contrasts. The two training contrasts share one set
+each with the control out of a hundred-odd, so their results are mostly not this.
+
+## Redundancy, and why no set is excluded by name
+
+Ten collections overlap, so glycolysis is tested in Hallmark, KEGG, Reactome, WikiPathways and
+several times over in GO. Nothing is removed before testing except on size: all 2,732 qualifying
+sets are tested and BH corrects across all of them.
+
+`collapsePathways` then prunes among the significant hits, re-running each conditioned on a more
+significant set's leading edge. It reads the data, not an overlap cutoff and not a name. The `main`
+column marks survivors; nothing is deleted, so both counts stay visible.
+
+**No set is excluded by name.** `REACTOME_INFLUENZA_INFECTION` is largely ribosome and translation
+machinery under a misleading label. An earlier disease-name regex removed real biology for a label
+and has been retired.
+
+## The phenotype result
+
+Every participant contributed one BFR leg and one HLRT leg, so `04_` asks the differential question
+within participant rather than between two groups of legs. That roughly doubles the power and
+removes every between-participant confound.
+
+**No differential association is detectable.** At nominal p < 0.01 the four outcomes return 12 to
+25 hits against 27 expected by chance — every ratio below 1.0. The screen is indistinguishable
+from noise, and nothing survives BH. With 32 pairs the study can only see a paired correlation of
+about 0.5, so this is a null result at that resolution, not evidence of no difference.

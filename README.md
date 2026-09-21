@@ -15,11 +15,13 @@ heavy load?
 | `00_Input/` | study data, runs nothing | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
 | `02_Differential_Expression/` | fit the model, test five contrasts | ready |
-| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, then which processes moved | first sub-stage ready; tests planned |
+| `03_Pathway_Enrichment/` | frozen gene sets, which processes moved, and pathway scores against the phenotype | ready |
 | `04_Network/` | protein groups the data defines | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-Each sub-stage holds `a_script/` (code), `b_reports/` (rendered HTML), `c_data/` (its outputs).
+Each sub-stage holds `a_script/` (code), `b_reports/` (rendered HTML, or figures where the step is
+a plain R script), `c_data/` (its outputs). `03_Pathway_Enrichment` runs as R scripts and writes
+one workbook per step; the earlier stages are Quarto notebooks and render to HTML.
 Stages run in order and pass data through disk, so any one can re-run alone. "Planned" means
 the folder holds only a README.
 
@@ -41,7 +43,11 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 
-quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
+Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R
+Rscript 03_Pathway_Enrichment/01_run_fgsea/a_script/01_run_fgsea.R
+Rscript 03_Pathway_Enrichment/02_run_singscore/a_script/02_run_singscore.R
+Rscript 03_Pathway_Enrichment/03_enrich_volcano_fgsea/a_script/03_enrich_volcano_fgsea.R
+Rscript 03_Pathway_Enrichment/04_singscore_pheno_associations/a_script/04_singscore_pheno_associations.R
 ```
 
 Minutes, not hours. No notebook computes anything slow. The one expensive step is `dpcQuant()` at
@@ -60,5 +66,8 @@ Two rules follow. Never filter on missing values before quantification, and neve
 protein matrix to an ordinary linear model.
 
 Packages: `limpa`, `limma`, `here`, `nanoparquet`, `writexl`, and `dplyr`, `stringr`, `purrr`,
-`readr`, `tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` adds `msigdbr`, `enrichVolcano`,
-`digest` and `Matrix`, and checks for them itself. Versions are not pinned.
+`readr`, `tibble`, `tidyr`, `ggplot2`, `yaml`. `03_Pathway_Enrichment` adds `fgsea`,
+`singscore`, `msigdbr`, `GO.db` and `enrichVolcano`. Versions are not pinned.
+
+Thresholds and the MSigDB collection list live in `config.yml` at the repo root, read by both
+pathway notebooks so a setting is written once.
