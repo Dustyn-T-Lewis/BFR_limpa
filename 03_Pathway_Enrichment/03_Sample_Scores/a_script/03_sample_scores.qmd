@@ -1,0 +1,217 @@
+---
+title: "03 · Per-sample set scores"
+subtitle: "ssGSEA scores, tested on the design and read against the phenotype"
+params:
+  score_fdr: 0.05
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    code-fold: true
+    df-print: kable
+    fig-width: 7.5
+    fig-height: 5
+execute:
+  message: false
+  warning: false
+---
+
+`02_Set_Tests` asks whether a set moved in a contrast. This stage asks a different question:
+how much of each set is present in each sample. The output is one number per set per sample, a
+1,040 × 131 matrix, and that turns a pathway into a variable that can be plotted against the
+muscle measurements rather than only reported with a p-value.
+
+Two things are lost in the conversion and have to be said out loud. ssGSEA ranks within a sample,
+so the precision weights from limpa do not travel; a protein reconstructed largely from missing
+values carries the same rank as a well-measured one. And the scores are relative to the cohort:
+adding or removing samples changes them. Neither makes the scores wrong, but both mean the
+whole-set tests in `02_Set_Tests`, not these scores, carry error control for the contrasts.
+
+```{r setup}
+required <- c("here", "limma", "GSVA", "dplyr", "tibble", "tidyr", "purrr",
+              "readr", "ggplot2")
+missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing)) stop("Install required R packages: ", paste(missing, collapse = ", "))
+library(here)
+library(limma)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(purrr)
+library(ggplot2)
+here::i_am("03_Pathway_Enrichment/03_Sample_Scores/a_script/03_sample_scores.qmd")
+
+stage <- here("03_Pathway_Enrichment", "03_Sample_Scores")
+out <- file.path(stage, "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+
+x <- readRDS(here("03_Pathway_Enrichment", "01_Gene_Sets", "c_data", "pathway_inputs.rds"))
+design <- x$design$design
+contrasts <- x$design$contrasts
+control <- x$design$negative_control
+targets <- as_tibble(x$proteins$targets)
+
+stopifnot(identical(colnames(x$gene_matrix), rownames(design)),
+          all(vapply(x$gene_sets, \(g) all(g %in% rownames(x$gene_matrix)), logical(1))))
+tibble(n_genes = nrow(x$gene_matrix), n_samples = ncol(x$gene_matrix),
+       n_sets = length(x$gene_sets), negative_control = control)
+```
+
+## Scoring
+
+`gene_matrix` is one fixed representative row per gene, chosen upstream without using any
+p-value or fold change, so the same representative serves every contrast.
+
+```{r score}
+set.seed(42)
+param <- GSVA::ssgseaParam(x$gene_matrix, x$gene_sets, minSize = 1, maxSize = Inf,
+                           normalize = TRUE)
+scores <- GSVA::gsva(param, verbose = FALSE)
+stopifnot(identical(dim(scores), c(length(x$gene_sets), ncol(x$gene_matrix))),
+          identical(colnames(scores), colnames(x$gene_matrix)),
+          all(is.finite(scores)))
+tibble(sets = nrow(scores), samples = ncol(scores),
+       score_min = signif(min(scores), 3), score_median = signif(median(scores), 3),
+       score_max = signif(max(scores), 3))
+```
+
+## Testing the scores on the same design
+
+The scores go into the same fixed-participant design, so a score is compared only within a
+person, exactly as the protein-level model does. No precision weights: they did not survive the
+ranking. `trend = TRUE` because set scores carry a mean-variance relationship of their own.
+
+The negative control is read first here too. It is the same true null, and a score-level test
+that finds pathways between two untrained legs is telling us the same thing a protein-level one
+would.
+
+```{r score-tests}
+fit <- lmFit(scores, design) |> contrasts.fit(contrasts) |> eBayes(trend = TRUE)
+
+score_results <- map(colnames(contrasts), \(cn) {
+  topTable(fit, coef = cn, number = Inf, adjust.method = "none", sort.by = "none") |>
+    rownames_to_column("set_id") |>
+    transmute(set_id, contrast = cn, diff = logFC, t, p = P.Value)
+}) |>
+  list_rbind() |>
+  separate_wider_delim(set_id, "|", names = c("database", "pathway"), cols_remove = FALSE) |>
+  mutate(padj = p.adjust(p, "BH"), .by = c(contrast, database))
+
+score_results |>
+  summarise(sets = n(), sig = sum(padj < params$score_fdr),
+            median_p = round(median(p), 3),
+            p_below_05 = round(mean(p < 0.05), 3), .by = contrast) |>
+  arrange(match(contrast, c(control, setdiff(colnames(contrasts), control))))
+```
+
+```{r control-check}
+score_results |>
+  filter(contrast == control, padj < params$score_fdr) |>
+  slice_min(padj, n = 15) |>
+  transmute(database, pathway, diff = signif(diff, 3), padj = signif(padj, 3))
+```
+
+Sets above are false positives by construction. Compare the count with `02_Set_Tests`: if the
+score-level test is looser than `fry` on the same null, its results on the interaction inherit
+that looseness.
+
+```{r hallmark-scores}
+score_results |>
+  filter(database == "Hallmark", padj < params$score_fdr) |>
+  arrange(contrast, padj) |>
+  transmute(contrast, pathway, diff = signif(diff, 3), padj = signif(padj, 3))
+```
+
+## Against the phenotype
+
+This is what per-sample scores are for. A set whose change tracks the change in muscle
+cross-sectional area is worth more than a set with a small p-value, because the phenotype is the
+outcome the study was designed around.
+
+The unit is a leg: one score change (T2 − T1) and one CSA change per leg. Correlation is computed
+**within each treatment separately**, so each person contributes one leg to each correlation and
+the observations are independent. Pooling both legs would put the same participant in twice.
+
+Only sets that the score-level test flagged are correlated. Correlating all 1,040 against the
+phenotype would be several thousand tests chasing a handful of real relationships.
+
+```{r phenotype}
+pheno <- readr::read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE) |>
+  mutate(d_csa = vl_csa_post_cm2 - vl_csa_pre_cm2) |>
+  select(participant, leg, treatment, d_csa)
+
+score_long <- as_tibble(scores, rownames = "set_id") |>
+  pivot_longer(-set_id, names_to = "sample_id", values_to = "score") |>
+  left_join(select(targets, sample_id, participant, leg, treatment, timepoint),
+            by = "sample_id")
+
+delta <- score_long |>
+  pivot_wider(id_cols = c(set_id, participant, leg, treatment),
+              names_from = timepoint, values_from = score) |>
+  filter(!is.na(T1), !is.na(T2)) |>
+  mutate(d_score = T2 - T1) |>
+  inner_join(pheno, by = c("participant", "leg", "treatment"))
+
+tested_sets <- score_results |>
+  filter(padj < params$score_fdr, contrast != control) |>
+  distinct(set_id) |>
+  pull(set_id)
+
+correlations <- delta |>
+  filter(set_id %in% tested_sets) |>
+  summarise(
+    n = n(),
+    rho = cor(d_score, d_csa, method = "spearman"),
+    p = cor.test(d_score, d_csa, method = "spearman", exact = FALSE)$p.value,
+    .by = c(set_id, treatment)
+  ) |>
+  mutate(padj = p.adjust(p, "BH"), .by = treatment) |>
+  separate_wider_delim(set_id, "|", names = c("database", "pathway"), cols_remove = FALSE)
+
+tibble(sets_correlated = n_distinct(correlations$set_id),
+       legs_per_treatment = paste(range(correlations$n), collapse = "-"),
+       sig_BFR = sum(correlations$padj < 0.05 & correlations$treatment == "BFR"),
+       sig_HLRT = sum(correlations$padj < 0.05 & correlations$treatment == "HLRT"))
+```
+
+```{r top-correlations}
+correlations |>
+  slice_min(padj, n = 20) |>
+  arrange(padj) |>
+  transmute(treatment, database, pathway, n, rho = round(rho, 3), padj = signif(padj, 3))
+```
+
+```{r correlation-plot}
+top <- correlations |> slice_min(padj, n = 4) |> pull(set_id) |> unique()
+if (length(top)) {
+  delta |>
+    filter(set_id %in% top) |>
+    mutate(pathway = sub("^[^|]+\\|", "", set_id)) |>
+    ggplot(aes(d_score, d_csa, colour = treatment)) +
+    geom_point(alpha = 0.8) +
+    geom_smooth(method = "lm", se = FALSE, linewidth = 0.6, formula = y ~ x) +
+    facet_wrap(~pathway, scales = "free_x", labeller = label_wrap_gen(34)) +
+    labs(x = "change in set score (T2 - T1)", y = expression(Delta ~ "VL CSA (cm"^2 * ")"),
+         colour = NULL) +
+    theme_minimal() +
+    theme(legend.position = "top")
+}
+```
+
+A correlation here is a relationship between two changes measured on the same leg, not evidence
+that the pathway caused the growth. Both would move together under any shared upstream cause,
+including how much that leg was loaded.
+
+## Export
+
+```{r export}
+saveRDS(scores, file.path(out, "set_scores.rds"))
+readr::write_csv(score_results, file.path(out, "score_contrast_results.csv"))
+readr::write_csv(correlations, file.path(out, "score_phenotype_correlations.csv"))
+tibble(file = list.files(out), bytes = file.size(file.path(out, list.files(out))))
+```
+
+```{r session}
+sessionInfo()
+```

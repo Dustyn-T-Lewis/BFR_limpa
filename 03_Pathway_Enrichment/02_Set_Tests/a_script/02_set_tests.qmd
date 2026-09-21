@@ -1,0 +1,240 @@
+---
+title: "02 · Set tests"
+subtitle: "Calibrate on the negative control, then test the contrasts"
+params:
+  set_fdr: 0.05
+  control_tolerance: 5
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    code-fold: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 5
+execute:
+  message: false
+  warning: false
+---
+
+Three families of set test disagree about what a gene set is allowed to assume, and the
+disagreement decides what this dataset is allowed to claim. This notebook runs all three on the
+negative control first. A method that finds pathways in two untrained legs of the same person has
+told us it cannot be trusted on the interaction, and its results on the real contrasts are never
+printed.
+
+```{r setup}
+required <- c("here", "limma", "limpa", "fgsea", "dplyr", "tibble", "tidyr",
+              "purrr", "readr", "ggplot2")
+missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing)) stop("Install required R packages: ", paste(missing, collapse = ", "))
+library(here)
+library(limma)
+library(limpa)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(purrr)
+library(ggplot2)
+here::i_am("03_Pathway_Enrichment/02_Set_Tests/a_script/02_set_tests.qmd")
+
+stage <- here("03_Pathway_Enrichment", "02_Set_Tests")
+out <- file.path(stage, "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+
+x <- readRDS(here("03_Pathway_Enrichment", "01_Gene_Sets", "c_data", "pathway_inputs.rds"))
+proteins <- x$proteins
+design <- x$design$design
+contrasts <- x$design$contrasts
+control <- x$design$negative_control
+contrast_names <- colnames(contrasts)
+
+stopifnot(
+  control %in% contrast_names,
+  identical(rownames(design), colnames(proteins$E)),
+  length(x$set_indices) == length(x$gene_sets),
+  max(unlist(x$set_indices)) <= nrow(proteins$E),
+  setequal(names(x$ranked_t), contrast_names)
+)
+# Column names must not shadow the objects the later columns read: inside tibble() each
+# argument sees the ones before it, so a column called `proteins` would hide the EList.
+tibble(n_proteins = nrow(proteins$E), n_samples = ncol(proteins$E),
+       n_sets = length(x$set_indices), n_contrasts = length(contrast_names),
+       negative_control = control)
+```
+
+## The precision weights
+
+`dpcDE()` calls `voomaLmFitWithImputation`, which turns the DPC-Quant standard errors into vooma
+precision weights and fits with them. Those weights are the only channel by which quantification
+uncertainty reaches a set test, and they cannot be rebuilt as `1 / standard.error^2` because
+vooma combines the standard errors with a fitted mean-variance trend.
+
+`contrasts.fit()` drops `fit$weights`, which is why the fit looks unweighted at first glance. The
+weighted EList the model was fitted to survives as `fit$EList`, and the weights are there. They
+are read from the published fit rather than recomputed: refitting would risk quietly diverging
+from the protein-level results everyone has already read.
+
+```{r weights}
+w <- x$fit$EList$weights
+stopifnot(!is.null(w), identical(dim(w), dim(proteins$E)),
+          all(is.finite(w)), all(w > 0))
+
+# limma reads y$weights, so attaching them to the EList avoids depending on an argument name.
+y <- proteins
+y$weights <- w
+tibble(weight_min = signif(min(w), 3),
+       weight_median = signif(median(w), 3),
+       weight_max = signif(max(w), 3),
+       weight_ratio = signif(max(w) / min(w), 3))
+```
+
+The ratio between the heaviest and lightest observation is how much the quantification stage
+thinks these measurements differ in reliability. A ratio near 1 would mean the weights change
+nothing and the whole limpa argument collapses at this step.
+
+## The three families
+
+| Family | Function | Assumes | Uses the design |
+|---|---|---|---|
+| Self-contained, rotation | `fry` | nothing about other sets; rotates residuals | yes, with weights |
+| Competitive, correlation-aware | `camera` | the set against the rest, inter-gene correlation estimated | yes, with weights |
+| Preranked, competitive | `fgsea` | genes are exchangeable and independent | no, a ranked vector only |
+
+`fgsea` is here as the comparator, not as a candidate. It receives `ranked_t`, a vector, and has
+no way to know that participants contributed four samples each. The stage README names an
+independence-assuming test that reported significant sets on the negative control; this is how we
+find out whether that description fits this data.
+
+```{r run-control}
+run_fry <- function(cn) {
+  fry(y, index = x$set_indices, design = design, contrast = contrasts[, cn]) |>
+    rownames_to_column("set_id") |>
+    transmute(set_id, contrast = cn, method = "fry", n = NGenes,
+              direction = Direction, p = PValue)
+}
+run_camera <- function(cn) {
+  camera(y, index = x$set_indices, design = design, contrast = contrasts[, cn]) |>
+    rownames_to_column("set_id") |>
+    transmute(set_id, contrast = cn, method = "camera", n = NGenes,
+              direction = Direction, p = PValue)
+}
+run_fgsea <- function(cn) {
+  set.seed(42)
+  fgsea::fgsea(pathways = x$gene_sets, stats = x$ranked_t[[cn]],
+               minSize = 1, maxSize = Inf, eps = 0) |>
+    as_tibble() |>
+    transmute(set_id = pathway, contrast = cn, method = "fgsea", n = size,
+              direction = if_else(NES > 0, "Up", "Down"), p = pval)
+}
+runners <- list(fry = run_fry, camera = run_camera, fgsea = run_fgsea)
+
+# Set-level FDR is always applied within one method, one contrast and one database. The three
+# databases are separate families; Hallmark is the primary one, declared before any test ran.
+add_fdr <- function(df) {
+  df |>
+    separate_wider_delim(set_id, "|", names = c("database", "pathway"), cols_remove = FALSE) |>
+    mutate(padj = p.adjust(p, "BH"), .by = c(method, contrast, database))
+}
+control_results <- map(runners, \(f) f(control)) |> list_rbind() |> add_fdr()
+```
+
+## The negative control
+
+`r control` compares the two legs of the same person before either was trained. Treatment was
+counterbalanced, so the labels are exchangeable and the truth is that nothing separates them. A
+test is calibrated here or it is not calibrated.
+
+```{r control-verdict}
+control_summary <- control_results |>
+  summarise(
+    sets = n(),
+    sig = sum(padj < params$set_fdr),
+    min_padj = signif(min(padj), 3),
+    median_p = round(median(p), 3),
+    p_below_05 = round(mean(p < 0.05), 3),
+    .by = method
+  ) |>
+  mutate(verdict = if_else(sig <= params$control_tolerance, "passes", "FAILS"))
+control_summary
+```
+
+Under a true null the p-values are uniform: median near 0.5 and about 5% below 0.05. A method far
+above that is finding structure that is not there. A method far below it is conservative, which
+is not a disqualification but bounds what its silence on the interaction can mean.
+
+```{r control-histogram}
+ggplot(control_results, aes(p)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
+  geom_hline(aes(yintercept = h),
+             summarise(control_results, h = n() / 20, .by = method),
+             linetype = 2, colour = "firebrick") +
+  facet_wrap(~method, scales = "free_y") +
+  labs(x = "set p-value", y = "sets",
+       caption = paste("negative control:", control, "· dashed line marks a flat null")) +
+  theme_minimal()
+```
+
+```{r control-worst}
+control_results |>
+  filter(padj < params$set_fdr) |>
+  slice_min(padj, n = 15) |>
+  transmute(method, set_id, n, direction, padj = signif(padj, 3))
+```
+
+Sets listed above are false positives by construction. An empty table is the outcome to hope for.
+
+## The contrasts, for methods that passed
+
+```{r run-rest}
+passed <- control_summary$method[control_summary$verdict == "passes"]
+if (!length(passed)) {
+  stop("No set-test method passed the negative control. Nothing here can be interpreted; ",
+       "revisit the method before touching the interaction.")
+}
+other_contrasts <- setdiff(contrast_names, control)
+results <- map(passed, \(nm) map(other_contrasts, runners[[nm]]) |> list_rbind()) |>
+  list_rbind() |>
+  add_fdr() |>
+  bind_rows(filter(control_results, method %in% passed))
+cat("Methods carried forward:", paste(passed, collapse = ", "),
+    "\nMethods excluded by the control:",
+    paste(setdiff(names(runners), passed), collapse = ", "), "\n")
+```
+
+FDR is applied within a method, within a contrast, and within a database. Hallmark is the primary
+collection, declared before these tests ran; Reactome and GO:BP are secondary. A set significant
+only in a secondary collection is a lead, not a result.
+
+```{r counts}
+results |>
+  summarise(sig = sum(padj < params$set_fdr), .by = c(method, contrast, database)) |>
+  pivot_wider(names_from = database, values_from = sig, values_fill = 0L) |>
+  arrange(method, contrast)
+```
+
+## Hallmark, the primary collection
+
+```{r hallmark}
+results |>
+  filter(database == "Hallmark", padj < params$set_fdr) |>
+  arrange(method, contrast, padj) |>
+  transmute(method, contrast, pathway, n, direction, padj = signif(padj, 3))
+```
+
+## Export
+
+```{r export}
+readr::write_csv(results, file.path(out, "set_test_results.csv"))
+readr::write_csv(control_summary, file.path(out, "negative_control_summary.csv"))
+saveRDS(list(results = results, control = control_results,
+             control_summary = control_summary, passed = passed,
+             parameters = params, session = sessionInfo()),
+        file.path(out, "set_tests.rds"))
+tibble(file = list.files(out), bytes = file.size(file.path(out, list.files(out))))
+```
+
+```{r session}
+sessionInfo()
+```
