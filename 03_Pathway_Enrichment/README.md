@@ -13,16 +13,14 @@ re-run alone.
 | [`01_run_fgsea`](01_run_fgsea/README.md) | topTable, fgsea, collapsePathways, GO themes | `fgsea.rds` |
 | [`02_run_singscore`](02_run_singscore/README.md) | score every sample on every set | `singscore.rds` |
 | [`03_enrich_volcano_fgsea`](03_enrich_volcano_fgsea/README.md) | volcano figures with fgsea rings | 6 PNG + 6 PDF |
-| [`04_singscore_pheno_associations`](04_singscore_pheno_associations/README.md) | pathway scores against the phenotype | `pheno_associations.rds` |
-| [`05_classify_pathway_themes`](05_classify_pathway_themes/README.md) | group sets into GO themes, map training response and phenotype coupling | `pathway_themes.rds` + 2 figures |
+| [`04_classify_and_associate_themes`](04_classify_and_associate_themes/README.md) | group sets into GO themes, classify them, associate them with the phenotype | one workbook + 2 figures |
 
 ```sh
 Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R
 Rscript 03_Pathway_Enrichment/01_run_fgsea/a_script/01_run_fgsea.R
 Rscript 03_Pathway_Enrichment/02_run_singscore/a_script/02_run_singscore.R
 Rscript 03_Pathway_Enrichment/03_enrich_volcano_fgsea/a_script/03_enrich_volcano_fgsea.R
-Rscript 03_Pathway_Enrichment/04_singscore_pheno_associations/a_script/04_singscore_pheno_associations.R
-Rscript 03_Pathway_Enrichment/05_classify_pathway_themes/a_script/05_classify_pathway_themes.R
+Rscript 03_Pathway_Enrichment/04_classify_and_associate_themes/a_script/04_classify_and_associate_themes.R
 ```
 
 About a minute end to end. Settings live in `config.yml` at the repo root, so a threshold is
@@ -80,7 +78,10 @@ Every participant contributed one BFR leg and one HLRT leg, so `04_` asks the di
 within participant rather than between two groups of legs. That roughly doubles the power and
 removes every between-participant confound.
 
-**No differential association is detectable.** At nominal p < 0.01 the four outcomes return 12 to
-25 hits against 27 expected by chance — every ratio below 1.0. The screen is indistinguishable
-from noise, and nothing survives BH. With 32 pairs the study can only see a paired correlation of
-about 0.5, so this is a null result at that resolution, not evidence of no difference.
+**Training separates, treatment does not.** At theme level, pre-to-post classification clears
+chance by 4.3x under BFR and 2.9x under high load. The pre-training control sits *below* chance,
+as it must. BFR against high load reaches 2.1x post-training and 0.7x on the change score.
+
+No phenotype association clears its chance expectation in either direction. With 32 pairs the
+study resolves a paired correlation of about 0.5, so that is a null at this resolution, not
+evidence that no difference exists.

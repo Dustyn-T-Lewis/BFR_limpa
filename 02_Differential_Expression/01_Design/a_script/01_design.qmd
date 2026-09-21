@@ -85,11 +85,11 @@ next notebook, but no branch and no warning will tell you. Read the row on every
 
 ```{r contrasts}
 contrasts <- makeContrasts(
-  BFR_post_vs_pre   = BFR_T2 - BFR_T1,
-  HLRT_post_vs_pre  = HLRT_T2 - HLRT_T1,
+  BFR_post_vs_pre = BFR_T2 - BFR_T1,
+  HLRT_post_vs_pre = HLRT_T2 - HLRT_T1,
   BFR_vs_HLRT_at_T1 = BFR_T1 - HLRT_T1,
   BFR_vs_HLRT_at_T2 = BFR_T2 - HLRT_T2,
-  interaction       = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
+  interaction = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
   levels = design
 )
 contrasts[rowSums(abs(contrasts)) > 0, ]
