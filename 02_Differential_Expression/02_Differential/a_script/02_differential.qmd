@@ -145,28 +145,6 @@ true null by construction. So the interaction returning nothing says that no bet
 difference is detectable under a test that is under-calling, which is a weaker claim than the two
 training modes producing equivalent proteomes.
 
-## Significant and large enough
-
-`treat()` tests against a fold-change floor rather than against zero, and unlike filtering on
-logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.15)`
-tests the null that \|logFC\| is at most 0.202. One floor is fixed in advance rather than swept,
-so the count reads as a property of that threshold rather than of the data. `robust = TRUE`
-matches the moderation used for the main fit, and is passed explicitly because `treat()` defaults
-to `FALSE`.
-
-```{r treat}
-ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
-contrast_names <- colnames(fit$coefficients)
-
-tibble(
-  contrast = contrast_names,
-  n_q_05 = map_int(
-    contrast_names,
-    \(cn) sum(topTreat(ft, coef = cn, number = Inf)$adj.P.Val < 0.05)
-  )
-)
-```
-
 ## The pi score
 
 `pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID
