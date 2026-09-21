@@ -14,6 +14,7 @@ re-run alone.
 | [`02_run_singscore`](02_run_singscore/README.md) | score every sample on every set | `singscore.rds` |
 | [`03_enrich_volcano_fgsea`](03_enrich_volcano_fgsea/README.md) | volcano figures with fgsea rings | 6 PNG + 6 PDF |
 | [`04_singscore_pheno_associations`](04_singscore_pheno_associations/README.md) | pathway scores against the phenotype | `pheno_associations.rds` |
+| [`05_classify_pathway_themes`](05_classify_pathway_themes/README.md) | group sets into GO themes, map training response and phenotype coupling | `pathway_themes.rds` + 2 figures |
 
 ```sh
 Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R
@@ -21,6 +22,7 @@ Rscript 03_Pathway_Enrichment/01_run_fgsea/a_script/01_run_fgsea.R
 Rscript 03_Pathway_Enrichment/02_run_singscore/a_script/02_run_singscore.R
 Rscript 03_Pathway_Enrichment/03_enrich_volcano_fgsea/a_script/03_enrich_volcano_fgsea.R
 Rscript 03_Pathway_Enrichment/04_singscore_pheno_associations/a_script/04_singscore_pheno_associations.R
+Rscript 03_Pathway_Enrichment/05_classify_pathway_themes/a_script/05_classify_pathway_themes.R
 ```
 
 About a minute end to end. Settings live in `config.yml` at the repo root, so a threshold is

@@ -45,3 +45,9 @@ seed: 1
 # Volcano figures: how many pathway rings and how many protein labels per panel.
 volcano_ring_n: 8
 volcano_label_n: 5
+
+# Theme classification figure. A theme needs this many qualifying member sets to be drawn,
+# and |r| at or above the bold cutoff is printed bold. Nominal p only at this stage.
+theme_min_sets: 8
+theme_nominal_p: 0.05
+theme_bold_r: 0.4

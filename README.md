@@ -48,6 +48,7 @@ Rscript 03_Pathway_Enrichment/01_run_fgsea/a_script/01_run_fgsea.R
 Rscript 03_Pathway_Enrichment/02_run_singscore/a_script/02_run_singscore.R
 Rscript 03_Pathway_Enrichment/03_enrich_volcano_fgsea/a_script/03_enrich_volcano_fgsea.R
 Rscript 03_Pathway_Enrichment/04_singscore_pheno_associations/a_script/04_singscore_pheno_associations.R
+Rscript 03_Pathway_Enrichment/05_classify_pathway_themes/a_script/05_classify_pathway_themes.R
 ```
 
 Minutes, not hours. No notebook computes anything slow. The one expensive step is `dpcQuant()` at
