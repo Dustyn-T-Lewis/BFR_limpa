@@ -1,29 +1,30 @@
 # BFR Proteomics
 
-DIA mass-spectrometry proteomics from a unilateral resistance training trial. Each participant
-trained one leg with blood-flow restriction and the other with conventional high load, with a
-biopsy from both legs before and after. 33 participants and 131 MS runs: four samples each,
-except one participant whose post-training biopsy on one leg was never acquired.
+DIA mass-spectrometry proteomics from a unilateral resistance training trial. Each
+participant trained one leg with blood-flow restriction and the other with conventional
+high load, with biopsies taken from both legs before and after training. 33 participants
+and 131 MS runs: four samples per participant, except one participant whose
+post-training biopsy from one leg was not acquired.
 
-The question is the interaction: does restriction change the muscle proteome differently from
-heavy load?
+The primary comparison is the interaction: whether blood-flow restriction alters the
+muscle proteome differently than heavy load.
 
 ## Stages
 
-| Stage | Does | State |
+| Stage | Contents | State |
 |---|---|---|
-| `00_Input/` | study data, runs nothing | ready |
+| `00_Input/` | study data, no code | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
-| `02_Differential_Expression/` | fit the model, test five contrasts | ready |
-| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, then which processes moved | first sub-stage ready; tests planned |
-| `04_Network/` | protein groups the data defines | planned |
+| `02_Differential_Expression/` | model fitting, five contrasts | ready |
+| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, enrichment tests | first sub-stage ready, tests planned |
+| `04_Network/` | data-driven protein modules | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-Each sub-stage holds `a_script/` (code), `b_reports/` (rendered HTML), `c_data/` (its outputs).
-Stages run in order and pass data through disk, so any one can re-run alone. "Planned" means
-the folder holds only a README.
+Each sub-stage contains `a_script/` (code), `b_reports/` (rendered HTML), and `c_data/`
+(outputs). Stages run in order and pass data through disk, so any stage can be re-run on
+its own. "Planned" means the folder currently contains only a README.
 
-## Get the data
+## Data
 
 `00_Input/report.parquet` is too large for git. From the repo root:
 
@@ -32,7 +33,7 @@ curl -L -o 00_Input/report.parquet \
   https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/download/data-v1/report.parquet
 ```
 
-## Run it
+## Running the pipeline
 
 ```sh
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd        --output-dir ../b_reports
@@ -44,21 +45,26 @@ quarto render 02_Differential_Expression/02_Differential/a_script/02_differentia
 quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
 ```
 
-Minutes, not hours. No notebook computes anything slow. The one expensive step is `dpcQuant()` at
-about 100 minutes, and it lives in `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`.
-Its output is committed, so these renders load it. Run that script by hand only when the precursor
-matrix changes.
+These renders take minutes. The one expensive step is `dpcQuant()` at roughly 100 minutes,
+which runs separately from
+`01_Preprocess/02_Quantification/a_script/02_quantify_run.R`. Its output is committed, so
+the renders above load it from disk. Re-run that script only when the precursor matrix
+changes.
 
 ## Approach
 
-We use **limpa**. Half a DIA matrix is empty, and not at random: faint peptides go missing more
-often than abundant ones. limpa fits that relationship and treats a missing value as evidence
-the protein was low, rather than filling in a guess. Every protein gets a value in every sample
-plus a standard error, and that uncertainty carries into the statistics.
+Quantification uses **limpa**. Roughly half of a DIA matrix is missing, and missingness is
+not random: low-abundance peptides are missed more often than abundant ones. limpa models
+that relationship and treats a missing value as evidence of low abundance rather than
+imputing a replacement. Every protein receives an estimate in every sample along with a
+standard error, and that uncertainty propagates into the downstream statistics.
 
-Two rules follow. Never filter on missing values before quantification, and never hand the
-protein matrix to an ordinary linear model.
+Two consequences for the workflow: do not filter on missingness before quantification, and
+do not pass the protein matrix to a standard linear model.
 
-Packages: `limpa`, `limma`, `here`, `nanoparquet`, `writexl`, and `dplyr`, `stringr`, `purrr`,
-`readr`, `tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` adds `msigdbr`, `enrichVolcano`,
-`digest` and `Matrix`, and checks for them itself. Versions are not pinned.
+## Dependencies
+
+`limpa`, `limma`, `here`, `nanoparquet`, `writexl`, `dplyr`, `stringr`, `purrr`, `readr`,
+`tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` additionally requires `msigdbr`,
+`enrichVolcano`, `digest`, and `Matrix`, and checks for them at runtime. Versions are not
+pinned.
