@@ -23,15 +23,13 @@ and `contaminants_removed`, recording what this stage did.
 3. Repair the search database fault and drop reversed decoys.
 4. Remove peptides mapping to several proteins, then groups holding several proteins.
 5. Remove blood, plasma, skin and antibody proteins, reporting each cell's contaminant share
-   first, since uneven contamination would land on a contrast.
 
-## The repair
+## Contaminant repair
 
-The contaminant database appended to the search FASTA repeats proteins the human FASTA already
-lists, so creatine kinase and myoglobin arrive tagged as contaminants and look ambiguous. Left
-alone, step 4 deletes them along with most of the muscle. So we drop only the entries that are
-contaminant-only, then strip the tag from the rest. The order matters: once the tag is gone, a
-contaminant-only entry looks real.
+The contaminant database appended to the search FASTA in DIANN repeats proteins the human FASTA 
+lists, so creatine kinase and myoglobin are tagged as contaminants and look ambiguous. Left
+alone, step 4 deletes them along with other muscle proteins. So we drop only the entries that are
+contaminant-only, then strip the tag from the rest. 
 
 ## Contaminants
 
@@ -41,7 +39,7 @@ single-cell muscle expression, not whole-tissue values, which are themselves blo
 A group counts as contamination only when **every** gene name on it does. One protein can carry
 several names, so testing the first would get it wrong both ways.
 
-## The guard
+### Note
 
 One assertion: all 28 symbols in `MUST_KEEP` must survive. It exists in order to fail, and catches
 both a broken repair and a contaminant rule that reaches too far.
