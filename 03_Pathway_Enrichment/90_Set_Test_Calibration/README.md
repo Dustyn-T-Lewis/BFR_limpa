@@ -1,18 +1,33 @@
-# 03_Pathway_Enrichment / 02_Set_Tests
+# 03_Pathway_Enrichment / 90_Set_Test_Calibration
 
-Runs three families of set test on the negative control, keeps the ones that stay calibrated, and
-tests the remaining contrasts with those. Per-sample set scoring is not here; it is a separate
-sub-stage and depends on this one choosing a method.
+Runs three families of set test (fry, camera, fgsea) on the negative control, keeps the ones that
+stay calibrated, and tests the remaining contrasts with those. Per-sample scores are in
+`91_Sample_Scores_ssGSEA`; the side-by-side with the other branches is in `92_Method_Comparison`.
 
 | | |
 |---|---|
-| **Script** | `a_script/02_set_tests.qmd` |
-| **Reads** | `03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds` |
-| **Writes** | `c_data/set_test_results.csv`, `c_data/negative_control_summary.csv`, `c_data/set_tests.rds` |
+| **Script** | `a_script/90_set_test_calibration.qmd` |
+| **Reads** | `01_Preprocess/02_Quantification/c_data/proteins.rds`, `02_Differential_Expression/02_Differential/c_data/fit.rds`, `02_Differential_Expression/01_Design/c_data/design.rds`, `c_data/tested_sets.rds` |
+| **Writes** | `c_data/set_test_results.csv`, `c_data/negative_control_summary.csv`, `c_data/set_tests.rds`, `c_data/tested_sets.csv` |
 
 ```sh
-quarto render 03_Pathway_Enrichment/02_Set_Tests/a_script/02_set_tests.qmd --output-dir ../b_reports
+quarto render 03_Pathway_Enrichment/90_Set_Test_Calibration/a_script/90_set_test_calibration.qmd --output-dir ../b_reports
 ```
+
+## Why a 90s number
+
+The pathway stages numbered 00 to 04 are being restructured in open pull requests, and each
+proposal names its folders differently. This stage and the two after it are numbered out of that
+range on purpose, so that they merge without touching any of those folders, whichever layout is
+kept. They read nothing from the moving stages at render time.
+
+## The sets tested are frozen
+
+`c_data/tested_sets.rds` holds the 1,040 sets this stage tested (41 Hallmark, 221 Reactome, 778
+GO:BP), the protein rows each indexes, the per-contrast ranked t vectors and the gene-level
+matrix, copied once from `01_Gene_Sets/c_data/pathway_inputs.rds` on `main` at `fc2dc23`. It
+records the md5 of that file. `c_data/tested_sets.csv` is the same list in plain text, one row
+per set with its measured members, for checking without R.
 
 ## The control decides the method
 
@@ -40,22 +55,20 @@ all three between-leg contrasts.
 | Preranked, competitive | `fgsea` | genes are exchangeable and independent | no, a vector only |
 
 `fgsea` is a comparator, not a candidate. It receives a ranked vector and has no way to know that
-participants contributed four samples each. The stage README names an independence-assuming test
-that reported significant sets on the negative control; running it here is how that description
-gets checked against this data instead of being taken on trust.
+participants contributed four samples each. Running it here is how the claim that an independence-assuming test calls sets on
+the negative control gets checked against this data instead of being taken on trust.
 
-## Precision weights have to be recovered
+## Where the precision weights are
 
 `dpcDE()` calls `voomaLmFitWithImputation`, which turns the DPC-Quant standard errors into vooma
 precision weights and fits with them. Those weights are the only channel by which quantification
-uncertainty reaches any test downstream. `contrasts.fit()` drops them, so the fit saved by
-`02_Differential` no longer carries them, and they cannot be rebuilt as `1 / standard.error^2`
+uncertainty reaches any test downstream, and they cannot be rebuilt as `1 / standard.error^2`
 because vooma combines the standard errors with a fitted mean-variance trend.
 
-This stage therefore repeats the fit with the same call `02_Differential` used, including
-`sample.weights = TRUE`, and asserts that the recomputed coefficients match the published ones
-before any weight is used. Without that check the tests could silently run on a different model
-than the protein-level results everyone has already read.
+`contrasts.fit()` drops `fit$weights`, so the saved fit looks unweighted at first glance. It is
+not: the weighted EList the model was fitted to survives as `fit$EList`, weights included. This
+stage reads them from there rather than refitting, so the set tests provably run on the same
+model as the protein-level results already in the repository.
 
 ## Multiplicity
 
@@ -84,9 +97,13 @@ now with the opposite sign.
 | `GOBP_MUSCLE_CONTRACTION` | 2.9e-04 | 0.34 |
 
 Same sets, same matrix. The only difference is whether the test knows that 131 samples come from
-33 people. The heme set is significant under fgsea on both the control (FDR 0.029) and the
-interaction (FDR 0.015); fry gives it p = 0.20 and 0.24.
+33 people. The heme set is significant under fgsea on both the control (FDR 0.029, NES -1.84) and
+the interaction (FDR 0.015, NES +1.87); fry gives it p = 0.20 and 0.24.
 
 On the two training contrasts all three methods agree on direction, and fry is the most powerful:
 271 sets on `BFR_post_vs_pre`, 235 on `HLRT_post_vs_pre`. Oxidative phosphorylation is the
-strongest Hallmark call in both legs.
+strongest Hallmark call in both legs (fgsea NES +2.99 in BFR, +2.87 in HLRT), and all three
+methods call it.
+
+fgsea samples, so its p-values move slightly between package versions; fry and camera do not.
+The figures above are from the render committed in `b_reports/`.

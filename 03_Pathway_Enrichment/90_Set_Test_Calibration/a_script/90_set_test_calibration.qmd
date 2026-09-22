@@ -1,6 +1,6 @@
 ---
-title: "02 · Set tests"
-subtitle: "Calibrate on the negative control, then test the contrasts"
+title: "90 · Set test calibration"
+subtitle: "fry, camera and fgsea on the negative control, then on the contrasts"
 params:
   set_fdr: 0.05
   control_tolerance: 5
@@ -24,44 +24,95 @@ negative control first. A method that finds pathways in two untrained legs of th
 told us it cannot be trusted on the interaction, and its results on the real contrasts are never
 printed.
 
+This stage sits beside the main pathway stages rather than inside their numbering. It reads only
+the upstream checkpoints (`proteins.rds`, `fit.rds`, `design.rds`) and its own frozen copy of the
+sets it tested, so it runs the same whichever layout of `03_Pathway_Enrichment` is merged.
+`92_Method_Comparison` puts its results next to the other set tests in the repository.
+
 ```{r setup}
-required <- c("here", "limma", "limpa", "fgsea", "dplyr", "tibble", "tidyr",
+required <- c("here", "limma", "fgsea", "dplyr", "tibble", "tidyr",
               "purrr", "readr", "ggplot2")
 missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing)) stop("Install required R packages: ", paste(missing, collapse = ", "))
 library(here)
 library(limma)
-library(limpa)
 library(dplyr)
 library(tibble)
 library(tidyr)
 library(purrr)
 library(ggplot2)
-here::i_am("03_Pathway_Enrichment/02_Set_Tests/a_script/02_set_tests.qmd")
+here::i_am("03_Pathway_Enrichment/90_Set_Test_Calibration/a_script/90_set_test_calibration.qmd")
 
-stage <- here("03_Pathway_Enrichment", "02_Set_Tests")
+stage <- here("03_Pathway_Enrichment", "90_Set_Test_Calibration")
 out <- file.path(stage, "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
-x <- readRDS(here("03_Pathway_Enrichment", "01_Gene_Sets", "c_data", "pathway_inputs.rds"))
-proteins <- x$proteins
-design <- x$design$design
-contrasts <- x$design$contrasts
-control <- x$design$negative_control
+upstream <- c(
+  proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds",
+  fit = "02_Differential_Expression/02_Differential/c_data/fit.rds",
+  design = "02_Differential_Expression/01_Design/c_data/design.rds"
+)
+stopifnot("Run the upstream stages first" = all(file.exists(here(upstream))))
+proteins <- readRDS(here(upstream[["proteins"]]))
+fit <- readRDS(here(upstream[["fit"]]))
+d <- readRDS(here(upstream[["design"]]))
+design <- d$design
+contrasts <- d$contrasts
+control <- d$negative_control
 contrast_names <- colnames(contrasts)
+```
+
+## The sets tested, frozen
+
+The gene sets, the protein rows each set indexes, the per-contrast ranked t vectors and the
+gene-level matrix all come from `01_Gene_Sets/c_data/pathway_inputs.rds` as it stood on `main` at
+commit `fc2dc23` (MSigDB 2026.1.Hs; Hallmark, Reactome and GO:BP; at least 10 measured members;
+within-database Jaccard reduction). That file is being restructured in open pull requests, so the
+parts used here are copied once into `c_data/tested_sets.rds` and read from there. The copy
+records the md5 of the file it came from. `tested_sets.csv` is the same list in plain text, one
+row per set with its measured members, so anyone can check the sets without opening R.
+
+```{r frozen-sets}
+frozen_path <- file.path(out, "tested_sets.rds")
+if (!file.exists(frozen_path)) {
+  source_rel <- "03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds"
+  stopifnot("pathway_inputs.rds from main @ fc2dc23 is needed once, to freeze the sets" =
+              file.exists(here(source_rel)))
+  x <- readRDS(here(source_rel))
+  saveRDS(list(
+    gene_sets = x$gene_sets, set_indices = x$set_indices, ranked_t = x$ranked_t,
+    gene_matrix = x$gene_matrix, protein_map = x$protein_map,
+    source = list(path = source_rel, md5 = unname(tools::md5sum(here(source_rel))),
+                  frozen_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+                  provenance = x$provenance)
+  ), frozen_path, compress = "xz")
+  rm(x)
+}
+sets <- readRDS(frozen_path)
 
 stopifnot(
   control %in% contrast_names,
   identical(rownames(design), colnames(proteins$E)),
-  length(x$set_indices) == length(x$gene_sets),
-  max(unlist(x$set_indices)) <= nrow(proteins$E),
-  setequal(names(x$ranked_t), contrast_names)
+  identical(rownames(fit$coefficients), rownames(proteins$E)),
+  length(sets$set_indices) == length(sets$gene_sets),
+  identical(names(sets$set_indices), names(sets$gene_sets)),
+  max(unlist(sets$set_indices)) <= nrow(proteins$E),
+  setequal(names(sets$ranked_t), contrast_names)
 )
+
+tested_sets <- tibble(set_id = names(sets$gene_sets),
+                      n_measured = lengths(sets$gene_sets),
+                      genes = map_chr(sets$gene_sets, \(g) paste(sort(g), collapse = ";"))) |>
+  separate_wider_delim(set_id, "|", names = c("database", "pathway"), cols_remove = FALSE) |>
+  relocate(set_id)
+readr::write_csv(tested_sets, file.path(out, "tested_sets.csv"))
+
 # Column names must not shadow the objects the later columns read: inside tibble() each
 # argument sees the ones before it, so a column called `proteins` would hide the EList.
 tibble(n_proteins = nrow(proteins$E), n_samples = ncol(proteins$E),
-       n_sets = length(x$set_indices), n_contrasts = length(contrast_names),
-       negative_control = control)
+       n_sets = length(sets$set_indices), n_contrasts = length(contrast_names),
+       negative_control = control, frozen_from_md5 = sets$source$md5)
+count(tested_sets, database, name = "sets")
 ```
 
 ## The precision weights
@@ -77,7 +128,7 @@ are read from the published fit rather than recomputed: refitting would risk qui
 from the protein-level results everyone has already read.
 
 ```{r weights}
-w <- x$fit$EList$weights
+w <- fit$EList$weights
 stopifnot(!is.null(w), identical(dim(w), dim(proteins$E)),
           all(is.finite(w)), all(w > 0))
 
@@ -102,31 +153,33 @@ nothing and the whole limpa argument collapses at this step.
 | Competitive, correlation-aware | `camera` | the set against the rest, inter-gene correlation estimated | yes, with weights |
 | Preranked, competitive | `fgsea` | genes are exchangeable and independent | no, a ranked vector only |
 
+Only fgsea returns an effect score, the normalised enrichment score (NES): its sign is the
+direction and its size how tightly the set's proteins sit at one end of the ranked list. fry and
+camera return a direction and a p-value only, so their NES column is left empty.
+
 `fgsea` is here as the comparator, not as a candidate. It receives `ranked_t`, a vector, and has
-no way to know that participants contributed four samples each. The stage README names an
-independence-assuming test that reported significant sets on the negative control; this is how we
-find out whether that description fits this data.
+no way to know that participants contributed four samples each.
 
 ```{r run-control}
 run_fry <- function(cn) {
-  fry(y, index = x$set_indices, design = design, contrast = contrasts[, cn]) |>
+  fry(y, index = sets$set_indices, design = design, contrast = contrasts[, cn]) |>
     rownames_to_column("set_id") |>
     transmute(set_id, contrast = cn, method = "fry", n = NGenes,
-              direction = Direction, p = PValue)
+              direction = Direction, NES = NA_real_, p = PValue)
 }
 run_camera <- function(cn) {
-  camera(y, index = x$set_indices, design = design, contrast = contrasts[, cn]) |>
+  camera(y, index = sets$set_indices, design = design, contrast = contrasts[, cn]) |>
     rownames_to_column("set_id") |>
     transmute(set_id, contrast = cn, method = "camera", n = NGenes,
-              direction = Direction, p = PValue)
+              direction = Direction, NES = NA_real_, p = PValue)
 }
 run_fgsea <- function(cn) {
   set.seed(42)
-  fgsea::fgsea(pathways = x$gene_sets, stats = x$ranked_t[[cn]],
+  fgsea::fgsea(pathways = sets$gene_sets, stats = sets$ranked_t[[cn]],
                minSize = 1, maxSize = Inf, eps = 0) |>
     as_tibble() |>
     transmute(set_id = pathway, contrast = cn, method = "fgsea", n = size,
-              direction = if_else(NES > 0, "Up", "Down"), p = pval)
+              direction = if_else(NES > 0, "Up", "Down"), NES = NES, p = pval)
 }
 runners <- list(fry = run_fry, camera = run_camera, fgsea = run_fgsea)
 
@@ -180,7 +233,7 @@ ggplot(control_results, aes(p)) +
 control_results |>
   filter(padj < params$set_fdr) |>
   slice_min(padj, n = 15) |>
-  transmute(method, set_id, n, direction, padj = signif(padj, 3))
+  transmute(method, set_id, n, direction, NES = round(NES, 2), padj = signif(padj, 3))
 ```
 
 Sets listed above are false positives by construction. An empty table is the outcome to hope for.
@@ -216,11 +269,38 @@ results |>
 
 ## Hallmark, the primary collection
 
-```{r hallmark}
-results |>
-  filter(database == "Hallmark", padj < params$set_fdr) |>
-  arrange(method, contrast, padj) |>
-  transmute(method, contrast, pathway, n, direction, padj = signif(padj, 3))
+One row per set and contrast, with every method side by side, so a set is read once rather than
+three times. `NES` comes from fgsea, the only method that returns an enrichment score: its sign
+is the direction and its size how tightly the set sits at one end of the ranked list. `methods`
+counts how many of the three called the set at FDR < 0.05; three is consensus.
+
+```{r hallmark, results="asis"}
+hallmark <- results |>
+  filter(database == "Hallmark") |>
+  select(contrast, pathway, n, method, direction, NES, padj) |>
+  # fgsea counts members after matching to its ranked list, so its size can differ by one or two
+  # from fry's; n is taken from fry and kept out of the pivot so the rows line up.
+  pivot_wider(id_cols = c(contrast, pathway), names_from = method,
+              values_from = c(n, direction, NES, padj)) |>
+  transmute(
+    contrast, pathway = sub("^HALLMARK_", "", pathway), n = n_fry,
+    direction = coalesce(direction_fry, direction_fgsea),
+    NES = round(NES_fgsea, 2),
+    fgsea = signif(padj_fgsea, 2), fry = signif(padj_fry, 2), camera = signif(padj_camera, 2),
+    methods = (padj_fgsea < params$set_fdr) + (padj_fry < params$set_fdr) +
+      (padj_camera < params$set_fdr)
+  ) |>
+  filter(methods > 0)
+
+for (cn in unique(hallmark$contrast)) {
+  hallmark |>
+    filter(contrast == cn) |>
+    arrange(direction == "Down", desc(methods), pmin(fgsea, fry, camera)) |>
+    select(-contrast) |>
+    knitr::kable(caption = cn, format = "pipe") |>
+    cat(sep = "\n")
+  cat("\n\n")
+}
 ```
 
 ## Export
@@ -230,6 +310,8 @@ readr::write_csv(results, file.path(out, "set_test_results.csv"))
 readr::write_csv(control_summary, file.path(out, "negative_control_summary.csv"))
 saveRDS(list(results = results, control = control_results,
              control_summary = control_summary, passed = passed,
+             inputs = c(upstream, tested_sets = "c_data/tested_sets.rds"),
+             inputs_md5 = c(tools::md5sum(here(upstream)), tested_sets = tools::md5sum(frozen_path)),
              parameters = params, session = sessionInfo()),
         file.path(out, "set_tests.rds"))
 tibble(file = list.files(out), bytes = file.size(file.path(out, list.files(out))))

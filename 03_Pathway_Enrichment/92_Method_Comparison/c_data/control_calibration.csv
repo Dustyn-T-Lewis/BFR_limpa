@@ -1,0 +1,20 @@
+test,source,method,scope,sets,sig_reported,median_p,p_below_05,sig_common
+diego_90:camera,diego_90,camera,all sets the source tested,1040,1,0.539,0.043,NA
+matheus_pr13:camera,matheus_pr13,camera,all sets the source tested,4627,2,0.518,0.038,NA
+diego_90:fgsea,diego_90,fgsea,all sets the source tested,1040,3,0.517,0.059,NA
+dustyn_pr11_fgsea:fgsea,dustyn_pr11_fgsea,fgsea,all sets the source tested,1007,3,0.508,0.06,NA
+dustyn_pr11_fgsea_pooled:fgsea,dustyn_pr11_fgsea_pooled,fgsea,all sets the source tested,999,1,0.507,0.057,NA
+dustyn_pr15_fgsea:fgsea,dustyn_pr15_fgsea,fgsea,all sets the source tested,2732,14,0.501,0.068,NA
+diego_90:fry,diego_90,fry,all sets the source tested,1040,0,0.583,0.016,NA
+dustyn_pr11_fry:fry,dustyn_pr11_fry,fry,all sets the source tested,1032,0,0.582,0.016,NA
+matheus_pr13:fry,matheus_pr13,fry,all sets the source tested,4627,0,0.563,0.019,NA
+diego_91:ssGSEA_limma,diego_91,ssGSEA_limma,all sets the source tested,1040,0,0.51,0.032,NA
+diego_90:camera,diego_90,camera,shared sets only,996,NA,0.536,0.042,1
+matheus_pr13:camera,matheus_pr13,camera,shared sets only,996,NA,0.536,0.043,1
+diego_90:fgsea,diego_90,fgsea,shared sets only,996,NA,0.512,0.058,3
+dustyn_pr11_fgsea:fgsea,dustyn_pr11_fgsea,fgsea,shared sets only,996,NA,0.507,0.059,3
+dustyn_pr15_fgsea:fgsea,dustyn_pr15_fgsea,fgsea,shared sets only,996,NA,0.506,0.059,3
+diego_90:fry,diego_90,fry,shared sets only,996,NA,0.58,0.016,0
+dustyn_pr11_fry:fry,dustyn_pr11_fry,fry,shared sets only,996,NA,0.58,0.016,0
+matheus_pr13:fry,matheus_pr13,fry,shared sets only,996,NA,0.579,0.017,0
+diego_91:ssGSEA_limma,diego_91,ssGSEA_limma,shared sets only,996,NA,0.507,0.03,0

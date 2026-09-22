@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>02 · Set tests</title>
+<title>90 · Set test calibration</title>
 <style>
 
 span.smallcaps{font-variant: small-caps;}
@@ -2210,7 +2210,8 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#the-precision-weights" id="toc-the-precision-weights" class="nav-link active" data-scroll-target="#the-precision-weights">The precision weights</a></li>
+  <li><a href="#the-sets-tested-frozen" id="toc-the-sets-tested-frozen" class="nav-link active" data-scroll-target="#the-sets-tested-frozen">The sets tested, frozen</a></li>
+  <li><a href="#the-precision-weights" id="toc-the-precision-weights" class="nav-link" data-scroll-target="#the-precision-weights">The precision weights</a></li>
   <li><a href="#the-three-families" id="toc-the-three-families" class="nav-link" data-scroll-target="#the-three-families">The three families</a></li>
   <li><a href="#the-negative-control" id="toc-the-negative-control" class="nav-link" data-scroll-target="#the-negative-control">The negative control</a></li>
   <li><a href="#the-contrasts-for-methods-that-passed" id="toc-the-contrasts-for-methods-that-passed" class="nav-link" data-scroll-target="#the-contrasts-for-methods-that-passed">The contrasts, for methods that passed</a></li>
@@ -2223,8 +2224,8 @@ vertical-align: -.125em;
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">02 · Set tests</h1>
-<p class="subtitle lead">Calibrate on the negative control, then test the contrasts</p>
+<h1 class="title">90 · Set test calibration</h1>
+<p class="subtitle lead">fry, camera and fgsea on the negative control, then on the contrasts</p>
 </div>
 
 
@@ -2242,50 +2243,99 @@ vertical-align: -.125em;
 
 
 <p>Three families of set test disagree about what a gene set is allowed to assume, and the disagreement decides what this dataset is allowed to claim. This notebook runs all three on the negative control first. A method that finds pathways in two untrained legs of the same person has told us it cannot be trusted on the interaction, and its results on the real contrasts are never printed.</p>
+<p>This stage sits beside the main pathway stages rather than inside their numbering. It reads only the upstream checkpoints (<code>proteins.rds</code>, <code>fit.rds</code>, <code>design.rds</code>) and its own frozen copy of the sets it tested, so it runs the same whichever layout of <code>03_Pathway_Enrichment</code> is merged. <code>92_Method_Comparison</code> puts its results next to the other set tests in the repository.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>required <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;here&quot;</span>, <span class="st">&quot;limma&quot;</span>, <span class="st">&quot;limpa&quot;</span>, <span class="st">&quot;fgsea&quot;</span>, <span class="st">&quot;dplyr&quot;</span>, <span class="st">&quot;tibble&quot;</span>, <span class="st">&quot;tidyr&quot;</span>,</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>required <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;here&quot;</span>, <span class="st">&quot;limma&quot;</span>, <span class="st">&quot;fgsea&quot;</span>, <span class="st">&quot;dplyr&quot;</span>, <span class="st">&quot;tibble&quot;</span>, <span class="st">&quot;tidyr&quot;</span>,</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>              <span class="st">&quot;purrr&quot;</span>, <span class="st">&quot;readr&quot;</span>, <span class="st">&quot;ggplot2&quot;</span>)</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>missing <span class="ot">&lt;-</span> required[<span class="sc">!</span><span class="fu">vapply</span>(required, requireNamespace, <span class="fu">logical</span>(<span class="dv">1</span>), <span class="at">quietly =</span> <span class="cn">TRUE</span>)]</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(missing)) <span class="fu">stop</span>(<span class="st">&quot;Install required R packages: &quot;</span>, <span class="fu">paste</span>(missing, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>))</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(here)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limpa)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tibble)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/02_Set_Tests/a_script/02_set_tests.qmd&quot;</span>)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;02_Set_Tests&quot;</span>)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;01_Gene_Sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;pathway_inputs.rds&quot;</span>))</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> x<span class="sc">$</span>proteins</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> x<span class="sc">$</span>design<span class="sc">$</span>design</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>contrasts <span class="ot">&lt;-</span> x<span class="sc">$</span>design<span class="sc">$</span>contrasts</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>control <span class="ot">&lt;-</span> x<span class="sc">$</span>design<span class="sc">$</span>negative_control</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>contrast_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(contrasts)</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  control <span class="sc">%in%</span> contrast_names,</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E)),</span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(x<span class="sc">$</span>set_indices) <span class="sc">==</span> <span class="fu">length</span>(x<span class="sc">$</span>gene_sets),</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">max</span>(<span class="fu">unlist</span>(x<span class="sc">$</span>set_indices)) <span class="sc">&lt;=</span> <span class="fu">nrow</span>(proteins<span class="sc">$</span>E),</span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setequal</span>(<span class="fu">names</span>(x<span class="sc">$</span>ranked_t), contrast_names)</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Column names must not shadow the objects the later columns read: inside tibble() each</span></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="co"># argument sees the ones before it, so a column called `proteins` would hide the EList.</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">n_proteins =</span> <span class="fu">nrow</span>(proteins<span class="sc">$</span>E), <span class="at">n_samples =</span> <span class="fu">ncol</span>(proteins<span class="sc">$</span>E),</span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>       <span class="at">n_sets =</span> <span class="fu">length</span>(x<span class="sc">$</span>set_indices), <span class="at">n_contrasts =</span> <span class="fu">length</span>(contrast_names),</span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>       <span class="at">negative_control =</span> control)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tibble)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/90_Set_Test_Calibration/a_script/90_set_test_calibration.qmd&quot;</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;90_Set_Test_Calibration&quot;</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(out, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>upstream <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">proteins =</span> <span class="st">&quot;01_Preprocess/02_Quantification/c_data/proteins.rds&quot;</span>,</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">fit =</span> <span class="st">&quot;02_Differential_Expression/02_Differential/c_data/fit.rds&quot;</span>,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> <span class="st">&quot;02_Differential_Expression/01_Design/c_data/design.rds&quot;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="st">&quot;Run the upstream stages first&quot;</span> <span class="ot">=</span> <span class="fu">all</span>(<span class="fu">file.exists</span>(<span class="fu">here</span>(upstream))))</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(upstream[[<span class="st">&quot;proteins&quot;</span>]]))</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(upstream[[<span class="st">&quot;fit&quot;</span>]]))</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(upstream[[<span class="st">&quot;design&quot;</span>]]))</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> d<span class="sc">$</span>design</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>contrasts <span class="ot">&lt;-</span> d<span class="sc">$</span>contrasts</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>control <span class="ot">&lt;-</span> d<span class="sc">$</span>negative_control</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>contrast_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(contrasts)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<section id="the-sets-tested-frozen" class="level2">
+<h2 class="anchored" data-anchor-id="the-sets-tested-frozen">The sets tested, frozen</h2>
+<p>The gene sets, the protein rows each set indexes, the per-contrast ranked t vectors and the gene-level matrix all come from <code>01_Gene_Sets/c_data/pathway_inputs.rds</code> as it stood on <code>main</code> at commit <code>fc2dc23</code> (MSigDB 2026.1.Hs; Hallmark, Reactome and GO:BP; at least 10 measured members; within-database Jaccard reduction). That file is being restructured in open pull requests, so the parts used here are copied once into <code>c_data/tested_sets.rds</code> and read from there. The copy records the md5 of the file it came from. <code>tested_sets.csv</code> is the same list in plain text, one row per set with its measured members, so anyone can check the sets without opening R.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>frozen_path <span class="ot">&lt;-</span> <span class="fu">file.path</span>(out, <span class="st">&quot;tested_sets.rds&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(frozen_path)) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  source_rel <span class="ot">&lt;-</span> <span class="st">&quot;03_Pathway_Enrichment/01_Gene_Sets/c_data/pathway_inputs.rds&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="st">&quot;pathway_inputs.rds from main @ fc2dc23 is needed once, to freeze the sets&quot;</span> <span class="ot">=</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>              <span class="fu">file.exists</span>(<span class="fu">here</span>(source_rel)))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(source_rel))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(<span class="fu">list</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene_sets =</span> x<span class="sc">$</span>gene_sets, <span class="at">set_indices =</span> x<span class="sc">$</span>set_indices, <span class="at">ranked_t =</span> x<span class="sc">$</span>ranked_t,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene_matrix =</span> x<span class="sc">$</span>gene_matrix, <span class="at">protein_map =</span> x<span class="sc">$</span>protein_map,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">source =</span> <span class="fu">list</span>(<span class="at">path =</span> source_rel, <span class="at">md5 =</span> <span class="fu">unname</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(<span class="fu">here</span>(source_rel))),</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>                  <span class="at">frozen_utc =</span> <span class="fu">format</span>(<span class="fu">Sys.time</span>(), <span class="at">tz =</span> <span class="st">&quot;UTC&quot;</span>, <span class="at">usetz =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>                  <span class="at">provenance =</span> x<span class="sc">$</span>provenance)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  ), frozen_path, <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rm</span>(x)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(frozen_path)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  control <span class="sc">%in%</span> contrast_names,</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E)),</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), <span class="fu">rownames</span>(proteins<span class="sc">$</span>E)),</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">length</span>(sets<span class="sc">$</span>set_indices) <span class="sc">==</span> <span class="fu">length</span>(sets<span class="sc">$</span>gene_sets),</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">names</span>(sets<span class="sc">$</span>set_indices), <span class="fu">names</span>(sets<span class="sc">$</span>gene_sets)),</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">max</span>(<span class="fu">unlist</span>(sets<span class="sc">$</span>set_indices)) <span class="sc">&lt;=</span> <span class="fu">nrow</span>(proteins<span class="sc">$</span>E),</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setequal</span>(<span class="fu">names</span>(sets<span class="sc">$</span>ranked_t), contrast_names)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>tested_sets <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">set_id =</span> <span class="fu">names</span>(sets<span class="sc">$</span>gene_sets),</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>                      <span class="at">n_measured =</span> <span class="fu">lengths</span>(sets<span class="sc">$</span>gene_sets),</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>                      <span class="at">genes =</span> <span class="fu">map_chr</span>(sets<span class="sc">$</span>gene_sets, \(g) <span class="fu">paste</span>(<span class="fu">sort</span>(g), <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(set_id, <span class="st">&quot;|&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;database&quot;</span>, <span class="st">&quot;pathway&quot;</span>), <span class="at">cols_remove =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(set_id)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>readr<span class="sc">::</span><span class="fu">write_csv</span>(tested_sets, <span class="fu">file.path</span>(out, <span class="st">&quot;tested_sets.csv&quot;</span>))</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Column names must not shadow the objects the later columns read: inside tibble() each</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co"># argument sees the ones before it, so a column called `proteins` would hide the EList.</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">n_proteins =</span> <span class="fu">nrow</span>(proteins<span class="sc">$</span>E), <span class="at">n_samples =</span> <span class="fu">ncol</span>(proteins<span class="sc">$</span>E),</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>       <span class="at">n_sets =</span> <span class="fu">length</span>(sets<span class="sc">$</span>set_indices), <span class="at">n_contrasts =</span> <span class="fu">length</span>(contrast_names),</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>       <span class="at">negative_control =</span> control, <span class="at">frozen_from_md5 =</span> sets<span class="sc">$</span>source<span class="sc">$</span>md5)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 10%">
+<col style="width: 7%">
+<col style="width: 13%">
+<col style="width: 19%">
+<col style="width: 36%">
+</colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: right;">n_proteins</th>
@@ -2293,6 +2343,7 @@ vertical-align: -.125em;
 <th style="text-align: right;">n_sets</th>
 <th style="text-align: right;">n_contrasts</th>
 <th style="text-align: left;">negative_control</th>
+<th style="text-align: left;">frozen_from_md5</th>
 </tr>
 </thead>
 <tbody>
@@ -2302,12 +2353,44 @@ vertical-align: -.125em;
 <td style="text-align: right;">1040</td>
 <td style="text-align: right;">5</td>
 <td style="text-align: left;">BFR_vs_HLRT_at_T1</td>
+<td style="text-align: left;">e06048b8fd805f113a38d150ad0905ac</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(tested_sets, database, <span class="at">name =</span> <span class="st">&quot;sets&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">database</th>
+<th style="text-align: right;">sets</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">GOBP</td>
+<td style="text-align: right;">778</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hallmark</td>
+<td style="text-align: right;">41</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Reactome</td>
+<td style="text-align: right;">221</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
 </div>
+</section>
 <section id="the-precision-weights" class="level2">
 <h2 class="anchored" data-anchor-id="the-precision-weights">The precision weights</h2>
 <p><code>dpcDE()</code> calls <code>voomaLmFitWithImputation</code>, which turns the DPC-Quant standard errors into vooma precision weights and fits with them. Those weights are the only channel by which quantification uncertainty reaches a set test, and they cannot be rebuilt as <code>1 / standard.error^2</code> because vooma combines the standard errors with a fitted mean-variance trend.</p>
@@ -2315,17 +2398,17 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> x<span class="sc">$</span>fit<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">is.null</span>(w), <span class="fu">identical</span>(<span class="fu">dim</span>(w), <span class="fu">dim</span>(proteins<span class="sc">$</span>E)),</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>          <span class="fu">all</span>(<span class="fu">is.finite</span>(w)), <span class="fu">all</span>(w <span class="sc">&gt;</span> <span class="dv">0</span>))</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># limma reads y$weights, so attaching them to the EList avoids depending on an argument name.</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> proteins</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>weights <span class="ot">&lt;-</span> w</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">weight_min =</span> <span class="fu">signif</span>(<span class="fu">min</span>(w), <span class="dv">3</span>),</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">weight_median =</span> <span class="fu">signif</span>(<span class="fu">median</span>(w), <span class="dv">3</span>),</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">weight_max =</span> <span class="fu">signif</span>(<span class="fu">max</span>(w), <span class="dv">3</span>),</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">weight_ratio =</span> <span class="fu">signif</span>(<span class="fu">max</span>(w) <span class="sc">/</span> <span class="fu">min</span>(w), <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>w <span class="ot">&lt;-</span> fit<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">is.null</span>(w), <span class="fu">identical</span>(<span class="fu">dim</span>(w), <span class="fu">dim</span>(proteins<span class="sc">$</span>E)),</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>          <span class="fu">all</span>(<span class="fu">is.finite</span>(w)), <span class="fu">all</span>(w <span class="sc">&gt;</span> <span class="dv">0</span>))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># limma reads y$weights, so attaching them to the EList avoids depending on an argument name.</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> proteins</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>weights <span class="ot">&lt;-</span> w</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">weight_min =</span> <span class="fu">signif</span>(<span class="fu">min</span>(w), <span class="dv">3</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">weight_median =</span> <span class="fu">signif</span>(<span class="fu">median</span>(w), <span class="dv">3</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">weight_max =</span> <span class="fu">signif</span>(<span class="fu">max</span>(w), <span class="dv">3</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">weight_ratio =</span> <span class="fu">signif</span>(<span class="fu">max</span>(w) <span class="sc">/</span> <span class="fu">min</span>(w), <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">
@@ -2390,40 +2473,41 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<p><code>fgsea</code> is here as the comparator, not as a candidate. It receives <code>ranked_t</code>, a vector, and has no way to know that participants contributed four samples each. The stage README names an independence-assuming test that reported significant sets on the negative control; this is how we find out whether that description fits this data.</p>
+<p>Only fgsea returns an effect score, the normalised enrichment score (NES): its sign is the direction and its size how tightly the set’s proteins sit at one end of the ranked list. fry and camera return a direction and a p-value only, so their NES column is left empty.</p>
+<p><code>fgsea</code> is here as the comparator, not as a candidate. It receives <code>ranked_t</code>, a vector, and has no way to know that participants contributed four samples each.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>run_fry <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(y, <span class="at">index =</span> x<span class="sc">$</span>set_indices, <span class="at">design =</span> design, <span class="at">contrast =</span> contrasts[, cn]) <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(set_id, <span class="at">contrast =</span> cn, <span class="at">method =</span> <span class="st">&quot;fry&quot;</span>, <span class="at">n =</span> NGenes,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> Direction, <span class="at">p =</span> PValue)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>run_camera <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">camera</span>(y, <span class="at">index =</span> x<span class="sc">$</span>set_indices, <span class="at">design =</span> design, <span class="at">contrast =</span> contrasts[, cn]) <span class="sc">|&gt;</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(set_id, <span class="at">contrast =</span> cn, <span class="at">method =</span> <span class="st">&quot;camera&quot;</span>, <span class="at">n =</span> NGenes,</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> Direction, <span class="at">p =</span> PValue)</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>run_fgsea <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  fgsea<span class="sc">::</span><span class="fu">fgsea</span>(<span class="at">pathways =</span> x<span class="sc">$</span>gene_sets, <span class="at">stats =</span> x<span class="sc">$</span>ranked_t[[cn]],</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>               <span class="at">minSize =</span> <span class="dv">1</span>, <span class="at">maxSize =</span> <span class="cn">Inf</span>, <span class="at">eps =</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(<span class="at">set_id =</span> pathway, <span class="at">contrast =</span> cn, <span class="at">method =</span> <span class="st">&quot;fgsea&quot;</span>, <span class="at">n =</span> size,</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> <span class="fu">if_else</span>(NES <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">&quot;Up&quot;</span>, <span class="st">&quot;Down&quot;</span>), <span class="at">p =</span> pval)</span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>runners <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">fry =</span> run_fry, <span class="at">camera =</span> run_camera, <span class="at">fgsea =</span> run_fgsea)</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Set-level FDR is always applied within one method, one contrast and one database. The three</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co"># databases are separate families; Hallmark is the primary one, declared before any test ran.</span></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>add_fdr <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">|&gt;</span></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">separate_wider_delim</span>(set_id, <span class="st">&quot;|&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;database&quot;</span>, <span class="st">&quot;pathway&quot;</span>), <span class="at">cols_remove =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">padj =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>), <span class="at">.by =</span> <span class="fu">c</span>(method, contrast, database))</span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>control_results <span class="ot">&lt;-</span> <span class="fu">map</span>(runners, \(f) <span class="fu">f</span>(control)) <span class="sc">|&gt;</span> <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span> <span class="fu">add_fdr</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>run_fry <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(y, <span class="at">index =</span> sets<span class="sc">$</span>set_indices, <span class="at">design =</span> design, <span class="at">contrast =</span> contrasts[, cn]) <span class="sc">|&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(set_id, <span class="at">contrast =</span> cn, <span class="at">method =</span> <span class="st">&quot;fry&quot;</span>, <span class="at">n =</span> NGenes,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> Direction, <span class="at">NES =</span> <span class="cn">NA_real_</span>, <span class="at">p =</span> PValue)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>run_camera <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">camera</span>(y, <span class="at">index =</span> sets<span class="sc">$</span>set_indices, <span class="at">design =</span> design, <span class="at">contrast =</span> contrasts[, cn]) <span class="sc">|&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(set_id, <span class="at">contrast =</span> cn, <span class="at">method =</span> <span class="st">&quot;camera&quot;</span>, <span class="at">n =</span> NGenes,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> Direction, <span class="at">NES =</span> <span class="cn">NA_real_</span>, <span class="at">p =</span> PValue)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>run_fgsea <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  fgsea<span class="sc">::</span><span class="fu">fgsea</span>(<span class="at">pathways =</span> sets<span class="sc">$</span>gene_sets, <span class="at">stats =</span> sets<span class="sc">$</span>ranked_t[[cn]],</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>               <span class="at">minSize =</span> <span class="dv">1</span>, <span class="at">maxSize =</span> <span class="cn">Inf</span>, <span class="at">eps =</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(<span class="at">set_id =</span> pathway, <span class="at">contrast =</span> cn, <span class="at">method =</span> <span class="st">&quot;fgsea&quot;</span>, <span class="at">n =</span> size,</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>              <span class="at">direction =</span> <span class="fu">if_else</span>(NES <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="st">&quot;Up&quot;</span>, <span class="st">&quot;Down&quot;</span>), <span class="at">NES =</span> NES, <span class="at">p =</span> pval)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>runners <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">fry =</span> run_fry, <span class="at">camera =</span> run_camera, <span class="at">fgsea =</span> run_fgsea)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Set-level FDR is always applied within one method, one contrast and one database. The three</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># databases are separate families; Hallmark is the primary one, declared before any test ran.</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>add_fdr <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">|&gt;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">separate_wider_delim</span>(set_id, <span class="st">&quot;|&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;database&quot;</span>, <span class="st">&quot;pathway&quot;</span>), <span class="at">cols_remove =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">padj =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>), <span class="at">.by =</span> <span class="fu">c</span>(method, contrast, database))</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>control_results <span class="ot">&lt;-</span> <span class="fu">map</span>(runners, \(f) <span class="fu">f</span>(control)) <span class="sc">|&gt;</span> <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span> <span class="fu">add_fdr</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 </section>
@@ -2433,17 +2517,17 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>control_summary <span class="ot">&lt;-</span> control_results <span class="sc">|&gt;</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sets =</span> <span class="fu">n</span>(),</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr),</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_padj =</span> <span class="fu">signif</span>(<span class="fu">min</span>(padj), <span class="dv">3</span>),</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_p =</span> <span class="fu">round</span>(<span class="fu">median</span>(p), <span class="dv">3</span>),</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_below_05 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="dv">3</span>),</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> method</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">verdict =</span> <span class="fu">if_else</span>(sig <span class="sc">&lt;=</span> params<span class="sc">$</span>control_tolerance, <span class="st">&quot;passes&quot;</span>, <span class="st">&quot;FAILS&quot;</span>))</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>control_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>control_summary <span class="ot">&lt;-</span> control_results <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sets =</span> <span class="fu">n</span>(),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_padj =</span> <span class="fu">signif</span>(<span class="fu">min</span>(padj), <span class="dv">3</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_p =</span> <span class="fu">round</span>(<span class="fu">median</span>(p), <span class="dv">3</span>),</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">p_below_05 =</span> <span class="fu">round</span>(<span class="fu">mean</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="dv">3</span>),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> method</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">verdict =</span> <span class="fu">if_else</span>(sig <span class="sc">&lt;=</span> params<span class="sc">$</span>control_tolerance, <span class="st">&quot;passes&quot;</span>, <span class="st">&quot;FAILS&quot;</span>))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>control_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">
@@ -2496,15 +2580,15 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(control_results, <span class="fu">aes</span>(p)) <span class="sc">+</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.05</span>, <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">fill =</span> <span class="st">&quot;grey35&quot;</span>) <span class="sc">+</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> h),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>             <span class="fu">summarise</span>(control_results, <span class="at">h =</span> <span class="fu">n</span>() <span class="sc">/</span> <span class="dv">20</span>, <span class="at">.by =</span> method),</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype =</span> <span class="dv">2</span>, <span class="at">colour =</span> <span class="st">&quot;firebrick&quot;</span>) <span class="sc">+</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>method, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;set p-value&quot;</span>, <span class="at">y =</span> <span class="st">&quot;sets&quot;</span>,</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">caption =</span> <span class="fu">paste</span>(<span class="st">&quot;negative control:&quot;</span>, control, <span class="st">&quot;· dashed line marks a flat null&quot;</span>)) <span class="sc">+</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(control_results, <span class="fu">aes</span>(p)) <span class="sc">+</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.05</span>, <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">fill =</span> <span class="st">&quot;grey35&quot;</span>) <span class="sc">+</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> h),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>             <span class="fu">summarise</span>(control_results, <span class="at">h =</span> <span class="fu">n</span>() <span class="sc">/</span> <span class="dv">20</span>, <span class="at">.by =</span> method),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype =</span> <span class="dv">2</span>, <span class="at">colour =</span> <span class="st">&quot;firebrick&quot;</span>) <span class="sc">+</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>method, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;set p-value&quot;</span>, <span class="at">y =</span> <span class="st">&quot;sets&quot;</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">caption =</span> <span class="fu">paste</span>(<span class="st">&quot;negative control:&quot;</span>, control, <span class="st">&quot;· dashed line marks a flat null&quot;</span>)) <span class="sc">+</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -2517,20 +2601,21 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>control_results <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">15</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(method, set_id, n, direction, <span class="at">padj =</span> <span class="fu">signif</span>(padj, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>control_results <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr) <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">15</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(method, set_id, n, direction, <span class="at">NES =</span> <span class="fu">round</span>(NES, <span class="dv">2</span>), <span class="at">padj =</span> <span class="fu">signif</span>(padj, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="caption-top table table-sm table-striped small">
 <colgroup>
 <col style="width: 8%">
-<col style="width: 63%">
+<col style="width: 59%">
 <col style="width: 3%">
-<col style="width: 12%">
 <col style="width: 11%">
+<col style="width: 6%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -2538,6 +2623,7 @@ vertical-align: -.125em;
 <th style="text-align: left;">set_id</th>
 <th style="text-align: right;">n</th>
 <th style="text-align: left;">direction</th>
+<th style="text-align: right;">NES</th>
 <th style="text-align: right;">padj</th>
 </tr>
 </thead>
@@ -2547,6 +2633,7 @@ vertical-align: -.125em;
 <td style="text-align: left;">Reactome|REACTOME_STRIATED_MUSCLE_CONTRACTION</td>
 <td style="text-align: right;">30</td>
 <td style="text-align: left;">Down</td>
+<td style="text-align: right;">NA</td>
 <td style="text-align: right;">2.40e-06</td>
 </tr>
 <tr class="even">
@@ -2554,6 +2641,7 @@ vertical-align: -.125em;
 <td style="text-align: left;">Reactome|REACTOME_STRIATED_MUSCLE_CONTRACTION</td>
 <td style="text-align: right;">30</td>
 <td style="text-align: left;">Down</td>
+<td style="text-align: right;">-2.52</td>
 <td style="text-align: right;">1.32e-05</td>
 </tr>
 <tr class="odd">
@@ -2561,6 +2649,7 @@ vertical-align: -.125em;
 <td style="text-align: left;">Reactome|REACTOME_MUSCLE_CONTRACTION</td>
 <td style="text-align: right;">86</td>
 <td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.81</td>
 <td style="text-align: right;">1.45e-02</td>
 </tr>
 <tr class="even">
@@ -2568,6 +2657,7 @@ vertical-align: -.125em;
 <td style="text-align: left;">Hallmark|HALLMARK_HEME_METABOLISM</td>
 <td style="text-align: right;">65</td>
 <td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.84</td>
 <td style="text-align: right;">2.91e-02</td>
 </tr>
 </tbody>
@@ -2582,19 +2672,19 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>passed <span class="ot">&lt;-</span> control_summary<span class="sc">$</span>method[control_summary<span class="sc">$</span>verdict <span class="sc">==</span> <span class="st">&quot;passes&quot;</span>]</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">length</span>(passed)) {</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">&quot;No set-test method passed the negative control. Nothing here can be interpreted; &quot;</span>,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>       <span class="st">&quot;revisit the method before touching the interaction.&quot;</span>)</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>other_contrasts <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(contrast_names, control)</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(passed, \(nm) <span class="fu">map</span>(other_contrasts, runners[[nm]]) <span class="sc">|&gt;</span> <span class="fu">list_rbind</span>()) <span class="sc">|&gt;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_fdr</span>() <span class="sc">|&gt;</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(<span class="fu">filter</span>(control_results, method <span class="sc">%in%</span> passed))</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Methods carried forward:&quot;</span>, <span class="fu">paste</span>(passed, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>),</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;</span><span class="sc">\n</span><span class="st">Methods excluded by the control:&quot;</span>,</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste</span>(<span class="fu">setdiff</span>(<span class="fu">names</span>(runners), passed), <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>passed <span class="ot">&lt;-</span> control_summary<span class="sc">$</span>method[control_summary<span class="sc">$</span>verdict <span class="sc">==</span> <span class="st">&quot;passes&quot;</span>]</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">length</span>(passed)) {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">&quot;No set-test method passed the negative control. Nothing here can be interpreted; &quot;</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>       <span class="st">&quot;revisit the method before touching the interaction.&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>other_contrasts <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(contrast_names, control)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(passed, \(nm) <span class="fu">map</span>(other_contrasts, runners[[nm]]) <span class="sc">|&gt;</span> <span class="fu">list_rbind</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_fdr</span>() <span class="sc">|&gt;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(<span class="fu">filter</span>(control_results, method <span class="sc">%in%</span> passed))</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Methods carried forward:&quot;</span>, <span class="fu">paste</span>(passed, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>),</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;</span><span class="sc">\n</span><span class="st">Methods excluded by the control:&quot;</span>,</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste</span>(<span class="fu">setdiff</span>(<span class="fu">names</span>(runners), passed), <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>Methods carried forward: fry, camera, fgsea 
@@ -2605,10 +2695,10 @@ Methods excluded by the control:  </code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">sig =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr), <span class="at">.by =</span> <span class="fu">c</span>(method, contrast, database)) <span class="sc">|&gt;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> database, <span class="at">values_from =</span> sig, <span class="at">values_fill =</span> <span class="dv">0</span>L) <span class="sc">|&gt;</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(method, contrast)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">sig =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr), <span class="at">.by =</span> <span class="fu">c</span>(method, contrast, database)) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> database, <span class="at">values_from =</span> sig, <span class="at">values_fill =</span> <span class="dv">0</span>L) <span class="sc">|&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(method, contrast)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">
@@ -2736,342 +2826,366 @@ Methods excluded by the control:  </code></pre>
 </section>
 <section id="hallmark-the-primary-collection" class="level2">
 <h2 class="anchored" data-anchor-id="hallmark-the-primary-collection">Hallmark, the primary collection</h2>
-<div class="cell">
+<p>One row per set and contrast, with every method side by side, so a set is read once rather than three times. <code>NES</code> comes from fgsea, the only method that returns an enrichment score: its sign is the direction and its size how tightly the set sits at one end of the ranked list. <code>methods</code> counts how many of the three called the set at FDR &lt; 0.05; three is consensus.</p>
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(database <span class="sc">==</span> <span class="st">&quot;Hallmark&quot;</span>, padj <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr) <span class="sc">|&gt;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(method, contrast, padj) <span class="sc">|&gt;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(method, contrast, pathway, n, direction, <span class="at">padj =</span> <span class="fu">signif</span>(padj, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>hallmark <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(database <span class="sc">==</span> <span class="st">&quot;Hallmark&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(contrast, pathway, n, method, direction, NES, padj) <span class="sc">|&gt;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># fgsea counts members after matching to its ranked list, so its size can differ by one or two</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># from fry&#39;s; n is taken from fry and kept out of the pivot so the rows line up.</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">id_cols =</span> <span class="fu">c</span>(contrast, pathway), <span class="at">names_from =</span> method,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>              <span class="at">values_from =</span> <span class="fu">c</span>(n, direction, NES, padj)) <span class="sc">|&gt;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    contrast, <span class="at">pathway =</span> <span class="fu">sub</span>(<span class="st">&quot;^HALLMARK_&quot;</span>, <span class="st">&quot;&quot;</span>, pathway), <span class="at">n =</span> n_fry,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> <span class="fu">coalesce</span>(direction_fry, direction_fgsea),</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">NES =</span> <span class="fu">round</span>(NES_fgsea, <span class="dv">2</span>),</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">fgsea =</span> <span class="fu">signif</span>(padj_fgsea, <span class="dv">2</span>), <span class="at">fry =</span> <span class="fu">signif</span>(padj_fry, <span class="dv">2</span>), <span class="at">camera =</span> <span class="fu">signif</span>(padj_camera, <span class="dv">2</span>),</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">methods =</span> (padj_fgsea <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr) <span class="sc">+</span> (padj_fry <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr) <span class="sc">+</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      (padj_camera <span class="sc">&lt;</span> params<span class="sc">$</span>set_fdr)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(methods <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (cn <span class="cf">in</span> <span class="fu">unique</span>(hallmark<span class="sc">$</span>contrast)) {</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  hallmark <span class="sc">|&gt;</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(contrast <span class="sc">==</span> cn) <span class="sc">|&gt;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(direction <span class="sc">==</span> <span class="st">&quot;Down&quot;</span>, <span class="fu">desc</span>(methods), <span class="fu">pmin</span>(fgsea, fry, camera)) <span class="sc">|&gt;</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span>contrast) <span class="sc">|&gt;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="at">caption =</span> cn, <span class="at">format =</span> <span class="st">&quot;pipe&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">&quot;</span><span class="sc">\n\n</span><span class="st">&quot;</span>)</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
-<div class="cell-output-display">
-<div class="kable-table">
-<table class="caption-top table table-sm table-striped small">
+<table class="caption-top table">
+<caption>BFR_post_vs_pre</caption>
 <colgroup>
+<col style="width: 33%">
+<col style="width: 5%">
+<col style="width: 12%">
 <col style="width: 7%">
-<col style="width: 19%">
-<col style="width: 47%">
-<col style="width: 4%">
+<col style="width: 10%">
 <col style="width: 10%">
 <col style="width: 9%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
-<th style="text-align: left;">method</th>
-<th style="text-align: left;">contrast</th>
 <th style="text-align: left;">pathway</th>
 <th style="text-align: right;">n</th>
 <th style="text-align: left;">direction</th>
-<th style="text-align: right;">padj</th>
+<th style="text-align: right;">NES</th>
+<th style="text-align: right;">fgsea</th>
+<th style="text-align: right;">fry</th>
+<th style="text-align: right;">camera</th>
+<th style="text-align: right;">methods</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_OXIDATIVE_PHOSPHORYLATION</td>
+<td style="text-align: left;">OXIDATIVE_PHOSPHORYLATION</td>
 <td style="text-align: right;">174</td>
 <td style="text-align: left;">Up</td>
-<td style="text-align: right;">0.00e+00</td>
+<td style="text-align: right;">2.99</td>
+<td style="text-align: right;">0.0e+00</td>
+<td style="text-align: right;">0.00048</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">3</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_MYOGENESIS</td>
-<td style="text-align: right;">117</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">7.91e-03</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_FATTY_ACID_METABOLISM</td>
+<td style="text-align: left;">FATTY_ACID_METABOLISM</td>
 <td style="text-align: right;">100</td>
 <td style="text-align: left;">Up</td>
-<td style="text-align: right;">7.91e-03</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_MYOGENESIS</td>
-<td style="text-align: right;">117</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">1.62e-02</td>
+<td style="text-align: right;">2.15</td>
+<td style="text-align: right;">1.2e-05</td>
+<td style="text-align: right;">0.01200</td>
+<td style="text-align: right;">0.0079</td>
+<td style="text-align: right;">3</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_BILE_ACID_METABOLISM</td>
-<td style="text-align: right;">29</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.72e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION</td>
-<td style="text-align: right;">64</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">1.72e-02</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_FATTY_ACID_METABOLISM</td>
-<td style="text-align: right;">100</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">3.15e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">camera</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_OXIDATIVE_PHOSPHORYLATION</td>
-<td style="text-align: right;">174</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">0.00e+00</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_OXIDATIVE_PHOSPHORYLATION</td>
-<td style="text-align: right;">174</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">0.00e+00</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_FATTY_ACID_METABOLISM</td>
-<td style="text-align: right;">100</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.25e-05</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_MYOGENESIS</td>
-<td style="text-align: right;">117</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">1.06e-04</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_ADIPOGENESIS</td>
+<td style="text-align: left;">ADIPOGENESIS</td>
 <td style="text-align: right;">118</td>
 <td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.70e-02</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_G2M_CHECKPOINT</td>
-<td style="text-align: right;">40</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">4.67e-02</td>
+<td style="text-align: right;">1.63</td>
+<td style="text-align: right;">1.7e-02</td>
+<td style="text-align: right;">0.02800</td>
+<td style="text-align: right;">0.1100</td>
+<td style="text-align: right;">2</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T1</td>
-<td style="text-align: left;">HALLMARK_HEME_METABOLISM</td>
-<td style="text-align: right;">65</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">2.91e-02</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_MYOGENESIS</td>
-<td style="text-align: right;">117</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">2.92e-04</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION</td>
-<td style="text-align: right;">64</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">2.53e-03</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_BILE_ACID_METABOLISM</td>
-<td style="text-align: right;">29</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.22e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_APICAL_JUNCTION</td>
-<td style="text-align: right;">54</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">1.61e-02</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">BFR_vs_HLRT_at_T2</td>
-<td style="text-align: left;">HALLMARK_FATTY_ACID_METABOLISM</td>
-<td style="text-align: right;">100</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.84e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_OXIDATIVE_PHOSPHORYLATION</td>
-<td style="text-align: right;">174</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">0.00e+00</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_APICAL_JUNCTION</td>
-<td style="text-align: right;">54</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.76e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_SPERMATOGENESIS</td>
-<td style="text-align: right;">19</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">3.89e-02</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fgsea</td>
-<td style="text-align: left;">interaction</td>
-<td style="text-align: left;">HALLMARK_HEME_METABOLISM</td>
-<td style="text-align: right;">65</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.47e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_OXIDATIVE_PHOSPHORYLATION</td>
-<td style="text-align: right;">174</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">4.77e-04</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_G2M_CHECKPOINT</td>
-<td style="text-align: right;">40</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">4.34e-03</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_KRAS_SIGNALING_DN</td>
-<td style="text-align: right;">17</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">4.34e-03</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_FATTY_ACID_METABOLISM</td>
-<td style="text-align: right;">100</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">1.18e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_SPERMATOGENESIS</td>
-<td style="text-align: right;">19</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">2.79e-02</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_ADIPOGENESIS</td>
-<td style="text-align: right;">118</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">2.84e-02</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_PEROXISOME</td>
+<td style="text-align: left;">PEROXISOME</td>
 <td style="text-align: right;">44</td>
 <td style="text-align: left;">Up</td>
-<td style="text-align: right;">2.84e-02</td>
+<td style="text-align: right;">1.54</td>
+<td style="text-align: right;">2.6e-01</td>
+<td style="text-align: right;">0.02800</td>
+<td style="text-align: right;">0.2400</td>
+<td style="text-align: right;">1</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">BFR_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_MYOGENESIS</td>
+<td style="text-align: left;">MYOGENESIS</td>
 <td style="text-align: right;">117</td>
 <td style="text-align: left;">Down</td>
-<td style="text-align: right;">3.56e-02</td>
+<td style="text-align: right;">-1.95</td>
+<td style="text-align: right;">1.1e-04</td>
+<td style="text-align: right;">0.03600</td>
+<td style="text-align: right;">0.0079</td>
+<td style="text-align: right;">3</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_SPERMATOGENESIS</td>
-<td style="text-align: right;">19</td>
-<td style="text-align: left;">Down</td>
-<td style="text-align: right;">1.33e-05</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_OXIDATIVE_PHOSPHORYLATION</td>
-<td style="text-align: right;">174</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">2.12e-05</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_G2M_CHECKPOINT</td>
+<td style="text-align: left;">G2M_CHECKPOINT</td>
 <td style="text-align: right;">40</td>
 <td style="text-align: left;">Down</td>
-<td style="text-align: right;">1.11e-02</td>
+<td style="text-align: right;">-1.73</td>
+<td style="text-align: right;">4.7e-02</td>
+<td style="text-align: right;">0.00430</td>
+<td style="text-align: right;">0.1100</td>
+<td style="text-align: right;">2</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_APICAL_JUNCTION</td>
-<td style="text-align: right;">54</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">3.09e-02</td>
+<td style="text-align: left;">KRAS_SIGNALING_DN</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.72</td>
+<td style="text-align: right;">8.0e-02</td>
+<td style="text-align: right;">0.00430</td>
+<td style="text-align: right;">0.1500</td>
+<td style="text-align: right;">1</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">fry</td>
-<td style="text-align: left;">HLRT_post_vs_pre</td>
-<td style="text-align: left;">HALLMARK_ALLOGRAFT_REJECTION</td>
-<td style="text-align: right;">35</td>
-<td style="text-align: left;">Up</td>
-<td style="text-align: right;">4.66e-02</td>
+<td style="text-align: left;">SPERMATOGENESIS</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.45</td>
+<td style="text-align: right;">2.6e-01</td>
+<td style="text-align: right;">0.02800</td>
+<td style="text-align: right;">0.5400</td>
+<td style="text-align: right;">1</td>
 </tr>
 </tbody>
 </table>
-</div>
-</div>
-</div>
+<table class="caption-top table">
+<caption>HLRT_post_vs_pre</caption>
+<colgroup>
+<col style="width: 34%">
+<col style="width: 5%">
+<col style="width: 13%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 10%">
+<col style="width: 9%">
+<col style="width: 10%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">pathway</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: left;">direction</th>
+<th style="text-align: right;">NES</th>
+<th style="text-align: right;">fgsea</th>
+<th style="text-align: right;">fry</th>
+<th style="text-align: right;">camera</th>
+<th style="text-align: right;">methods</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">OXIDATIVE_PHOSPHORYLATION</td>
+<td style="text-align: right;">174</td>
+<td style="text-align: left;">Up</td>
+<td style="text-align: right;">2.87</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">2.1e-05</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">APICAL_JUNCTION</td>
+<td style="text-align: right;">54</td>
+<td style="text-align: left;">Up</td>
+<td style="text-align: right;">1.86</td>
+<td style="text-align: right;">0.018</td>
+<td style="text-align: right;">3.1e-02</td>
+<td style="text-align: right;">0.073</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">ALLOGRAFT_REJECTION</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: left;">Up</td>
+<td style="text-align: right;">1.38</td>
+<td style="text-align: right;">0.240</td>
+<td style="text-align: right;">4.7e-02</td>
+<td style="text-align: right;">0.400</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SPERMATOGENESIS</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.79</td>
+<td style="text-align: right;">0.039</td>
+<td style="text-align: right;">1.3e-05</td>
+<td style="text-align: right;">0.096</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">G2M_CHECKPOINT</td>
+<td style="text-align: right;">40</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.44</td>
+<td style="text-align: right;">0.140</td>
+<td style="text-align: right;">1.1e-02</td>
+<td style="text-align: right;">0.180</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top table">
+<caption>BFR_vs_HLRT_at_T2</caption>
+<colgroup>
+<col style="width: 41%">
+<col style="width: 4%">
+<col style="width: 12%">
+<col style="width: 7%">
+<col style="width: 9%">
+<col style="width: 6%">
+<col style="width: 8%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">pathway</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: left;">direction</th>
+<th style="text-align: right;">NES</th>
+<th style="text-align: right;">fgsea</th>
+<th style="text-align: right;">fry</th>
+<th style="text-align: right;">camera</th>
+<th style="text-align: right;">methods</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">BILE_ACID_METABOLISM</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: left;">Up</td>
+<td style="text-align: right;">1.92</td>
+<td style="text-align: right;">0.01200</td>
+<td style="text-align: right;">0.11</td>
+<td style="text-align: right;">0.017</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">FATTY_ACID_METABOLISM</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: left;">Up</td>
+<td style="text-align: right;">1.68</td>
+<td style="text-align: right;">0.01800</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.032</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">MYOGENESIS</td>
+<td style="text-align: right;">117</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.95</td>
+<td style="text-align: right;">0.00029</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.016</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EPITHELIAL_MESENCHYMAL_TRANSITION</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.91</td>
+<td style="text-align: right;">0.00250</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.017</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">APICAL_JUNCTION</td>
+<td style="text-align: right;">54</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.77</td>
+<td style="text-align: right;">0.01600</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.130</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top table">
+<caption>interaction</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">pathway</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: left;">direction</th>
+<th style="text-align: right;">NES</th>
+<th style="text-align: right;">fgsea</th>
+<th style="text-align: right;">fry</th>
+<th style="text-align: right;">camera</th>
+<th style="text-align: right;">methods</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">HEME_METABOLISM</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: left;">Up</td>
+<td style="text-align: right;">1.87</td>
+<td style="text-align: right;">0.015</td>
+<td style="text-align: right;">0.88</td>
+<td style="text-align: right;">0.22</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top table">
+<caption>BFR_vs_HLRT_at_T1</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">pathway</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: left;">direction</th>
+<th style="text-align: right;">NES</th>
+<th style="text-align: right;">fgsea</th>
+<th style="text-align: right;">fry</th>
+<th style="text-align: right;">camera</th>
+<th style="text-align: right;">methods</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">HEME_METABOLISM</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: left;">Down</td>
+<td style="text-align: right;">-1.84</td>
+<td style="text-align: right;">0.029</td>
+<td style="text-align: right;">0.96</td>
+<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
 </section>
 <section id="export" class="level2">
 <h2 class="anchored" data-anchor-id="export">Export</h2>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>readr<span class="sc">::</span><span class="fu">write_csv</span>(results, <span class="fu">file.path</span>(out, <span class="st">&quot;set_test_results.csv&quot;</span>))</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>readr<span class="sc">::</span><span class="fu">write_csv</span>(control_summary, <span class="fu">file.path</span>(out, <span class="st">&quot;negative_control_summary.csv&quot;</span>))</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">list</span>(<span class="at">results =</span> results, <span class="at">control =</span> control_results,</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>             <span class="at">control_summary =</span> control_summary, <span class="at">passed =</span> passed,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">parameters =</span> params, <span class="at">session =</span> <span class="fu">sessionInfo</span>()),</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">file.path</span>(out, <span class="st">&quot;set_tests.rds&quot;</span>))</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">file =</span> <span class="fu">list.files</span>(out), <span class="at">bytes =</span> <span class="fu">file.size</span>(<span class="fu">file.path</span>(out, <span class="fu">list.files</span>(out))))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>readr<span class="sc">::</span><span class="fu">write_csv</span>(results, <span class="fu">file.path</span>(out, <span class="st">&quot;set_test_results.csv&quot;</span>))</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>readr<span class="sc">::</span><span class="fu">write_csv</span>(control_summary, <span class="fu">file.path</span>(out, <span class="st">&quot;negative_control_summary.csv&quot;</span>))</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">list</span>(<span class="at">results =</span> results, <span class="at">control =</span> control_results,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>             <span class="at">control_summary =</span> control_summary, <span class="at">passed =</span> passed,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">inputs =</span> <span class="fu">c</span>(upstream, <span class="at">tested_sets =</span> <span class="st">&quot;c_data/tested_sets.rds&quot;</span>),</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>             <span class="at">inputs_md5 =</span> <span class="fu">c</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(<span class="fu">here</span>(upstream)), <span class="at">tested_sets =</span> tools<span class="sc">::</span><span class="fu">md5sum</span>(frozen_path)),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">parameters =</span> params, <span class="at">session =</span> <span class="fu">sessionInfo</span>()),</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        <span class="fu">file.path</span>(out, <span class="st">&quot;set_tests.rds&quot;</span>))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">file =</span> <span class="fu">list.files</span>(out), <span class="at">bytes =</span> <span class="fu">file.size</span>(<span class="fu">file.path</span>(out, <span class="fu">list.files</span>(out))))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="kable-table">
@@ -3089,11 +3203,19 @@ Methods excluded by the control:  </code></pre>
 </tr>
 <tr class="even">
 <td style="text-align: left;">set_test_results.csv</td>
-<td style="text-align: right;">2451780</td>
+<td style="text-align: right;">2583826</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">set_tests.rds</td>
-<td style="text-align: right;">591957</td>
+<td style="text-align: right;">643867</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">tested_sets.csv</td>
+<td style="text-align: right;">358487</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">tested_sets.rds</td>
+<td style="text-align: right;">3177204</td>
 </tr>
 </tbody>
 </table>
@@ -3103,7 +3225,7 @@ Methods excluded by the control:  </code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.5.2 (2025-10-31 ucrt)
@@ -3128,7 +3250,7 @@ attached base packages:
 
 other attached packages:
 [1] ggplot2_4.0.3 purrr_1.2.2   tidyr_1.3.2   tibble_3.3.1  dplyr_1.2.1  
-[6] limpa_1.2.5   limma_3.66.0  here_1.0.2   
+[6] limma_3.66.0  here_1.0.2   
 
 loaded via a namespace (and not attached):
  [1] generics_0.1.4      fgsea_1.36.2        stringi_1.8.9      
@@ -3144,7 +3266,7 @@ loaded via a namespace (and not attached):
 [31] R6_2.6.1            lifecycle_1.0.5     stringr_1.6.0      
 [34] bit_4.6.0           htmlwidgets_1.6.4   vroom_1.7.1        
 [37] pkgconfig_2.0.3     pillar_1.11.1       gtable_0.3.6       
-[40] data.table_1.18.6.1 glue_1.8.0          Rcpp_1.1.1         
+[40] glue_1.8.0          data.table_1.18.6.1 Rcpp_1.1.1         
 [43] statmod_1.5.2       xfun_0.60           tidyselect_1.2.1   
 [46] rstudioapi_0.19.0   knitr_1.52          farver_2.1.2       
 [49] snow_0.4-4          htmltools_0.5.9     labeling_0.4.3     

@@ -1,0 +1,16 @@
+contrast,database,diego_90:fry,diego_90:camera,diego_90:fgsea,diego_91:ssGSEA_limma,dustyn_pr11_fgsea:fgsea,dustyn_pr11_fry:fry,dustyn_pr15_fgsea:fgsea,matheus_pr13:camera,matheus_pr13:fry
+BFR_vs_HLRT_at_T1,GOBP,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down
+BFR_vs_HLRT_at_T1,Hallmark,0 up / 0 down,0 up / 0 down,0 up / 1 down,0 up / 0 down,0 up / 1 down,0 up / 0 down,0 up / 1 down,0 up / 0 down,0 up / 0 down
+BFR_vs_HLRT_at_T1,Reactome,0 up / 0 down,0 up / 1 down,0 up / 2 down,0 up / 0 down,0 up / 2 down,0 up / 0 down,0 up / 2 down,0 up / 1 down,0 up / 0 down
+BFR_post_vs_pre,GOBP,37 up / 161 down,19 up / 24 down,29 up / 46 down,20 up / 35 down,29 up / 44 down,37 up / 161 down,30 up / 45 down,19 up / 24 down,37 up / 161 down
+BFR_post_vs_pre,Hallmark,4 up / 4 down,2 up / 1 down,3 up / 2 down,1 up / 0 down,3 up / 1 down,4 up / 4 down,3 up / 2 down,2 up / 1 down,4 up / 4 down
+BFR_post_vs_pre,Reactome,16 up / 36 down,14 up / 19 down,15 up / 26 down,7 up / 1 down,15 up / 23 down,16 up / 36 down,15 up / 27 down,14 up / 19 down,16 up / 36 down
+HLRT_post_vs_pre,GOBP,44 up / 120 down,11 up / 3 down,14 up / 15 down,5 up / 15 down,14 up / 15 down,44 up / 120 down,13 up / 13 down,11 up / 3 down,44 up / 120 down
+HLRT_post_vs_pre,Hallmark,3 up / 2 down,1 up / 0 down,2 up / 1 down,2 up / 1 down,2 up / 0 down,3 up / 2 down,2 up / 1 down,1 up / 0 down,3 up / 2 down
+HLRT_post_vs_pre,Reactome,18 up / 36 down,10 up / 6 down,16 up / 21 down,3 up / 2 down,15 up / 18 down,18 up / 36 down,16 up / 22 down,10 up / 6 down,18 up / 36 down
+BFR_vs_HLRT_at_T2,GOBP,0 up / 0 down,11 up / 11 down,18 up / 25 down,0 up / 0 down,18 up / 24 down,0 up / 0 down,19 up / 24 down,NA,NA
+BFR_vs_HLRT_at_T2,Hallmark,0 up / 0 down,2 up / 2 down,2 up / 3 down,0 up / 0 down,2 up / 3 down,0 up / 0 down,2 up / 3 down,NA,NA
+BFR_vs_HLRT_at_T2,Reactome,0 up / 0 down,4 up / 4 down,6 up / 8 down,0 up / 0 down,5 up / 6 down,0 up / 0 down,5 up / 8 down,NA,NA
+interaction,GOBP,0 up / 0 down,0 up / 0 down,2 up / 5 down,0 up / 0 down,2 up / 6 down,0 up / 0 down,1 up / 3 down,0 up / 0 down,0 up / 0 down
+interaction,Hallmark,0 up / 0 down,0 up / 0 down,1 up / 0 down,0 up / 0 down,1 up / 0 down,0 up / 0 down,1 up / 0 down,0 up / 0 down,0 up / 0 down
+interaction,Reactome,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down,0 up / 0 down

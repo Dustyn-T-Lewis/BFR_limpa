@@ -1,5 +1,5 @@
 ---
-title: "03 · Per-sample set scores"
+title: "91 · Per-sample set scores (ssGSEA)"
 subtitle: "ssGSEA scores, tested on the design and read against the phenotype"
 params:
   score_fdr: 0.05
@@ -17,16 +17,18 @@ execute:
   warning: false
 ---
 
-`02_Set_Tests` asks whether a set moved in a contrast. This stage asks a different question:
-how much of each set is present in each sample. The output is one number per set per sample, a
-1,040 × 131 matrix, and that turns a pathway into a variable that can be plotted against the
-muscle measurements rather than only reported with a p-value.
+`90_Set_Test_Calibration` asks whether a set moved in a contrast. This stage asks a different
+question: how much of each set is present in each sample. The output is one number per set per
+sample, a 1,040 × 131 matrix, and that turns a pathway into a variable that can be plotted against
+the muscle measurements rather than only reported with a p-value.
 
 Two things are lost in the conversion and have to be said out loud. ssGSEA ranks within a sample,
 so the precision weights from limpa do not travel; a protein reconstructed largely from missing
 values carries the same rank as a well-measured one. And the scores are relative to the cohort:
 adding or removing samples changes them. Neither makes the scores wrong, but both mean the
-whole-set tests in `02_Set_Tests`, not these scores, carry error control for the contrasts.
+whole-set tests in `90_Set_Test_Calibration`, not these scores, carry error control for the
+contrasts. The main pathway stages score samples with singscore, which is sample-independent;
+`92_Method_Comparison` sets the two side by side.
 
 ```{r setup}
 required <- c("here", "limma", "GSVA", "dplyr", "tibble", "tidyr", "purrr",
@@ -40,17 +42,23 @@ library(tibble)
 library(tidyr)
 library(purrr)
 library(ggplot2)
-here::i_am("03_Pathway_Enrichment/03_Sample_Scores/a_script/03_sample_scores.qmd")
+here::i_am("03_Pathway_Enrichment/91_Sample_Scores_ssGSEA/a_script/91_sample_scores_ssgsea.qmd")
 
-stage <- here("03_Pathway_Enrichment", "03_Sample_Scores")
+stage <- here("03_Pathway_Enrichment", "91_Sample_Scores_ssGSEA")
 out <- file.path(stage, "c_data")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
-x <- readRDS(here("03_Pathway_Enrichment", "01_Gene_Sets", "c_data", "pathway_inputs.rds"))
-design <- x$design$design
-contrasts <- x$design$contrasts
-control <- x$design$negative_control
-targets <- as_tibble(x$proteins$targets)
+# The same frozen sets as 90_Set_Test_Calibration, so both stages test exactly one list.
+frozen_path <- here("03_Pathway_Enrichment", "90_Set_Test_Calibration", "c_data",
+                    "tested_sets.rds")
+stopifnot("Render 90_Set_Test_Calibration first" = file.exists(frozen_path))
+x <- readRDS(frozen_path)
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+design <- d$design
+contrasts <- d$contrasts
+control <- d$negative_control
+targets <- as_tibble(proteins$targets)
 
 stopifnot(identical(colnames(x$gene_matrix), rownames(design)),
           all(vapply(x$gene_sets, \(g) all(g %in% rownames(x$gene_matrix)), logical(1))))
@@ -112,9 +120,9 @@ score_results |>
   transmute(database, pathway, diff = signif(diff, 3), padj = signif(padj, 3))
 ```
 
-Sets above are false positives by construction. Compare the count with `02_Set_Tests`: if the
-score-level test is looser than `fry` on the same null, its results on the interaction inherit
-that looseness.
+Sets above are false positives by construction. Compare the count with
+`90_Set_Test_Calibration`: if the score-level test is looser than `fry` on the same null, its
+results on the interaction inherit that looseness.
 
 ```{r hallmark-scores}
 score_results |>
@@ -203,12 +211,78 @@ A correlation here is a relationship between two changes measured on the same le
 that the pathway caused the growth. Both would move together under any shared upstream cause,
 including how much that leg was loaded.
 
+## Alternative: every Hallmark set, unfiltered
+
+The analysis above correlates only the sets whose mean score changed with training. That filter
+keeps the number of tests down, but it selects on the average, and a set can track growth without
+moving on average: up in the legs that grew most, down in those that grew least, near zero overall.
+Those are exactly the sets a correlation exists to find, and the filter removes them before they
+are tested.
+
+So the same correlation is run here on all Hallmark sets, with no filter. Hallmark was declared the
+primary collection before any test ran, so the set list is fixed in advance and not chosen after
+seeing results, and at around forty sets per arm the FDR correction costs little. Reactome and
+GO:BP stay exploratory.
+
+```{r hallmark-all}
+hallmark_ids <- grep("^Hallmark\\|", unique(delta$set_id), value = TRUE)
+
+correlations_hallmark <- delta |>
+  filter(set_id %in% hallmark_ids) |>
+  summarise(
+    n = n(),
+    rho = cor(d_score, d_csa, method = "spearman"),
+    p = cor.test(d_score, d_csa, method = "spearman", exact = FALSE)$p.value,
+    .by = c(set_id, treatment)
+  ) |>
+  mutate(padj = p.adjust(p, "BH"), .by = treatment) |>
+  separate_wider_delim(set_id, "|", names = c("database", "pathway"), cols_remove = FALSE)
+
+correlations_hallmark |>
+  summarise(sets = n(), sig_FDR = sum(padj < 0.05), raw_p_below_05 = sum(p < 0.05),
+            expected_by_chance = round(0.05 * n(), 1), smallest_FDR = signif(min(padj), 3),
+            .by = treatment)
+```
+
+```{r hallmark-all-table}
+correlations_hallmark |>
+  arrange(treatment, p) |>
+  slice_head(n = 10, by = treatment) |>
+  transmute(treatment, pathway = sub("^HALLMARK_", "", pathway), n,
+            rho = round(rho, 3), p = signif(p, 3), padj = signif(padj, 3))
+```
+
+Whether a set tracks growth differently in the two arms is a separate question from whether it
+tracks growth in either arm. Being significant in one arm and not the other is not evidence of a
+difference, so the arms are compared directly, with Fisher's z on the two correlations.
+
+```{r hallmark-all-difference}
+arm_difference <- correlations_hallmark |>
+  select(set_id, database, pathway, treatment, rho, n) |>
+  pivot_wider(names_from = treatment, values_from = c(rho, n)) |>
+  mutate(
+    z = (atanh(rho_HLRT) - atanh(rho_BFR)) / sqrt(1 / (n_HLRT - 3) + 1 / (n_BFR - 3)),
+    p_difference = 2 * pnorm(-abs(z)),
+    padj_difference = p.adjust(p_difference, "BH")
+  )
+
+arm_difference |>
+  arrange(p_difference) |>
+  slice_head(n = 10) |>
+  transmute(pathway = sub("^HALLMARK_", "", pathway),
+            rho_BFR = round(rho_BFR, 3), rho_HLRT = round(rho_HLRT, 3),
+            p_difference = signif(p_difference, 3), padj_difference = signif(padj_difference, 3))
+```
+
 ## Export
 
 ```{r export}
 saveRDS(scores, file.path(out, "set_scores.rds"))
 readr::write_csv(score_results, file.path(out, "score_contrast_results.csv"))
 readr::write_csv(correlations, file.path(out, "score_phenotype_correlations.csv"))
+readr::write_csv(correlations_hallmark,
+                 file.path(out, "score_phenotype_correlations_hallmark_all.csv"))
+readr::write_csv(arm_difference, file.path(out, "score_phenotype_arm_difference_hallmark.csv"))
 tibble(file = list.files(out), bytes = file.size(file.path(out, list.files(out))))
 ```
 

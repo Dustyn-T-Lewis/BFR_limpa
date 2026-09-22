@@ -1,0 +1,322 @@
+---
+title: "92 · Method comparison"
+subtitle: "Every set test in the repository, on the same sets, the same contrasts and the same control"
+params:
+  fdr: 0.05
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    code-fold: true
+    df-print: kable
+    fig-width: 8
+    fig-height: 5
+execute:
+  message: false
+  warning: false
+---
+
+Four branches have run pathway tests on this dataset, with different tests, different set
+filters and different FDR families. Read one at a time, their counts cannot be compared: a set
+significant in one and not another may differ in the test, in the set list, or only in how many
+other sets shared its correction. This notebook puts all of them in one long table with the same
+column names, and then compares them where the comparison is fair.
+
+It runs no test of its own. It reads the results of `90_Set_Test_Calibration` and
+`91_Sample_Scores_ssGSEA` from this branch, and snapshots of the other branches' results taken by
+`a_script/92_snapshot_external.R`, each pinned to a commit in `c_data/external/external_manifest.csv`.
+
+```{r setup}
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(readr)
+library(ggplot2)
+here::i_am("03_Pathway_Enrichment/92_Method_Comparison/a_script/92_method_comparison.qmd")
+
+stage <- here("03_Pathway_Enrichment", "92_Method_Comparison")
+out <- file.path(stage, "c_data")
+ext <- file.path(out, "external")
+design <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+control <- design$negative_control
+
+manifest <- read_csv(file.path(ext, "external_manifest.csv"), show_col_types = FALSE)
+manifest |> select(source, owner, pull_request, commit, path, rows)
+```
+
+## One table, one set of names
+
+Every row is one set, one contrast, one method, from one source. The columns mean the same thing
+everywhere:
+
+| Column | Meaning |
+|---|---|
+| `source` | who ran it and where: `diego_90`, `diego_91`, or a snapshot name from the manifest |
+| `method` | `fry`, `camera`, `fgsea`, or `ssGSEA_limma` (ssGSEA scores tested with limma) |
+| `set_id` | `Database|SET_NAME`, the MSigDB name, identical across sources |
+| `n` | measured members the test used |
+| `direction` | `Up` or `Down` |
+| `effect` | fgsea NES, or the ssGSEA score difference; empty for fry and camera, which return none |
+| `p` | the raw p-value, exactly as the source reported it |
+| `padj_reported` | the adjusted p-value exactly as the source reported it |
+| `fdr_family` | what that `padj_reported` was corrected across |
+
+```{r harmonise}
+ours_sets <- read_csv(here("03_Pathway_Enrichment", "90_Set_Test_Calibration", "c_data",
+                           "set_test_results.csv"), show_col_types = FALSE) |>
+  transmute(source = "diego_90", method, contrast, set_id, n, direction,
+            effect = NES, p, padj_reported = padj,
+            fdr_family = "method x contrast x database")
+
+ours_scores <- read_csv(here("03_Pathway_Enrichment", "91_Sample_Scores_ssGSEA", "c_data",
+                             "score_contrast_results.csv"), show_col_types = FALSE) |>
+  transmute(source = "diego_91", method = "ssGSEA_limma", contrast, set_id, n = NA_real_,
+            direction = if_else(diff > 0, "Up", "Down"), effect = diff, p,
+            padj_reported = padj, fdr_family = "contrast x database")
+
+read_ext <- function(name) read_csv(file.path(ext, paste0(name, ".csv.gz")),
+                                    show_col_types = FALSE, guess_max = 1e5)
+
+# PR 11 ran fgsea twice: once per database, and once on all three pooled after a cross-database
+# overlap reduction. They are kept as two sources because their FDR families differ.
+dustyn_pr11_fgsea <- read_ext("dustyn_pr11_fgsea") |>
+  transmute(source = if_else(collection == "combined", "dustyn_pr11_fgsea_pooled",
+                             "dustyn_pr11_fgsea"),
+            method = "fgsea", contrast, set_id = pathway,
+            n = size, direction = if_else(NES > 0, "Up", "Down"), effect = NES, p = pval,
+            padj_reported = padj,
+            fdr_family = if_else(collection == "combined", "contrast (all databases pooled)",
+                                 "contrast x database"))
+
+dustyn_pr11_fry <- read_ext("dustyn_pr11_fry") |>
+  transmute(source = "dustyn_pr11_fry", method = "fry", contrast, set_id, n = NGenes,
+            direction = Direction, effect = NA_real_, p = PValue, padj_reported = FDR,
+            fdr_family = "contrast (all databases pooled)")
+
+dustyn_pr15_fgsea <- read_ext("dustyn_pr15_fgsea") |>
+  transmute(source = "dustyn_pr15_fgsea", method = "fgsea", contrast, set_id, n = size,
+            direction = if_else(NES > 0, "Up", "Down"), effect = NES, p = pval,
+            padj_reported = padj, fdr_family = "contrast (all databases pooled)")
+
+matheus_db <- c("GO:BP" = "GOBP", "Hallmark" = "Hallmark", "Reactome" = "Reactome",
+                "KEGG" = "KEGG_Legacy")
+matheus <- read_ext("matheus_pr13") |>
+  mutate(set_id = paste(matheus_db[collection], gs_name, sep = "|"))
+matheus_pr13 <- bind_rows(
+  transmute(matheus, method = "camera", contrast, set_id, n = n_matched,
+            direction = camera_dir, p = camera_p, padj_reported = camera_fdr),
+  transmute(matheus, method = "fry", contrast, set_id, n = n_matched,
+            direction = fry_dir, p = fry_p, padj_reported = fry_fdr)
+) |>
+  mutate(source = "matheus_pr13", effect = NA_real_,
+         fdr_family = "method x contrast x database", .before = 1)
+
+comparison <- bind_rows(ours_sets, ours_scores, dustyn_pr11_fgsea, dustyn_pr11_fry,
+                        dustyn_pr15_fgsea, matheus_pr13) |>
+  separate_wider_delim(set_id, "|", names = c("database", "pathway"), cols_remove = FALSE) |>
+  mutate(test = paste(source, method, sep = ":")) |>
+  relocate(test, source, method, contrast, set_id, database, pathway)
+
+stopifnot(!anyNA(comparison$p), all(comparison$direction %in% c("Up", "Down")),
+          !anyDuplicated(select(comparison, test, contrast, set_id)))
+comparison |>
+  summarise(sets = n_distinct(set_id), contrasts = n_distinct(contrast),
+            databases = paste(sort(unique(database)), collapse = ", "), .by = test)
+```
+
+The set lists differ by design, not by accident: the floor on measured members is 10 in `diego_*`
+and `dustyn_pr11_*`, 15 with a ceiling of 500 in `dustyn_pr15_fgsea`, and 5 in `matheus_pr13`;
+each branch also removes near-duplicate sets its own way. `matheus_pr13` does not test
+`BFR_vs_HLRT_at_T2`.
+
+## A fair comparison needs the same sets and the same FDR family
+
+Two corrections are made before anything is counted.
+
+- **Same sets.** Only sets that every test ran on, in that contrast, are compared.
+- **Same FDR family.** `padj_reported` is corrected across different numbers of sets in different
+  sources, so it is recomputed as `padj_common`: BH within one test, one contrast and one database,
+  over the shared sets only. This is the only adjusted value used below.
+
+The raw p-value needs neither correction, so it is compared directly.
+
+The pooled fgsea run from PR 11 stays in `comparison_long.csv` but is left out from here on: its
+cross-database overlap reduction drops sets the per-database run keeps, and the per-database run
+is the same test on the same ranking.
+
+```{r common}
+shared_scope <- filter(comparison, source != "dustyn_pr11_fgsea_pooled")
+tests_per_contrast <- shared_scope |> distinct(contrast, test) |> count(contrast, name = "tests")
+common <- shared_scope |>
+  distinct(contrast, set_id, test) |>
+  count(contrast, set_id, name = "tests_with_set") |>
+  inner_join(tests_per_contrast, by = "contrast") |>
+  filter(tests_with_set == tests) |>
+  select(contrast, set_id)
+
+comparison_common <- shared_scope |>
+  semi_join(common, by = c("contrast", "set_id")) |>
+  mutate(padj_common = p.adjust(p, "BH"), .by = c(test, contrast, database))
+
+common |>
+  separate_wider_delim(set_id, "|", names = c("database", "pathway")) |>
+  count(contrast, database, name = "shared_sets") |>
+  pivot_wider(names_from = database, values_from = shared_sets, values_fill = 0L)
+```
+
+## The negative control, for every test
+
+`r control` compares two untrained legs of the same person, so every call here is a false
+positive. Under a calibrated test the p-values are uniform: median near 0.5 and about 5% below
+0.05. This is the table to read before any other, because it says which tests can be believed on
+the interaction.
+
+```{r control}
+control_calibration <- bind_rows(
+  comparison |>
+    filter(contrast == control) |>
+    summarise(sets = n(), sig_reported = sum(padj_reported < params$fdr),
+              median_p = round(median(p), 3), p_below_05 = round(mean(p < 0.05), 3),
+              .by = c(test, source, method)) |>
+    mutate(scope = "all sets the source tested"),
+  comparison_common |>
+    filter(contrast == control) |>
+    summarise(sets = n(), sig_common = sum(padj_common < params$fdr),
+              median_p = round(median(p), 3), p_below_05 = round(mean(p < 0.05), 3),
+              .by = c(test, source, method)) |>
+    mutate(scope = "shared sets only")
+) |>
+  relocate(scope, .after = method) |>
+  arrange(scope, method, source)
+control_calibration
+```
+
+```{r control-histogram}
+#| fig-height: 6
+comparison_common |>
+  filter(contrast == control) |>
+  ggplot(aes(p)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
+  facet_wrap(~test, scales = "free_y", ncol = 3) +
+  labs(x = "set p-value on the negative control (shared sets)", y = "sets") +
+  theme_minimal(base_size = 9)
+```
+
+```{r control-calls}
+comparison_common |>
+  filter(contrast == control, padj_common < params$fdr) |>
+  arrange(padj_common) |>
+  transmute(test, set_id, n, direction, effect = round(effect, 2),
+            padj_common = signif(padj_common, 3))
+```
+
+## Do the same tests agree across branches
+
+The same function on the same set should return the same p-value. Where it does not, the
+difference is in the inputs: which proteins mapped to the set, which weights were used, or which
+fit. This is a reproducibility check, not a finding.
+
+```{r same-method}
+pair_up <- function(a, b) {
+  inner_join(filter(comparison, test == a), filter(comparison, test == b),
+             by = c("contrast", "set_id"), suffix = c("_a", "_b")) |>
+    summarise(
+      pair = paste(a, "vs", b), shared = n(),
+      same_n = round(mean(n_a == n_b, na.rm = TRUE), 3),
+      same_direction = round(mean(direction_a == direction_b), 3),
+      spearman_log_p = round(cor(-log10(p_a), -log10(p_b), method = "spearman"), 3),
+      max_abs_diff_log10_p = signif(max(abs(log10(p_a) - log10(p_b))), 3)
+    )
+}
+same_method <- bind_rows(
+  pair_up("diego_90:fry", "dustyn_pr11_fry:fry"),
+  pair_up("diego_90:fry", "matheus_pr13:fry"),
+  pair_up("diego_90:camera", "matheus_pr13:camera"),
+  pair_up("diego_90:fgsea", "dustyn_pr11_fgsea:fgsea"),
+  pair_up("diego_90:fgsea", "dustyn_pr15_fgsea:fgsea")
+)
+same_method
+```
+
+`diego_90` and `dustyn_pr11_fry` both read the weights from `fit$EList$weights`. `matheus_pr13`
+refits with `dpcDE(sample.weights = TRUE)`, so its weights differ and its p-values should differ a
+little. fgsea's p-values also move between runs and versions because it samples.
+
+## How many sets each test calls, on shared sets
+
+```{r counts}
+call_counts <- comparison_common |>
+  summarise(up = sum(padj_common < params$fdr & direction == "Up"),
+            down = sum(padj_common < params$fdr & direction == "Down"),
+            .by = c(contrast, database, test)) |>
+  mutate(calls = paste0(up, " up / ", down, " down")) |>
+  select(contrast, database, test, calls) |>
+  pivot_wider(names_from = test, values_from = calls) |>
+  arrange(match(contrast, c(control, setdiff(unique(contrast), control))), database)
+call_counts
+```
+
+## Hallmark, side by side
+
+One row per Hallmark set and contrast, one column per test, holding `padj_common` with the
+direction as a sign: `+0.003` is up at FDR 0.003, `-0.02` is down at FDR 0.02. Only rows where at
+least one test calls the set are shown; the CSV holds every row.
+
+```{r hallmark, results="asis"}
+hallmark_side_by_side <- comparison_common |>
+  filter(database == "Hallmark") |>
+  mutate(value = if_else(direction == "Up", 1, -1) * signif(padj_common, 2)) |>
+  select(contrast, pathway, test, value) |>
+  pivot_wider(names_from = test, values_from = value) |>
+  mutate(pathway = sub("^HALLMARK_", "", pathway))
+
+hallmark_side_by_side |>
+  mutate(tests_calling = rowSums(abs(across(-c(contrast, pathway))) < params$fdr,
+                                 na.rm = TRUE)) |>
+  filter(tests_calling > 0) |>
+  arrange(match(contrast, c(control, setdiff(unique(contrast), control))),
+          desc(tests_calling)) |>
+  group_split(contrast) |>
+  walk(\(block) {
+    knitr::kable(select(block, -contrast), caption = block$contrast[1], format = "pipe") |>
+      cat(sep = "\n")
+    cat("\n\n")
+  })
+```
+
+## Export
+
+```{r export}
+# The long tables are compressed; readr, R and Excel's Power Query open .csv.gz directly.
+write_csv(comparison, file.path(out, "comparison_long.csv.gz"))
+write_csv(comparison_common, file.path(out, "comparison_shared_sets.csv.gz"))
+write_csv(control_calibration, file.path(out, "control_calibration.csv"))
+write_csv(same_method, file.path(out, "same_method_agreement.csv"))
+write_csv(call_counts, file.path(out, "call_counts_shared_sets.csv"))
+write_csv(hallmark_side_by_side, file.path(out, "hallmark_side_by_side.csv"))
+
+# The same small tables as one workbook, for readers who check in Excel. The long tables stay
+# in the .csv.gz files; a sheet cannot hold them comfortably.
+writexl::write_xlsx(list(
+  read_me = tibble::tibble(
+    sheet = c("control_calibration", "same_method_agreement", "call_counts_shared_sets",
+              "hallmark_side_by_side", "external_manifest"),
+    what = c("negative control, every test: calls, median p, share of p < 0.05",
+             "same function run in two branches: do n, direction and p agree",
+             "sets called at FDR < 0.05 on the shared sets, BH recomputed per test, contrast, database",
+             "Hallmark padj_common per test; sign is the direction",
+             "which commit and file each snapshot came from")),
+  control_calibration = control_calibration,
+  same_method_agreement = same_method,
+  call_counts_shared_sets = call_counts,
+  hallmark_side_by_side = hallmark_side_by_side,
+  external_manifest = manifest
+), file.path(out, "92_method_comparison.xlsx"))
+tibble(file = list.files(out), bytes = file.size(file.path(out, list.files(out))))
+```
+
+```{r session}
+sessionInfo()
+```

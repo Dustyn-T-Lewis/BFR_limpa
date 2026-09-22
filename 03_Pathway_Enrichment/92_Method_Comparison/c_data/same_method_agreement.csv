@@ -1,0 +1,6 @@
+pair,shared,same_n,same_direction,spearman_log_p,max_abs_diff_log10_p
+diego_90:fry vs dustyn_pr11_fry:fry,5140,1,1,1,6.84e-14
+diego_90:fry vs matheus_pr13:fry,4160,0.998,1,1,0.351
+diego_90:camera vs matheus_pr13:camera,4160,0.998,1,1,0.296
+diego_90:fgsea vs dustyn_pr11_fgsea:fgsea,5035,1,1,0.998,0.928
+diego_90:fgsea vs dustyn_pr15_fgsea:fgsea,5200,1,1,0.997,1.21
