@@ -1,6 +1,6 @@
 # 00 · Input
 
-Study data. Nothing here runs.
+Study data. 
 
 | File | What one row is | Read by |
 |---|---|---|
