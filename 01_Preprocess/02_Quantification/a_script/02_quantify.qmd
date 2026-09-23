@@ -79,7 +79,7 @@ value `dpc.slope=0.7`." The fitted value is carried into a sensitivityrun at the
 The FAQ says a slope set too low makes the analysis more conservative. On this data the reverse
 held when it was last measured: the lower fitted slope gave smaller standard errors and more hits
 than the preset. The preset remains both the documented setting and the cautious one here, but the
-direction, notably, runs against what the documentation predicts.
+direction runs against what the documentation predicts.
 
 ::: {.callout-note}
 The visual fit is not diagnostic. `plotDPC()` draws a curve in *unobserved* intensity

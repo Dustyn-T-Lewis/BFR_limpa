@@ -54,7 +54,7 @@ conservative test.
 
 Compare the between-leg contrasts against `BFR_Pre-HLRT_Pre`, not against the theoretical values.
 That contrast is a true null by construction, so whatever it returns is what a null looks like in
-this design, and it has run conservative here. The honest reading of an empty interaction is that
+this design, and it has run conservative here. An empty interaction therefore means that
 no between-modality difference is detectable under a test that is under-calling, which is weaker
 than saying the two training modes produce equivalent proteomes.
 
