@@ -52,7 +52,7 @@ its ceiling, which is why the other two are reported beside it. All three read t
 histogram, which is plotted next to them: a spike at zero is signal, a slope toward 1 is a
 conservative test.
 
-Compare the between-leg contrasts against `BFR_vs_HLRT_at_T1`, not against the theoretical values.
+Compare the between-leg contrasts against `BFR_Pre-HLRT_Pre`, not against the theoretical values.
 That contrast is a true null by construction, so whatever it returns is what a null looks like in
 this design, and it has run conservative here. The honest reading of an empty interaction is that
 no between-modality difference is detectable under a test that is under-calling, which is weaker
@@ -78,7 +78,7 @@ gets read as a result list whatever the caption says.
 
 ## The control
 
-`BFR_vs_HLRT_at_T1` compares two untrained legs of the same person and should find nothing. Its row
+`BFR_Pre-HLRT_Pre` compares two untrained legs of the same person and should find nothing. Its row
 count is asserted, because a name matching no contrast would otherwise look like a clean control.
 The hit count is printed rather than asserted: if two untrained legs ever differ, that belongs in
 the report, not in a halted render. Results are written before the check runs, so a failure leaves
