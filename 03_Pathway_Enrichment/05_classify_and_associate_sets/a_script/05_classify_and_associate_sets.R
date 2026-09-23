@@ -327,15 +327,18 @@ draw_roc_figure <- function(task_name) {
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
       labs(
         x = "1 - specificity", y = "sensitivity", title = spec$label,
-        subtitle = paste0(
-          "strongest ", per_database, " per collection of ",
-          sum(set_auc$task == task_name & set_auc$p_paired < 0.05),
-          " sets at nominal p    |    ", length(spec$positive), " paired ", spec$unit,
-          "    |    red: higher in ", spec$favours, "    blue: lower in ", spec$favours
+        subtitle = sprintf(
+          "singscore per set, %d paired %s, AUC with direction fixed", length(spec$positive),
+          spec$unit
         ),
-        caption = paste0(
-          "AUC from pROC with direction fixed; p from the paired Wilcoxon signed-rank test.\n",
-          chance_line
+        caption = sprintf(
+          paste(
+            "Strongest %d sets per collection of %d reaching nominal p. Red separates higher in",
+            "%s, blue lower. Shading is area under the curve, dashed line chance.",
+            "p from the paired Wilcoxon signed-rank test. %s"
+          ),
+          per_database, sum(set_auc$task == task_name & set_auc$p_paired < 0.05),
+          spec$favours, chance_line
         )
       ),
     paste0("roc_", task_name), nrow(hits), columns
@@ -391,14 +394,16 @@ draw_association_figure <- function(which_analysis, title, subtitle) {
       labs(
         x = "change in set score, T2 - T1, one point per leg",
         y = "change in phenotype", title = title,
-        subtitle = paste0(
-          "strongest ", per_database, " per collection of ",
+        subtitle = sprintf("Spearman, %s analysis, %s", which_analysis, subtitle),
+        caption = sprintf(
+          paste(
+            "Strongest %d set-outcome pairs per collection of %d reaching nominal p.",
+            "Lines are fitted within each arm; the header r is the %s correlation",
+            "that selected the panel. %s"
+          ),
+          per_database,
           sum(set_association$analysis == which_analysis & set_association$p < 0.05),
-          " set-outcome pairs at nominal p    |    ", subtitle
-        ),
-        caption = paste0(
-          "Lines are fitted within each arm; the header r is the ", which_analysis,
-          " correlation that selected the panel.\n", chance_line
+          which_analysis, chance_line
         )
       ),
     paste0("association_", which_analysis), nrow(hits), columns,
@@ -436,12 +441,15 @@ save_faceted(
     scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
-      title = "Each collection against its own chance expectation",
+      title = "Nominal hits relative to chance, by collection",
       subtitle = sprintf(
-        "Training clears chance in all %d; every between-leg task sits at or below it",
-        nrow(collection_sizes)
+        "paired Wilcoxon per set, %d collections, uncorrected p", nrow(collection_sizes)
       ),
-      caption = "Nominal p from the paired Wilcoxon signed-rank test. A ratio of 1 is chance."
+      caption = paste(
+        "Bar length is observed nominal hits divided by the count that collection returns under",
+        "the null. Red clears 1, grey does not. Labels give observed of tested.",
+        "Table: c_data/05_classify_and_associate_sets.xlsx, chance_expectation sheet."
+      )
     ) +
     theme(panel.grid.major.y = element_blank()),
   "chance_by_database", n_distinct(chance_figure$comparison), 1,
@@ -504,4 +512,10 @@ saveRDS(
   file.path(out, "set_results.rds"),
   compress = "xz"
 )
-message("wrote 05_classify_and_associate_sets.xlsx (", length(sheets) + 1, " sheets)")
+combined <- file.path(figure_dir, "05_classify_and_associate_sets_figures.pdf")
+pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
+qpdf::pdf_combine(sort(pages), combined)
+message(
+  "wrote 05_classify_and_associate_sets.xlsx (", length(sheets) + 1, " sheets) and a ",
+  length(pages), "-page figure PDF"
+)

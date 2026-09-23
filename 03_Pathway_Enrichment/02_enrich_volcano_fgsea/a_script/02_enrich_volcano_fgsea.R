@@ -146,3 +146,8 @@ for (contrast in c("BFR_Post-Pre", "HLRT_Post-Pre")) {
 drawn <- sort(basename(list.files(figure_dir, pattern = "[.]png$")))
 print(tibble(file = drawn))
 stopifnot(length(drawn) == length(plot_order) + 2)
+
+combined <- file.path(figure_dir, "02_enrich_volcano_fgsea_figures.pdf")
+pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
+qpdf::pdf_combine(sort(pages), combined)
+message("wrote a ", length(pages), "-page figure PDF")
