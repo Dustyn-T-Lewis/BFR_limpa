@@ -16,10 +16,6 @@ quarto render 02_Differential_Expression/02_Differential/a_script/02_differentia
 quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd       --output-dir ../b_reports
 ```
 
-`03_Phenotype` asks a question the contrasts cannot: not whether a protein changed, but whether
-its change tracks how much the muscle changed. Nothing survives BH across 24,336 correlations and
-every nominal count sits within what 3,042 tests return under the null, which is a clean negative
-at this sample size.
 
 ## The five comparisons
 
@@ -31,8 +27,8 @@ at this sample size.
 | `HLRT_Post-Pre` | descriptive | the other leg over time | what conventional training did |
 | `BFR_Post-HLRT_Post` | descriptive | two legs after training | leg difference at the end |
 
-`Modality_x_Time_Interaction` equals `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so these are not five
-independent questions. Report the primary and the control as the result; the other three describe
+`Modality_x_Time_Interaction` equals `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so
+these are not five independent questions. Report the primary and the control as the result; the other three describe
 what happened on the way.
 
 ## Three things that matter
@@ -49,8 +45,3 @@ participant.
 **The interaction has returned no hits under every variant tried.** That is a statement about what
 this study could detect, not a demonstration that the two training modes act alike. `02_Differential`
 prints the effect size it had 80% power to find, and the two numbers have to be quoted together.
-
-`02_Differential/README.md` covers what comes out, how the null contrasts are read, and why
-Benjamini-Hochberg runs within each contrast rather than across the five.
-`03_Phenotype/README.md` covers the phenotype correlations and why classification is left to
-`02_Differential`.

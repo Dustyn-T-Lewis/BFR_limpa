@@ -51,14 +51,12 @@ manifest <- tibble(
 
 catalog <- set_catalog |>
   filter(qualifies) |>
-  select(set_id, database, pathway, theme, measured_size)
+  select(set_id, database, pathway, measured_size)
 stopifnot(setequal(catalog$set_id, rownames(set_score)))
 set_score <- set_score[catalog$set_id, ]
 collection_sizes <- count(catalog, database)
 message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
 
-# The same labels the volcanoes and dot plots carry, with the line breaks flattened for a strip.
-clean_name <- function(x) gsub("\n", " ", enrichVolcano::ev_clean_label(x))
 
 # ---- the five classification tasks -------------------------------------------------------
 
@@ -111,7 +109,7 @@ tasks <- list(
 )
 
 # pROC::roc() auto-orients by default: on a case whose true directional AUC is 0.194 it returns
-# 0.806. direction = "<" pins it, without which every below-chance theme flips and the red/blue
+# 0.806. direction = "<" pins it, without which every below-chance set flips and the red/blue
 # encoding on the figures inverts silently.
 fit_roc <- function(values, spec) {
   labels <- rep(c("neg", "pos"), c(length(spec$negative), length(spec$positive)))
@@ -304,7 +302,7 @@ draw_roc_figure <- function(task_name) {
       # direction rather than a failure, so it is coloured instead of hidden.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = paste0(
-        database, ": ", stringr::str_trunc(clean_name(pathway), 32),
+        database, ": ", enrichVolcano::ev_clean_label(pathway),
         "\nAUC ", sprintf("%.2f", auc), "    p = ", signif(p_paired, 2)
       )
     )
@@ -365,7 +363,7 @@ draw_association_figure <- function(which_analysis, title, subtitle) {
       mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
     tibble(
       panel = paste0(
-        database, ": ", stringr::str_trunc(clean_name(pathway), 28), "   vs   ", outcome,
+        database, ": ", enrichVolcano::ev_clean_label(pathway), "   vs   ", outcome,
         "\nr = ", sprintf("%+.2f", r), "    p = ", signif(p, 2)
       ),
       d_score = delta_set[set_id, ], d_outcome = leg_phenotype[[outcome]],
@@ -484,7 +482,7 @@ descriptions <- c(
   set_auc = "How well each set separates each task. AUC from ranks, p from paired test.",
   set_association = "Set against phenotype change: pooled, then within participant.",
   set_by_arm = "The same correlation computed inside BFR and inside high load, descriptive.",
-  set_catalog = "Every tested set with its collection, GO Slim theme and training NES.",
+  set_catalog = "Every tested set with its collection and training NES.",
   set_scores = "The set by sample score matrix the analyses above were computed on.",
   input_manifest = "Which files were read and their checksums.",
   package_versions = "Package versions at the time of the run."
