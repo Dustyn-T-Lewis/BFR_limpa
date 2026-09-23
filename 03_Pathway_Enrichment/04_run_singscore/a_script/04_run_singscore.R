@@ -187,7 +187,7 @@ writexl::write_xlsx(
 readr::write_csv(score_table, file.path(out, "set_scores.csv"))
 combined <- file.path(figures, "04_run_singscore_figures.pdf")
 pages <- setdiff(list.files(figures, "[.]pdf$", full.names = TRUE), combined)
-qpdf::pdf_combine(sort(pages), combined)
+invisible(qpdf::pdf_combine(sort(pages), combined))
 message(
   "wrote singscore.rds, 04_run_singscore.xlsx, set_scores.csv and a ",
   length(pages), "-page figure PDF"

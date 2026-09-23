@@ -5,8 +5,8 @@ Protein volcanoes with the surviving pathways ringed. Computes nothing.
 | | |
 |---|---|
 | **Script** | `a_script/02_enrich_volcano_fgsea.R` |
-| **Reads** | `set_tests.rds`, `design.rds` |
-| **Writes** | `b_reports/`, six PNGs and six PDFs |
+| **Reads** | `set_tests.rds` |
+| **Writes** | `b_reports/`, six PNGs, six PDFs and a six-page figure PDF |
 
 Needs `enrichVolcano`, which is not on CRAN.
 

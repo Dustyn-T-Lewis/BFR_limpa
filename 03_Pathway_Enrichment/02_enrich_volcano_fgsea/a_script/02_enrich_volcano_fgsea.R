@@ -15,10 +15,7 @@ stage <- here("03_Pathway_Enrichment", "02_enrich_volcano_fgsea")
 figure_dir <- file.path(stage, "b_reports")
 dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
 
-inputs <- c(
-  set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds",
-  design = "02_Differential_Expression/01_Design/c_data/design.rds"
-)
+inputs <- c(set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds")
 paths <- map_chr(inputs, here)
 if (!all(file.exists(paths))) {
   stop(
@@ -27,7 +24,6 @@ if (!all(file.exists(paths))) {
   )
 }
 fg <- readRDS(paths[["set_tests"]])
-d <- readRDS(paths[["design"]])
 
 # Keep exact p-values in the export; bound only the logarithm for plotting.
 protein_results <- mutate(fg$protein_results, plot_p = pmax(P.Value, .Machine$double.xmin))
@@ -149,5 +145,5 @@ stopifnot(length(drawn) == length(plot_order) + 2)
 
 combined <- file.path(figure_dir, "02_enrich_volcano_fgsea_figures.pdf")
 pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-qpdf::pdf_combine(sort(pages), combined)
+invisible(qpdf::pdf_combine(sort(pages), combined))
 message("wrote a ", length(pages), "-page figure PDF")

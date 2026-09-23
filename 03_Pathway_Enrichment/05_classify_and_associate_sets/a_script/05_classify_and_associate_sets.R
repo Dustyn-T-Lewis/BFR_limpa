@@ -410,14 +410,12 @@ draw_association_figure <- function(which_analysis, title, subtitle) {
     panel = 3.1, header = 2.4
   )
 }
-association_drawn <- c(
-  pooled = draw_association_figure(
-    "pooled", "Training response against phenotype, all legs", "65 legs, both arms pooled"
-  ),
-  differential = draw_association_figure(
-    "differential", "BFR minus high load, within participant", "32 paired participants"
-  )
-)
+invisible(draw_association_figure(
+  "pooled", "Training response against phenotype, all legs", "65 legs, both arms pooled"
+))
+invisible(draw_association_figure(
+  "differential", "BFR minus high load, within participant", "32 paired participants"
+))
 
 # Every collection with a nominal hit is represented on each figure that was drawn.
 stopifnot(all(map_lgl(drawn_tasks, \(task_name) {
@@ -514,7 +512,7 @@ saveRDS(
 )
 combined <- file.path(figure_dir, "05_classify_and_associate_sets_figures.pdf")
 pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-qpdf::pdf_combine(sort(pages), combined)
+invisible(qpdf::pdf_combine(sort(pages), combined))
 message(
   "wrote 05_classify_and_associate_sets.xlsx (", length(sheets) + 1, " sheets) and a ",
   length(pages), "-page figure PDF"
