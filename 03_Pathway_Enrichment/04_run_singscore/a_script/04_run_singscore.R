@@ -1,0 +1,169 @@
+# Score every sample on every set. singscore ranks each sample's proteins and scores sets
+# against those ranks, so a score is rank-based and sample-independent: it does not move when
+# the cohort changes, which is what a paired within-participant design needs. No p-value, and
+# it never sees the contrast. The matrix is what 04_singscore_pheno_associations consumes.
+
+suppressPackageStartupMessages({
+  library(here)
+  library(dplyr)
+  library(tibble)
+  library(purrr)
+  library(ggplot2)
+})
+
+out <- here("03_Pathway_Enrichment", "04_run_singscore", "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+
+inputs <- c(
+  gene_sets = "03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds",
+  proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds"
+)
+paths <- map_chr(inputs, here)
+if (!all(file.exists(paths))) {
+  stop(
+    "Run 00_build_gene_sets first. Missing: ",
+    paste(inputs[!file.exists(paths)], collapse = ", ")
+  )
+}
+gs <- readRDS(paths[["gene_sets"]])
+proteins <- readRDS(paths[["proteins"]])
+manifest <- tibble(
+  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+)
+
+gene_map <- filter(gs$protein_map, selected)
+stopifnot(
+  identical(gene_map$protein, intersect(gene_map$protein, rownames(proteins$E))),
+  !anyDuplicated(gene_map$gene)
+)
+
+# Rows become gene symbols because that is the namespace the sets are keyed on.
+gene_matrix <- proteins$E[gene_map$protein, ]
+rownames(gene_matrix) <- gene_map$gene
+ranks <- singscore::rankGenes(gene_matrix)
+scored <- singscore::multiScore(ranks, upSetColc = gs$sets)
+scores <- scored$Scores
+stopifnot(
+  identical(rownames(scores), names(gs$sets)),
+  identical(colnames(scores), colnames(proteins$E))
+)
+message("scores: ", nrow(scores), " sets x ", ncol(scores), " samples")
+
+# Spread across sets within a sample is set composition; spread across samples within a set is
+# what the phenotype analysis has to work with, so both are recorded.
+score_summary <- tibble(
+  sets = nrow(scores), samples = ncol(scores),
+  min = round(min(scores), 4), max = round(max(scores), 4),
+  mean = round(mean(scores), 4),
+  mean_sd_across_sets = round(mean(apply(scores, 2, sd)), 4),
+  mean_sd_across_samples = round(mean(apply(scores, 1, sd)), 4)
+)
+print(score_summary)
+
+# Dispersion is the spread of a set's member ranks within one sample: a low value means the
+# members sit together in that sample's ranking, a high one that they are scattered. It comes
+# back from multiScore beside the scores, so the cohort view costs no extra call.
+set_spread <- gs$set_catalog |>
+  filter(qualifies) |>
+  transmute(set_id, database) |>
+  mutate(
+    score = rowMeans(scores[set_id, ]),
+    dispersion = rowMeans(scored$Dispersions[set_id, ])
+  )
+collection_spread <- set_spread |>
+  summarise(
+    sets = n(), median_score = round(median(score), 4),
+    median_dispersion = round(median(dispersion), 1), .by = database
+  )
+print(as.data.frame(collection_spread))
+
+# Participant identity dominates the raw scores, which is why the phenotype analysis works on
+# the within-leg change and never on the raw value.
+components <- prcomp(t(scores), scale. = FALSE)
+variance <- summary(components)$importance[2, 1:4]
+targets <- proteins$targets[match(rownames(components$x), proteins$targets$sample_id), ]
+participant_share <- map_dbl(1:2, function(i) {
+  terms <- summary(aov(components$x[, i] ~ targets$participant))[[1]]
+  terms[1, 2] / sum(terms[, 2])
+})
+structure_check <- tibble(
+  component = paste0("PC", 1:4),
+  variance_explained = round(as.numeric(variance), 3),
+  participant_share = c(round(participant_share, 3), NA, NA)
+)
+print(structure_check)
+
+# singscore's own two diagnostics, on one set named in advance rather than picked from the
+# results. Dispersion says whether a sample's score rests on a tight block of ranks or a
+# scattered one; the rank density says where the set's proteins sit in one sample's ranking.
+# singscore ships plotDispersion and plotRankDensity, both of which draw one signature at a
+# time. Reporting here is at cohort scale, so these are plain ggplots over the two matrices
+# multiScore already returned.
+figures <- here("03_Pathway_Enrichment", "04_run_singscore", "b_reports")
+dir.create(figures, recursive = TRUE, showWarnings = FALSE)
+ggsave(
+  file.path(figures, "01_score_dispersion.png"),
+  ggplot(set_spread, aes(score, dispersion, colour = database)) +
+    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey80") +
+    geom_point(alpha = 0.4, size = 0.8) +
+    scale_colour_brewer(palette = "Dark2", name = NULL) +
+    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+    labs(
+      x = "mean score across samples", y = "mean dispersion across samples",
+      title = "Every set scored, by collection"
+    ) +
+    theme_minimal(base_size = 9),
+  width = 6.5, height = 4.5, dpi = 200, bg = "white"
+)
+
+group_scores <- tibble(
+  group = rep(proteins$targets$group[match(colnames(scores), proteins$targets$sample_id)],
+    each = nrow(scores)
+  ),
+  score = as.vector(scores)
+)
+ggsave(
+  file.path(figures, "02_score_distribution.png"),
+  ggplot(group_scores, aes(score, group)) +
+    geom_violin(fill = "grey85", colour = NA) +
+    geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.3) +
+    labs(
+      x = "singscore", y = NULL,
+      title = "Score distribution over all sets, by study group"
+    ) +
+    theme_minimal(base_size = 9),
+  width = 6.5, height = 3.5, dpi = 200, bg = "white"
+)
+message("wrote 2 cohort figures")
+
+packages <- c("here", "limpa", "singscore", "dplyr", "purrr", "ggplot2")
+versions <- tibble(
+  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
+)
+score_table <- rownames_to_column(as.data.frame(scores), "set_id")
+
+saveRDS(
+  list(
+    scores = scores, score_summary = score_summary, structure_check = structure_check,
+    collection_spread = collection_spread,
+    provenance = list(
+      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
+      inputs = manifest, packages = versions
+    )
+  ),
+  file.path(out, "singscore.rds"),
+  compress = "xz"
+)
+writexl::write_xlsx(
+  list(
+    score_summary = score_summary,
+    collection_spread = collection_spread,
+    structure_check = structure_check,
+    set_scores = score_table,
+    input_manifest = manifest,
+    package_versions = versions
+  ),
+  file.path(out, "04_run_singscore.xlsx")
+)
+readr::write_csv(score_table, file.path(out, "set_scores.csv"))
+message("wrote singscore.rds, 04_run_singscore.xlsx and set_scores.csv")
