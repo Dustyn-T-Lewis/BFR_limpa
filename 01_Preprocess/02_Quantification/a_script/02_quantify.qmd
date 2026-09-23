@@ -15,10 +15,9 @@ execute:
   message: false
 ---
 
-Half of a DIA matrix is empty: some faint precursors go missing more often which limpa
-can handle. `dpc()` fits that as a curve, and `dpcQuant()` uses it to give every
-protein a value in every sample without imputing anything. This stage refers to limpa's
-vignette sequence.
+Half of a DIA matrix is empty, and fainter precursors go missing more often. `dpc()` fits that as
+a curve, and `dpcQuant()` uses it to give every protein a value in every sample without imputing
+anything. This stage follows limpa's vignette sequence.
 
 ```{r setup}
 library(here)
@@ -69,17 +68,16 @@ if `model='on'"*, so it does nothing here and the subsample supplies the robustn
 
 The fit comes out at `r round(dpcest$dpc[2], 3)`, below the 0.7-to-0.9 band the FAQ calls typical
 for DIA-NN searched with match-between-runs, though inside the 0.1-to-1.0 range it calls usable.
-The vignette notes the slope comes out low when peptides vary a lot, which is what our 
-within-subject design with heavy missingness might produce.
+The vignette notes the slope comes out low when peptides vary a lot, which a within-subject design
+with heavy missingness might produce.
 
-Quantification therefore uses a preset 0.7, which is the rule limpa's FAQ suggests: "If `dpcCN()` 
-doesn't give a value in that range, it would be reasonable to run `dpcQuant()` with a preset 
-value `dpc.slope=0.7`." The fitted value is carried into a sensitivityrun at the end. 
+Quantification therefore uses the preset 0.7 that limpa's FAQ suggests: "If `dpcCN()` doesn't give
+a value in that range, it would be reasonable to run `dpcQuant()` with a preset value
+`dpc.slope=0.7`." The fitted value is carried into a sensitivity run at the end.
 
 The FAQ says a slope set too low makes the analysis more conservative. On this data the reverse
 held when it was last measured: the lower fitted slope gave smaller standard errors and more hits
-than the preset. The preset remains both the documented setting and the cautious one here, but the
-direction runs against what the documentation predicts.
+than the preset. The preset remains the documented setting and, here, the cautious one.
 
 ::: {.callout-note}
 The visual fit is not diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
@@ -93,12 +91,12 @@ Judge the slope.
 posterior that scores observed values by squared residual and missing values by their DPC
 probability. The returned `$other$standard.error` is why this project uses limpa: `dpcDE()`
 reads it as a precision weight, so a protein reconstructed largely from missing precursors
-gets a "wide" value. Handing `$E` to `lmFit()` discards that and treats every
-protein as equally reliable.
+gets a wide standard error. Handing `$E` to `lmFit()` discards that and treats every protein as
+equally reliable.
 
 That takes about 100 minutes, so it lives in `a_script/02_quantify_run.R` rather than here.
-This notebook loads what the script wrote and nothing more, so a render doesn't begin a long run 
-by accident. Rerun the script by hand when the precursor matrix changes.
+This notebook loads what the script wrote, so a render doesn't begin a long run by accident.
+Rerun the script by hand when the precursor matrix changes.
 
 ```{r quantify}
 if (!file.exists(primary_file)) {
@@ -112,13 +110,13 @@ proteins <- readRDS(primary_file)$object
 
 `r format(nrow(proteins), big.mark = ",")` protein groups from
 `r format(nrow(y), big.mark = ",")` precursors. The matrix has no missing values; what varies
-is how "certain" each value is.
+is each value's standard error.
 
 ## Detection filter
 
-`filterByDetection()` fixes the order: it runs after `dpcQuant()` and before DE, and returns 
-a logical vector. For a small experiment the help suggests setting `n.samples` to the smallest 
-group size. Here that is `BFR_T2` with 32 samples, one short because S06_L_T2 is missing.
+`filterByDetection()` runs after `dpcQuant()` and before DE, and returns a logical vector.
+For a small experiment the help suggests setting `n.samples` to the smallest group size.
+Here that is `BFR_T2` with 32 samples, one short because S06_L_T2 is missing.
 
 The function counts detections across all samples and keeps a protein when that count clears 
 the threshold, so the smallest group size sets a cohort-wide bar rather than guaranteeing 
@@ -143,9 +141,11 @@ proteins back above 0.05 on the two training contrasts.
 ## Normalisation
 
 limpa places normalisation after `dpcQuant()` and before `dpcDE()` and performs none itself,
-because DIA-NN has usually normalised the precursors already. DIA-NN normalised the precursors, but that does not mean protein roll-up is normalized.
+because DIA-NN has usually normalised the precursors already. Normalised precursors do not make a
+normalised protein roll-up.
 
-The spread in per-sample medians is what a single per-sample shift would fix... but not the MA curve width which cyclic loess may help with. Comparing a sample against the average of all samples gives a
+A single per-sample shift fixes the spread in per-sample medians but not the MA curve width, which
+cyclic loess may help with. Comparing a sample against the average of all samples gives a
 difference per protein, and fitting that against abundance gives a curve. A flat curve means the
 sample disagrees by a constant. A curve that travels means the disagreement depends on abundance.
 Both are reported before and after.
@@ -164,7 +164,8 @@ after <- c(ma_width = median(ma_width(proteins$E)), median_spread = spread(prote
 round(rbind(before, after), 3)
 ```
 
-The curvature is unrelated to treatment or timepoint, so cyclic loess is not absorbing the effect being tested. `proteins.rds` is written after this, so it is the matrix the model is fitted to.
+The curvature is unrelated to treatment or timepoint, so cyclic loess is not absorbing the effect
+being tested. `proteins.rds` is written after this step and is the matrix the model is fitted to.
 
 ::: {.callout-warning}
 ## The standard errors stay on the old scale
@@ -193,9 +194,9 @@ summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
 with a high mean standard error and few observations is one whose estimate is drawn from DPC.
 
 Points are coloured by participant, and the variance each factor explains in the leading dimension
-is below the plot. 32/33 participants contribute all four cells, so between-participant variation 
-dominates, the participant term in the design removes it. A sample sitting far from its own participant 
-is worth investigating. No group structure here is expected.
+is below the plot. 32 of 33 participants contribute all four cells, so between-participant
+variation dominates; the participant term in the design removes it. Check any sample sitting far
+from its own participant. No group structure is expected here.
 
 ```{r mds}
 #| fig-height: 5
@@ -216,7 +217,8 @@ round(c(
 Quantification is repeated against the fitted curve and compared with the primary run, with the
 same detection filter and normalisation applied to both. The primary run passes `dpc.slope = 0.7` 
 and lets limpa fit the rest, while the sensitivity run hands `dpcQuant()` the whole curve `dpc()` 
-estimated, intercept included. `dpcDE()` reads the standard errors as precision weights, so whichever run carries the larger mean is the more conservative setting.
+estimated, intercept included. `dpcDE()` reads the standard errors as precision weights, so
+whichever run carries the larger mean standard error is the more conservative setting.
 
 The median absolute difference in protein abundance follows the table. It measures how far values
 move, not whether that movement survives a contrast: every comparison here is within one
@@ -254,7 +256,7 @@ computing it costs about another 100 minutes. To produce it once:
 Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 ```
 
-After that it loads exactly as the primary run does.
+After that it loads as the primary run does.
 
 Refitting the contrasts under each slope is separate and not done here; the counts produced are 
 recorded in this stage's README.
