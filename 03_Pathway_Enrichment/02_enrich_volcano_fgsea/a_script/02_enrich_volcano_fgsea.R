@@ -119,11 +119,11 @@ make_volcano <- function(contrast, rank_by = "fdr") {
     )
 }
 save_volcano <- function(volcano, name) {
-  for (extension in c("png", "pdf")) {
+  walk(c("png", "pdf"), \(extension) {
     ggsave(file.path(figure_dir, paste0(name, ".", extension)),
       plot = volcano, width = 7, height = 6.5, units = "in", dpi = 300, bg = "white"
     )
-  }
+  })
 }
 
 # The primary question first, then the two training responses and the between-treatment

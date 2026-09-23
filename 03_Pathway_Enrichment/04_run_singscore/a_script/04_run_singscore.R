@@ -101,8 +101,14 @@ print(structure_check)
 # multiScore already returned.
 figures <- here("03_Pathway_Enrichment", "04_run_singscore", "b_reports")
 dir.create(figures, recursive = TRUE, showWarnings = FALSE)
-ggsave(
-  file.path(figures, "01_score_dispersion.png"),
+save_figure <- function(figure, name, height) {
+  walk(c("png", "pdf"), \(extension) {
+    ggsave(file.path(figures, paste0(name, ".", extension)), figure,
+      width = 6.5, height = height, dpi = 200, bg = "white"
+    )
+  })
+}
+save_figure(
   ggplot(set_spread, aes(score, dispersion, colour = database)) +
     geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey80") +
     geom_point(alpha = 0.4, size = 0.8) +
@@ -113,7 +119,8 @@ ggsave(
       title = "Every set scored, by collection"
     ) +
     theme_minimal(base_size = 9),
-  width = 6.5, height = 4.5, dpi = 200, bg = "white"
+  "01_score_dispersion",
+  height = 4.5
 )
 
 group_scores <- tibble(
@@ -122,8 +129,7 @@ group_scores <- tibble(
   ),
   score = as.vector(scores)
 )
-ggsave(
-  file.path(figures, "02_score_distribution.png"),
+save_figure(
   ggplot(group_scores, aes(score, group)) +
     geom_violin(fill = "grey85", colour = NA) +
     geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.3) +
@@ -132,7 +138,8 @@ ggsave(
       title = "Score distribution over all sets, by study group"
     ) +
     theme_minimal(base_size = 9),
-  width = 6.5, height = 3.5, dpi = 200, bg = "white"
+  "02_score_distribution",
+  height = 3.5
 )
 message("wrote 2 cohort figures")
 

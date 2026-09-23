@@ -184,6 +184,13 @@ themed_hits <- set_tests |>
 # its line breaks flattened because these sit on an axis.
 figure_root <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "b_reports")
 flat_label <- function(x) gsub("\n", " ", enrichVolcano::ev_clean_label(x))
+save_figure <- function(figure, file, width, height) {
+  walk(c("png", "pdf"), \(extension) {
+    ggsave(paste0(file, ".", extension), figure,
+      width = width, height = height, dpi = 200, bg = "white"
+    )
+  })
+}
 shown <- c("BFR_Post-Pre", "HLRT_Post-Pre", "Modality_x_Time_Interaction", "BFR_Post-HLRT_Post")
 survivors <- set_tests |>
   filter(method == "fgsea", padj < 0.05, main, contrast %in% shown)
@@ -207,7 +214,7 @@ draw_dotplot <- function(rows, colour_by, file) {
       name = expression(-log[10] ~ FDR)
     )
   }
-  ggsave(file, figure, width = 7.5, height = 1.6 + 0.22 * nrow(top), dpi = 200, bg = "white")
+  save_figure(figure, file, width = 7.5, height = 1.6 + 0.22 * nrow(top))
 }
 
 collections <- unique(gs$set_catalog$database[gs$set_catalog$qualifies])
@@ -220,7 +227,7 @@ for (db in c(collections, "all_db")) {
     draw_dotplot(
       mutate(filter(rows, contrast == cn), `-log10 FDR` = -log10(padj)),
       if (db == "all_db") "database" else "-log10 FDR",
-      file.path(dir, paste0("01_dotplot_", cn, ".png"))
+      file.path(dir, paste0("01_dotplot_", cn))
     )
   }
   message("drew ", db, ": ", length(drawn), " contrasts")
@@ -235,15 +242,15 @@ collapse_effect <- set_tests |>
     stage = factor(stage, c("before", "after")),
     contrast = factor(contrast, levels = shown)
   )
-ggsave(
-  file.path(figure_root, "all_db", "02_collapse_before_after.png"),
+save_figure(
   ggplot(collapse_effect, aes(stage, sets, fill = database)) +
     geom_col(position = "dodge") +
     facet_wrap(~contrast, scales = "free_y", nrow = 1) +
     scale_fill_brewer(palette = "Dark2", name = NULL) +
     labs(x = NULL, y = "significant sets", title = "collapsePathways removes redundancy only") +
     theme_minimal(base_size = 9),
-  width = 10, height = 3, dpi = 200, bg = "white"
+  file.path(figure_root, "all_db", "02_collapse_before_after"),
+  width = 10, height = 3
 )
 
 packages <- c("here", "limma", "fgsea", "dplyr", "purrr", "enrichVolcano")

@@ -13,7 +13,8 @@ decided once.
 ## The freeze
 
 The first run fetches four collections through `msigdbr` and writes a snapshot with an md5 beside
-it. Every run after that reads the snapshot and verifies the checksum, needing neither the network
+it. GO Slim is the fifth collection in the table below and is built here from those four rather
+than fetched, so it needs no snapshot of its own. Every run after that reads the snapshot and verifies the checksum, needing neither the network
 nor `msigdbr`. The filename carries the release and the collection list.
 
 Do not rebuild it casually. Restore the RDS and its checksum together when a check fails, and move

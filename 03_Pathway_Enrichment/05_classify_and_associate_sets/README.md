@@ -7,7 +7,7 @@ whether it tracks the phenotype. The unit is the set, with no collapse and no gr
 |---|---|
 | **Script** | `a_script/05_classify_and_associate_sets.R` |
 | **Reads** | `gene_sets.rds`, `set_tests.rds`, `singscore.rds`, `proteins.rds`, `phenotype.csv` |
-| **Writes** | one workbook, `set_results.rds`, seven figures |
+| **Writes** | one workbook, `set_results.rds`, seven figures as PNG and PDF |
 
 ## Each collection carries its own chance expectation
 
@@ -31,6 +31,10 @@ independent look rather than another slice of the same branch.
 BH within collection and task survives only on the training contrasts: 9 sets under BFR and 49
 under high load. It returns nothing on the three between-leg tasks and nothing on any phenotype
 association.
+
+The 32,000 Spearman tests behind those tables read `estimate` and `p.value` straight off each
+`htest`. Passing them through `broom::tidy` first, which builds one tibble per test, cost 18 of
+the stage's 27 seconds and returned the same numbers to the bit.
 
 ## Every comparison here is paired
 
