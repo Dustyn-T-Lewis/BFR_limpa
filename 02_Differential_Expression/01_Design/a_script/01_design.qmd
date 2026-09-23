@@ -98,7 +98,7 @@ contrasts[rowSums(abs(contrasts)) > 0, ]
 The five carry three different roles, and the manuscript should read them that way. `Modality_x_Time_Interaction`
 is the **primary** comparison and the question the study was designed to answer.
 `BFR_Pre-HLRT_Pre` is the **negative control**: two legs of one person before either was trained,
-so it must find nothing. The remaining three are **descriptive**. `interaction` equals
+so it must find nothing. The remaining three are **descriptive**. `Modality_x_Time_Interaction` equals
 `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so these are not five independent
 questions.
 

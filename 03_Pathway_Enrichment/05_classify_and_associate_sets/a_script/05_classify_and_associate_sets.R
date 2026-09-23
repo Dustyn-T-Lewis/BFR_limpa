@@ -92,19 +92,19 @@ tasks <- list(
   pre_vs_post_HLRT = list(
     matrix = "score", positive = filter(legs, treatment == "HLRT")$T2,
     negative = filter(legs, treatment == "HLRT")$T1,
-    label = "Pre to post, HL", favours = "post", unit = "legs"
+    label = "Pre to post, HLRT", favours = "post", unit = "legs"
   ),
   baseline_BFR_vs_HLRT = list(
     matrix = "score", positive = baseline$BFR, negative = baseline$HLRT,
-    label = "Baseline BFR vs HL (control)", favours = "BFR", unit = "participants"
+    label = "Baseline BFR vs HLRT (control)", favours = "BFR", unit = "participants"
   ),
   post_BFR_vs_HLRT = list(
     matrix = "score", positive = post$BFR, negative = post$HLRT,
-    label = "Post BFR vs HL", favours = "BFR", unit = "participants"
+    label = "Post BFR vs HLRT", favours = "BFR", unit = "participants"
   ),
   delta_BFR_vs_HLRT = list(
     matrix = "delta", positive = delta_pairs$BFR, negative = delta_pairs$HLRT,
-    label = "Change, BFR vs HL", favours = "BFR", unit = "participants"
+    label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
   )
 )
 
@@ -412,7 +412,7 @@ invisible(draw_association_figure(
   "pooled", "Training response against phenotype, all legs", "65 legs, both arms pooled"
 ))
 invisible(draw_association_figure(
-  "differential", "BFR minus high load, within participant", "32 paired participants"
+  "differential", "BFR minus HLRT, within participant", "32 paired participants"
 ))
 
 # Every collection with a nominal hit is represented on each figure that was drawn.
@@ -481,7 +481,7 @@ descriptions <- c(
   chance_expectation = "Nominal hits against chance, per collection. Read this first.",
   set_auc = "How well each set separates each task. AUC from ranks, p from paired test.",
   set_association = "Set against phenotype change: pooled, then within participant.",
-  set_by_arm = "The same correlation computed inside BFR and inside high load, descriptive.",
+  set_by_arm = "The same correlation computed inside BFR and inside HLRT, descriptive.",
   set_catalog = "Every tested set with its collection and training NES.",
   set_scores = "The set by sample score matrix the analyses above were computed on.",
   input_manifest = "Which files were read and their checksums.",

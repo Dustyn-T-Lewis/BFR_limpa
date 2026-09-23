@@ -41,5 +41,5 @@ several names, so testing the first would get it wrong both ways.
 
 ### Note
 
-One assertion: all 28 symbols in `MUST_KEEP` must survive. It exists in order to fail, and catches
+One assertion: all 28 symbols in `MUST_KEEP` must survive. It exists to fail, and catches
 both a broken repair and a contaminant rule that reaches too far.

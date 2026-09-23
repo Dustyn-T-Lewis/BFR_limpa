@@ -2846,7 +2846,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="negative-control" class="level2">
 <h2 class="anchored" data-anchor-id="negative-control">Negative control</h2>
-<p>Two untrained legs of the same person should not differ. If they do, the cause is upstream and the failure is the finding.</p>
+<p>Two untrained legs of the same person should not differ. If they do, the cause is upstream, and the difference is itself a result.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>nc <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> d<span class="sc">$</span>negative_control)</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="co"># sum(logical(0)) is zero, so a contrast name matching nothing would look like a clean control.</span></span>
@@ -2910,7 +2910,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </div>
 </div>
 </div>
-<p>The hit count is printed rather than asserted. If two untrained legs of one person ever differ, that is the most informative result this pipeline can produce and it belongs in the report, not in a halted render.</p>
+<p>The hit count is printed rather than asserted. If two untrained legs of one person ever differ, that belongs in the report, not in a halted render.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
