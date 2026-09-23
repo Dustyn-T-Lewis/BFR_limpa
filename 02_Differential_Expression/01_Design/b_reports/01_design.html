@@ -2337,7 +2337,7 @@ treatment T1 T2
 </div>
 </div>
 </div>
-<p>The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it describes the matrix rather than the model. That is enough for a near-zero check. When the number sits near zero, as it has on this data, <code>02_Differential</code> calls <code>dpcDE()</code> without <code>block =</code>. Nothing automates that reading. If the correlation ever rose, the fix is <code>block = leg_id</code> in the next notebook, but no branch and no warning will tell you. Read the row on every rerun.</p>
+<p>The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it describes the matrix rather than the model. That is enough for a near-zero check. When the number sits near zero, as it has on this data, <code>02_Differential</code> calls <code>dpcDE()</code> without <code>block =</code>. If the correlation ever rose, the fix is <code>block = leg_id</code> in the next notebook, but no branch and no warning will tell you. Read the row on every rerun.</p>
 </section>
 <section id="contrasts" class="level2">
 <h2 class="anchored" data-anchor-id="contrasts">Contrasts</h2>

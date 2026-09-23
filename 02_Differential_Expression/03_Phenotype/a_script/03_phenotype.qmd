@@ -15,8 +15,8 @@ execute:
   message: false
 ---
 
-`02_Differential` asks which proteins changed between groups. This asks a different question:
-whether a protein's change tracks how much the muscle changed. The contrast model cannot
+`02_Differential` asks which proteins changed between groups. This asks whether a
+protein's change tracks how much the muscle changed. The contrast model cannot
 answer it, because a contrast compares group means and carries no per-leg outcome.
 
 Two framings. **Pooled** takes all 65 legs and correlates each protein's pre-to-post change with
