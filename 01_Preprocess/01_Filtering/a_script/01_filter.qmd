@@ -287,7 +287,7 @@ quality weight per sample, which absorbs some of this but is not aimed at it.
 
 ## Guard
 
-One assertion, run after every filter. It exists in order to fail: it catches a broken repair,
+One assertion, run after every filter. It exists to fail: it catches a broken repair,
 which deletes muscle through the `Proteotypic` flag, and an over-reaching contaminant rule, which
 deletes it directly.
 

@@ -221,8 +221,8 @@ dim(dep_matrix)
 
 ## Negative control
 
-Two untrained legs of the same person should not differ. If they do, the cause is upstream and the
-failure is the finding.
+Two untrained legs of the same person should not differ. If they do, the cause is upstream, and
+the difference is itself a result.
 
 ```{r negative-control}
 nc <- filter(results, contrast == d$negative_control)
@@ -235,8 +235,7 @@ slice_min(nc, P.Value, n = 5) |>
 ```
 
 The hit count is printed rather than asserted. If two untrained legs of one person ever differ,
-that is the most informative result this pipeline can produce and it belongs in the report, not in
-a halted render.
+that belongs in the report, not in a halted render.
 
 ```{r session}
 sessionInfo()

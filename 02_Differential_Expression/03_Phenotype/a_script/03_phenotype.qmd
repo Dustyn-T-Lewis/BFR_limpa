@@ -16,7 +16,7 @@ execute:
 ---
 
 `02_Differential` asks which proteins changed between groups. This asks a different question:
-whether a protein's change tracks how much the muscle actually changed. The contrast model cannot
+whether a protein's change tracks how much the muscle changed. The contrast model cannot
 answer it, because a contrast compares group means and carries no per-leg outcome.
 
 Two framings. **Pooled** takes all 65 legs and correlates each protein's pre-to-post change with
@@ -25,7 +25,7 @@ whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-hig
 in phenotype, which removes every between-participant confound.
 
 3,042 proteins mean 152 nominal hits are expected at p < 0.05, so nothing here is read at nominal
-p. BH within each protein-by-outcome family is the reported quantity.
+p. BH within each analysis and outcome is the reported quantity.
 
 ```{r setup}
 library(here)
