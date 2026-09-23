@@ -9,7 +9,7 @@ Tests whether proteins that work together moved together, then scores every samp
 | [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | 6 volcanoes |
 | [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | BFR NES against HLRT NES | 2 composites |
 | [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds`, 2 figures |
-| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, 7 figures |
+| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, 7 figures, 96 pages |
 
 ```sh
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
@@ -18,9 +18,11 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-About a minute in total. Each substage writes every figure as PNG and PDF, and bundles them into
-one `<substage>_figures.pdf`. Figure titles name the figure, subtitles give method and counts,
-captions state the encodings and the source table. Findings live here, not on the figures.
+About three minutes in total, most of it drawing the `05_` pages. Each substage writes every
+figure as PDF, and a PNG when the figure is one page, and bundles the PDFs into one
+`<substage>_figures.pdf`.
+Figure titles name the figure, subtitles give method and counts, captions state the encodings and
+the source table. Findings live here, not on the figures.
 
 ## Methods
 
