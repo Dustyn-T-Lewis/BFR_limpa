@@ -76,5 +76,5 @@ use. Colour is `-log10(FDR)` inside a collection, the collection itself in `all_
 carries `02_collapse_before_after.png`.
 
 Labels come from `enrichVolcano::ev_clean_label`, so a dot plot, a volcano and a ROC strip name a
-pathway the same way. `KEGG_Legacy/` has three files rather than four: no KEGG set survives
-collapse on the interaction.
+pathway the same way. `KEGG_Legacy/` and `Reactome/` hold three files rather than four, because
+neither has a set surviving collapse on the interaction. 23 figures, each as PNG and PDF.

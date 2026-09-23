@@ -10,9 +10,9 @@ re-run alone.
 | Step | Runs | Writes |
 |---|---|---|
 | [`00_build_gene_sets`](00_build_gene_sets/README.md) | freeze MSigDB, map proteins to genes, filter on size, build GO Slim sets | `gene_sets.rds` |
-| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | topTable, fgsea and fry, collapsePathways | `set_tests.rds` + 24 figures |
+| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | topTable, fgsea and fry, collapsePathways | `set_tests.rds` + 23 figures |
 | [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | volcano figures with fgsea rings | six volcanoes |
-| [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | BFR against high load on one pair of axes | the concordance scatter |
+| [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | BFR against high load on one pair of axes | two concordance composites |
 | [`04_run_singscore`](04_run_singscore/README.md) | score every sample on every set | `singscore.rds` + two figures |
 | [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | classify every set, associate it with the phenotype | one workbook + seven figures |
 
@@ -25,7 +25,7 @@ Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R
 Rscript 03_Pathway_Enrichment/05_classify_and_associate_sets/a_script/05_classify_and_associate_sets.R
 ```
 
-About 80 seconds end to end. Thresholds are written where they are used, with a comment saying
+About 60 seconds end to end. Every figure is written as PNG and PDF, 40 of each. Thresholds are written where they are used, with a comment saying
 what each one is for.
 
 ## Two questions, two methods
