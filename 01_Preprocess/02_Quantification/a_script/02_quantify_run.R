@@ -1,5 +1,5 @@
 # Run by hand when the precursor matrix changes; about 100 minutes per dpcQuant() call.
-# 02_quantify.qmd only loads what this writes, so a render can never start one.
+# 02_quantify.qmd only loads what this writes, so a render never starts one.
 #   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R
 #   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 
@@ -14,8 +14,8 @@ out <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 
 y <- readRDS(precursors_file)
-# Recorded, not enforced. The notebook loads whatever is here; these say which precursor
-# matrix and which limpa it came from, for anyone reconstructing a run after the fact.
+# Recorded, not enforced: the notebook loads whatever is here. These name the precursor matrix
+# and limpa version behind each run, for reconstructing it later.
 stamp <- unname(tools::md5sum(precursors_file))
 limpa_version <- as.character(packageVersion("limpa"))
 
