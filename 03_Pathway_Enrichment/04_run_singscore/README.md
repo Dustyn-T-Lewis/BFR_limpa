@@ -6,7 +6,7 @@ Scores every sample on every set. One number per set per sample, no p-value.
 |---|---|
 | **Script** | `a_script/04_run_singscore.R` |
 | **Reads** | `gene_sets.rds`, `proteins.rds` |
-| **Writes** | `c_data/singscore.rds`, `04_run_singscore.xlsx`, `set_scores.csv`, two figures |
+| **Writes** | `c_data/singscore.rds`, `04_run_singscore.xlsx`, `set_scores.csv`, two figures and a two-page figure PDF |
 
 ## Why singscore
 

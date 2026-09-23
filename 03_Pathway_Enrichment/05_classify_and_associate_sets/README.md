@@ -7,7 +7,7 @@ whether it tracks the phenotype. The unit is the set, with no collapse and no gr
 |---|---|
 | **Script** | `a_script/05_classify_and_associate_sets.R` |
 | **Reads** | `gene_sets.rds`, `set_tests.rds`, `singscore.rds`, `proteins.rds`, `phenotype.csv` |
-| **Writes** | one workbook, `set_results.rds`, seven figures as PNG and PDF |
+| **Writes** | one workbook, `set_results.rds`, seven figures as PNG and PDF, plus a seven-page figure PDF |
 
 ## Each collection carries its own chance expectation
 

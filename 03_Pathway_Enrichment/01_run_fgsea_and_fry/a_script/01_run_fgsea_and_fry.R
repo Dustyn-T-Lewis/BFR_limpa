@@ -308,7 +308,7 @@ writexl::write_xlsx(
 readr::write_csv(flat, file.path(out, "set_tests.csv"))
 combined <- file.path(figure_root, "01_run_fgsea_and_fry_figures.pdf")
 pages <- setdiff(list.files(figure_root, "[.]pdf$", recursive = TRUE, full.names = TRUE), combined)
-qpdf::pdf_combine(sort(pages), combined)
+invisible(qpdf::pdf_combine(sort(pages), combined))
 message(
   "wrote set_tests.rds, 01_run_fgsea_and_fry.xlsx, set_tests.csv and a ",
   length(pages), "-page figure PDF"

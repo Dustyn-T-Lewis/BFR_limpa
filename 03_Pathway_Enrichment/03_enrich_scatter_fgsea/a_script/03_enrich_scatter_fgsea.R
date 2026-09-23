@@ -122,7 +122,7 @@ save_composite <- function(figure, name, width, height) {
   message("wrote ", name)
 }
 
-annotate <- function(title, subtitle, caption) {
+page_labels <- function(title, subtitle, caption) {
   plot_annotation(
     title = title, subtitle = subtitle, caption = caption, tag_levels = "A",
     theme = theme(
@@ -145,7 +145,7 @@ composite_all <- wrap_plots(
     guides(colour = "none", size = "none"),
   nrow = 1
 ) +
-  annotate(
+  page_labels(
     "NES concordance, all collections",
     sprintf("fgsea NES per contrast, %d sets, BH within contrast", nrow(paired)),
     paste(
@@ -172,7 +172,7 @@ composite_curated <- (
     labelled = slice_min(filter(curated, significance != "NS"), padj_x + padj_y, n = 8)
   ) | (quadrant(TRUE) / quadrant(FALSE))
 ) +
-  annotate(
+  page_labels(
     "NES concordance, Hallmark and GO Slim",
     sprintf("fgsea NES per contrast, %d non-nesting sets, BH within contrast", nrow(curated)),
     paste(
@@ -221,5 +221,5 @@ writexl::write_xlsx(
 )
 combined <- file.path(figure_dir, "03_enrich_scatter_fgsea_figures.pdf")
 pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-qpdf::pdf_combine(sort(pages), combined)
+invisible(qpdf::pdf_combine(sort(pages), combined))
 message("wrote 03_enrich_scatter_fgsea.xlsx and a ", length(pages), "-page figure PDF")

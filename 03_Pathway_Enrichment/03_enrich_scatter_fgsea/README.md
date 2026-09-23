@@ -8,7 +8,7 @@ interaction term.
 |---|---|
 | **Script** | `a_script/03_enrich_scatter_fgsea.R` |
 | **Reads** | `set_tests.rds` |
-| **Writes** | two composites in `b_reports/`, `c_data/03_enrich_scatter_fgsea.xlsx`, `nes_scatter.csv` |
+| **Writes** | two composites in `b_reports/` and a two-page figure PDF, `c_data/03_enrich_scatter_fgsea.xlsx`, `nes_scatter.csv` |
 
 ## What it shows
 
