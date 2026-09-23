@@ -1,6 +1,5 @@
-# Freeze one MSigDB release, map the protein matrix onto gene symbols, and keep the sets
-# large enough to test. Writes the set list that both 01_run_fgsea_and_fry and 04_run_singscore
-# read, so membership is decided once.
+# Freeze one MSigDB release, map proteins to gene symbols, and keep sets large enough to test.
+# 01_run_fgsea_and_fry and 04_run_singscore both read the set list, so membership is decided once.
 
 suppressPackageStartupMessages({
   library(here)
@@ -24,9 +23,9 @@ manifest <- tibble(
   input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
 )
 
-# Membership shifts between MSigDB releases, so one release is pinned. The first run fetches
-# it and writes a snapshot with an md5; later runs read and verify that snapshot, needing
-# neither the network nor msigdbr. The filename carries the release and the collections.
+# Membership shifts between MSigDB releases, so one is pinned. The first run fetches it and
+# writes a snapshot with an md5; later runs verify the snapshot and need neither network nor
+# msigdbr.
 msigdb_release <- "2026.1.Hs"
 collection_specs <- list(
   Hallmark = list("H", NULL),
@@ -87,9 +86,9 @@ message(
   "cached ", frozen$created_utc
 )
 
-# Set tests need one row per gene. A row with no symbol, or several, is dropped rather than
-# split, because splitting invents measurements nobody made. Where rows share a symbol, the
-# one with the most observed precursors represents it. Decided once, reading no fold change.
+# Set tests need one row per gene. A row with no symbol or several is dropped, not split:
+# splitting invents measurements nobody made. Among rows sharing a symbol, the one with the most
+# observed precursors represents it, chosen once and without reading any fold change.
 protein_map <- proteins$genes |>
   rownames_to_column("protein") |>
   mutate(
@@ -131,8 +130,8 @@ mapping_summary <- count(protein_map, mapping_status, name = "proteins")
 print(mapping_summary)
 message("measured gene universe: ", length(gene_universe))
 
-# Size is the only pre-test filter. The measured bar counts proteins this experiment detected,
-# which is what governs power. Nothing is dropped for overlapping another set or for its name.
+# Size is the only pre-test filter. The measured bar counts detected proteins, which govern
+# power. No set is dropped for overlapping another or for its name.
 set_members <- distinct(membership, set_id, gene)
 sets_full <- split(set_members$gene, set_members$set_id)
 sets_measured <- map(sets_full, intersect, y = gene_universe)
@@ -149,8 +148,8 @@ stopifnot(!anyDuplicated(set_catalog$set_id))
 sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
 if (!length(sets)) stop("No gene sets passed the size filters.")
 
-# GO Slim sets come from the GO Consortium's generic slim, a published 140-term list, frozen with
-# an md5 like the MSigDB snapshot.
+# GO Slim sets come from the GO Consortium's generic slim (140 terms), frozen with an md5 like
+# the MSigDB snapshot.
 slim_file <- file.path(cache_dir, "goslim_generic.obo")
 stopifnot(
   file.exists(slim_file),
@@ -162,11 +161,10 @@ slim_offspring <- AnnotationDbi::mget(
 )
 slim_offspring <- slim_offspring[!is.na(slim_offspring)]
 
-# Each slim term is also a set: every measured gene annotated to it or to any term beneath it.
-# Built from the frozen membership rather than from the qualifying subset, because a gene must
-# not be lost when the GO:BP set carrying it falls outside the size filter. A slim term is broad
-# by design, so the 15-to-500 rule is read on measured size, which is the size that governs
-# whether the set is testable here.
+# A slim set is every measured gene annotated to the term or any term beneath it. It is built
+# from the full frozen membership, not the qualifying subset, so a gene survives when its GO:BP
+# set fails the size filter. Slim terms are broad by design, so the 15-to-500 rule reads measured
+# size, the size that decides whether a set is testable here.
 go_genes <- membership |>
   filter(database == "GOBP") |>
   with(split(gene, source_id))

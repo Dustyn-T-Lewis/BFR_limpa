@@ -1,16 +1,7 @@
-# Two set tests, reported side by side.
-#
-# fgsea is competitive: it ranks proteins by moderated t and asks whether a set piles up at one
-# end, relative to every other protein. That assumes the ranked proteins are exchangeable, and
-# they are not.
-#
-# fry is self-contained: it asks whether a set moved at all, rotating the residuals of the fitted
-# model rather than shuffling gene labels. Correlation rotates with the data, so it cannot inflate
-# the null, and the design's participant structure is built in.
-#
-# Neither is simply better. fry flags roughly a third of all sets on the training contrasts,
-# because with a global effect most sets did move a little. Both ship as rows of one table, and
-# set_summary puts their counts side by side, the negative control among them.
+# fgsea and fry, side by side; neither is simply better. fgsea is competitive on moderated t and
+# assumes exchangeable proteins, which they are not. fry is self-contained and rotates residuals
+# of the participant design, so correlation cannot inflate its null; under the global training
+# effect it flags about a third of sets.
 
 suppressPackageStartupMessages({
   library(here)
@@ -57,10 +48,9 @@ stopifnot(
   d$negative_control %in% contrast_names
 )
 
-# topTable rebuilds all five contrasts from the saved fit. BH stays as upstream applied it,
-# one adjustment per contrast; re-adjusting on the mapped subset would change what every FDR
-# here means. pi_score is the Xiao et al. (2014, PMID 22321699) score: it controls no error
-# rate, so it orders a contrast and selects nothing.
+# All five contrasts, BH once per contrast as upstream applied it; re-adjusting on the mapped
+# subset would change what every FDR here means. pi_score is the Xiao et al. (2014, PMID
+# 22321699) score: it controls no error rate, so it orders a contrast and selects nothing.
 protein_results <- map(set_names(contrast_names), function(contrast) {
   topTable(fit,
     coef = contrast, number = Inf, adjust.method = "BH", sort.by = "none"
@@ -90,18 +80,16 @@ ranked <- protein_results |>
   map(\(result) set_names(result$t, result$gene))
 ranked <- ranked[contrast_names]
 
-# fry indexes rows of proteins$E, not genes, so the sets are mapped back through the
-# representative protein chosen in 00_build_gene_sets. A missing index would silently test the
-# wrong rows.
+# fry indexes rows of proteins$E, not genes, so sets map back through the representative
+# protein from 00_build_gene_sets. A missing index would silently test the wrong rows.
 gene_map <- filter(protein_map, selected)
 set_rows <- map(sets, \(genes) {
   match(gene_map$protein[match(genes, gene_map$gene)], protein_ids)
 })
 stopifnot(!any(map_lgl(set_rows, anyNA)))
 
-# limma reads y$weights, so attaching limpa's per-observation precision to the EList carries it
-# into fry without depending on an argument name. A protein rebuilt largely from missing
-# precursors counts for less.
+# limma reads y$weights, so limpa's per-observation precision reaches fry without depending on
+# an argument name. A protein rebuilt largely from missing precursors counts for less.
 weights <- fit$EList$weights
 stopifnot(identical(dim(weights), dim(proteins$E)), all(is.finite(weights)), all(weights > 0))
 proteins$weights <- weights
@@ -134,11 +122,10 @@ set_tests <- bind_rows(
   })
 )
 
-# Four collections overlap, so glycolysis is tested in Hallmark, KEGG, Reactome and again in
-# GO. collapsePathways re-runs each significant set conditioned on a more significant one's
-# leading edge and keeps it only if it still stands alone. It needs the results, so it can only
-# run after testing, and it prunes rather than re-adjusting: the surviving list's FDR is
-# conservative, not inflated.
+# Four collections overlap: glycolysis is tested in Hallmark, KEGG, Reactome and GO.
+# collapsePathways re-runs each significant set conditioned on a stronger set's leading edge and
+# keeps it only if it stands alone. It needs the results, so it runs after testing, and it
+# prunes without re-adjusting, so the surviving FDR is conservative, not inflated.
 main_sets <- map(set_names(contrast_names), function(contrast) {
   significant <- fgsea_raw[[contrast]][padj < 0.05][order(pval)]
   if (nrow(significant) < 2) {
@@ -158,8 +145,8 @@ set_tests <- set_tests |>
   ) |>
   relocate(contrast, method, set_id, database, pathway)
 
-# One row per contrast: how many sets each test called, and how many survived collapse. The
-# control sits in the table unflagged, for the reader to compare against.
+# Sets called per test and contrast, and how many survived collapse. The negative control sits
+# in the table unflagged, for comparison.
 set_summary <- set_tests |>
   summarise(
     sets = n_distinct(set_id),
@@ -173,8 +160,7 @@ print(as.data.frame(set_summary))
 
 # ---- figures -------------------------------------------------------------------------------
 
-# One directory per collection plus all_db, one file per contrast. Each panel shows the ten
-# strongest collapse survivors by adjusted p. Labels come from enrichVolcano::ev_clean_label.
+# One directory per collection plus all_db, one file per contrast.
 figure_root <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "b_reports")
 save_figure <- function(figure, file, width, height) {
   walk(c("png", "pdf"), \(extension) {
@@ -240,7 +226,7 @@ for (db in c(collections, "all_db")) {
   message("drew ", db, ": ", length(drawn), " contrasts")
 }
 
-# How much redundancy collapsePathways removed, so the pruning is visible rather than asserted.
+# Shows how much redundancy collapsePathways removed, rather than asserting it.
 collapse_effect <- set_tests |>
   filter(method == "fgsea", padj < 0.05, contrast %in% shown) |>
   summarise(before = n(), after = sum(main), .by = c(contrast, database)) |>
@@ -258,8 +244,8 @@ save_figure(
       x = NULL, y = "significant sets", title = "Significant sets before and after collapse",
       subtitle = "fgsea at FDR 0.05, then collapsePathways",
       caption = paste(
-        "collapsePathways re-tests each significant set conditioned on a stronger set's leading",
-        "edge and keeps it only if it stands alone. Table: c_data/set_tests.csv."
+        "Bars count significant sets per collection. Collapse keeps a set only if it stands alone",
+        "given a stronger set's leading edge. Table: c_data/set_tests.csv."
       )
     ) +
     theme_minimal(base_size = 9) +

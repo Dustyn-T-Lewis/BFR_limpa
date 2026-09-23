@@ -1,15 +1,8 @@
-# Answer two questions about every tested set: how well it separates the study's groups, and
-# whether it tracks the phenotype. The unit is the set, with no collapse and no grouping, and
-# results are read per database so each collection carries its own chance expectation. Four
-# independently curated collections agreeing is stronger than any single grouping of them.
-#
-# Every comparison here is paired. Pre versus post is the same leg twice; BFR versus high load
-# is two legs of one person. AUC comes from pROC as the effect-size descriptor and the p-value
-# from the paired Wilcoxon signed-rank test. An unpaired p would answer for a design this study
-# did not run.
-#
-# Nominal p is read against chance_expectation, which carries the count a table that size
-# returns under the null, per database. BH within database and task is reported beside it.
+# Per set, uncollapsed: how well it separates the study groups (pROC AUC as effect size, paired
+# Wilcoxon signed-rank p) and whether it tracks phenotype. Every comparison is paired: pre/post is
+# one leg twice, BFR/HLRT two legs of one person; an unpaired p fits a design not run.
+# Nominal p is read per database against chance_expectation, with BH within database and task
+# beside it; agreement across independent collections beats any single grouping of them.
 # baseline_BFR_vs_HLRT is the empirical floor, because no signal can exist there.
 
 suppressPackageStartupMessages({
@@ -81,8 +74,8 @@ delta_pairs <- pair_by_treatment(legs, "leg_id")
 delta_set <- set_score[, legs$T2] - set_score[, legs$T1]
 colnames(delta_set) <- legs$leg_id
 
-# Each task names the matrix it reads and the two paired column sets. `favours` is the group an
-# AUC above 0.5 points to, which is what makes the direction readable on the figures.
+# Each task names its matrix and two paired column sets. `favours` is the group an AUC above 0.5
+# points to, so the figures can state direction.
 tasks <- list(
   pre_vs_post_BFR = list(
     matrix = "score", positive = filter(legs, treatment == "BFR")$T2,
@@ -108,9 +101,9 @@ tasks <- list(
   )
 )
 
-# pROC::roc() auto-orients by default: on a case whose true directional AUC is 0.194 it returns
-# 0.806. direction = "<" pins it, without which every below-chance set flips and the red/blue
-# encoding on the figures inverts silently.
+# pROC::roc() auto-orients by default: a case with true directional AUC 0.194 returns 0.806.
+# direction = "<" pins it; without it every below-chance set flips and the figures' red/blue
+# encoding silently inverts.
 fit_roc <- function(values, spec) {
   labels <- rep(c("neg", "pos"), c(length(spec$negative), length(spec$positive)))
   pROC::roc(labels, values[c(spec$negative, spec$positive)],
@@ -179,16 +172,15 @@ paired_outcome <- map(set_names(names(outcomes)), function(name) {
   value[delta_pairs$BFR] - value[delta_pairs$HLRT]
 })
 
-# cor.test computes the exact Spearman p at these sample sizes. The t approximation this
-# replaced was off by up to 9e-4, which is enough to move a result across the 0.05 line the
-# figures report against.
+# cor.test gives the exact Spearman p at these sample sizes. The t approximation is off by up
+# to 9e-4, enough to move a result across the 0.05 line the figures report against.
 spearman_by_row <- function(values, outcome) {
   usable <- !is.na(outcome)
   values <- values[, usable, drop = FALSE]
   outcome <- outcome[usable]
   # Ties make cor.test fall back from the exact p to its approximation and warn each time.
-  # Reading the two fields off the htest rather than tidying it runs ten times faster over the
-  # 32,000 tests this stage performs, and returns the same numbers to the bit.
+  # Reading two fields off the htest, not tidying it, is ten times faster over the 32,000 tests
+  # here and returns the same numbers to the bit.
   fits <- suppressWarnings(apply(values, 1, \(row) {
     test <- stats::cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
@@ -246,8 +238,8 @@ chance_expectation <- bind_rows(
 
 # ---- figures: one per comparison, significant results only --------------------------------
 
-# Every set reaching nominal p gets a panel, 16 to a page, ordered by collection then p. Paging
-# changes how many files a figure writes, so the previous run's figures are cleared first.
+# Every set reaching nominal p gets a panel, 16 to a page, by collection then p. Paging changes
+# how many files a figure writes, so the previous run's figures are cleared first.
 unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
 figure_theme <- theme_minimal(base_size = 10) +
@@ -317,8 +309,8 @@ draw_roc_figure <- function(task_name) {
     coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
-      # An AUC below 0.5 means the set separates the other way, which is a result about
-      # direction rather than a failure, so it is coloured instead of hidden.
+      # An AUC below 0.5 separates the other way: a direction, not a failure, so it is
+      # coloured, not hidden.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = paste0(
         database, ": ", enrichVolcano::ev_clean_label(pathway),
@@ -358,9 +350,8 @@ draw_roc_figure <- function(task_name) {
       )
   }, paste0("roc_", task_name), strip = 0.6)
 }
-# The baseline control is tested and reported, in chance_expectation and in the README, but
-# it gets no figure: it exists to say what the method returns when nothing is there, which is
-# a number to read rather than a panel to present.
+# The baseline control is reported in chance_expectation and the README but not drawn: it shows
+# what the method returns when nothing is there, a number to read, not a panel to present.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 roc_drawn <- map_int(set_names(drawn_tasks), draw_roc_figure)
 
@@ -428,8 +419,7 @@ invisible(draw_association_figure(
 stopifnot(all(map_lgl(drawn_tasks, \(task_name) {
   roc_drawn[[task_name]] == sum(set_auc$task == task_name & set_auc$p_paired < 0.05)
 })))
-# Whether a collection clears chance is the headline, so it gets a panel of its own rather
-# than living only in a sheet.
+# Whether a collection clears chance is the headline, so it gets its own panel, not just a sheet.
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))

@@ -1,6 +1,6 @@
-# Put the two training contrasts on one pair of axes. fgsea scores each set once per contrast,
-# so plotting one NES against the other asks directly whether the two modalities move the same
-# biology. Computes no new test; it reads 01_run_fgsea_and_fry and reshapes.
+# NES in the two training contrasts on one pair of axes: fgsea scores each set once per contrast,
+# so the scatter asks whether both modalities move the same biology. No new test; reshapes the
+# 01_run_fgsea_and_fry output.
 
 suppressPackageStartupMessages({
   library(here)
@@ -41,8 +41,8 @@ paired <- fg$set_tests |>
       padj_y < 0.05 ~ y_contrast,
       .default = "NS"
     ) |> factor(c("Both", x_contrast, y_contrast, "NS")),
-    # Discordant means the two contrasts put the set on opposite sides of zero. Each one here is
-    # significant in a single arm, so the opposite sign rests on the other arm's null.
+    # Discordant: opposite sides of zero. Each discordant set here is significant in one arm
+    # only, so the opposite sign rests on the other arm's null.
     discordant = sign(NES_x) != sign(NES_y),
     survivor = main_x | main_y,
     label = enrichVolcano::ev_clean_label(pathway)
@@ -63,15 +63,14 @@ set_colours <- set_names(
   c("#6A3D9A", "#D7301F", "#2B6CB0"), c("Both", x_contrast, y_contrast)
 )
 
-# One panel builder for all six panels. `labelled` is the subset that gets names, so a dense
-# cloud and a zoomed handful of sets differ only in what is passed in.
+# Builds all six panels. `labelled` is the subset that gets names, so a dense cloud and a
+# zoomed handful differ only in what is passed in.
 nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
   span <- range(c(data$NES_x, data$NES_y))
   limit <- span + c(-1, 1) * diff(span) * pad
   shown <- filter(data, significance != "NS")
   stats <- concordance(data)
-  # A rank correlation over a handful of points is noise, so the panel reports it only when
-  # there are enough sets for it to describe anything.
+  # A rank correlation over a handful of points is noise, so rho appears only from 30 sets up.
   caption <- sprintf(
     "%d sets | %d significant | %d discordant",
     stats$sets, stats$significant, stats$discordant
@@ -133,8 +132,7 @@ page_labels <- function(title, subtitle, caption) {
   )
 }
 
-# Composite one: every collection, then the sets that survived collapse, then the discordant
-# handful on their own axes.
+# Composite one: all collections, collapse survivors, and the discordant sets on their own axes.
 discordant_sets <- filter(paired, discordant, significance != "NS")
 survivors <- filter(paired, survivor)
 composite_all <- wrap_plots(
