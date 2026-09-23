@@ -69,7 +69,7 @@ Effect size the interaction could detect at 80% power, two-sided 0.05. Without t
 nothing: a contrast returning no hits is uninformative about effects smaller than this number.
 
 ```{r detectable-effect}
-se <- fit$stdev.unscaled[, "interaction"] * sqrt(fit$s2.post)
+se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
 round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
@@ -110,7 +110,7 @@ from a conservative one. Median \|t\| is 0.674 under a calibrated null, so a val
 means the tests are conservative. `p_below_0.2` is 0.2 under a uniform null, so a value below that
 means the distribution rises toward 1 rather than being flat.
 
-Read the between-leg contrasts against `BFR_vs_HLRT_at_T1`, not against theory. That contrast is a
+Read the between-leg contrasts against `BFR_Pre-HLRT_Pre`, not against theory. That contrast is a
 true null by construction, and whatever it returns is what a null looks like in this design.
 
 ```{r null-calibration}
@@ -185,7 +185,7 @@ invites reading structure into noise no matter what the caption says.
 obs_per_sample <- rowMeans(proteins$other$n.observations)
 
 results |>
-  filter(contrast %in% c("BFR_post_vs_pre", "HLRT_post_vs_pre")) |>
+  filter(contrast %in% c("BFR_Post-Pre", "HLRT_Post-Pre")) |>
   slice_min(pi_score, n = 10, by = contrast) |>
   mutate(mean_obs = round(obs_per_sample[protein], 2)) |>
   select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
