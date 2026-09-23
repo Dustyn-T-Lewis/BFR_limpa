@@ -2343,36 +2343,36 @@ treatment T1 T2
 <h2 class="anchored" data-anchor-id="contrasts">Contrasts</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>contrasts <span class="ot">&lt;-</span> <span class="fu">makeContrasts</span>(</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_post_vs_pre   =</span> BFR_T2 <span class="sc">-</span> BFR_T1,</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">HLRT_post_vs_pre  =</span> HLRT_T2 <span class="sc">-</span> HLRT_T1,</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_vs_HLRT_at_T1 =</span> BFR_T1 <span class="sc">-</span> HLRT_T1,</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR_vs_HLRT_at_T2 =</span> BFR_T2 <span class="sc">-</span> HLRT_T2,</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">interaction       =</span> (BFR_T2 <span class="sc">-</span> BFR_T1) <span class="sc">-</span> (HLRT_T2 <span class="sc">-</span> HLRT_T1),</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Post-Pre</span><span class="st">`</span>       <span class="ot">=</span> BFR_T2 <span class="sc">-</span> BFR_T1,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">HLRT_Post-Pre</span><span class="st">`</span>      <span class="ot">=</span> HLRT_T2 <span class="sc">-</span> HLRT_T1,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Pre-HLRT_Pre</span><span class="st">`</span>   <span class="ot">=</span> BFR_T1 <span class="sc">-</span> HLRT_T1,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Post-HLRT_Post</span><span class="st">`</span> <span class="ot">=</span> BFR_T2 <span class="sc">-</span> HLRT_T2,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">Modality_x_Time_Interaction =</span> (BFR_T2 <span class="sc">-</span> BFR_T1) <span class="sc">-</span> (HLRT_T2 <span class="sc">-</span> HLRT_T1),</span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">levels =</span> design</span>
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>contrasts[<span class="fu">rowSums</span>(<span class="fu">abs</span>(contrasts)) <span class="sc">&gt;</span> <span class="dv">0</span>, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>         Contrasts
-Levels    BFR_post_vs_pre HLRT_post_vs_pre BFR_vs_HLRT_at_T1 BFR_vs_HLRT_at_T2
-  BFR_T1               -1                0                 1                 0
-  BFR_T2                1                0                 0                 1
-  HLRT_T1               0               -1                -1                 0
-  HLRT_T2               0                1                 0                -1
+Levels    BFR_Post-Pre HLRT_Post-Pre BFR_Pre-HLRT_Pre BFR_Post-HLRT_Post
+  BFR_T1            -1             0                1                  0
+  BFR_T2             1             0                0                  1
+  HLRT_T1            0            -1               -1                  0
+  HLRT_T2            0             1                0                 -1
          Contrasts
-Levels    interaction
-  BFR_T1           -1
-  BFR_T2            1
-  HLRT_T1           1
-  HLRT_T2          -1</code></pre>
+Levels    Modality_x_Time_Interaction
+  BFR_T1                           -1
+  BFR_T2                            1
+  HLRT_T1                           1
+  HLRT_T2                          -1</code></pre>
 </div>
 </div>
-<p>The five carry three different roles, and the manuscript should read them that way. <code>interaction</code> is the <strong>primary</strong> comparison and the question the study was designed to answer. <code>BFR_vs_HLRT_at_T1</code> is the <strong>negative control</strong>: two legs of one person before either was trained, so it must find nothing. The remaining three are <strong>descriptive</strong>. <code>interaction</code> equals <code>BFR_vs_HLRT_at_T2</code> minus <code>BFR_vs_HLRT_at_T1</code> exactly, so these are not five independent questions.</p>
+<p>The five carry three different roles, and the manuscript should read them that way. <code>Modality_x_Time_Interaction</code> is the <strong>primary</strong> comparison and the question the study was designed to answer. <code>BFR_Pre-HLRT_Pre</code> is the <strong>negative control</strong>: two legs of one person before either was trained, so it must find nothing. The remaining three are <strong>descriptive</strong>. <code>interaction</code> equals <code>BFR_Post-HLRT_Post</code> minus <code>BFR_Pre-HLRT_Pre</code> exactly, so these are not five independent questions.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> design, <span class="at">contrasts =</span> contrasts,</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">negative_control =</span> <span class="st">&quot;BFR_vs_HLRT_at_T1&quot;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">negative_control =</span> <span class="st">&quot;BFR_Pre-HLRT_Pre&quot;</span></span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;design.rds&quot;</span>)</span>
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>)</span>
