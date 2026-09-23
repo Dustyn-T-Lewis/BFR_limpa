@@ -4,8 +4,8 @@ Each set's BFR_Post-Pre NES against its HLRT_Post-Pre NES.
 
 | | |
 |---|---|
-| **Reads** | `set_tests.rds` |
-| **Writes** | 2 composites, `nes_scatter.csv`, `03_enrich_scatter_fgsea.xlsx` |
+| Reads | `set_tests.rds` |
+| Writes | 2 composites, `nes_scatter.csv`, `03_enrich_scatter_fgsea.xlsx` |
 
 | Population | Sets | rho | Significant | Discordant |
 |---|---:|---:|---:|---:|
