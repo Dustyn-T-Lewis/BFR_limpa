@@ -9,6 +9,7 @@ suppressPackageStartupMessages({
   library(tibble)
   library(purrr)
   library(ggplot2)
+  library(patchwork)
 })
 
 stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
@@ -24,20 +25,14 @@ manifest <- tibble(
   input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
 )
 
-# Hallmark and GO Slim only, the two collections whose members do not nest inside one another.
-# GO:BP's 1,366 sets would bury the plot and, being largely restatements of each other, would
-# pull the rank correlation toward whichever branch happens to be densest.
 x_contrast <- "BFR_Post-Pre"
 y_contrast <- "HLRT_Post-Pre"
 paired <- fg$set_tests |>
-  filter(
-    method == "fgsea", database %in% c("Hallmark", "GO_Slim"),
-    contrast %in% c(x_contrast, y_contrast)
-  ) |>
+  filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
   mutate(contrast = if_else(contrast == x_contrast, "x", "y")) |>
   pivot_wider(
     id_cols = c(set_id, database, pathway, n),
-    names_from = contrast, values_from = c(NES, padj)
+    names_from = contrast, values_from = c(NES, padj, main)
   ) |>
   mutate(
     significance = case_when(
@@ -46,87 +41,180 @@ paired <- fg$set_tests |>
       padj_y < 0.05 ~ y_contrast,
       .default = "NS"
     ) |> factor(c("Both", x_contrast, y_contrast, "NS")),
+    # Discordant means the two contrasts put the set on opposite sides of zero. Each one here is
+    # significant in a single arm, so the opposite sign rests on the other arm's null.
+    discordant = sign(NES_x) != sign(NES_y),
+    survivor = main_x | main_y,
     label = enrichVolcano::ev_clean_label(pathway)
   )
 stopifnot(nrow(paired) > 0, !anyNA(paired$NES_x), !anyNA(paired$NES_y))
 
-# Spearman over every set, so the number describes the experiment rather than a selection.
-concordance <- cor.test(paired$NES_x, paired$NES_y, method = "spearman", exact = FALSE)
-signif_sets <- filter(paired, significance != "NS")
-agreement <- mean(sign(signif_sets$NES_x) == sign(signif_sets$NES_y))
-quadrants <- count(signif_sets, up_x = NES_x > 0, up_y = NES_y > 0)
-summary_row <- tibble(
-  sets = nrow(paired), significant = nrow(signif_sets),
-  both = sum(paired$significance == "Both"),
-  x_only = sum(paired$significance == x_contrast),
-  y_only = sum(paired$significance == y_contrast),
-  rho = round(concordance$estimate, 3), p = concordance$p.value,
-  same_sign = round(agreement, 3)
-)
-print(as.data.frame(summary_row))
+concordance <- function(data) {
+  test <- suppressWarnings(cor.test(data$NES_x, data$NES_y, method = "spearman"))
+  hits <- filter(data, significance != "NS")
+  tibble(
+    sets = nrow(data), significant = nrow(hits), discordant = sum(hits$discordant),
+    rho = round(unname(test$estimate), 3), p = test$p.value,
+    same_sign = round(mean(!hits$discordant), 3)
+  )
+}
 
-limit <- max(abs(c(paired$NES_x, paired$NES_y))) * 1.08
-figure <- ggplot(paired, aes(NES_x, NES_y)) +
-  geom_hline(yintercept = 0, colour = "grey80", linewidth = 0.3) +
-  geom_vline(xintercept = 0, colour = "grey80", linewidth = 0.3) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "grey45", linewidth = 0.4) +
-  geom_point(
-    data = filter(paired, significance == "NS"),
-    colour = "grey78", size = 0.7, alpha = 0.5
-  ) +
-  geom_point(data = signif_sets, aes(colour = significance, size = n), alpha = 0.8) +
-  ggrepel::geom_text_repel(
-    data = slice_min(mutate(signif_sets, lobe = NES_x > 0), padj_x + padj_y,
-      n = 6, by = lobe, with_ties = FALSE
+set_colours <- set_names(
+  c("#6A3D9A", "#D7301F", "#2B6CB0"), c("Both", x_contrast, y_contrast)
+)
+
+# One panel builder for all six panels. `labelled` is the subset that gets names, so a dense
+# cloud and a zoomed handful of sets differ only in what is passed in.
+nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
+  span <- range(c(data$NES_x, data$NES_y))
+  limit <- span + c(-1, 1) * diff(span) * pad
+  shown <- filter(data, significance != "NS")
+  stats <- concordance(data)
+  # A rank correlation over a handful of points is noise, so the panel reports it only when
+  # there are enough sets for it to describe anything.
+  caption <- sprintf(
+    "%d sets | %d significant | %d discordant",
+    stats$sets, stats$significant, stats$discordant
+  )
+  if (stats$sets >= 30) {
+    caption <- sprintf(
+      "%d sets | %d significant | rho %.2f | %d discordant",
+      stats$sets, stats$significant, stats$rho, stats$discordant
+    )
+  }
+  ggplot(data, aes(NES_x, NES_y)) +
+    geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
+    geom_vline(xintercept = 0, colour = "grey85", linewidth = 0.3) +
+    geom_abline(slope = 1, linetype = "dashed", colour = "grey45", linewidth = 0.4) +
+    geom_point(
+      data = filter(data, significance == "NS"),
+      colour = "grey82", size = 0.45, alpha = 0.3
+    ) +
+    geom_point(aes(colour = significance, size = n), data = shown, alpha = 0.85) +
+    ggrepel::geom_text_repel(
+      data = labelled, aes(label = label), size = 2.3, colour = "grey15",
+      segment.colour = "grey60", segment.size = 0.25, min.segment.length = 0,
+      max.overlaps = Inf, seed = 1, force = 6, lineheight = 0.85
+    ) +
+    scale_colour_manual(values = set_colours, name = "significant in", drop = FALSE) +
+    scale_size_continuous(
+      range = c(1, 4.5), name = "genes",
+      limits = range(paired$n), breaks = c(50, 150, 300)
+    ) +
+    coord_fixed(xlim = limit, ylim = limit) +
+    labs(
+      x = paste("NES,", x_contrast), y = paste("NES,", y_contrast),
+      title = title, subtitle = caption
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(
+      plot.title = element_text(face = "bold", size = 10),
+      plot.subtitle = element_text(size = 7.5, colour = "grey30")
+    )
+}
+
+save_composite <- function(figure, name, width, height) {
+  walk(c("png", "pdf"), \(extension) {
+    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
+      width = width, height = height, dpi = 300, bg = "white"
+    )
+  })
+  message("wrote ", name)
+}
+
+# Composite one: every collection, then the sets that survived collapse, then the discordant
+# handful on their own axes.
+discordant_sets <- filter(paired, discordant, significance != "NS")
+survivors <- filter(paired, survivor)
+composite_all <- wrap_plots(
+  nes_panel(paired, "All collections"),
+  nes_panel(survivors, "Survived collapsePathways"),
+  # Too few points for a size key, and patchwork will not merge guide sets that differ.
+  nes_panel(discordant_sets, "Discordant", labelled = discordant_sets, pad = 0.35) +
+    guides(colour = "none", size = "none"),
+  nrow = 1
+) +
+  plot_annotation(
+    title = "Blood flow restriction against high load, every tested set",
+    subtitle = paste(
+      "Each point is one gene set scored in both contrasts. Discordant sets fall on opposite",
+      "sides of zero; each is significant in one arm only, so its opposite sign rests on the",
+      "other arm's null."
     ),
-    aes(label = label), size = 2.4, colour = "grey15", segment.colour = "grey60",
-    segment.size = 0.25, min.segment.length = 0, max.overlaps = Inf, seed = 1, force = 6
-  ) +
-  scale_colour_manual(
-    values = set_names(c("#6A3D9A", "#D7301F", "#2B6CB0"), c("Both", x_contrast, y_contrast)),
-    name = "significant in", drop = FALSE
-  ) +
-  scale_size_continuous(range = c(1.2, 5), name = "genes") +
-  coord_fixed(xlim = c(-limit, limit), ylim = c(-limit, limit)) +
-  labs(
-    x = paste("NES,", x_contrast), y = paste("NES,", y_contrast),
-    title = "The two training modalities move the same pathways",
-    subtitle = sprintf(
-      paste(
-        "Hallmark and GO Slim, %d sets (%d significant) | Spearman rho = %.2f",
-        "| %.0f%% of significant sets agree in sign"
-      ),
-      summary_row$sets, summary_row$significant, summary_row$rho, 100 * summary_row$same_sign
+    tag_levels = "A",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(size = 8.5, colour = "grey30")
     )
   ) +
-  theme_minimal(base_size = 9) +
-  theme(legend.position = "bottom", plot.subtitle = element_text(size = 7.5))
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+save_composite(composite_all, "01_nes_concordance_all", 13, 6)
 
-walk(c("png", "pdf"), \(extension) {
-  ggsave(
-    file.path(figure_dir, paste0("01_nes_scatter.", extension)), figure,
-    width = 7, height = 7, dpi = 300, bg = "white"
+# Composite two: the two collections whose members do not nest, then each concordant quadrant
+# scaled to its own points so every set can be named.
+curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
+quadrant <- function(direction) {
+  rows <- filter(curated, significance != "NS", (NES_x > 0) == direction)
+  nes_panel(
+    rows, if (direction) "Up in both arms" else "Down in both arms",
+    labelled = rows, pad = 0.22
   )
-})
+}
+composite_curated <- (
+  nes_panel(
+    curated, "Hallmark and GO Slim",
+    labelled = slice_min(filter(curated, significance != "NS"), padj_x + padj_y, n = 8)
+  ) | (quadrant(TRUE) / quadrant(FALSE))
+) +
+  plot_annotation(
+    title = "The two modalities move the same pathways",
+    subtitle = paste(
+      "Hallmark and GO Slim only: the collections whose members do not nest inside one another.",
+      "Each quadrant is scaled to its own sets so all of them can be named."
+    ),
+    tag_levels = "A",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(size = 8.5, colour = "grey30")
+    )
+  ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+save_composite(composite_curated, "02_nes_concordance_curated", 12, 7)
 
-packages <- c("here", "fgsea", "dplyr", "ggplot2", "ggrepel", "enrichVolcano")
+summary_table <- bind_rows(
+  mutate(concordance(paired), population = "all collections"),
+  mutate(concordance(survivors), population = "collapse survivors"),
+  mutate(concordance(curated), population = "Hallmark and GO Slim")
+) |>
+  relocate(population)
+print(as.data.frame(summary_table))
+stopifnot(
+  nrow(discordant_sets) == sum(paired$discordant & paired$significance != "NS"),
+  sum(curated$significance != "NS") == nrow(filter(curated, significance != "NS"))
+)
+
+packages <- c("here", "fgsea", "dplyr", "ggplot2", "ggrepel", "patchwork", "enrichVolcano")
 versions <- tibble(
   package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
 )
 export <- paired |>
-  transmute(set_id, database, pathway,
+  transmute(
+    set_id, database, pathway, label,
     genes = n,
     nes_x = round(NES_x, 3), nes_y = round(NES_y, 3),
     padj_x = signif(padj_x, 4), padj_y = signif(padj_y, 4),
-    significance = as.character(significance)
+    significance = as.character(significance), discordant, survivor
   ) |>
   arrange(significance, desc(abs(nes_x) + abs(nes_y)))
 readr::write_csv(export, file.path(out, "nes_scatter.csv"))
 writexl::write_xlsx(
   list(
-    concordance = summary_row, quadrants = quadrants, nes_scatter = export,
-    input_manifest = manifest, package_versions = versions
+    concordance = summary_table,
+    discordant = filter(export, discordant, significance != "NS"),
+    nes_scatter = export, input_manifest = manifest, package_versions = versions
   ),
   file.path(out, "03_enrich_scatter_fgsea.xlsx")
 )
-message("wrote 01_nes_scatter and 03_enrich_scatter_fgsea.xlsx")
+message("wrote 03_enrich_scatter_fgsea.xlsx")
