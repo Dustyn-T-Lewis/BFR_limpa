@@ -122,29 +122,37 @@ save_composite <- function(figure, name, width, height) {
   message("wrote ", name)
 }
 
+annotate <- function(title, subtitle, caption) {
+  plot_annotation(
+    title = title, subtitle = subtitle, caption = caption, tag_levels = "A",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(size = 8.5, colour = "grey30"),
+      plot.caption = element_text(size = 7.5, colour = "grey45", hjust = 0)
+    )
+  )
+}
+
 # Composite one: every collection, then the sets that survived collapse, then the discordant
 # handful on their own axes.
 discordant_sets <- filter(paired, discordant, significance != "NS")
 survivors <- filter(paired, survivor)
 composite_all <- wrap_plots(
   nes_panel(paired, "All collections"),
-  nes_panel(survivors, "Survived collapsePathways"),
+  nes_panel(survivors, "Collapse survivors"),
   # Too few points for a size key, and patchwork will not merge guide sets that differ.
   nes_panel(discordant_sets, "Discordant", labelled = discordant_sets, pad = 0.35) +
     guides(colour = "none", size = "none"),
   nrow = 1
 ) +
-  plot_annotation(
-    title = "Blood flow restriction against high load, every tested set",
-    subtitle = paste(
-      "Each point is one gene set scored in both contrasts. Discordant sets fall on opposite",
-      "sides of zero; each is significant in one arm only, so its opposite sign rests on the",
-      "other arm's null."
-    ),
-    tag_levels = "A",
-    theme = theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 8.5, colour = "grey30")
+  annotate(
+    "NES concordance, all collections",
+    sprintf("fgsea NES per contrast, %d sets, BH within contrast", nrow(paired)),
+    paste(
+      "One point per gene set, scored in both training contrasts. Dashed line is identity;",
+      "grey points reach neither threshold. Discordant sets sit on opposite sides of zero and",
+      "are significant in one arm only. Panel C rescales those eight.",
+      "Table: c_data/nes_scatter.csv."
     )
   ) +
   plot_layout(guides = "collect") &
@@ -156,10 +164,7 @@ save_composite(composite_all, "01_nes_concordance_all", 13, 6)
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
 quadrant <- function(direction) {
   rows <- filter(curated, significance != "NS", (NES_x > 0) == direction)
-  nes_panel(
-    rows, if (direction) "Up in both arms" else "Down in both arms",
-    labelled = rows, pad = 0.22
-  )
+  nes_panel(rows, if (direction) "Up in both" else "Down in both", labelled = rows, pad = 0.22)
 }
 composite_curated <- (
   nes_panel(
@@ -167,16 +172,13 @@ composite_curated <- (
     labelled = slice_min(filter(curated, significance != "NS"), padj_x + padj_y, n = 8)
   ) | (quadrant(TRUE) / quadrant(FALSE))
 ) +
-  plot_annotation(
-    title = "The two modalities move the same pathways",
-    subtitle = paste(
-      "Hallmark and GO Slim only: the collections whose members do not nest inside one another.",
-      "Each quadrant is scaled to its own sets so all of them can be named."
-    ),
-    tag_levels = "A",
-    theme = theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 8.5, colour = "grey30")
+  annotate(
+    "NES concordance, Hallmark and GO Slim",
+    sprintf("fgsea NES per contrast, %d non-nesting sets, BH within contrast", nrow(curated)),
+    paste(
+      "Panel A is every Hallmark and GO Slim set; B and C rescale the significant ones by",
+      "direction so each can be named. Point size is gene count, colour the contrast a set",
+      "reached FDR 0.05 in. Table: c_data/nes_scatter.csv."
     )
   ) +
   plot_layout(guides = "collect") &
@@ -217,4 +219,7 @@ writexl::write_xlsx(
   ),
   file.path(out, "03_enrich_scatter_fgsea.xlsx")
 )
-message("wrote 03_enrich_scatter_fgsea.xlsx")
+combined <- file.path(figure_dir, "03_enrich_scatter_fgsea_figures.pdf")
+pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
+qpdf::pdf_combine(sort(pages), combined)
+message("wrote 03_enrich_scatter_fgsea.xlsx and a ", length(pages), "-page figure PDF")

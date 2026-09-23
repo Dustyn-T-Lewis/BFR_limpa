@@ -203,9 +203,23 @@ draw_dotplot <- function(rows, colour_by, file) {
     geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
     geom_point(alpha = 0.9) +
     scale_size_continuous(range = c(2, 6), name = "genes") +
-    labs(x = "normalised enrichment score", y = NULL, title = unique(top$contrast)) +
+    labs(
+      x = "normalised enrichment score", y = NULL, title = unique(top$contrast),
+      subtitle = sprintf("%s, fgsea, BH within contrast", unique(rows$database[1])),
+      caption = sprintf(
+        paste(
+          "%s of %d collapse survivor%s, ranked by adjusted p.",
+          "Size is gene count, colour is -log10 FDR. Table: c_data/set_tests.csv."
+        ),
+        if (nrow(rows) > 10) "Ten strongest" else "All", nrow(rows),
+        if (nrow(rows) == 1) "" else "s"
+      )
+    ) +
     theme_minimal(base_size = 10) +
-    theme(panel.grid.major.y = element_blank())
+    theme(
+      panel.grid.major.y = element_blank(),
+      plot.caption = element_text(size = 6.5, colour = "grey45", hjust = 0)
+    )
   figure <- if (colour_by == "database") {
     figure + scale_colour_brewer(palette = "Dark2", name = NULL)
   } else {
@@ -214,7 +228,8 @@ draw_dotplot <- function(rows, colour_by, file) {
       name = expression(-log[10] ~ FDR)
     )
   }
-  save_figure(figure, file, width = 7.5, height = 1.6 + 0.22 * nrow(top))
+  # A one-row panel still needs room for the legend and the caption beneath it.
+  save_figure(figure, file, width = 7.5, height = max(3, 1.9 + 0.22 * nrow(top)))
 }
 
 collections <- unique(gs$set_catalog$database[gs$set_catalog$qualifies])
@@ -247,8 +262,16 @@ save_figure(
     geom_col(position = "dodge") +
     facet_wrap(~contrast, scales = "free_y", nrow = 1) +
     scale_fill_brewer(palette = "Dark2", name = NULL) +
-    labs(x = NULL, y = "significant sets", title = "collapsePathways removes redundancy only") +
-    theme_minimal(base_size = 9),
+    labs(
+      x = NULL, y = "significant sets", title = "Significant sets before and after collapse",
+      subtitle = "fgsea at FDR 0.05, then collapsePathways",
+      caption = paste(
+        "collapsePathways re-tests each significant set conditioned on a stronger set's leading",
+        "edge and keeps it only if it stands alone. Table: c_data/set_tests.csv."
+      )
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)),
   file.path(figure_root, "all_db", "02_collapse_before_after"),
   width = 10, height = 3
 )
@@ -283,4 +306,10 @@ writexl::write_xlsx(
   file.path(out, "01_run_fgsea_and_fry.xlsx")
 )
 readr::write_csv(flat, file.path(out, "set_tests.csv"))
-message("wrote set_tests.rds, 01_run_fgsea_and_fry.xlsx and set_tests.csv")
+combined <- file.path(figure_root, "01_run_fgsea_and_fry_figures.pdf")
+pages <- setdiff(list.files(figure_root, "[.]pdf$", recursive = TRUE, full.names = TRUE), combined)
+qpdf::pdf_combine(sort(pages), combined)
+message(
+  "wrote set_tests.rds, 01_run_fgsea_and_fry.xlsx, set_tests.csv and a ",
+  length(pages), "-page figure PDF"
+)

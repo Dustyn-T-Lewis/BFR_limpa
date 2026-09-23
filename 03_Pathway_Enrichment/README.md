@@ -25,7 +25,13 @@ Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R
 Rscript 03_Pathway_Enrichment/05_classify_and_associate_sets/a_script/05_classify_and_associate_sets.R
 ```
 
-About 60 seconds end to end. Every figure is written as PNG and PDF, 40 of each. Thresholds are written where they are used, with a comment saying
+About 60 seconds end to end.
+
+Every figure is written as PNG and PDF, 40 of each, and each substage also writes a multi-page
+`<substage>_figures.pdf` holding its own figures one per page. Titles name the figure, subtitles
+give the method and the counts, and the caption states what each visual channel encodes and where
+the underlying table lives. No figure carries a conclusion; those are here and in the substage
+READMEs. Thresholds are written where they are used, with a comment saying
 what each one is for.
 
 ## Two questions, two methods

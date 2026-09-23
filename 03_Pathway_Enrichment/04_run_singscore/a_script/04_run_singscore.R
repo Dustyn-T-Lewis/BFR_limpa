@@ -116,9 +116,15 @@ save_figure(
     guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
     labs(
       x = "mean score across samples", y = "mean dispersion across samples",
-      title = "Every set scored, by collection"
+      title = "Set score against dispersion",
+      subtitle = sprintf("singscore, %d sets across %d samples", nrow(scores), ncol(scores)),
+      caption = paste(
+        "One point per set, averaged over samples. Dispersion is the spread of a set's member",
+        "ranks within a sample: low means members sit together. Table: c_data/set_scores.csv."
+      )
     ) +
-    theme_minimal(base_size = 9),
+    theme_minimal(base_size = 9) +
+    theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)),
   "01_score_dispersion",
   height = 4.5
 )
@@ -135,9 +141,15 @@ save_figure(
     geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.3) +
     labs(
       x = "singscore", y = NULL,
-      title = "Score distribution over all sets, by study group"
+      title = "Score distribution by study group",
+      subtitle = sprintf("singscore, %d sets pooled", nrow(scores)),
+      caption = paste(
+        "Every set in every sample, pooled within group. Box is the interquartile range.",
+        "Scores are rank-based and sample-independent. Table: c_data/set_scores.csv."
+      )
     ) +
-    theme_minimal(base_size = 9),
+    theme_minimal(base_size = 9) +
+    theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)),
   "02_score_distribution",
   height = 3.5
 )
@@ -173,4 +185,10 @@ writexl::write_xlsx(
   file.path(out, "04_run_singscore.xlsx")
 )
 readr::write_csv(score_table, file.path(out, "set_scores.csv"))
-message("wrote singscore.rds, 04_run_singscore.xlsx and set_scores.csv")
+combined <- file.path(figures, "04_run_singscore_figures.pdf")
+pages <- setdiff(list.files(figures, "[.]pdf$", full.names = TRUE), combined)
+qpdf::pdf_combine(sort(pages), combined)
+message(
+  "wrote singscore.rds, 04_run_singscore.xlsx, set_scores.csv and a ",
+  length(pages), "-page figure PDF"
+)
