@@ -1,0 +1,162 @@
+---
+title: "03 · Protein against phenotype"
+subtitle: "Every protein correlated with the ultrasound outcomes"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+    df-print: kable
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 150
+    fig-align: center
+execute:
+  message: false
+---
+
+`02_Differential` asks which proteins changed between groups. This asks a different question:
+whether a protein's change tracks how much the muscle actually changed. The contrast model cannot
+answer it, because a contrast compares group means and carries no per-leg outcome.
+
+Two framings. **Pooled** takes all 65 legs and correlates each protein's pre-to-post change with
+that leg's phenotype change. **Differential** takes the 32 participants with both legs and asks
+whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference
+in phenotype, which removes every between-participant confound.
+
+3,042 proteins mean 152 nominal hits are expected at p < 0.05, so nothing here is read at nominal
+p. BH within each protein-by-outcome family is the reported quantity.
+
+```{r setup}
+library(here)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(ggplot2)
+
+proteins <- readRDS(here("01_Preprocess/02_Quantification/c_data/proteins.rds"))
+phenotype <- readr::read_csv(here("00_Input/phenotype.csv"), show_col_types = FALSE)
+out <- here("02_Differential_Expression", "03_Phenotype", "c_data")
+dir.create(out, recursive = TRUE, showWarnings = FALSE)
+```
+
+## Pairing
+
+A leg contributes only when both timepoints were acquired, which is what makes a change score
+definable. S06's left leg has T1 only, so it drops here and nowhere else.
+
+```{r pairs}
+targets <- proteins$targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_"))
+by_timepoint <- targets |>
+  select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = timepoint, values_from = sample_id)
+legs <- by_timepoint |>
+  filter(!is.na(T1), !is.na(T2)) |>
+  arrange(participant, treatment)
+pairs <- legs |>
+  select(participant, treatment, leg_id) |>
+  pivot_wider(names_from = treatment, values_from = leg_id) |>
+  filter(!is.na(BFR), !is.na(HLRT))
+
+delta <- proteins$E[, legs$T2] - proteins$E[, legs$T1]
+colnames(delta) <- legs$leg_id
+paired <- delta[, pairs$BFR] - delta[, pairs$HLRT]
+colnames(paired) <- pairs$participant
+tibble(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
+```
+
+## Outcomes
+
+Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area is the size
+outcome; echo intensity is the quality one, and falls when muscle composition improves.
+
+```{r outcomes}
+outcomes <- c(
+  vl_csa = "vl_csa_post_cm2 - vl_csa_pre_cm2",
+  vl_echo = "vl_echo_post_au - vl_echo_pre_au",
+  rf_csa = "rf_csa_post_cm2 - rf_csa_pre_cm2",
+  rf_echo = "rf_echo_post_au - rf_echo_pre_au"
+)
+leg_phenotype <- legs |>
+  left_join(select(phenotype, -treatment), by = c("participant", "leg")) |>
+  mutate(!!!set_names(map(outcomes, rlang::parse_expr), names(outcomes)))
+paired_outcome <- map(set_names(names(outcomes)), function(name) {
+  value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
+  value[pairs$BFR] - value[pairs$HLRT]
+})
+```
+
+## Correlations
+
+Spearman throughout, since neither a protein change nor an echo intensity change is expected to
+be normal. Ties make `cor.test` fall back from its exact p to the approximation and warn on every
+call, so the warnings are suppressed rather than printed 24,336 times.
+
+```{r correlate}
+spearman_by_row <- function(values, outcome) {
+  usable <- !is.na(outcome)
+  values <- values[, usable, drop = FALSE]
+  outcome <- outcome[usable]
+  suppressWarnings(map(set_names(rownames(values)), \(protein) {
+    broom::tidy(stats::cor.test(values[protein, ], outcome, method = "spearman"))
+  })) |>
+    list_rbind(names_to = "protein") |>
+    transmute(protein, n = length(outcome), r = estimate, p = p.value)
+}
+results <- imap(outcomes, \(expression, name) {
+  bind_rows(
+    mutate(spearman_by_row(delta, leg_phenotype[[name]]), analysis = "pooled"),
+    mutate(spearman_by_row(paired, paired_outcome[[name]]), analysis = "differential")
+  ) |>
+    mutate(outcome = name)
+}) |>
+  list_rbind() |>
+  mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome)) |>
+  left_join(
+    rownames_to_column(proteins$genes, "protein") |> select(protein, gene = Genes),
+    by = "protein"
+  ) |>
+  relocate(analysis, outcome, protein, gene)
+```
+
+## What survives
+
+```{r summary}
+summary_table <- results |>
+  summarise(
+    proteins = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
+    fdr_sig = sum(fdr < 0.05), best_fdr = signif(min(fdr), 3),
+    .by = c(analysis, outcome, n)
+  ) |>
+  mutate(ratio = round(nominal / expected, 2)) |>
+  arrange(analysis, outcome)
+summary_table
+```
+
+Read `ratio` first. A value near 1 means the nominal count is what 3,042 tests return when
+nothing is there, whatever the smallest p happens to be.
+
+```{r figure}
+#| fig-width: 7
+#| fig-height: 4
+ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
+  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  scale_fill_manual(values = c(pooled = "#B2182B", differential = "#2166AC"), name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(x = "nominal hits / chance expectation", y = NULL) +
+  theme_minimal(base_size = 10) +
+  theme(panel.grid.major.y = element_blank(), legend.position = "top")
+```
+
+```{r write}
+writexl::write_xlsx(
+  list(summary = summary_table, correlations = arrange(results, fdr)),
+  file.path(out, "03_phenotype.xlsx")
+)
+saveRDS(list(results = results, summary = summary_table), file.path(out, "phenotype.rds"),
+  compress = "xz"
+)
+```

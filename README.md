@@ -15,14 +15,16 @@ muscle proteome differently than heavy load.
 |---|---|---|
 | `00_Input/` | study data, no code | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
-| `02_Differential_Expression/` | model fitting, five contrasts | ready |
-| `03_Pathway_Enrichment/` | frozen gene sets, protein plots, enrichment tests | first sub-stage ready, tests planned |
+| `02_Differential_Expression/` | model fitting, five contrasts, protein against phenotype | ready |
+| `03_Pathway_Enrichment/` | frozen gene sets, which processes moved, and per-sample set scores against the phenotype | ready |
 | `04_Network/` | data-driven protein modules | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-Each sub-stage contains `a_script/` (code), `b_reports/` (rendered HTML), and `c_data/`
-(outputs). Stages run in order and pass data through disk, so any stage can be re-run on
-its own. "Planned" means the folder currently contains only a README.
+Each sub-stage contains `a_script/` (code), `b_reports/` (rendered HTML, or figures where the
+step is a plain R script), and `c_data/` (outputs). `03_Pathway_Enrichment` runs as R scripts and
+writes one workbook per step; the earlier stages are Quarto notebooks and render to HTML. Stages
+run in order and pass data through disk, so any stage can be re-run on its own. "Planned" means
+the folder currently contains only a README.
 
 ## Data
 
@@ -41,8 +43,14 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
+quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd       --output-dir ../b_reports
 
-quarto render 03_Pathway_Enrichment/01_Gene_Sets/a_script/01_gene_sets.qmd --output-dir ../b_reports
+Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R
+Rscript 03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and_fry.R
+Rscript 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.R
+Rscript 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.R
+Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R
+Rscript 03_Pathway_Enrichment/05_classify_and_associate_sets/a_script/05_classify_and_associate_sets.R
 ```
 
 These renders take minutes. The one expensive step is `dpcQuant()` at roughly 100 minutes,
@@ -65,6 +73,7 @@ do not pass the protein matrix to a standard linear model.
 ## Dependencies
 
 `limpa`, `limma`, `here`, `nanoparquet`, `writexl`, `dplyr`, `stringr`, `purrr`, `readr`,
-`tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` additionally requires `msigdbr`,
-`enrichVolcano`, `digest`, and `Matrix`, and checks for them at runtime. Versions are not
-pinned.
+`tibble`, `tidyr`, `ggplot2`. `03_Pathway_Enrichment` additionally requires `fgsea`, `singscore`,
+`msigdbr`, `GO.db`, `pROC`, `broom`, and `enrichVolcano`. Versions are not pinned.
+
+Thresholds sit next to the code that reads them, with a comment saying what each one is for.

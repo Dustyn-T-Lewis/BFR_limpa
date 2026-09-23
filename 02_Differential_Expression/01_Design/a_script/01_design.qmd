@@ -85,21 +85,21 @@ next notebook, but no branch and no warning will tell you. Read the row on every
 
 ```{r contrasts}
 contrasts <- makeContrasts(
-  BFR_post_vs_pre   = BFR_T2 - BFR_T1,
-  HLRT_post_vs_pre  = HLRT_T2 - HLRT_T1,
-  BFR_vs_HLRT_at_T1 = BFR_T1 - HLRT_T1,
-  BFR_vs_HLRT_at_T2 = BFR_T2 - HLRT_T2,
-  interaction       = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
+  `BFR_Post-Pre`       = BFR_T2 - BFR_T1,
+  `HLRT_Post-Pre`      = HLRT_T2 - HLRT_T1,
+  `BFR_Pre-HLRT_Pre`   = BFR_T1 - HLRT_T1,
+  `BFR_Post-HLRT_Post` = BFR_T2 - HLRT_T2,
+  Modality_x_Time_Interaction = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
   levels = design
 )
 contrasts[rowSums(abs(contrasts)) > 0, ]
 ```
 
-The five carry three different roles, and the manuscript should read them that way. `interaction`
+The five carry three different roles, and the manuscript should read them that way. `Modality_x_Time_Interaction`
 is the **primary** comparison and the question the study was designed to answer.
-`BFR_vs_HLRT_at_T1` is the **negative control**: two legs of one person before either was trained,
+`BFR_Pre-HLRT_Pre` is the **negative control**: two legs of one person before either was trained,
 so it must find nothing. The remaining three are **descriptive**. `interaction` equals
-`BFR_vs_HLRT_at_T2` minus `BFR_vs_HLRT_at_T1` exactly, so these are not five independent
+`BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so these are not five independent
 questions.
 
 ```{r write}
@@ -107,7 +107,7 @@ out <- here("02_Differential_Expression", "01_Design", "c_data")
 saveRDS(
   list(
     design = design, contrasts = contrasts,
-    negative_control = "BFR_vs_HLRT_at_T1"
+    negative_control = "BFR_Pre-HLRT_Pre"
   ),
   file.path(out, "design.rds")
 )
