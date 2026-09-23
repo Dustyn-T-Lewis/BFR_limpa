@@ -55,7 +55,7 @@ it only when the precursor matrix changes.
 
 ## Approach
 
-Quantification uses **limpa**. Roughly half of a DIA matrix is missing, and missingness is
+Quantification uses limpa. Roughly half of a DIA matrix is missing, and missingness is
 not random: low-abundance peptides are missed more often than abundant ones. limpa models
 that relationship and treats a missing value as evidence of low abundance rather than
 imputing a replacement. Every protein receives an estimate in every sample along with a

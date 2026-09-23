@@ -4,8 +4,8 @@ Tests every set on every contrast with fgsea and fry, and marks non-redundant fg
 
 | | |
 |---|---|
-| **Reads** | `gene_sets.rds`, `fit.rds`, `design.rds`, `proteins.rds` |
-| **Writes** | `set_tests.rds`, `set_tests.csv`, `01_run_fgsea_and_fry.xlsx`, 23 dot plots |
+| Reads | `gene_sets.rds`, `fit.rds`, `design.rds`, `proteins.rds` |
+| Writes | `set_tests.rds`, `set_tests.csv`, `01_run_fgsea_and_fry.xlsx`, 23 dot plots |
 
 `topTable()` rebuilds the five contrasts from the saved fit, keeping `02_Differential`'s BH.
 fgsea ranks proteins by moderated t, seeded. `collapsePathways` re-tests each significant set

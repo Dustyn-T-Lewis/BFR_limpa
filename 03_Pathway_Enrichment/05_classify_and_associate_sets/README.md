@@ -4,8 +4,8 @@ How well each set's score separates study groups, and whether it tracks the phen
 
 | | |
 |---|---|
-| **Reads** | `gene_sets.rds`, `set_tests.rds`, `singscore.rds`, `proteins.rds`, `phenotype.csv` |
-| **Writes** | `set_results.rds`, `05_classify_and_associate_sets.xlsx`, 7 figures over 96 pages |
+| Reads | `gene_sets.rds`, `set_tests.rds`, `singscore.rds`, `proteins.rds`, `phenotype.csv` |
+| Writes | `set_results.rds`, `05_classify_and_associate_sets.xlsx`, 7 figures over 96 pages |
 
 Five tasks: pre against post in each arm, BFR against HLRT at baseline, after training, and in
 change. All are paired, so AUC comes from `pROC` with `direction = "<"` fixed (unfixed, it flips

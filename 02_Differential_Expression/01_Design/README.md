@@ -5,9 +5,9 @@ Separate from the fit so a design problem surfaces in seconds.
 
 | | |
 |---|---|
-| **Script** | `a_script/01_design.qmd` |
-| **Reads** | `01_Preprocess/02_Quantification/c_data/proteins.rds` |
-| **Writes** | `c_data/design.rds`, `c_data/01_design.xlsx` |
+| Script | `a_script/01_design.qmd` |
+| Reads | `01_Preprocess/02_Quantification/c_data/proteins.rds` |
+| Writes | `c_data/design.rds`, `c_data/01_design.xlsx` |
 
 ```sh
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd --output-dir ../b_reports
@@ -39,10 +39,9 @@ code and a level named like `2E-T1` would be read as subtraction.
 
 Samples share a participant, and within that they share a leg. The participant term removes the
 first exactly; the second stays in the residual. If it were large, the within-leg comparisons would
-be tested too conservatively and the between-leg ones too liberally. The workbook
-reports it in the `correlation_strata` sheet; it has been near zero on this data, which is why
-`02_Differential` calls `dpcDE()`
-without `block =`.
+be tested too conservatively and the between-leg ones too liberally. The workbook reports it in
+the `correlation_strata` sheet; it has been near zero on this data, which is why `02_Differential`
+calls `dpcDE()` without `block =`.
 
 Two caveats. It is estimated on the bare expression matrix, so it carries neither the precision
 weights nor the sample weights the real fit uses; it describes the matrix, not the model. And
