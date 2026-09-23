@@ -1,12 +1,12 @@
 # 00 · Input
 
-Study data. 
+Study data.
 
 | File | What one row is | Read by |
 |---|---|---|
 | `report.parquet` | one precursor in one MS run | `01_Preprocess/01_Filtering` |
 | `metadata.csv` | one MS sample, 131 rows | `01_Preprocess/01_Filtering` |
-| `phenotype.csv` | one leg, 70 rows | nothing yet |
+| `phenotype.csv` | one leg, 70 rows | `02_Differential_Expression/03_Phenotype`, `03_Pathway_Enrichment/05_classify_and_associate_sets` |
 
 ## Get report.parquet
 
@@ -30,9 +30,9 @@ got restriction was counterbalanced, so the letter gives the side only. `metadat
 leg. Stored once per MS sample it would be repeated, and summing the column would report twice
 the real volume.
 
-### Correction (2026-09-19): vasto lateral pre-CSA, 8 of 70 rows
+### Correction (2026-09-19): vastus lateralis pre-CSA, 8 of 70 rows
 
-The CV between the two pre-training VL CSA measurements was high. Ultrasound images were re-analyzed, 
-`vl_csa_pre_cm2` changed for 8 legs (participants S07, S10, S11, S18 ×2, S21, S24, S29). Nothing else 
-in the file changed — pre VL CSA only
+The CV between the two pre-training VL CSA measurements was high, so the ultrasound images were
+re-analysed. `vl_csa_pre_cm2` changed for 8 legs (S07, S10, S11, S18 ×2, S21, S24, S29). Nothing
+else in the file changed.
 

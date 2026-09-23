@@ -149,9 +149,8 @@ stopifnot(!anyDuplicated(set_catalog$set_id))
 sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
 if (!length(sets)) stop("No gene sets passed the size filters.")
 
-# The GO Consortium's generic slim is a curated 140-term list, so grouping GO:BP by it uses a
-# published standard rather than a cut chosen here. map2slim puts a term under every slim term it
-# descends from; where a set needs one label, the most specific ancestor takes it.
+# GO Slim sets come from the GO Consortium's generic slim, a published 140-term list, frozen with
+# an md5 like the MSigDB snapshot.
 slim_file <- file.path(cache_dir, "goslim_generic.obo")
 stopifnot(
   file.exists(slim_file),
@@ -162,17 +161,6 @@ slim_offspring <- AnnotationDbi::mget(
   ifnotfound = NA
 )
 slim_offspring <- slim_offspring[!is.na(slim_offspring)]
-
-themes <- utils::stack(slim_offspring) |>
-  transmute(source_id = values, theme_id = as.character(ind)) |>
-  filter(source_id %in% set_catalog$source_id[set_catalog$database == "GOBP"]) |>
-  mutate(breadth = lengths(slim_offspring)[theme_id]) |>
-  slice_min(breadth, n = 1, by = source_id, with_ties = FALSE) |>
-  transmute(
-    database = "GOBP", source_id, theme_id,
-    theme = AnnotationDbi::Term(GO.db::GOTERM[theme_id])
-  )
-set_catalog <- left_join(set_catalog, themes, by = c("database", "source_id"))
 
 # Each slim term is also a set: every measured gene annotated to it or to any term beneath it.
 # Built from the frozen membership rather than from the qualifying subset, because a gene must
@@ -196,8 +184,7 @@ slim_catalog <- tibble(
     database = "GO_Slim", pathway, source_id = theme_id,
     description = "GO Slim term: every measured gene under it in the GO:BP hierarchy",
     source_size = measured_size, measured_size,
-    qualifies = measured_size >= 15 & measured_size <= 500,
-    theme = pathway, theme_id
+    qualifies = measured_size >= 15 & measured_size <= 500
   )
 names(slim_sets) <- slim_catalog$set_id
 set_catalog <- bind_rows(set_catalog, slim_catalog)
@@ -211,9 +198,6 @@ collection_summary <- set_catalog |>
     median_measured = median(measured_size[qualifies]), .by = database
   ) |>
   arrange(match(database, c(collections, "GO_Slim")))
-theme_summary <- set_catalog |>
-  filter(qualifies, !is.na(theme)) |>
-  count(theme, sort = TRUE, name = "qualifying_sets")
 print(collection_summary)
 message("qualifying sets: ", length(sets))
 
@@ -239,7 +223,6 @@ writexl::write_xlsx(
   list(
     collection_summary = collection_summary,
     set_catalog = set_catalog,
-    theme_summary = theme_summary,
     protein_gene_map = protein_map,
     mapping_summary = mapping_summary,
     input_manifest = manifest,
