@@ -22,14 +22,14 @@ and `contaminants_removed`, recording what this stage did.
    metadata run must match a report column, or the sample would silently become all-NA.
 3. Repair the search database fault and drop reversed decoys.
 4. Remove peptides mapping to several proteins, then groups holding several proteins.
-5. Remove blood, plasma, skin and antibody proteins, reporting each cell's contaminant share
+5. Remove blood, plasma, skin and antibody proteins, reporting each cell's contaminant share.
 
 ## Contaminant repair
 
-The contaminant database appended to the search FASTA in DIANN repeats proteins the human FASTA 
+The contaminant database appended to the search FASTA in DIA-NN repeats proteins the human FASTA 
 lists, so creatine kinase and myoglobin are tagged as contaminants and look ambiguous. Left
 alone, step 4 deletes them along with other muscle proteins. So we drop only the entries that are
-contaminant-only, then strip the tag from the rest. 
+contaminant-only, then strip the tag from the rest.
 
 ## Contaminants
 

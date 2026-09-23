@@ -99,11 +99,14 @@ spearman_by_row <- function(values, outcome) {
   usable <- !is.na(outcome)
   values <- values[, usable, drop = FALSE]
   outcome <- outcome[usable]
-  suppressWarnings(map(set_names(rownames(values)), \(protein) {
-    broom::tidy(stats::cor.test(values[protein, ], outcome, method = "spearman"))
-  })) |>
-    list_rbind(names_to = "protein") |>
-    transmute(protein, n = length(outcome), r = estimate, p = p.value)
+  fits <- suppressWarnings(apply(values, 1, \(row) {
+    test <- stats::cor.test(row, outcome, method = "spearman")
+    c(r = unname(test$estimate), p = test$p.value)
+  }))
+  tibble(
+    protein = rownames(values), n = length(outcome),
+    r = unname(fits["r", ]), p = unname(fits["p", ])
+  )
 }
 results <- imap(outcomes, \(expression, name) {
   bind_rows(

@@ -19,7 +19,6 @@ suppressPackageStartupMessages({
   library(purrr)
   library(limma)
   library(ggplot2)
-  library(stringr)
 })
 
 out <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data")
@@ -154,10 +153,10 @@ set_tests <- set_tests |>
   left_join(main_lookup, by = c("contrast", "set_id")) |>
   mutate(main = if_else(method == "fgsea", coalesce(kept, FALSE), NA), kept = NULL) |>
   left_join(
-    select(gs$set_catalog, set_id, database, pathway, theme, source_size, description),
+    select(gs$set_catalog, set_id, database, pathway, source_size, description),
     by = "set_id"
   ) |>
-  relocate(contrast, method, set_id, database, pathway, theme)
+  relocate(contrast, method, set_id, database, pathway)
 
 # One row per contrast: how many sets each test called, and how many survived collapse. The
 # control sits in the table unflagged, for the reader to compare against.
@@ -171,19 +170,12 @@ set_summary <- set_tests |>
   )
 print(as.data.frame(set_summary))
 
-themed_hits <- set_tests |>
-  filter(method == "fgsea", padj < 0.05, main) |>
-  mutate(theme = coalesce(theme, paste0("(", database, ", no hierarchy)"))) |>
-  count(contrast, theme, sort = TRUE, name = "sets")
 
 # ---- figures -------------------------------------------------------------------------------
 
-# One directory per collection plus all_db, one file per contrast, so a panel can be read at full
-# size. Each shows the ten strongest collapse survivors by adjusted p, the rule the volcano rings
-# use. Labels come from enrichVolcano::ev_clean_label, the same function the volcanoes use, with
-# its line breaks flattened because these sit on an axis.
+# One directory per collection plus all_db, one file per contrast. Each panel shows the ten
+# strongest collapse survivors by adjusted p. Labels come from enrichVolcano::ev_clean_label.
 figure_root <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "b_reports")
-flat_label <- function(x) gsub("\n", " ", enrichVolcano::ev_clean_label(x))
 save_figure <- function(figure, file, width, height) {
   walk(c("png", "pdf"), \(extension) {
     ggsave(paste0(file, ".", extension), figure,
@@ -198,7 +190,7 @@ survivors <- set_tests |>
 draw_dotplot <- function(rows, colour_by, file) {
   top <- rows |>
     slice_min(padj, n = 10, with_ties = FALSE) |>
-    mutate(label = str_trunc(flat_label(pathway), 46))
+    mutate(label = enrichVolcano::ev_clean_label(pathway))
   figure <- ggplot(top, aes(NES, reorder(label, NES), size = n, colour = .data[[colour_by]])) +
     geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
     geom_point(alpha = 0.9) +
@@ -228,8 +220,8 @@ draw_dotplot <- function(rows, colour_by, file) {
       name = expression(-log[10] ~ FDR)
     )
   }
-  # A one-row panel still needs room for the legend and the caption beneath it.
-  save_figure(figure, file, width = 7.5, height = max(3, 1.9 + 0.22 * nrow(top)))
+  # Wrapped labels take up to three lines, and a one-row panel still needs room for the legend.
+  save_figure(figure, file, width = 7.5, height = max(3, 1.9 + 0.38 * nrow(top)))
 }
 
 collections <- unique(gs$set_catalog$database[gs$set_catalog$qualifies])
@@ -297,7 +289,6 @@ writexl::write_xlsx(
   list(
     set_summary = set_summary,
     significant = filter(flat, padj < 0.05),
-    themed_hits = themed_hits,
     protein_summary = protein_summary,
     protein_results = protein_results,
     input_manifest = manifest,
