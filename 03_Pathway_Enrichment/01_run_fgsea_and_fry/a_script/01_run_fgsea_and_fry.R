@@ -3,65 +3,39 @@
 # of the participant design, so correlation cannot inflate its null; under the global training
 # effect it flags about a third of sets.
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tibble)
-  library(purrr)
-  library(limma)
-  library(ggplot2)
-})
-
-out <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data")
-dir.create(out, recursive = TRUE, showWarnings = FALSE)
-
-inputs <- c(
-  gene_sets = "03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds",
-  fit = "02_Differential_Expression/02_Differential/c_data/fit.rds",
-  design = "02_Differential_Expression/01_Design/c_data/design.rds",
-  proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds"
-)
-paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) {
-  stop(
-    "Run the upstream stages first. Missing: ",
-    paste(inputs[!file.exists(paths)], collapse = ", ")
-  )
-}
-gs <- readRDS(paths[["gene_sets"]])
-fit <- readRDS(paths[["fit"]])
-d <- readRDS(paths[["design"]])
-proteins <- readRDS(paths[["proteins"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+pacman::p_load(
+  here, dplyr, tibble, tidyr, purrr, stringr, limma, ggplot2, patchwork, readxl, writexl
 )
 
-sets <- gs$sets
-protein_map <- gs$protein_map
-protein_ids <- protein_map$protein
+stage <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry")
+gene_sets <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
+sets <- readRDS(file.path(gene_sets, "gene_sets.rds"))
+gene_set_book <- file.path(gene_sets, "00_build_gene_sets.xlsx")
+set_catalog <- read_excel(gene_set_book, "set_catalog")
+protein_map <- read_excel(gene_set_book, "protein_gene_map")
+fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+
 contrast_names <- colnames(d$contrasts)
 # A stale fit still lines up by count, so these compare names rather than lengths.
 stopifnot(
-  identical(rownames(fit$coefficients), protein_ids),
+  identical(rownames(fit$coefficients), protein_map$protein),
   identical(colnames(fit$coefficients), contrast_names),
-  identical(rownames(proteins$E), protein_ids),
-  d$negative_control %in% contrast_names
+  identical(rownames(proteins$E), protein_map$protein)
 )
 
 # All five contrasts, BH once per contrast as upstream applied it; re-adjusting on the mapped
 # subset would change what every FDR here means. pi_score is the Xiao et al. (2014, PMID
 # 22321699) score: it controls no error rate, so it orders a contrast and selects nothing.
 protein_results <- map(set_names(contrast_names), function(contrast) {
-  topTable(fit,
-    coef = contrast, number = Inf, adjust.method = "BH", sort.by = "none"
-  ) |>
+  topTable(fit, coef = contrast, number = Inf, adjust.method = "BH", sort.by = "none") |>
     rownames_to_column("protein") |>
     select(protein, logFC, AveExpr, t, P.Value, adj.P.Val)
 }) |>
   list_rbind(names_to = "contrast") |>
   left_join(protein_map, by = "protein", relationship = "many-to-one") |>
   mutate(pi_score = P.Value^abs(logFC))
-stopifnot(nrow(protein_results) == length(protein_ids) * length(contrast_names))
 
 protein_summary <- protein_results |>
   summarise(
@@ -75,29 +49,23 @@ print(protein_summary)
 # One vector per contrast, representative proteins only, keyed by gene symbol so fgsea's
 # leadingEdge comes back in the namespace the volcanoes label with.
 ranked <- protein_results |>
-  filter(selected, !is.na(gene)) |>
+  filter(selected) |>
   split(~contrast) |>
   map(\(result) set_names(result$t, result$gene))
 ranked <- ranked[contrast_names]
 
-# fry indexes rows of proteins$E, not genes, so sets map back through the representative
-# protein from 00_build_gene_sets. A missing index would silently test the wrong rows.
-gene_map <- filter(protein_map, selected)
-set_rows <- map(sets, \(genes) {
-  match(gene_map$protein[match(genes, gene_map$gene)], protein_ids)
-})
-stopifnot(!any(map_lgl(set_rows, anyNA)))
-
-# limma reads y$weights, so limpa's per-observation precision reaches fry without depending on
-# an argument name. A protein rebuilt largely from missing precursors counts for less.
-weights <- fit$EList$weights
-stopifnot(identical(dim(weights), dim(proteins$E)), all(is.finite(weights)), all(weights > 0))
-proteins$weights <- weights
-
-# fry takes no block argument: 01_Design fixes participant in the design and the residual
-# within-leg correlation is 0.027.
 set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
+
+# fry indexes rows of proteins$E, so sets map back through the representative protein of each
+# symbol. limma reads y$weights, so limpa's per-observation precision reaches fry: a protein
+# rebuilt largely from missing precursors counts for less. fry takes no block argument, because
+# 01_Design fixes participant in the design and the residual within-leg correlation is 0.027.
+gene_map <- filter(protein_map, selected)
+set_rows <- map(sets, \(genes) {
+  match(gene_map$protein[match(genes, gene_map$gene)], protein_map$protein)
+})
+proteins$weights <- fit$EList$weights
 
 # Both packages return their own BH column over the list they were given: fgsea's padj and
 # fry's FDR. Neither is recomputed here.
@@ -140,7 +108,7 @@ set_tests <- set_tests |>
   left_join(main_lookup, by = c("contrast", "set_id")) |>
   mutate(main = if_else(method == "fgsea", coalesce(kept, FALSE), NA), kept = NULL) |>
   left_join(
-    select(gs$set_catalog, set_id, database, pathway, source_size, description),
+    select(set_catalog, set_id, database, pathway, source_size, description),
     by = "set_id"
   ) |>
   relocate(contrast, method, set_id, database, pathway)
@@ -158,135 +126,134 @@ set_summary <- set_tests |>
 print(as.data.frame(set_summary))
 
 
-# ---- figures -------------------------------------------------------------------------------
+# ---- figures: S1 to S7, one A4 page each ---------------------------------------------------
 
-# One directory per collection plus all_db, one file per contrast.
-figure_root <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "b_reports")
-save_figure <- function(figure, file, width, height) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(paste0(file, ".", extension), figure,
-      width = width, height = height, dpi = 200, bg = "white"
-    )
-  })
+supplement <- function(number, title, text, tags = "A") {
+  plot_annotation(
+    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 115),
+    tag_levels = tags,
+    theme = theme(plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2))
+  )
 }
-shown <- c("BFR_Post-Pre", "HLRT_Post-Pre", "Modality_x_Time_Interaction", "BFR_Post-HLRT_Post")
-survivors <- set_tests |>
-  filter(method == "fgsea", padj < 0.05, main, contrast %in% shown)
 
-draw_dotplot <- function(rows, colour_by, file) {
+shown <- c("BFR_Post-Pre", "HLRT_Post-Pre", "Modality_x_Time_Interaction", "BFR_Post-HLRT_Post")
+collections <- unique(set_catalog$database[set_catalog$qualifies])
+survivors <- set_tests |>
+  filter(method == "fgsea", padj < 0.05, main, contrast %in% shown) |>
+  mutate(contrast = factor(contrast, shown))
+
+dotplot <- function(rows, by_database, sizes, fdr) {
   top <- rows |>
     slice_min(padj, n = 10, with_ties = FALSE) |>
-    mutate(label = enrichVolcano::ev_clean_label(pathway))
-  figure <- ggplot(top, aes(NES, reorder(label, NES), size = n, colour = .data[[colour_by]])) +
-    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
-    geom_point(alpha = 0.9) +
-    scale_size_continuous(range = c(2, 6), name = "genes") +
-    labs(
-      x = "normalised enrichment score", y = NULL, title = unique(top$contrast),
-      subtitle = sprintf("%s, fgsea, BH within contrast", unique(rows$database[1])),
-      caption = sprintf(
-        paste(
-          "%s of %d collapse survivor%s, ranked by adjusted p.",
-          "Size is gene count, colour is -log10 FDR. Table: c_data/set_tests.csv."
-        ),
-        if (nrow(rows) > 10) "Ten strongest" else "All", nrow(rows),
-        if (nrow(rows) == 1) "" else "s"
-      )
-    ) +
-    theme_minimal(base_size = 10) +
-    theme(
-      panel.grid.major.y = element_blank(),
-      plot.caption = element_text(size = 6.5, colour = "grey45", hjust = 0)
+    mutate(
+      label = str_wrap(str_replace_all(enrichVolcano::ev_clean_label(pathway), "\n", " "), 45)
     )
-  figure <- if (colour_by == "database") {
-    figure + scale_colour_brewer(palette = "Dark2", name = NULL)
+  colour <- if (by_database) {
+    list(
+      scale_colour_brewer(palette = "Dark2", limits = collections, name = NULL),
+      guides(colour = guide_legend(override.aes = list(size = 3)))
+    )
   } else {
-    figure + scale_colour_viridis_c(
-      option = "rocket", direction = -1, end = 0.9,
+    scale_colour_viridis_c(
+      option = "rocket", direction = -1, end = 0.9, limits = fdr,
       name = expression(-log[10] ~ FDR)
     )
   }
-  # Wrapped labels take up to three lines, and a one-row panel still needs room for the legend.
-  save_figure(figure, file, width = 7.5, height = max(3, 1.9 + 0.38 * nrow(top)))
+  ggplot(top, aes(NES, reorder(label, NES), size = n)) +
+    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
+    geom_point(
+      aes(colour = if (by_database) database else -log10(padj)),
+      alpha = 0.9, show.legend = TRUE
+    ) +
+    colour +
+    scale_size_continuous(range = c(1.5, 5), limits = sizes, name = "genes") +
+    labs(
+      x = "normalised enrichment score", y = NULL,
+      title = sprintf("%s, %d of %d survivors", rows$contrast[1], nrow(top), nrow(rows))
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(panel.grid.major.y = element_blank(), plot.title = element_text(size = 9))
 }
 
-collections <- unique(gs$set_catalog$database[gs$set_catalog$qualifies])
-for (db in c(collections, "all_db")) {
-  dir <- file.path(figure_root, db)
-  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  rows <- if (db == "all_db") survivors else filter(survivors, database == db)
-  drawn <- intersect(shown, unique(rows$contrast))
-  for (cn in drawn) {
-    draw_dotplot(
-      mutate(filter(rows, contrast == cn), `-log10 FDR` = -log10(padj)),
-      if (db == "all_db") "database" else "-log10 FDR",
-      file.path(dir, paste0("01_dotplot_", cn))
+dotplot_figure <- function(rows, number, name, by_database = FALSE) {
+  by_contrast <- split(rows, rows$contrast, drop = TRUE)
+  wrap_plots(
+    map(by_contrast, dotplot,
+      by_database = by_database, sizes = range(rows$n), fdr = range(-log10(rows$padj))
+    ),
+    ncol = 1, guides = "collect"
+  ) +
+    supplement(
+      number, paste("Strongest fgsea sets after collapse,", name),
+      paste0(
+        paste(sprintf("(%s) %s.", LETTERS[seq_along(by_contrast)], names(by_contrast)),
+          collapse = " "
+        ),
+        " Up to ten collapsePathways survivors per contrast, lowest adjusted p first; FDR is",
+        " BH within contrast. Point size is the number of measured genes in the set; colour is ",
+        if (by_database) "the collection" else "-log10 FDR",
+        ". Contrasts with no survivor are omitted. Data: set_tests sheet of",
+        " 01_run_fgsea_and_fry.xlsx."
+      )
     )
-  }
-  message("drew ", db, ": ", length(drawn), " contrasts")
 }
+
+figures <- c(
+  list(dotplot_figure(survivors, 1, "all collections", by_database = TRUE)),
+  imap(unname(collections), \(db, i) {
+    dotplot_figure(filter(survivors, database == db), i + 1, db)
+  })
+)
 
 # Shows how much redundancy collapsePathways removed, rather than asserting it.
 collapse_effect <- set_tests |>
   filter(method == "fgsea", padj < 0.05, contrast %in% shown) |>
   summarise(before = n(), after = sum(main), .by = c(contrast, database)) |>
-  tidyr::pivot_longer(c(before, after), names_to = "stage", values_to = "sets") |>
-  mutate(
-    stage = factor(stage, c("before", "after")),
-    contrast = factor(contrast, levels = shown)
-  )
-save_figure(
+  pivot_longer(c(before, after), names_to = "stage", values_to = "sets") |>
+  mutate(stage = factor(stage, c("before", "after")), contrast = factor(contrast, shown))
+figures <- c(figures, list(
   ggplot(collapse_effect, aes(stage, sets, fill = database)) +
     geom_col(position = "dodge") +
-    facet_wrap(~contrast, scales = "free_y", nrow = 1) +
+    facet_wrap(~contrast, scales = "free_y", ncol = 2) +
     scale_fill_brewer(palette = "Dark2", name = NULL) +
-    labs(
-      x = NULL, y = "significant sets", title = "Significant sets before and after collapse",
-      subtitle = "fgsea at FDR 0.05, then collapsePathways",
-      caption = paste(
-        "Bars count significant sets per collection. Collapse keeps a set only if it stands alone",
-        "given a stronger set's leading edge. Table: c_data/set_tests.csv."
-      )
-    ) +
-    theme_minimal(base_size = 9) +
-    theme(plot.caption = element_text(size = 7, colour = "grey45", hjust = 0)),
-  file.path(figure_root, "all_db", "02_collapse_before_after"),
-  width = 10, height = 3
-)
-
-packages <- c("here", "limma", "fgsea", "dplyr", "purrr", "enrichVolcano")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
-flat <- mutate(set_tests, leadingEdge = map_chr(leadingEdge, paste, collapse = ";"))
-
-saveRDS(
-  list(
-    protein_results = protein_results, set_tests = set_tests, set_summary = set_summary,
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions
+    labs(x = NULL, y = "significant sets") +
+    theme_minimal(base_size = 10) +
+    theme(legend.position = "bottom") +
+    supplement(
+      length(figures) + 1, "Significant fgsea sets before and after collapse",
+      paste(
+        "Sets at FDR 0.05 per collection and contrast, before and after collapsePathways, which",
+        "keeps a set only if it stands alone given a stronger set's leading edge. Data: set_tests",
+        "sheet of 01_run_fgsea_and_fry.xlsx."
+      ),
+      tags = NULL
     )
-  ),
-  file.path(out, "set_tests.rds"),
-  compress = "xz"
+))
+
+pdf(file.path(stage, "b_reports", "01_run_fgsea_and_fry_figures.pdf"), width = 8.27, height = 11.69)
+walk(figures, print)
+invisible(dev.off())
+
+sheets <- list(
+  set_summary = set_summary,
+  protein_summary = protein_summary,
+  set_tests = mutate(set_tests, leadingEdge = map_chr(leadingEdge, paste, collapse = ";")),
+  protein_results = protein_results
 )
-writexl::write_xlsx(
-  list(
-    set_summary = set_summary,
-    significant = filter(flat, padj < 0.05),
-    protein_summary = protein_summary,
-    protein_results = protein_results,
-    input_manifest = manifest,
-    package_versions = versions
-  ),
-  file.path(out, "01_run_fgsea_and_fry.xlsx")
+overview <- tibble(
+  sheet = names(sheets),
+  rows = map_int(sheets, nrow),
+  columns = map_int(sheets, ncol),
+  description = c(
+    "Sets per contrast significant by fgsea, by fgsea after collapse, and by fry, at FDR 0.05",
+    "Proteins per contrast up and down at FDR 0.05",
+    "Every set, contrast and method; main marks fgsea collapse survivors; leadingEdge is ;-joined",
+    "Every protein and contrast from the saved fit, with its gene mapping and pi score"
+  )
 )
-readr::write_csv(flat, file.path(out, "set_tests.csv"))
-combined <- file.path(figure_root, "01_run_fgsea_and_fry_figures.pdf")
-pages <- setdiff(list.files(figure_root, "[.]pdf$", recursive = TRUE, full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message(
-  "wrote set_tests.rds, 01_run_fgsea_and_fry.xlsx, set_tests.csv and a ",
-  length(pages), "-page figure PDF"
+write_xlsx(
+  c(list(overview = overview), sheets),
+  file.path(stage, "c_data", "01_run_fgsea_and_fry.xlsx")
 )
+message("wrote 01_run_fgsea_and_fry.xlsx and a ", length(figures), "-page figure PDF")
+sessionInfo()

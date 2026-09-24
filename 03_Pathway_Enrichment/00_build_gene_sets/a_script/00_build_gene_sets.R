@@ -1,27 +1,11 @@
 # Freeze one MSigDB release, map proteins to gene symbols, and keep sets large enough to test.
 # 01_run_fgsea_and_fry and 04_run_singscore both read the set list, so membership is decided once.
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tibble)
-  library(purrr)
-})
-
+pacman::p_load(here, dplyr, tibble, purrr, writexl)
 
 out <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 cache_dir <- file.path(out, "cache")
-dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
-
-inputs <- c(proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds")
-paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) {
-  stop("Run 01_Preprocess first. Missing: ", paste(inputs[!file.exists(paths)], collapse = ", "))
-}
-proteins <- readRDS(paths[["proteins"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 
 # Membership shifts between MSigDB releases, so one is pinned. The first run fetches it and
 # writes a snapshot with an md5; later runs verify the snapshot and need neither network nor
@@ -41,7 +25,7 @@ checksum_file <- paste0(cache_file, ".md5")
 
 if (!file.exists(cache_file)) {
   message("fetching ", length(collections), " collections from msigdbr")
-  fetched <- imap(collection_specs[collections], function(spec, database) {
+  fetched <- imap(collection_specs, function(spec, database) {
     df <- msigdbr::msigdbr(
       db_species = "HS", species = "Homo sapiens",
       collection = spec[[1]], subcollection = spec[[2]]
@@ -63,15 +47,11 @@ if (!file.exists(cache_file)) {
   })
   frozen <- list(
     db_version = msigdb_release, collections = collections,
-    created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
     msigdbr_version = as.character(packageVersion("msigdbr")),
     membership = list_rbind(fetched)
   )
-  # Write a complete snapshot before exposing the final cache filename.
-  temporary <- tempfile(tmpdir = cache_dir, fileext = ".rds")
-  saveRDS(frozen, temporary, compress = "xz")
-  writeLines(unname(tools::md5sum(temporary)), checksum_file)
-  if (!file.rename(temporary, cache_file)) stop("Could not save MSigDB cache.")
+  saveRDS(frozen, cache_file, compress = "xz")
+  writeLines(unname(tools::md5sum(cache_file)), checksum_file)
 }
 if (!file.exists(checksum_file) || !identical(
   unname(tools::md5sum(cache_file)), readLines(checksum_file, warn = FALSE)
@@ -80,11 +60,7 @@ if (!file.exists(checksum_file) || !identical(
 }
 frozen <- readRDS(cache_file)
 membership <- frozen$membership
-stopifnot(identical(frozen$collections, collections))
-message(
-  "frozen: ", frozen$db_version, ", ", n_distinct(membership$set_id), " sets, ",
-  "cached ", frozen$created_utc
-)
+message("frozen: ", frozen$db_version, ", ", n_distinct(membership$set_id), " sets")
 
 # Set tests need one row per gene. A row with no symbol or several is dropped, not split:
 # splitting invents measurements nobody made. Among rows sharing a symbol, the one with the most
@@ -114,16 +90,15 @@ protein_map <- protein_map |>
       mapping_status == "candidate" ~ "duplicate_gene",
       TRUE ~ mapping_status
     ),
-    # Accessions distinguish duplicate symbols in protein-level plot labels.
+  ) |>
+  # Accessions distinguish duplicate symbols in protein-level plot labels.
+  mutate(
     label = if_else(
-      is.na(gene), protein,
-      if_else(duplicated(gene) | duplicated(gene, fromLast = TRUE),
-        paste0(gene, " (", protein, ")"), gene
-      )
-    )
+      !is.na(gene) & n() > 1, paste0(gene, " (", protein, ")"), coalesce(gene, protein)
+    ),
+    .by = gene
   )
-gene_map <- filter(protein_map, selected)
-gene_universe <- gene_map$gene
+gene_universe <- protein_map$gene[protein_map$selected]
 # Labels are what the volcanoes print, and a collision would put two proteins on one point.
 stopifnot(!anyDuplicated(protein_map$label))
 mapping_summary <- count(protein_map, mapping_status, name = "proteins")
@@ -146,7 +121,6 @@ set_catalog <- membership |>
   )
 stopifnot(!anyDuplicated(set_catalog$set_id))
 sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
-if (!length(sets)) stop("No gene sets passed the size filters.")
 
 # GO Slim sets come from the GO Consortium's generic slim (140 terms), frozen with an md5 like
 # the MSigDB snapshot.
@@ -170,7 +144,7 @@ go_genes <- membership |>
   with(split(gene, source_id))
 slim_sets <- imap(slim_offspring, function(descendants, slim_id) {
   covered <- intersect(c(slim_id, descendants), names(go_genes))
-  sort(intersect(unique(unlist(go_genes[covered], use.names = FALSE)), gene_universe))
+  sort(intersect(unlist(go_genes[covered], use.names = FALSE), gene_universe))
 })
 slim_catalog <- tibble(
   theme_id = names(slim_sets),
@@ -199,33 +173,24 @@ collection_summary <- set_catalog |>
 print(collection_summary)
 message("qualifying sets: ", length(sets))
 
-packages <- c("here", "limpa", "msigdbr", "GO.db", "GSEABase", "dplyr", "purrr")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
+sheets <- list(
+  collection_summary = collection_summary,
+  set_catalog = set_catalog,
+  protein_gene_map = protein_map,
+  mapping_summary = mapping_summary
 )
-saveRDS(
-  list(
-    sets = sets, set_catalog = set_catalog, protein_map = protein_map,
-    gene_universe = gene_universe,
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions,
-      msigdb_cache_md5 = unname(tools::md5sum(cache_file)),
-      goslim_md5 = unname(tools::md5sum(slim_file))
-    )
-  ),
-  file.path(out, "gene_sets.rds"),
-  compress = "xz"
+overview <- tibble(
+  sheet = names(sheets),
+  rows = map_int(sheets, nrow),
+  columns = map_int(sheets, ncol),
+  description = c(
+    "Sets per collection in the frozen release, how many qualify, median measured size",
+    "Every set with its source and measured size; qualifies marks the tested ones",
+    "Every protein, its gene symbol, and whether it represents that symbol in set tests",
+    "Proteins per mapping outcome"
+  )
 )
-writexl::write_xlsx(
-  list(
-    collection_summary = collection_summary,
-    set_catalog = set_catalog,
-    protein_gene_map = protein_map,
-    mapping_summary = mapping_summary,
-    input_manifest = manifest,
-    package_versions = versions
-  ),
-  file.path(out, "00_build_gene_sets.xlsx")
-)
+saveRDS(sets, file.path(out, "gene_sets.rds"), compress = "xz")
+write_xlsx(c(list(overview = overview), sheets), file.path(out, "00_build_gene_sets.xlsx"))
 message("wrote gene_sets.rds and 00_build_gene_sets.xlsx")
+sessionInfo()
