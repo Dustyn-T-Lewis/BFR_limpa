@@ -7,7 +7,7 @@ surfaces before anything is fitted.
 01_Preprocess/02_Quantification/c_data/proteins.rds
   01_Design       design matrix, five contrasts, one diagnostic  -> design.rds
   02_Differential fit, contrasts, results tables                 -> fit.rds
-  03_Phenotype    every protein against the ultrasound outcomes  -> phenotype.rds
+  03_Phenotype    every protein against the ultrasound outcomes  -> 03_phenotype.xlsx
 ```
 
 ```sh
