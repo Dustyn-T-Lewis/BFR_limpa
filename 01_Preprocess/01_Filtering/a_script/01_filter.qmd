@@ -195,8 +195,9 @@ removal_counts
 Two faults share this chunk. Most groups mentioning `cRAP` keep a human accession and are
 repaired rather than removed, so only the cRAP-only ones go. Reversed decoys are separate: the
 search FASTA already contained them, so DIA-NN scored them as targets and its own decoy column
-reads zero for every row. They carry almost no signal, but they inflate the protein count and
-would surface as nonsense identifiers in any enrichment.
+reads zero for every row. They carry `r signif(removal_counts$pct_signal[2], 2)`% of the starting
+signal, but they inflate the protein count and would surface as nonsense identifiers in any
+enrichment.
 
 ## limpa's two precursor filters run on the repaired annotation
 
@@ -269,11 +270,11 @@ carrying `r round(sum(removed$pct_signal), 2)`% of the starting signal.
 ::: callout-note
 ## The contaminant fraction is compared across cells, not adjusted for
 
-The medians above compare the four cells, so a gross imbalance in how bloody the biopsies were
-would be visible. Nothing adjusts for the fraction, and no test is run on it, so a difference too
-small to see here could still tilt a contrast: blood takes MS duty cycle away from muscle protein,
-and biopsy technique varies between legs and between visits. `02_Differential` estimates one
-quality weight per sample, which absorbs some of this but is not aimed at it.
+The medians above compare the four cells and show a gross imbalance in how bloody the biopsies
+were. They do not show a small one. Nothing adjusts for the fraction and no test is run on it.
+Blood takes MS duty cycle away from muscle protein, and biopsy technique varies between legs and
+between visits. `02_Differential` estimates one quality weight per sample; the weight absorbs
+part of this and is not aimed at it.
 :::
 
 ## One assertion protects the muscle proteins

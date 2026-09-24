@@ -10,7 +10,7 @@ Tests every set on every contrast with fgsea and fry, and marks the non-redundan
   `set_tests`, `protein_results`; `02_` and `03_` read the last two),
   `b_reports/01_run_fgsea_and_fry_figures.pdf` (S1–S7)
 - Run: `Rscript 03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and_fry.R`,
-  about 35 seconds.
+  34 seconds.
 
 `topTable()` rebuilds the five contrasts from the saved fit, keeping `02_Differential`'s BH.
 fgsea ranks proteins by moderated t, seeded. fry reads `proteins$E` with limpa's weights and no

@@ -6,7 +6,7 @@ Correlates each protein's pre-to-post change with the leg's change in muscle siz
 - Writes: `c_data/03_phenotype.xlsx` (`overview`, `summary`, `correlations`),
   `b_reports/03_phenotype.html`
 - Run: `quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd --output-dir ../b_reports`,
-  about ten seconds.
+  5 seconds.
 
 ## No protein tracks the phenotype after correction
 

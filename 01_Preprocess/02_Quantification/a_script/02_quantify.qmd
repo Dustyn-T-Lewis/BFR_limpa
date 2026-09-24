@@ -61,8 +61,7 @@ if `model='on'"*, so it does nothing here and the subsample supplies the robustn
 
 The fit comes out at `r round(dpcest$dpc[2], 3)`, below the 0.7-to-0.9 band the FAQ calls typical
 for DIA-NN searched with match-between-runs, though inside the 0.1-to-1.0 range it calls usable.
-The vignette notes the slope comes out low when peptides vary a lot, which a within-subject design
-with heavy missingness might produce.
+The vignette notes the slope comes out low when peptides vary a lot.
 
 Quantification therefore uses the preset 0.7 that limpa's FAQ suggests: "If `dpcCN()` doesn't give
 a value in that range, it would be reasonable to run `dpcQuant()` with a preset value
@@ -75,7 +74,8 @@ chosen before any downstream count was consulted.
 
 ::: {.callout-note}
 The visual fit is not diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
-against proportions computed on *observed* intensity, so some discrepancy is structural.
+against proportions computed on *observed* intensity, so curve and points disagree by
+construction.
 Judge the slope.
 :::
 
@@ -129,11 +129,11 @@ proteins back above 0.05 on the two training contrasts.
 ## Normalisation is measured before and after cyclic loess
 
 limpa places normalisation after `dpcQuant()` and before `dpcDE()` and performs none itself,
-because DIA-NN has usually normalised the precursors already. Normalised precursors do not make a
+because DIA-NN normalises the precursors, as it did here (`Precursor.Normalised`). Normalised precursors do not make a
 normalised protein roll-up.
 
 A single per-sample shift fixes the spread in per-sample medians but not the MA curve width, which
-cyclic loess may help with. Comparing a sample against the average of all samples gives a
+is what cyclic loess targets. Comparing a sample against the average of all samples gives a
 difference per protein, and fitting that against abundance gives a curve. A flat curve means the
 sample disagrees by a constant. A curve that travels means the disagreement depends on abundance.
 Both are reported before and after.

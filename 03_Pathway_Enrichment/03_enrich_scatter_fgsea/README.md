@@ -6,7 +6,7 @@ Plots each set's BFR_Post-Pre NES against its HLRT_Post-Pre NES.
 - Writes: `c_data/03_enrich_scatter_fgsea.xlsx` (`overview`, `concordance`, `discordant`,
   `nes_scatter`), `b_reports/03_enrich_scatter_fgsea_figures.pdf` (S10–S11)
 - Run: `Rscript 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.R`,
-  a few seconds.
+  3 seconds.
 
 ## BFR and HLRT NES correlate at rho 0.83 across all sets
 

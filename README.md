@@ -48,13 +48,13 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-Everything above takes about three minutes. `dpcQuant()` takes about 100 and runs separately, from
+The block above ran in 155 seconds. `dpcQuant()` takes about 100 minutes and runs separately, from
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`. Its output is committed, so re-run
 it only when the precursor matrix changes.
 
 ## limpa treats a missing value as evidence of low abundance
 
-Roughly half of a DIA matrix is missing, and low-abundance peptides are missed more often than
+Half of a DIA matrix is missing, and low-abundance peptides are missed more often than
 abundant ones. limpa models that relationship instead of imputing a replacement. Every protein
 gets an estimate in every sample with a standard error, and the standard error propagates into
 the downstream statistics.

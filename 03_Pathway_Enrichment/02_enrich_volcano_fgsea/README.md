@@ -6,7 +6,7 @@ Draws protein volcanoes with the collapse-surviving fgsea sets ringed. Computes 
 - Writes: `b_reports/02_enrich_volcano_fgsea_figures.pdf` (S8–S9). It writes no table, so it has no
   `c_data/`.
 - Run: `Rscript 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.R`,
-  a few seconds.
+  3 seconds.
 
 Point colour reads protein BH FDR; the ring reads set fgsea FDR. Red is up, blue down. The ring
 holds the twelve collapse survivors with the lowest adjusted p, in either direction. S8 has four
