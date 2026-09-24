@@ -4,12 +4,12 @@ Tests whether proteins that work together moved together, then scores every samp
 
 | Step | Runs | Writes |
 |---|---|---|
-| [`00_build_gene_sets`](00_build_gene_sets/README.md) | frozen MSigDB snapshot, protein-to-gene map, size filter, GO Slim sets | `gene_sets.rds` |
-| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | fgsea and fry per contrast, `collapsePathways` | `set_tests.rds`, 23 dot plots |
-| [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | 6 volcanoes |
-| [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | BFR NES against HLRT NES | 2 composites |
-| [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds`, 2 figures |
-| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, 7 figures, 96 pages |
+| [`00_build_gene_sets`](00_build_gene_sets/README.md) | frozen MSigDB snapshot, protein-to-gene map, size filter, GO Slim sets | `gene_sets.rds`, workbook |
+| [`01_run_fgsea_and_fry`](01_run_fgsea_and_fry/README.md) | fgsea and fry per contrast, `collapsePathways` | workbook, S1–S7 |
+| [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | S8–S9 |
+| [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | BFR NES against HLRT NES | workbook, S10–S11 |
+| [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `set_scores.rds`, workbook, S12 |
+| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | workbook, S13–S19 over 128 pages |
 
 ```sh
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
@@ -18,10 +18,16 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-About two minutes in total, half of it in `05_`. Each substage writes every
-figure as PDF, and a PNG when the figure is one page, and bundles the PDFs into one
-`<substage>_figures.pdf`. Figure titles name the figure, subtitles give method and counts, captions
-state the encodings and the source table. Findings live here, not on the figures.
+About two minutes in total, half of it in `05_`. Each substage writes at most two things:
+
+- `c_data/<substage>.xlsx`, an `overview` sheet listing the others, then one sheet per table. Later
+  substages read their tables from these workbooks.
+- `b_reports/<substage>_figures.pdf`, A4 pages numbered S1 to S19 through the stage, each with a
+  supplement-style caption beneath: title, one entry per lettered panel, encodings, and the sheet
+  the data come from. Findings live here, not on the figures.
+
+An `.rds` is written only where the next substage needs an R object: the set list, and the
+singscore matrix, whose exact rank ties a trip through Excel would break.
 
 ## Methods
 

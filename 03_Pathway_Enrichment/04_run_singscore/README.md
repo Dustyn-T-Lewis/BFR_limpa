@@ -4,8 +4,8 @@ One singscore per set per sample.
 
 | | |
 |---|---|
-| Reads | `gene_sets.rds`, `proteins.rds` |
-| Writes | `singscore.rds`, `set_scores.csv`, `04_run_singscore.xlsx`, 2 figures |
+| Reads | `gene_sets.rds`, `00_build_gene_sets.xlsx`, `proteins.rds` |
+| Writes | `set_scores.rds`, `04_run_singscore.xlsx`, `04_run_singscore_figures.pdf` (S12) |
 
 singscore ranks proteins within each sample, so a score does not depend on the cohort. Measured
 here, dropping 51 of 131 samples changed singscore values by 0 and GSVA values by up to 0.34.
@@ -13,12 +13,10 @@ here, dropping 51 of 131 samples changed singscore values by 0 and GSVA values b
 Participant dominates raw scores (PC1 33.6%, of which participant explains 0.64), so later steps
 use within-leg change.
 
-Figures: mean score against mean dispersion per set, coloured by collection; score distribution by
-study group. Reactome scores highest and disperses least.
+S12: (A) mean score against mean dispersion per set, coloured by collection; (B) score
+distribution by study group. Reactome scores highest and disperses least.
 
-```r
-ss <- readRDS("03_Pathway_Enrichment/04_run_singscore/c_data/singscore.rds")
-ss$scores            # 1,990 sets x 131 samples
-ss$collection_spread # median score and dispersion per collection
-ss$structure_check   # variance per component, participant share
-```
+The score matrix is written twice: as a sheet for reading, and as `set_scores.rds`, which
+`05_classify_and_associate_sets` reads. singscore values carry exact rank ties, and a trip
+through Excel changes the last bit of some of them, which breaks the ties and moves 05's
+Wilcoxon and Spearman p-values by up to 10%.
