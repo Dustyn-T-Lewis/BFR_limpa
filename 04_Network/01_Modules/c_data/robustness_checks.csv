@@ -1,0 +1,3 @@
+check,result
+minModuleSize = 20 (vs. 30),identical module partition
+Louvain on |r| > 0.5 correlation graph,largest community (n=562) overlaps 230/322 of the target module
