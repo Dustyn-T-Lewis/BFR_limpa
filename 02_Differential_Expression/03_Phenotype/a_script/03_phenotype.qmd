@@ -83,8 +83,8 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 
 ## Spearman correlations throughout
 
-Spearman throughout, since neither a protein change nor an echo intensity change is expected to
-be normal. Ties make `cor.test` fall back from its exact p to the approximation and warn on every
+Neither a protein change nor an echo intensity change is expected to be normal, so every
+correlation is Spearman. Ties make `cor.test` fall back from its exact p to the approximation and warn on every
 call, so the warnings are suppressed rather than printed 24,336 times.
 
 ```{r correlate}

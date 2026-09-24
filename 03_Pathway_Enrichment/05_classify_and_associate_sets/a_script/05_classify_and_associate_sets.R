@@ -334,7 +334,7 @@ figures <- c(
   )
 )
 
-# Whether a collection clears chance is the headline, so it gets its own figure, not just a sheet.
+# Whether a collection clears chance is the headline, so it gets its own figure beside the sheet.
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))

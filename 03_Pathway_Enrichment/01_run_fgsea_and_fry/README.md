@@ -38,7 +38,8 @@ training): a redundancy filter removes significant sets, not hopeless ones (Bour
 | Modality_x_Time_Interaction | 26 | 10 | 0 |
 | BFR_Pre-HLRT_Pre *(control)* | 1 | 1 | 0 |
 
-So the interaction's 10 fgsea pathways are leads, not findings. The control's one fgsea hit,
+fry's zeros on the between-leg contrasts make the interaction's 10 fgsea pathways leads, not
+findings. The control's one fgsea hit,
 `REACTOME_STRIATED_MUSCLE_CONTRACTION`, is the floor every count should be read against.
 
 S1 shows the ten strongest collapse survivors per contrast across all collections, S2–S6 the same
