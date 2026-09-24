@@ -2207,10 +2207,10 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#pairing" id="toc-pairing" class="nav-link active" data-scroll-target="#pairing">Pairing</a></li>
-  <li><a href="#outcomes" id="toc-outcomes" class="nav-link" data-scroll-target="#outcomes">Outcomes</a></li>
-  <li><a href="#correlations" id="toc-correlations" class="nav-link" data-scroll-target="#correlations">Correlations</a></li>
-  <li><a href="#what-survives" id="toc-what-survives" class="nav-link" data-scroll-target="#what-survives">What survives</a></li>
+  <li><a href="#a-leg-counts-only-with-both-timepoints" id="toc-a-leg-counts-only-with-both-timepoints" class="nav-link active" data-scroll-target="#a-leg-counts-only-with-both-timepoints">A leg counts only with both timepoints</a></li>
+  <li><a href="#four-ultrasound-changes-are-the-outcomes" id="toc-four-ultrasound-changes-are-the-outcomes" class="nav-link" data-scroll-target="#four-ultrasound-changes-are-the-outcomes">Four ultrasound changes are the outcomes</a></li>
+  <li><a href="#spearman-correlations-throughout" id="toc-spearman-correlations-throughout" class="nav-link" data-scroll-target="#spearman-correlations-throughout">Spearman correlations throughout</a></li>
+  <li><a href="#read-the-ratio-to-chance-first" id="toc-read-the-ratio-to-chance-first" class="nav-link" data-scroll-target="#read-the-ratio-to-chance-first">Read the ratio to chance first</a></li>
   </ul>
 </nav>
 </div>
@@ -2237,7 +2237,7 @@ vertical-align: -.125em;
 
 
 <p><code>02_Differential</code> asks which proteins changed between groups. This asks whether a protein’s change tracks how much the muscle changed. The contrast model cannot answer it, because a contrast compares group means and carries no per-leg outcome.</p>
-<p>Two framings. <strong>Pooled</strong> takes all 65 legs and correlates each protein’s pre-to-post change with that leg’s phenotype change. <strong>Differential</strong> takes the 32 participants with both legs and asks whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference in phenotype, which removes every between-participant confound.</p>
+<p>Two framings. Pooled takes all 65 legs and correlates each protein’s pre-to-post change with that leg’s phenotype change. Differential takes the 32 participants with both legs and asks whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference in phenotype, which removes every between-participant confound.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2245,8 +2245,8 @@ vertical-align: -.125em;
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>3,042 proteins mean 152 nominal hits are expected at p &lt; 0.05, so nothing here is read at nominal p. BH within each analysis and outcome is the reported quantity.</p>
-<section id="pairing" class="level2">
-<h2 class="anchored" data-anchor-id="pairing">Pairing</h2>
+<section id="a-leg-counts-only-with-both-timepoints" class="level2">
+<h2 class="anchored" data-anchor-id="a-leg-counts-only-with-both-timepoints">A leg counts only with both timepoints</h2>
 <p>A leg contributes only when both timepoints were acquired, which is what makes a change score definable. S06’s left leg has T1 only, so it drops here and nowhere else.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets <span class="sc">|&gt;</span></span>
@@ -2288,8 +2288,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="outcomes" class="level2">
-<h2 class="anchored" data-anchor-id="outcomes">Outcomes</h2>
+<section id="four-ultrasound-changes-are-the-outcomes" class="level2">
+<h2 class="anchored" data-anchor-id="four-ultrasound-changes-are-the-outcomes">Four ultrasound changes are the outcomes</h2>
 <p>Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area is the size outcome; echo intensity is the quality one, and falls when muscle composition improves.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>leg_phenotype <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
@@ -2307,9 +2307,9 @@ vertical-align: -.125em;
 <span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="correlations" class="level2">
-<h2 class="anchored" data-anchor-id="correlations">Correlations</h2>
-<p>Spearman throughout, since neither a protein change nor an echo intensity change is expected to be normal. Ties make <code>cor.test</code> fall back from its exact p to the approximation and warn on every call, so the warnings are suppressed rather than printed 24,336 times.</p>
+<section id="spearman-correlations-throughout" class="level2">
+<h2 class="anchored" data-anchor-id="spearman-correlations-throughout">Spearman correlations throughout</h2>
+<p>Neither a protein change nor an echo intensity change is expected to be normal, so every correlation is Spearman. Ties make <code>cor.test</code> fall back from its exact p to the approximation and warn on every call, so the warnings are suppressed rather than printed 24,336 times.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>spearman_by_row <span class="ot">&lt;-</span> <span class="cf">function</span>(values, outcome) {</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  usable <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(outcome)</span>
@@ -2340,8 +2340,8 @@ vertical-align: -.125em;
 <span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(analysis, outcome, protein, gene)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="what-survives" class="level2">
-<h2 class="anchored" data-anchor-id="what-survives">What survives</h2>
+<section id="read-the-ratio-to-chance-first" class="level2">
+<h2 class="anchored" data-anchor-id="read-the-ratio-to-chance-first">Read the ratio to chance first</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>summary_table <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>

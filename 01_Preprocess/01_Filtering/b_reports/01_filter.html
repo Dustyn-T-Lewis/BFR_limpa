@@ -2207,13 +2207,13 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#read" id="toc-read" class="nav-link active" data-scroll-target="#read">Read</a></li>
-  <li><a href="#map-runs-to-samples" id="toc-map-runs-to-samples" class="nav-link" data-scroll-target="#map-runs-to-samples">Map runs to samples</a></li>
-  <li><a href="#repair-the-annotation" id="toc-repair-the-annotation" class="nav-link" data-scroll-target="#repair-the-annotation">Repair the annotation</a></li>
-  <li><a href="#limpas-precursor-filters" id="toc-limpas-precursor-filters" class="nav-link" data-scroll-target="#limpas-precursor-filters">limpa’s precursor filters</a></li>
-  <li><a href="#contaminants" id="toc-contaminants" class="nav-link" data-scroll-target="#contaminants">Contaminants</a></li>
-  <li><a href="#guard" id="toc-guard" class="nav-link" data-scroll-target="#guard">Guard</a></li>
-  <li><a href="#outputs" id="toc-outputs" class="nav-link" data-scroll-target="#outputs">Outputs</a></li>
+  <li><a href="#readdiann-reads-protein.ids-on-top-of-its-defaults" id="toc-readdiann-reads-protein.ids-on-top-of-its-defaults" class="nav-link active" data-scroll-target="#readdiann-reads-protein.ids-on-top-of-its-defaults">readDIANN() reads Protein.Ids on top of its defaults</a></li>
+  <li><a href="#runs-become-sample-ids-by-case-insensitive-match" id="toc-runs-become-sample-ids-by-case-insensitive-match" class="nav-link" data-scroll-target="#runs-become-sample-ids-by-case-insensitive-match">Runs become sample IDs by case-insensitive match</a></li>
+  <li><a href="#the-crap-annotation-is-repaired-before-any-filter" id="toc-the-crap-annotation-is-repaired-before-any-filter" class="nav-link" data-scroll-target="#the-crap-annotation-is-repaired-before-any-filter">The cRAP annotation is repaired before any filter</a></li>
+  <li><a href="#limpas-two-precursor-filters-run-on-the-repaired-annotation" id="toc-limpas-two-precursor-filters-run-on-the-repaired-annotation" class="nav-link" data-scroll-target="#limpas-two-precursor-filters-run-on-the-repaired-annotation">limpa’s two precursor filters run on the repaired annotation</a></li>
+  <li><a href="#contaminants-go-before-quantification" id="toc-contaminants-go-before-quantification" class="nav-link" data-scroll-target="#contaminants-go-before-quantification">Contaminants go before quantification</a></li>
+  <li><a href="#one-assertion-protects-the-muscle-proteins" id="toc-one-assertion-protects-the-muscle-proteins" class="nav-link" data-scroll-target="#one-assertion-protects-the-muscle-proteins">One assertion protects the muscle proteins</a></li>
+  <li><a href="#only-precursors_filtered.rds-is-read-downstream" id="toc-only-precursors_filtered.rds-is-read-downstream" class="nav-link" data-scroll-target="#only-precursors_filtered.rds-is-read-downstream">Only precursors_filtered.rds is read downstream</a></li>
   </ul>
 </nav>
 </div>
@@ -2302,10 +2302,10 @@ vertical-align: -.125em;
 <span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A2M&quot;</span>, <span class="st">&quot;BLVRB&quot;</span>, <span class="st">&quot;STOM&quot;</span>, <span class="st">&quot;TALDO1&quot;</span></span>
 <span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<section id="read" class="level2">
-<h2 class="anchored" data-anchor-id="read">Read</h2>
+<section id="readdiann-reads-protein.ids-on-top-of-its-defaults" class="level2">
+<h2 class="anchored" data-anchor-id="readdiann-reads-protein.ids-on-top-of-its-defaults">readDIANN() reads Protein.Ids on top of its defaults</h2>
 <p><code>Protein.Ids</code> is not one of <code>readDIANN()</code>’s default <code>annotation.columns</code>, and the repair below cannot run without it. It is added to the defaults, not substituted for them, so <code>Protein.Names</code> still comes through for later annotation.</p>
-<p>Everything else stays as shipped. <code>q.cutoffs = 0.01</code> over <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code> is the set the vignette recommends for a match-between-runs search. <code>intensity.column = &quot;Precursor.Normalised&quot;</code> is DIA-NN’s normalised column, which is why nothing here normalises again. <code>log = TRUE</code> means <code>y$E</code> arrives on the log2 scale, so never log it twice.</p>
+<p>Everything else stays at the defaults. <code>q.cutoffs = 0.01</code> over <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code> is the set the vignette recommends for a match-between-runs search. <code>intensity.column = &quot;Precursor.Normalised&quot;</code> is DIA-NN’s normalised column, which is why nothing here normalises again. <code>log = TRUE</code> means <code>y$E</code> arrives on the log2 scale, so never log it twice.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">readDIANN</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;report.parquet&quot;</span>),</span>
@@ -2323,8 +2323,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="map-runs-to-samples" class="level2">
-<h2 class="anchored" data-anchor-id="map-runs-to-samples">Map runs to samples</h2>
+<section id="runs-become-sample-ids-by-case-insensitive-match" class="level2">
+<h2 class="anchored" data-anchor-id="runs-become-sample-ids-by-case-insensitive-match">Runs become sample IDs by case-insensitive match</h2>
 <p>Columns come back named by DIA-NN <code>Run</code>. Matching them case-insensitively against <code>metadata$run</code> renames columns to <code>sample_id</code>, absorbs a run the instrument wrote <code>Cl_MDR_7E-T2</code> against <code>CL_MDR_7E-T2</code> in the sheet, and drops the discarded S08 injection, which is in the report but not the sheet.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
@@ -2352,11 +2352,11 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="repair-the-annotation" class="level2">
-<h2 class="anchored" data-anchor-id="repair-the-annotation">Repair the annotation</h2>
-<p>The contaminant database appended to the search FASTA repeats proteins the human FASTA already lists, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where <em>every</em> member is cRAP should go; the rest need the prefix stripped.</p>
+<section id="the-crap-annotation-is-repaired-before-any-filter" class="level2">
+<h2 class="anchored" data-anchor-id="the-crap-annotation-is-repaired-before-any-filter">The cRAP annotation is repaired before any filter</h2>
+<p>The contaminant database appended to the search FASTA repeats proteins the human FASTA already lists, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where every member is cRAP go; the rest have the prefix stripped.</p>
 <p>Order matters, because <code>Genes</code> carries the prefix too. One of the six cRAP-only symbols here is <code>cRAP-MB</code>: strip first and it becomes <code>MB</code>, which <code>must_keep</code> requires to survive, so precursors of a contaminant standard would merge into human myoglobin unnoticed. Two more cRAP-only rows carry no gene symbol at all, so no symbol list could catch them either.</p>
-<p>Stripping also repairs <code>Proteotypic</code>, which is why the muscle survives at all. <code>filterNonProteotypicPeptides()</code> believes the flag, and on the unrepaired annotation it deleted 13 of the <code>must_keep</code> symbols when that was last measured.</p>
+<p>Stripping also repairs <code>Proteotypic</code>, which is why the muscle survives. <code>filterNonProteotypicPeptides()</code> believes the flag, and on the unrepaired annotation it deleted 13 of the <code>must_keep</code> symbols when that was last measured.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">str_split</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Ids, <span class="st">&quot;;&quot;</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>crap_only <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(members, \(m) <span class="fu">all</span>(<span class="fu">str_starts</span>(m, <span class="st">&quot;cRAP-&quot;</span>)))</span>
@@ -2391,7 +2391,7 @@ vertical-align: -.125em;
 <span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>      }</span>
 <span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    ),</span>
 <span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mutate() evaluates in order, so this reads the de-duplicated Protein.Ids the</span></span>
-<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>    <span class="co"># line above just wrote. Splitting these into two mutate() calls breaks it.</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>    <span class="co"># line above wrote. Splitting these into two mutate() calls breaks it.</span></span>
 <span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">Proteotypic =</span> <span class="fu">if_else</span>(</span>
 <span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>      crap_mention,</span>
 <span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(<span class="sc">!</span><span class="fu">str_detect</span>(Protein.Ids, <span class="st">&quot;;&quot;</span>)),</span>
@@ -2433,8 +2433,8 @@ vertical-align: -.125em;
 </div>
 <p>Two faults share this chunk. Most groups mentioning <code>cRAP</code> keep a human accession and are repaired rather than removed, so only the cRAP-only ones go. Reversed decoys are separate: the search FASTA already contained them, so DIA-NN scored them as targets and its own decoy column reads zero for every row. They carry almost no signal, but they inflate the protein count and would surface as nonsense identifiers in any enrichment.</p>
 </section>
-<section id="limpas-precursor-filters" class="level2">
-<h2 class="anchored" data-anchor-id="limpas-precursor-filters">limpa’s precursor filters</h2>
+<section id="limpas-two-precursor-filters-run-on-the-repaired-annotation" class="level2">
+<h2 class="anchored" data-anchor-id="limpas-two-precursor-filters-run-on-the-repaired-annotation">limpa’s two precursor filters run on the repaired annotation</h2>
 <p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum information. Nothing here filters on missingness either, because the vignette says precursors need no missing-value filtering, and those gaps are what <code>dpc()</code> recovers.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>summary_repaired <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>, signal_start)</span>
@@ -2446,10 +2446,10 @@ vertical-align: -.125em;
 <span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>summary_compound <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;compound groups removed&quot;</span>, signal_start)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="contaminants" class="level2">
-<h2 class="anchored" data-anchor-id="contaminants">Contaminants</h2>
+<section id="contaminants-go-before-quantification" class="level2">
+<h2 class="anchored" data-anchor-id="contaminants-go-before-quantification">Contaminants go before quantification</h2>
 <p>A needle biopsy bleeds and passes through skin, so a large share of signal here is blood, plasma, skin and antibody protein that muscle fibres do not express. Removal happens before quantification because <code>dpc()</code> fits one curve across every precursor and <code>dpcQuant()</code> estimates its prior from the global data, so contaminants left in place would shape the missing-value model that every muscle protein is then quantified through.</p>
-<p><code>filterCompoundProteins()</code> removes groups holding several <em>proteins</em>, but a single protein can still be annotated with several <em>gene symbols</em>, so a plain symbol test is not enough. A group counts as contamination only when every one of its symbols does, which is what keeps myoglobin when DIA-NN reports it alongside a second name.</p>
+<p><code>contaminant_symbols</code> holds 147 gene symbols and <code>contaminant_families</code> four family patterns. <code>filterCompoundProteins()</code> removes groups holding several proteins, but one protein can still carry several gene symbols, so a test on the first symbol fails both ways. A group counts as contamination only when every one of its symbols does, which keeps myoglobin when DIA-NN reports it alongside a second name.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>symbols <span class="ot">&lt;-</span> <span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>n_multi <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">lengths</span>(symbols) <span class="sc">&gt;</span> <span class="dv">1</span>)</span>
@@ -2628,7 +2628,7 @@ vertical-align: -.125em;
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>What the contaminant fraction does and does not settle
+<span class="screen-reader-only">Note</span>The contaminant fraction is compared across cells, not adjusted for
 </div>
 </div>
 <div class="callout-body-container callout-body">
@@ -2636,9 +2636,9 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="guard" class="level2">
-<h2 class="anchored" data-anchor-id="guard">Guard</h2>
-<p>One assertion, run after every filter. It catches a broken repair, which deletes muscle through the <code>Proteotypic</code> flag, and an over-reaching contaminant rule, which deletes it directly.</p>
+<section id="one-assertion-protects-the-muscle-proteins" class="level2">
+<h2 class="anchored" data-anchor-id="one-assertion-protects-the-muscle-proteins">One assertion protects the muscle proteins</h2>
+<p>All 28 symbols in <code>must_keep</code> must survive. The assertion runs after the last filter. It catches a broken repair, which deletes muscle through the <code>Proteotypic</code> flag, and an over-reaching contaminant rule, which deletes it directly.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>))</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(must_keep <span class="sc">%in%</span> survivors))</span>
@@ -2665,8 +2665,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="outputs" class="level2">
-<h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
+<section id="only-precursors_filtered.rds-is-read-downstream" class="level2">
+<h2 class="anchored" data-anchor-id="only-precursors_filtered.rds-is-read-downstream">Only precursors_filtered.rds is read downstream</h2>
 <p><code>precursors_filtered.rds</code> is read by <code>01_Preprocess/02_Quantification</code>. <code>01_filter.xlsx</code> is the record of what this stage did; its first sheet lists the others.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
