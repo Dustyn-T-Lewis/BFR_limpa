@@ -20,16 +20,9 @@ a curve, and `dpcQuant()` uses it to give every protein a value in every sample 
 anything. This stage follows limpa's vignette sequence.
 
 ```{r setup}
-library(here)
-library(limpa)
-library(limma)
-library(dplyr)
-library(tibble)
-library(writexl)
+pacman::p_load(here, limpa, limma, purrr, tibble, writexl)
 
-precursors_file <- here("01_Preprocess", "01_Filtering", "c_data",
-                        "precursors_filtered.rds")
-y <- readRDS(precursors_file)
+y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 dim(y)
 
 checkpoints <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
@@ -99,13 +92,7 @@ This notebook loads what the script wrote, so a render doesn't begin a long run 
 Rerun the script by hand when the precursor matrix changes.
 
 ```{r quantify}
-if (!file.exists(primary_file)) {
-  stop(
-    "No dpcQuant checkpoint. Run:\n",
-    "  Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R"
-  )
-}
-proteins <- readRDS(primary_file)$object
+proteins <- readRDS(primary_file)
 ```
 
 `r format(nrow(proteins), big.mark = ",")` protein groups from
@@ -240,13 +227,9 @@ The median absolute difference in protein abundance follows the table. It measur
 move, not whether that movement survives a contrast: every comparison here is within one
 participant, so a shift common to a participant's samples cancels out.
 
-```{r slope-fitted}
-#| eval: !expr file.exists(sensitivity_file)
-sensitivity <- readRDS(sensitivity_file)$object
-```
-
 ```{r slope-sensitivity}
 #| eval: !expr file.exists(sensitivity_file)
+sensitivity <- readRDS(sensitivity_file)
 sensitivity <- sensitivity[filterByDetection(sensitivity, n.samples = min(group_sizes)), ]
 sensitivity$E <- normalizeBetweenArrays(sensitivity$E, method = "cyclicloess")
 
@@ -282,12 +265,20 @@ recorded in this stage's README.
 `proteins.rds` is read by both stages of `02_Differential_Expression`.
 
 ```{r write}
+sheets <- list(dpc_parameters = dpc_parameters, protein_quality = protein_quality)
+overview <- tibble(
+  sheet = names(sheets),
+  rows = map_int(sheets, nrow),
+  columns = map_int(sheets, ncol),
+  description = c(
+    "Intercept and slope of the fitted detection probability curve",
+    "Per protein: precursors, observed proportion, mean abundance, standard error, observations"
+  )
+)
+
 out <- here("01_Preprocess", "02_Quantification", "c_data")
 saveRDS(proteins, file.path(out, "proteins.rds"))
-write_xlsx(
-  list(dpc_parameters = dpc_parameters, protein_quality = protein_quality),
-  file.path(out, "02_quantify.xlsx")
-)
+write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_quantify.xlsx"))
 ```
 
 ```{r session}
