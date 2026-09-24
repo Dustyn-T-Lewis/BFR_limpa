@@ -158,10 +158,24 @@ ma_width <- function(E) {
 spread <- function(E) diff(range(apply(E, 2, median)))
 
 before <- c(ma_width = median(ma_width(proteins$E)), median_spread = spread(proteins$E))
+unnormalised <- proteins$E
 proteins$E <- normalizeBetweenArrays(proteins$E, method = "cyclicloess")
 after <- c(ma_width = median(ma_width(proteins$E)), median_spread = spread(proteins$E))
 
 round(rbind(before, after), 3)
+```
+
+The top row shows every sample's intensity density before and after. The bottom row shows the
+sample whose curve travelled furthest before normalisation, against the average of all samples.
+
+```{r normalise-plots}
+#| fig-height: 8
+worst <- which.max(ma_width(unnormalised))
+par(mfrow = c(2, 2))
+plotDensities(unnormalised, legend = FALSE, main = "Before cyclic loess")
+plotDensities(proteins$E, legend = FALSE, main = "After cyclic loess")
+plotMD(unnormalised, column = worst, main = paste(colnames(unnormalised)[worst], "before"))
+plotMD(proteins$E, column = worst, main = paste(colnames(proteins$E)[worst], "after"))
 ```
 
 The curvature is unrelated to treatment or timepoint, so cyclic loess is not absorbing the effect
@@ -172,7 +186,9 @@ being tested. `proteins.rds` is written after this step and is the matrix the mo
 
 Cyclic loess remaps `$E` non-linearly and leaves `$other$standard.error` untouched. After
 normalisation the stored errors describe the unnormalised scale, and `dpcDE()` reads them as though
-they described the new one. Smyth recommends quantile and cyclic loess for this data regardless.
+they described the new one. Smyth recommends quantile or cyclic-loess normalisation of limpa
+protein quantifications when sample differences are technical
+([Bioconductor support, 2026](https://support.bioconductor.org/p/9163187/#9163221)).
 :::
 
 ## What survives
