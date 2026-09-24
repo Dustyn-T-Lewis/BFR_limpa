@@ -30,7 +30,7 @@ primary_file <- file.path(checkpoints, "proteins_slope_0.7.rds")
 sensitivity_file <- file.path(checkpoints, "proteins_slope_fitted.rds")
 ```
 
-## Missingness
+## Missingness is plotted against intensity first
 
 ```{r ave-vs-mis}
 plotAveVsMis(y)
@@ -40,7 +40,7 @@ A downward trend means detection depends on intensity and the DPC has something 
 flat cloud would mean missingness is closer to random, where limpa still works but gains
 less over simpler methods.
 
-## The curve
+## The fitted DPC slope falls below the band limpa calls typical
 
 ```{r dpc}
 dpcest <- dpc(y$E)
@@ -70,7 +70,8 @@ a value in that range, it would be reasonable to run `dpcQuant()` with a preset 
 
 The FAQ says a slope set too low makes the analysis more conservative. On this data the reverse
 held when it was last measured: the lower fitted slope gave smaller standard errors and more hits
-than the preset. The preset remains the documented setting and, here, the cautious one.
+than the preset. The preset remains the documented setting and, here, the cautious one. It was
+chosen before any downstream count was consulted.
 
 ::: {.callout-note}
 The visual fit is not diagnostic. `plotDPC()` draws a curve in *unobserved* intensity
@@ -78,7 +79,7 @@ against proportions computed on *observed* intensity, so some discrepancy is str
 Judge the slope.
 :::
 
-## Roll-up
+## dpcQuant() gives every value a standard error
 
 `dpcQuant()` fits an additive precursor-plus-sample model per protein, maximising a
 posterior that scores observed values by squared residual and missing values by their DPC
@@ -99,14 +100,14 @@ proteins <- readRDS(primary_file)
 `r format(nrow(y), big.mark = ",")` precursors. The matrix has no missing values; what varies
 is each value's standard error.
 
-## Detection filter
+## The detection filter uses the smallest group size, 32
 
 `filterByDetection()` runs after `dpcQuant()` and before DE, and returns a logical vector.
 For a small experiment the help suggests setting `n.samples` to the smallest group size.
 Here that is `BFR_T2` with 32 samples, one short because S06_L_T2 is missing.
 
-The function counts detections across all samples and keeps a protein when that count clears 
-the threshold, so the smallest group size sets a cohort-wide bar rather than guaranteeing 
+The function counts detections across all samples and keeps a protein when that count clears
+the threshold, so the smallest group size sets a cohort-wide bar rather than guaranteeing
 detection within any one group.
 
 ```{r detection}
@@ -118,14 +119,14 @@ group_sizes
 c(before = length(keep), kept = sum(keep), dropped = sum(!keep))
 ```
 
-Measured on an earlier run, the dropped proteins had a mean SE of 1.56 against 0.66 for 
-those kept, and 0.15 detected precursors per sample against 7.48, so the typical sample 
-measured nothing at all for them. Relaxing the threshold to limpa's default of 3 
-recovered 371 of them, of which exactly one reached BH < 0.05 in any contrast, while the 
-larger test set tightened the BH threshold enough to push 14 and 29 previously significant 
+Measured on an earlier run, the dropped proteins had a mean SE of 1.56 against 0.66 for
+those kept, and 0.15 detected precursors per sample against 7.48, so the typical sample
+measured nothing at all for them. Relaxing the threshold to limpa's default of 3
+recovered 371 of them, of which exactly one reached BH < 0.05 in any contrast, while the
+larger test set tightened the BH threshold enough to push 14 and 29 previously significant
 proteins back above 0.05 on the two training contrasts.
 
-## Normalisation
+## Normalisation is measured before and after cyclic loess
 
 limpa places normalisation after `dpcQuant()` and before `dpcDE()` and performs none itself,
 because DIA-NN has usually normalised the precursors already. Normalised precursors do not make a
@@ -175,10 +176,11 @@ Cyclic loess remaps `$E` non-linearly and leaves `$other$standard.error` untouch
 normalisation the stored errors describe the unnormalised scale, and `dpcDE()` reads them as though
 they described the new one. Smyth recommends quantile or cyclic-loess normalisation of limpa
 protein quantifications when sample differences are technical
-([Bioconductor support, 2026](https://support.bioconductor.org/p/9163187/#9163221)).
+([Bioconductor support, 2026](https://support.bioconductor.org/p/9163187/#9163221)). The mapping
+is close to linear, but it is an approximation carried into every later stage.
 :::
 
-## What survives
+## Participant dominates the protein matrix
 
 ```{r quality}
 protein_quality <- tibble(
@@ -215,11 +217,11 @@ round(c(
 ), 3)
 ```
 
-## Slope sensitivity
+## The fitted slope is a sensitivity run
 
 Quantification is repeated against the fitted curve and compared with the primary run, with the
-same detection filter and normalisation applied to both. The primary run passes `dpc.slope = 0.7` 
-and lets limpa fit the rest, while the sensitivity run hands `dpcQuant()` the whole curve `dpc()` 
+same detection filter and normalisation applied to both. The primary run passes `dpc.slope = 0.7`
+and lets limpa fit the rest, while the sensitivity run hands `dpcQuant()` the whole curve `dpc()`
 estimated, intercept included. `dpcDE()` reads the standard errors as precision weights, so
 whichever run carries the larger mean standard error is the more conservative setting.
 
@@ -257,12 +259,16 @@ Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 
 After that it loads as the primary run does.
 
-Refitting the contrasts under each slope is separate and not done here; the counts produced are 
-recorded in this stage's README.
+Refitting the five contrasts under each slope is not done here. Done separately, it gave 60 and
+107 proteins on the two training contrasts under the preset against 82 and 114 under the fitted
+slope, with the negative control and the interaction empty under both.
 
-## Outputs
+## proteins.rds carries a standard error beside every abundance
 
-`proteins.rds` is read by both stages of `02_Differential_Expression`.
+`proteins.rds` holds abundance, standard error and detected-precursor count per protein per
+sample. Every sub-stage of `02_Differential_Expression` reads it, as do `00_build_gene_sets`,
+`01_run_fgsea_and_fry`, `04_run_singscore` and `05_classify_and_associate_sets`. The standard
+error is the point, so keep the `.rds` rather than exporting abundances alone.
 
 ```{r write}
 sheets <- list(dpc_parameters = dpc_parameters, protein_quality = protein_quality)

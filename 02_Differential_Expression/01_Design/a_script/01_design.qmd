@@ -16,7 +16,7 @@ execute:
 ---
 
 limpa works with any design limma accepts. This notebook builds one and checks it, apart from
-the fit.
+the fit, so a design problem surfaces in seconds.
 
 ```{r setup}
 pacman::p_load(here, limma, purrr, tibble, writexl)
@@ -27,11 +27,14 @@ targets <- proteins$targets
 with(targets, table(treatment, timepoint))
 ```
 
-## Design
+## Participant is a fixed block
 
-Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block.
+Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block: 131
+rows by 36 columns, four group means and 32 participant dummies, 95 residual degrees of freedom.
 Fixed rather than random because every contrast the study asks for sits within one person
-(limma User's Guide §9.4.2). `sex` is constant within participant, so this design cannot test it.
+(limma User's Guide §9.4.2), which is what makes pre-to-post paired. `sex` is constant within
+participant, so this design cannot test it. One participant contributes three cells rather than
+four, so the group columns are participant-adjusted cell means.
 
 ```{r design}
 design <- model.matrix(~ 0 + group + participant, data = targets)
@@ -52,7 +55,7 @@ c(
 )
 ```
 
-## Is a fixed participant term enough
+## The within-leg correlation is checked, not modelled
 
 Samples share a participant, and within that they share a leg. The participant term removes the
 first exactly; the second stays in the residual. If the leg-level correlation were large, the
@@ -71,10 +74,10 @@ round(strata$correlation, 3)
 The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it
 describes the matrix rather than the model. That is enough for a near-zero check. When the number
 sits near zero, as it has on this data, `02_Differential` calls `dpcDE()` without `block =`.
-If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but no branch
-and no warning will tell you. Read the row on every rerun.
+If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but `leg_id` is
+not saved, and no branch and no warning will tell you. Read the row on every rerun.
 
-## Contrasts
+## The interaction is primary and BFR_Pre-HLRT_Pre is the control
 
 ```{r contrasts}
 contrasts <- makeContrasts(
@@ -88,12 +91,17 @@ contrasts <- makeContrasts(
 contrasts[rowSums(abs(contrasts)) > 0, ]
 ```
 
-The five carry three different roles, and the manuscript should read them that way. `Modality_x_Time_Interaction`
-is the **primary** comparison and the question the study was designed to answer.
-`BFR_Pre-HLRT_Pre` is the **negative control**: two legs of one person before either was trained,
-so it must find nothing. The remaining three are **descriptive**. `Modality_x_Time_Interaction` equals
-`BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so these are not five independent
-questions.
+| Name | Role | Compares | Reads as |
+|---|---|---|---|
+| `Modality_x_Time_Interaction` | primary | difference of the two time effects | the study question |
+| `BFR_Pre-HLRT_Pre` | negative control | two legs before training | must find nothing |
+| `BFR_Post-Pre` | descriptive | one leg over time | what restricted training did |
+| `HLRT_Post-Pre` | descriptive | the other leg over time | what conventional training did |
+| `BFR_Post-HLRT_Post` | descriptive | two legs after training | leg difference at the end |
+
+`Modality_x_Time_Interaction` equals `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so
+these are not five independent questions. Report the primary and the control as the result; the
+other three describe what happened on the way.
 
 ```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
