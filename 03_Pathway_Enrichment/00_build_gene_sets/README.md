@@ -6,7 +6,7 @@ this one list.
 | | |
 |---|---|
 | Reads | `proteins.rds` |
-| Writes | `gene_sets.rds`, `00_build_gene_sets.xlsx`, `c_data/cache/` |
+| Writes | `gene_sets.rds` (the tested sets), `00_build_gene_sets.xlsx`, `c_data/cache/` |
 
 ## Snapshot
 
@@ -42,9 +42,8 @@ several proteins share a symbol, the one with the most observed precursors repre
 `protein_gene_map` records each decision.
 
 ```r
-gs <- readRDS("03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds")
-gs$sets          # 1,990 tested sets, measured gene symbols
-gs$set_catalog   # every set, with sizes and whether it is tested
-gs$protein_map   # representative protein per gene, and plot labels
-gs$gene_universe # 3,039 measured symbols
+sets <- readRDS("03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds") # 1,990 sets
+book <- "03_Pathway_Enrichment/00_build_gene_sets/c_data/00_build_gene_sets.xlsx"
+readxl::read_excel(book, "set_catalog")      # every set, with sizes and whether it is tested
+readxl::read_excel(book, "protein_gene_map") # representative protein per gene, and plot labels
 ```
