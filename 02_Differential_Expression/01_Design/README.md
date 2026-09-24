@@ -1,49 +1,10 @@
 # 02_Differential_Expression / 01_Design
 
-Builds the design matrix and the five contrasts, and measures the assumption they rest on.
-Separate from the fit so a design problem surfaces in seconds.
+Builds the design matrix and the five contrasts, and measures the within-leg correlation they
+assume is small.
 
-| | |
-|---|---|
-| Script | `a_script/01_design.qmd` |
-| Reads | `01_Preprocess/02_Quantification/c_data/proteins.rds` |
-| Writes | `c_data/design.rds`, `c_data/01_design.xlsx` |
-
-```sh
-quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd --output-dir ../b_reports
-```
-
-## The design
-
-```r
-model.matrix(~ 0 + group + participant, data = targets)
-```
-
-131 rows by 36 columns: four group means, one per treatment-and-timepoint cell, plus 32 participant
-dummies. Full rank, 95 residual degrees of freedom.
-
-Participant is fixed, not random, because every comparison happens inside one person. With the term
-in the design, treatments are only compared within the same person, which is what makes pre-to-post
-paired. A random participant effect is for designs that also compare between people.
-
-One participant contributes three cells rather than four, so the group columns are
-participant-adjusted cell means rather than raw ones. The design is full rank regardless.
-
-## Two assertions before anything is fitted
-
-The design must be full rank, or the contrasts are not estimable and come back as silent NAs. And
-every column name must survive `make.names()`, because `makeContrasts()` parses its arguments as R
-code and a level named like `2E-T1` would be read as subtraction.
-
-## The correlation diagnostic
-
-Samples share a participant, and within that they share a leg. The participant term removes the
-first exactly; the second stays in the residual. If it were large, the within-leg comparisons would
-be tested too conservatively and the between-leg ones too liberally. The workbook reports it in
-the `correlation_strata` sheet; it has been near zero on this data, which is why `02_Differential`
-calls `dpcDE()` without `block =`.
-
-Two caveats. It is estimated on the bare expression matrix, so it carries neither the precision
-weights nor the sample weights the real fit uses; it describes the matrix, not the model. And
-nothing automates the decision. If that number ever rose, the fix is `block = leg_id` in the next
-notebook, but there is no branch, `leg_id` is not saved, and nothing would warn you. Read the row.
+- Reads: `01_Preprocess/02_Quantification/c_data/proteins.rds`
+- Writes: `c_data/design.rds` (read by `02_Differential` and `01_run_fgsea_and_fry`),
+  `c_data/01_design.xlsx` (`overview`, `correlation_strata`), `b_reports/01_design.html`
+- Run: `quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd --output-dir ../b_reports`,
+  a few seconds.
