@@ -181,7 +181,7 @@ y$genes <- y$genes |>
       }
     ),
     # mutate() evaluates in order, so this reads the de-duplicated Protein.Ids the
-    # line above just wrote. Splitting these into two mutate() calls breaks it.
+    # line above wrote. Splitting these into two mutate() calls breaks it.
     Proteotypic = if_else(
       crap_mention,
       as.integer(!str_detect(Protein.Ids, ";")),

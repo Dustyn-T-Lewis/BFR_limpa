@@ -68,8 +68,7 @@ round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0
 
 ## BH runs within each contrast, never across them
 
-Benjamini-Hochberg runs within each contrast and never across them. The five share participants
-and the interaction is a difference of two of the others, so pooling them would not control
+The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control
 anything that can be stated.
 
 ```{r results}
@@ -96,7 +95,7 @@ contrast_summary |>
 
 ## Three numbers separate an empty contrast from a conservative test
 
-Three numbers together, because each misleads alone. `propTrueNull()` estimates the null
+Each number misleads alone. `propTrueNull()` estimates the null
 proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null
 from a conservative one. Median \|t\| is 0.674 under a calibrated null, so a value below that
 means the tests are conservative. `p_below_0.2` is 0.2 under a uniform null, so a value below that
@@ -209,8 +208,8 @@ dim(dep_matrix)
 
 ## Two untrained legs should not differ
 
-Two untrained legs of the same person should not differ. If they do, the cause is upstream, and
-the difference is itself a result.
+If two untrained legs of the same person differ, the cause is upstream, and the difference is
+itself a result.
 
 ```{r negative-control}
 nc <- filter(results, contrast == d$negative_control)
