@@ -138,11 +138,11 @@ sample disagrees by a constant. A curve that travels means the disagreement depe
 Both are reported before and after.
 
 ```{r normalise}
-ma_width <- function(E) {
-  a <- rowMeans(E)
-  apply(E, 2, \(x) diff(range(lowess(a, x - a, f = 0.5)$y)))
+ma_width <- function(m) {
+  a <- rowMeans(m)
+  apply(m, 2, \(x) diff(range(lowess(a, x - a, f = 0.5)$y)))
 }
-spread <- function(E) diff(range(apply(E, 2, median)))
+spread <- function(m) diff(range(apply(m, 2, median)))
 
 before <- c(ma_width = median(ma_width(proteins$E)), median_spread = spread(proteins$E))
 unnormalised <- proteins$E
