@@ -12,8 +12,8 @@ Reads the DIA-NN report and removes rows. Drops no sample, filters nothing on mi
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports
 ```
 
-Only `precursors_filtered.rds` is read downstream. The workbook holds two sheets, `filter_log`
-and `contaminants_removed`, recording what this stage did.
+Only `precursors_filtered.rds` is read downstream. The workbook records what this stage did: an `overview` sheet
+listing the others, then `filter_log` and `contaminants_removed`.
 
 ## What it does
 
@@ -41,5 +41,5 @@ several names, so testing the first would get it wrong both ways.
 
 ### Note
 
-One assertion: all 28 symbols in `MUST_KEEP` must survive. It catches both a broken repair and a
+One assertion: all 28 symbols in `must_keep` must survive. It catches both a broken repair and a
 contaminant rule that reaches too far.
