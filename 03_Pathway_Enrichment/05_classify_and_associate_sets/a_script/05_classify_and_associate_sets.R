@@ -208,8 +208,7 @@ chance_line <- paste0(
   ), collapse = ", "), "."
 )
 set_label <- function(database, pathway) {
-  label <- str_replace_all(enrichVolcano::ev_clean_label(pathway), "\n", " ")
-  str_wrap(paste0(database, ": ", label), 40)
+  str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
 }
 
 # Every set reaching nominal p gets a panel, twelve to a page, by collection then p. `draw` builds
