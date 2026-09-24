@@ -24,7 +24,6 @@ collection_sizes <- count(catalog, database)
 message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
 
 
-# ---- the five classification tasks -------------------------------------------------------
 
 targets$leg_id <- paste(targets$participant, targets$leg, sep = "_")
 by_timepoint <- targets |>
@@ -101,7 +100,6 @@ set_auc <- imap(tasks, function(spec, name) {
   mutate(fdr = p.adjust(p_paired, "BH"), .by = c(task, database))
 
 
-# ---- phenotype association ---------------------------------------------------------------
 
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
 # A duplicated phenotype row would silently misalign every leg below.
@@ -185,7 +183,6 @@ chance_expectation <- bind_rows(
 print(as.data.frame(filter(chance_expectation, analysis == "classification")))
 
 
-# ---- figures: S13 to S19, A4 pages ---------------------------------------------------------
 
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
@@ -323,7 +320,7 @@ association_figure <- function(which_analysis, number, title, population) {
 }
 
 # The baseline control is reported in chance_expectation and the README but not drawn: it shows
-# what the method returns when nothing is there, a number to read, not a panel to present.
+# what the method returns when nothing is there.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 figures <- c(
   imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 12 + i)) |> list_flatten(),
@@ -372,7 +369,6 @@ walk(figures, print)
 invisible(dev.off())
 
 
-# ---- one workbook -------------------------------------------------------------------------
 
 sheets <- list(
   chance_expectation = chance_expectation,
