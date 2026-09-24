@@ -4,9 +4,9 @@ Fits the model and writes the results.
 
 | | |
 |---|---|
-| **Script** | `a_script/02_differential.qmd` |
-| **Reads** | `proteins.rds`, `01_Design/c_data/design.rds` |
-| **Writes** | `c_data/fit.rds`, `c_data/02_differential.xlsx` |
+| Script | `a_script/02_differential.qmd` |
+| Reads | `proteins.rds`, `01_Design/c_data/design.rds` |
+| Writes | `c_data/fit.rds`, `c_data/02_differential.xlsx` |
 
 ```sh
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
@@ -25,8 +25,8 @@ precision weights; `lmFit()` would discard them. `sample.weights` estimates one 
 sample, because biopsies differed in how much blood they carried. Contrasts are applied before
 moderation, which is why `eBayes` comes last.
 
-The weights are summarised per cell. They downweight, they do not exclude, and what matters is
-that the downweighting falls evenly, since uneven weighting would act like an undeclared covariate.
+The weights are summarised per cell. They downweight rather than exclude, and the downweighting
+must fall evenly, since uneven weighting would act like an undeclared covariate.
 
 One assertion runs first: that the design rows are the same samples in the same order as the matrix
 columns. limma checks only that the counts match.

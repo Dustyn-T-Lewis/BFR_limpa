@@ -1,7 +1,6 @@
-# Score every sample on every set. singscore ranks each sample's proteins and scores sets
-# against those ranks, so a score is rank-based and sample-independent: it does not move when
-# the cohort changes, which is what a paired within-participant design needs. No p-value, and
-# it never sees the contrast. The matrix is what 04_singscore_pheno_associations consumes.
+# Score every sample on every set with singscore. Scores rest on within-sample ranks, so they do
+# not move when the cohort changes, as a paired within-participant design needs. No p-value, no
+# contrast. 05_classify_and_associate_sets consumes the matrix.
 
 suppressPackageStartupMessages({
   library(here)
@@ -37,7 +36,7 @@ stopifnot(
   !anyDuplicated(gene_map$gene)
 )
 
-# Rows become gene symbols because that is the namespace the sets are keyed on.
+# Sets are keyed on gene symbols.
 gene_matrix <- proteins$E[gene_map$protein, ]
 rownames(gene_matrix) <- gene_map$gene
 ranks <- singscore::rankGenes(gene_matrix)
@@ -49,8 +48,8 @@ stopifnot(
 )
 message("scores: ", nrow(scores), " sets x ", ncol(scores), " samples")
 
-# Spread across sets within a sample is set composition; spread across samples within a set is
-# what the phenotype analysis has to work with, so both are recorded.
+# Spread across sets within a sample reflects set composition; spread across samples within a
+# set is what the phenotype analysis works with. Both are recorded.
 score_summary <- tibble(
   sets = nrow(scores), samples = ncol(scores),
   min = round(min(scores), 4), max = round(max(scores), 4),
@@ -60,9 +59,8 @@ score_summary <- tibble(
 )
 print(score_summary)
 
-# Dispersion is the spread of a set's member ranks within one sample: a low value means the
-# members sit together in that sample's ranking, a high one that they are scattered. It comes
-# back from multiScore beside the scores, so the cohort view costs no extra call.
+# Dispersion is the spread of a set's member ranks within one sample: low means the members sit
+# together, high that they scatter. multiScore returns it beside the scores at no extra cost.
 set_spread <- gs$set_catalog |>
   filter(qualifies) |>
   transmute(set_id, database) |>
@@ -77,8 +75,8 @@ collection_spread <- set_spread |>
   )
 print(as.data.frame(collection_spread))
 
-# Participant identity dominates the raw scores, which is why the phenotype analysis works on
-# the within-leg change and never on the raw value.
+# Participant identity dominates the raw scores, so the phenotype analysis uses the within-leg
+# change, never the raw value.
 components <- prcomp(t(scores), scale. = FALSE)
 variance <- summary(components)$importance[2, 1:4]
 targets <- proteins$targets[match(rownames(components$x), proteins$targets$sample_id), ]
@@ -93,12 +91,8 @@ structure_check <- tibble(
 )
 print(structure_check)
 
-# singscore's own two diagnostics, on one set named in advance rather than picked from the
-# results. Dispersion says whether a sample's score rests on a tight block of ranks or a
-# scattered one; the rank density says where the set's proteins sit in one sample's ranking.
-# singscore ships plotDispersion and plotRankDensity, both of which draw one signature at a
-# time. Reporting here is at cohort scale, so these are plain ggplots over the two matrices
-# multiScore already returned.
+# singscore's plotDispersion and plotRankDensity draw one signature at a time. These cohort-scale
+# views are plain ggplots over the score and dispersion matrices multiScore already returned.
 figures <- here("03_Pathway_Enrichment", "04_run_singscore", "b_reports")
 dir.create(figures, recursive = TRUE, showWarnings = FALSE)
 save_figure <- function(figure, name, height) {
@@ -145,7 +139,7 @@ save_figure(
       subtitle = sprintf("singscore, %d sets pooled", nrow(scores)),
       caption = paste(
         "Every set in every sample, pooled within group. Box is the interquartile range.",
-        "Scores are rank-based and sample-independent. Table: c_data/set_scores.csv."
+        "Table: c_data/set_scores.csv."
       )
     ) +
     theme_minimal(base_size = 9) +

@@ -53,9 +53,9 @@ fit <- contrasts.fit(fit, d$contrasts)
 fit <- eBayes(fit, robust = TRUE)
 ```
 
-Weights downweight a sample in proportion to how noisy it looks; none is dropped. What matters is
-whether the downweighting falls evenly across the four cells, because uneven weighting would act
-like a covariate nobody declared.
+Weights downweight a sample in proportion to how noisy it looks; none is dropped. The
+downweighting should fall evenly across the four cells, because uneven weighting would act like a
+covariate nobody declared.
 
 ```{r sample-weights}
 tibble(group = proteins$targets$group, weight = sample_weights) |>
@@ -65,8 +65,8 @@ tibble(group = proteins$targets$group, weight = sample_weights) |>
   )
 ```
 
-Effect size the interaction could detect at 80% power, two-sided 0.05. Without this, "null" says
-nothing: a contrast returning no hits is uninformative about effects smaller than this number.
+Effect size the interaction could detect at 80% power, two-sided 0.05. Without it, a contrast
+returning no hits says nothing about effects smaller than this number.
 
 ```{r detectable-effect}
 se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
@@ -234,8 +234,8 @@ slice_min(nc, P.Value, n = 5) |>
   select(protein, Genes, logFC, P.Value, adj.P.Val)
 ```
 
-The hit count is printed rather than asserted. If two untrained legs of one person ever differ,
-that belongs in the report, not in a halted render.
+The hit count is printed rather than asserted, so a difference lands in the report, not in a
+halted render.
 
 ```{r session}
 sessionInfo()

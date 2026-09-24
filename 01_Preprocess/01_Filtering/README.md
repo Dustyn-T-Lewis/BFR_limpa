@@ -4,9 +4,9 @@ Reads the DIA-NN report and removes rows. Drops no sample, filters nothing on mi
 
 | | |
 |---|---|
-| **Script** | `a_script/01_filter.qmd` |
-| **Reads** | `00_Input/report.parquet`, `00_Input/metadata.csv` |
-| **Writes** | `c_data/precursors_filtered.rds`, `c_data/01_filter.xlsx` |
+| Script | `a_script/01_filter.qmd` |
+| Reads | `00_Input/report.parquet`, `00_Input/metadata.csv` |
+| Writes | `c_data/precursors_filtered.rds`, `c_data/01_filter.xlsx` |
 
 ```sh
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports
@@ -36,10 +36,10 @@ contaminant-only, then strip the tag from the rest.
 147 gene symbols plus four family patterns, defined in the notebook. Symbols were screened against
 single-cell muscle expression, not whole-tissue values, which are themselves blood-contaminated.
 
-A group counts as contamination only when **every** gene name on it does. One protein can carry
+A group counts as contamination only when every gene name on it does. One protein can carry
 several names, so testing the first would get it wrong both ways.
 
 ### Note
 
-One assertion: all 28 symbols in `MUST_KEEP` must survive. It exists to fail, and catches
-both a broken repair and a contaminant rule that reaches too far.
+One assertion: all 28 symbols in `MUST_KEEP` must survive. It catches both a broken repair and a
+contaminant rule that reaches too far.

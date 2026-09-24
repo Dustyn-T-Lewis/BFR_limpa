@@ -9,7 +9,7 @@ Tests whether proteins that work together moved together, then scores every samp
 | [`02_enrich_volcano_fgsea`](02_enrich_volcano_fgsea/README.md) | protein volcanoes with pathway rings | 6 volcanoes |
 | [`03_enrich_scatter_fgsea`](03_enrich_scatter_fgsea/README.md) | BFR NES against HLRT NES | 2 composites |
 | [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `singscore.rds`, 2 figures |
-| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, 7 figures |
+| [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | `set_results.rds`, 7 figures, 96 pages |
 
 ```sh
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
@@ -18,25 +18,25 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-About a minute in total. Each substage writes every figure as PNG and PDF, and bundles them into
-one `<substage>_figures.pdf`. Figure titles name the figure, subtitles give method and counts,
-captions state the encodings and the source table. Findings live here, not on the figures.
+About two minutes in total, half of it in `05_`. Each substage writes every
+figure as PDF, and a PNG when the figure is one page, and bundles the PDFs into one
+`<substage>_figures.pdf`. Figure titles name the figure, subtitles give method and counts, captions
+state the encodings and the source table. Findings live here, not on the figures.
 
 ## Methods
 
-**fgsea** is competitive: does a set sit at one end of the protein ranking? **fry** is
+fgsea is competitive: does a set sit at one end of the protein ranking? fry is
 self-contained: did the set move at all under the fitted design? Both run on the same 1,990 sets
 and both ship. fgsea assumes proteins are exchangeable, and co-regulated sets break that; fry does
 not assume it.
 
-**singscore** gives one rank-based score per set per sample. It carries no p-value and never sees
+singscore gives one rank-based score per set per sample. It carries no p-value and never sees
 a contrast, and a sample's score does not change with the cohort, which the paired design needs.
 
-**Order: pool, test, then collapse.** All sets are tested and BH corrects within each contrast.
+The order is pool, test, then collapse. All sets are tested and BH corrects within each contrast.
 `collapsePathways` then marks non-redundant hits in the `main` column and deletes nothing.
-Deduplicating before testing was measured and lost two thirds of the discoveries (363 to 133 on
-BFR training): a redundancy filter removes significant sets, not hopeless ones (Bourgon et al.,
-PNAS 2010).
+Deduplicating before testing lost two thirds of the discoveries (363 to 133 on BFR training): a
+redundancy filter removes significant sets, not hopeless ones (Bourgon et al., PNAS 2010).
 
 No set is excluded by name.
 
@@ -54,7 +54,7 @@ fry finds nothing on any between-leg contrast, so the interaction's 10 fgsea pat
 not findings. The control's one fgsea hit, `REACTOME_STRIATED_MUSCLE_CONTRACTION`, is the floor
 every count should be read against.
 
-**Classification by set score**, nominal hits over chance, per collection:
+Classification by set score, nominal hits over chance, per collection:
 
 | Task | Hallmark | KEGG | Reactome | GO:BP | GO Slim |
 |---|---:|---:|---:|---:|---:|
@@ -69,6 +69,6 @@ BFR training and 49 on HLRT, and none elsewhere. No set, and no protein
 (`02_Differential_Expression/03_Phenotype`), tracks the phenotype after correction. With 32 pairs
 the study resolves a paired correlation near 0.5, so this is a null at that resolution.
 
-**Concordance.** BFR and HLRT NES correlate at rho 0.83 over all sets, 0.86 over collapse
-survivors and 0.82 over Hallmark and GO Slim. No set significant in both arms differs in sign.
+BFR and HLRT NES correlate at rho 0.83 over all sets, 0.86 over collapse survivors and 0.82 over
+Hallmark and GO Slim. No set significant in both arms differs in sign.
 Both modalities moved the same pathways by similar amounts, which is why the interaction is empty.

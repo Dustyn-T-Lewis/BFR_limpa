@@ -78,8 +78,8 @@ mutate(strata, correlation = round(correlation, 3))
 The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it
 describes the matrix rather than the model. That is enough for a near-zero check. When the number
 sits near zero, as it has on this data, `02_Differential` calls `dpcDE()` without `block =`.
-Nothing automates that reading. If the correlation ever rose, the fix is `block = leg_id` in the
-next notebook, but no branch and no warning will tell you. Read the row on every rerun.
+If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but no branch
+and no warning will tell you. Read the row on every rerun.
 
 ## Contrasts
 
