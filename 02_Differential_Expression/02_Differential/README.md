@@ -33,7 +33,7 @@ columns. limma checks only that the counts match.
 
 ## What comes out
 
-`02_differential.xlsx` holds two sheets. `DEP_matrix` is one row per protein with `logFC`,
+`02_differential.xlsx` opens on an `overview` sheet listing the other two. `DEP_matrix` is one row per protein with `logFC`,
 `P.Value` and `adj.P.Val` for each of the five contrasts. `contrast_summary` counts hits per
 contrast. `fit.rds` is the complete fitted model, so the long per-contrast form is not written.
 
