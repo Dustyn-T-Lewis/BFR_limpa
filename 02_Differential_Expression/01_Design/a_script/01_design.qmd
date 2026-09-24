@@ -19,12 +19,7 @@ limpa works with any design limma accepts. This notebook builds one and checks i
 the fit.
 
 ```{r setup}
-library(here)
-library(limpa)
-library(limma)
-library(dplyr)
-library(tibble)
-library(writexl)
+pacman::p_load(here, limma, purrr, tibble, writexl)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
@@ -47,7 +42,7 @@ rownames(design) <- targets$sample_id
 
 # Rank deficiency would make the contrasts inestimable and surface as silent NA coefficients.
 stopifnot(
-  qr(design)$rank == ncol(design),
+  is.fullrank(design),
   identical(make.names(colnames(design)), colnames(design))
 )
 
@@ -68,11 +63,9 @@ leg_id <- paste(targets$participant, targets$leg, sep = "_")
 
 strata <- tibble(
   level = "within leg, participant fixed (unweighted matrix correlation)",
-  correlation = duplicateCorrelation(proteins$E, design,
-    block = leg_id
-  )$consensus.correlation
+  correlation = duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
 )
-mutate(strata, correlation = round(correlation, 3))
+round(strata$correlation, 3)
 ```
 
 The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it
@@ -85,9 +78,9 @@ and no warning will tell you. Read the row on every rerun.
 
 ```{r contrasts}
 contrasts <- makeContrasts(
-  `BFR_Post-Pre`       = BFR_T2 - BFR_T1,
-  `HLRT_Post-Pre`      = HLRT_T2 - HLRT_T1,
-  `BFR_Pre-HLRT_Pre`   = BFR_T1 - HLRT_T1,
+  `BFR_Post-Pre` = BFR_T2 - BFR_T1,
+  `HLRT_Post-Pre` = HLRT_T2 - HLRT_T1,
+  `BFR_Pre-HLRT_Pre` = BFR_T1 - HLRT_T1,
   `BFR_Post-HLRT_Post` = BFR_T2 - HLRT_T2,
   Modality_x_Time_Interaction = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
   levels = design
@@ -111,7 +104,14 @@ saveRDS(
   ),
   file.path(out, "design.rds")
 )
-write_xlsx(list(correlation_strata = strata), file.path(out, "01_design.xlsx"))
+sheets <- list(correlation_strata = strata)
+overview <- tibble(
+  sheet = names(sheets),
+  rows = map_int(sheets, nrow),
+  columns = map_int(sheets, ncol),
+  description = "Consensus within-leg correlation with participant as a fixed term"
+)
+write_xlsx(c(list(overview = overview), sheets), file.path(out, "01_design.xlsx"))
 ```
 
 ```{r session}
