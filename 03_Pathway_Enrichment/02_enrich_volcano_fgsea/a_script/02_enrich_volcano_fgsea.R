@@ -12,7 +12,7 @@ fgsea_results <- read_excel(tests, "set_tests") |>
   filter(method == "fgsea", main) |>
   mutate(leadingEdge = str_split(leadingEdge, ";"))
 
-# volcano_ring() matches leading-edge genes against point labels, which carry an accession when
+# plot_volcano_ring() matches leading-edge genes against point labels, which carry an accession when
 # a symbol sits on more than one protein. The representative protein is the one fgsea ranked.
 gene_to_label <- with(
   filter(protein_results, contrast == contrast[1], selected),
@@ -20,8 +20,12 @@ gene_to_label <- with(
 )
 fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) unname(gene_to_label[genes]))
 
+da <- enrichVolcano::as_da(
+  select(protein_results, protein, gene = label, contrast, logFC, t, P.Value, adj.P.Val),
+  species = NULL
+)
 # Default palette: red up, blue down, dark blue to dark red NES ramp.
-plot_theme <- enrichVolcano::volcano_ring_theme(
+ring_theme <- enrichVolcano::plot_theme(
   base_size = 10, base_family = "sans", palette = "default", ns = "#9a9a9a"
 )
 # Contrast names carry their own algebra and are the panel titles. Only the interaction needs
@@ -34,8 +38,7 @@ make_volcano <- function(contrast, rank_by = "fdr") {
   points <- filter(protein_results, .data$contrast == .env$contrast)
   ring <- fgsea_results |>
     filter(.data$contrast == .env$contrast) |>
-    slice_min(padj, n = 12, with_ties = FALSE) |>
-    # With five overlapping collections two ringed sets can share a name once volcano_ring()
+    # With five overlapping collections two ringed sets can share a name once the ring
     # strips the prefix: GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION would label
     # two arcs identically.
     mutate(
@@ -56,21 +59,23 @@ make_volcano <- function(contrast, rank_by = "fdr") {
   } else {
     "Protein significance: BH FDR < 0.05"
   }
-  enrichVolcano::volcano_ring(
-    volc_df = select(points, label, logFC, P.Value, adj.P.Val),
-    enrich_df = ring,
-    gene_col = "label", pval_col = "P.Value", padj_col = "padj",
-    volc_sig_col = "adj.P.Val", genes_col = "leadingEdge",
+  enrichment <- ring |>
+    select(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
+    enrichVolcano::as_enrichment(enrichment_test = "fgsea")
+  # The ring draws the twelve survivors with the lowest adjusted p, in either direction.
+  enrichVolcano::plot_volcano_ring(
+    da, enrichment,
+    contrast = contrast, collapse = FALSE, n_terms = 12,
     p_threshold = 0.05, logfc_threshold = 0,
     title = contrast,
     subtitle = paste(na.omit(c(contrast_subtitle[contrast], note)), collapse = "\n"),
     label_mode = if (length(labels)) "by_genes" else "none",
     label_genes = labels, label_n = 5,
     label_size = 2.6, axis_size = 2.6, count_size = 2.8,
-    point_size = 0.9, theme = plot_theme
+    point_size = 0.9, theme = ring_theme
   ) +
-    # volcano_ring() draws with clip = "off" on a square panel and puts the NES key on the right,
-    # so a label on that edge lands on the colourbar. Below the plot nothing collides.
+    # The ring draws with clip = "off" on a square panel and puts the NES key on the right, so a
+    # label on that edge lands on the colourbar. Below the plot nothing collides.
     guides(fill = guide_colorbar(direction = "horizontal", title.position = "top")) +
     theme(
       plot.title = element_text(size = 10, face = "bold"),

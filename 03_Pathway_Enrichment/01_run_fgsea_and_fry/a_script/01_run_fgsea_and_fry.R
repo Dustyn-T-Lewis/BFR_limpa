@@ -145,9 +145,7 @@ survivors <- set_tests |>
 dotplot <- function(rows, by_database, sizes, fdr) {
   top <- rows |>
     slice_min(padj, n = 10, with_ties = FALSE) |>
-    mutate(
-      label = str_wrap(str_replace_all(enrichVolcano::ev_clean_label(pathway), "\n", " "), 45)
-    )
+    mutate(label = enrichVolcano::clean_label(pathway, width = 45))
   colour <- if (by_database) {
     list(
       scale_colour_brewer(palette = "Dark2", limits = collections, name = NULL),

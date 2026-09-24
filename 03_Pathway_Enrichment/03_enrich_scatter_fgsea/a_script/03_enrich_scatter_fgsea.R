@@ -32,7 +32,7 @@ paired <- set_tests |>
     # only, so the opposite sign rests on the other arm's null.
     discordant = sign(NES_x) != sign(NES_y),
     survivor = main_x | main_y,
-    label = enrichVolcano::ev_clean_label(pathway)
+    label = enrichVolcano::clean_label(pathway)
   )
 
 concordance <- function(data) {
