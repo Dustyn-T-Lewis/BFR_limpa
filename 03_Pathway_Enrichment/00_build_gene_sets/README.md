@@ -5,8 +5,8 @@ this one list.
 
 | | |
 |---|---|
-| **Reads** | `proteins.rds` |
-| **Writes** | `gene_sets.rds`, `00_build_gene_sets.xlsx`, `c_data/cache/` |
+| Reads | `proteins.rds` |
+| Writes | `gene_sets.rds`, `00_build_gene_sets.xlsx`, `c_data/cache/` |
 
 ## Snapshot
 
@@ -23,14 +23,14 @@ both aside to rebuild.
 | Reactome | 1,839 | 430 | 33 |
 | GO:BP | 7,538 | 1,366 | 29 |
 | GO Slim | 71 | 59 | 138 |
-| **Total** | **9,684** | **1,990** | |
+| Total | 9,684 | 1,990 | |
 
 A set is tested with 15 to 500 source genes and at least 15 measured. Six other collections were
 measured and dropped. GO:CC is the main one: its sets are physical complexes, co-regulated by
 stoichiometry, and three of the control's original six false positives came from it. Dropping
 GO:CC and GO:MF took the control from 14 hits to 1.
 
-**GO Slim** sets are built here from the GO Consortium's generic slim (`goslim_generic.obo`,
+GO Slim sets are built here from the GO Consortium's generic slim (`goslim_generic.obo`,
 frozen with an md5). Each holds every measured gene annotated to the slim term or any term below
 it in GO:BP. Two rules matter: genes come from the full membership, not the tested subset, and the
 size rule reads measured size. Built otherwise, *protein folding* kept 19 of its 129 genes.

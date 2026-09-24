@@ -4,8 +4,8 @@ One singscore per set per sample.
 
 | | |
 |---|---|
-| **Reads** | `gene_sets.rds`, `proteins.rds` |
-| **Writes** | `singscore.rds`, `set_scores.csv`, `04_run_singscore.xlsx`, 2 figures |
+| Reads | `gene_sets.rds`, `proteins.rds` |
+| Writes | `singscore.rds`, `set_scores.csv`, `04_run_singscore.xlsx`, 2 figures |
 
 singscore ranks proteins within each sample, so a score does not depend on the cohort. Measured
 here, dropping 51 of 131 samples changed singscore values by 0 and GSVA values by up to 0.34.

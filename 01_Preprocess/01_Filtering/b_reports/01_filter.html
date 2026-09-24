@@ -2352,7 +2352,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="map-runs-to-samples" class="level2">
 <h2 class="anchored" data-anchor-id="map-runs-to-samples">Map runs to samples</h2>
-<p>Columns come back named by DIA-NN <code>Run</code>. Matching them case-insensitively against <code>metadata$run</code> does three jobs at once: it renames columns to <code>sample_id</code>, it absorbs a run the instrument wrote <code>Cl_MDR_7E-T2</code> against <code>CL_MDR_7E-T2</code> in the sheet, and it drops the discarded S08 injection, which is in the report but not the sheet.</p>
+<p>Columns come back named by DIA-NN <code>Run</code>. Matching them case-insensitively against <code>metadata$run</code> renames columns to <code>sample_id</code>, absorbs a run the instrument wrote <code>Cl_MDR_7E-T2</code> against <code>CL_MDR_7E-T2</code> in the sheet, and drops the discarded S08 injection, which is in the report but not the sheet.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">str_to_lower</span>(metadata<span class="sc">$</span>run), <span class="fu">str_to_lower</span>(<span class="fu">colnames</span>(y)))</span>
@@ -2464,7 +2464,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="limpas-precursor-filters" class="level2">
 <h2 class="anchored" data-anchor-id="limpas-precursor-filters">limpa’s precursor filters</h2>
-<p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is deliberately skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum information. Nothing here filters on missingness either, because the vignette is explicit that precursors need no missing-value filtering, and those gaps are exactly what <code>dpc()</code> recovers.</p>
+<p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum information. Nothing here filters on missingness either, because the vignette says precursors need no missing-value filtering, and those gaps are what <code>dpc()</code> recovers.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>summary_repaired <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>, signal_start)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2668,7 +2668,7 @@ Attaching package: &#39;dplyr&#39;</code></pre>
 </section>
 <section id="guard" class="level2">
 <h2 class="anchored" data-anchor-id="guard">Guard</h2>
-<p>One assertion, run after every filter. It exists to fail: it catches a broken repair, which deletes muscle through the <code>Proteotypic</code> flag, and an over-reaching contaminant rule, which deletes it directly.</p>
+<p>One assertion, run after every filter. It catches a broken repair, which deletes muscle through the <code>Proteotypic</code> flag, and an over-reaching contaminant rule, which deletes it directly.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>))</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(MUST_KEEP <span class="sc">%in%</span> survivors))</span>

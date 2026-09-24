@@ -25,16 +25,16 @@ keep the `.rds` rather than exporting abundances alone.
 
 ## Two orderings that matter
 
-The search-database repair runs **before** any filter, because the fault it fixes makes limpa's
+The search-database repair runs before any filter, because the fault it fixes makes limpa's
 filters delete real muscle protein.
 
-Nothing is filtered on missing values **before** quantification, because those gaps are what the
+Nothing is filtered on missing values before quantification, because those gaps are what the
 detection curve is fitted to.
 
 ## Cost
 
 Both notebooks render in seconds. `dpcQuant()` costs about 100 minutes per call, so it does not
-live in a notebook at all. `02_Quantification/a_script/02_quantify_run.R` computes it, you run
+live in a notebook. `02_Quantification/a_script/02_quantify_run.R` computes it, you run
 that by hand, and `02_quantify.qmd` loads the result from `c_data/quant_runs/`. That output is
 committed, so a fresh clone renders without computing anything. No stage uses knitr caching, so
 no `_cache/` directory is ever created.

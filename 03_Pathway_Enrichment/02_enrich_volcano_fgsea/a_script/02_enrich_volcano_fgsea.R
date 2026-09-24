@@ -1,7 +1,6 @@
-# Draw the protein volcanoes with the surviving fgsea pathways ringed. Computes nothing.
-# Two separate claims share a panel: point colour and the count badges read protein-level BH
-# FDR, the ring reads set-level fgsea FDR. Only sets that survived collapsePathways are ringed.
-# The pre-training control is not drawn; 01_run_fgsea_and_fry reports what it returns.
+# Protein volcanoes with collapse-surviving fgsea sets ringed. Computes nothing. Two claims share
+# a panel: colour and count badges read protein-level BH FDR, rings read set-level fgsea FDR.
+# The pre-training control is not drawn; 01_run_fgsea_and_fry reports it.
 
 suppressPackageStartupMessages({
   library(here)
@@ -27,13 +26,11 @@ fg <- readRDS(paths[["set_tests"]])
 
 # Keep exact p-values in the export; bound only the logarithm for plotting.
 protein_results <- mutate(fg$protein_results, plot_p = pmax(P.Value, .Machine$double.xmin))
-# the results table is long, one row per set per contrast per method; rings read fgsea
 fgsea_results <- filter(fg$set_tests, method == "fgsea", main)
 stopifnot(nrow(fgsea_results) > 0, !is.null(protein_results$label))
 
-# volcano_ring() matches leading-edge genes against the point labels, and a label carries its
-# accession when a symbol sits on more than one protein. Translate the edges into label space
-# or the tick lines silently draw nothing.
+# volcano_ring() matches leading-edge genes against point labels, which carry an accession when
+# a symbol sits on more than one protein. Untranslated edges make the tick lines draw nothing.
 gene_to_label <- with(
   filter(protein_results, contrast == contrast[1], !is.na(gene)),
   set_names(label, gene)
@@ -42,12 +39,12 @@ fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) {
   unname(gene_to_label[genes[genes %in% names(gene_to_label)]])
 })
 
-# The default palette is red for up, blue for down, with a dark blue to dark red NES ramp.
+# Default palette: red up, blue down, dark blue to dark red NES ramp.
 plot_theme <- enrichVolcano::volcano_ring_theme(
   base_size = 12, base_family = "sans", palette = "default", ns = "#9a9a9a"
 )
-# The contrast names carry their own algebra now, so they are the panel titles. Only the
-# interaction needs expanding, since a difference of differences has no one-line name.
+# Contrast names carry their own algebra and are the panel titles. Only the interaction needs
+# expanding: a difference of differences has no one-line name.
 contrast_subtitle <- c(
   Modality_x_Time_Interaction = "(BFR_Post - BFR_Pre) - (HLRT_Post - HLRT_Pre)"
 )
@@ -57,9 +54,9 @@ make_volcano <- function(contrast, rank_by = "fdr") {
   ring <- fgsea_results |>
     filter(.data$contrast == .env$contrast, padj < 0.05) |>
     slice_min(padj, n = 8) |>
-    # Ten overlapping databases mean two ringed sets can carry the same name, and
-    # volcano_ring() strips the database prefix before drawing. GOBP_MUSCLE_CONTRACTION and
-    # REACTOME_MUSCLE_CONTRACTION then label two arcs identically.
+    # With five overlapping collections two ringed sets can share a name once volcano_ring()
+    # strips the prefix: GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION would label
+    # two arcs identically.
     mutate(
       stem = sub("^[A-Z0-9]+_", "", pathway),
       pathway = if_else(
@@ -99,9 +96,8 @@ make_volcano <- function(contrast, rank_by = "fdr") {
     label_size = 3.1, axis_size = 3.1, count_size = 3.3,
     point_size = 1.2, theme = plot_theme
   ) +
-    # volcano_ring() draws with clip = "off" against a square panel and puts the NES key on
-    # the right, so a label anchored on that edge lands on top of the colourbar. Below the
-    # plot there is nothing to collide with.
+    # volcano_ring() draws with clip = "off" on a square panel and puts the NES key on the right,
+    # so a label on that edge lands on the colourbar. Below the plot nothing collides.
     guides(fill = guide_colorbar(direction = "horizontal", title.position = "top")) +
     theme(
       plot.title = element_text(size = 13, face = "bold"),
@@ -122,8 +118,7 @@ save_volcano <- function(volcano, name) {
   })
 }
 
-# The primary question first, then the two training responses and the between-treatment
-# comparison. The pre-training control is fitted and reported upstream, not drawn here.
+# Primary question first, then the two training responses and the between-treatment comparison.
 plot_order <- c(
   "Modality_x_Time_Interaction", "BFR_Post-Pre", "HLRT_Post-Pre", "BFR_Post-HLRT_Post"
 )
@@ -131,8 +126,8 @@ for (contrast in plot_order) {
   save_volcano(make_volcano(contrast), paste0("protein_volcano_fdr_", contrast))
   message("drew ", contrast)
 }
-# Same points, colours, rings and notation; only the labels move. A pi label ranks and selects
-# nothing, so nothing named on these two panels has been discovered.
+# Same points, colours and rings; only the labels move. Pi ranks and selects nothing, so no
+# protein named on these two panels is a discovery.
 for (contrast in c("BFR_Post-Pre", "HLRT_Post-Pre")) {
   volcano <- make_volcano(contrast, rank_by = "pi")
   save_volcano(volcano, paste0("protein_volcano_pi_rank_", contrast))

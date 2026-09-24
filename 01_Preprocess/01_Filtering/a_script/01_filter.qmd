@@ -115,9 +115,9 @@ dim(y)
 ## Map runs to samples
 
 Columns come back named by DIA-NN `Run`. Matching them case-insensitively against `metadata$run`
-does three jobs at once: it renames columns to `sample_id`, it absorbs a run the instrument wrote
-`Cl_MDR_7E-T2` against `CL_MDR_7E-T2` in the sheet, and it drops the discarded S08 injection,
-which is in the report but not the sheet.
+renames columns to `sample_id`, absorbs a run the instrument wrote `Cl_MDR_7E-T2` against
+`CL_MDR_7E-T2` in the sheet, and drops the discarded S08 injection, which is in the report but
+not the sheet.
 
 ```{r map-samples}
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
@@ -210,9 +210,9 @@ would surface as nonsense identifiers in any enrichment.
 ## limpa's precursor filters
 
 Both run on the repaired annotation, in the vignette's order. `filterSingletonPeptides()` is
-deliberately skipped: the vignette calls it optional and recommends keeping all proteins to retain
-maximum information. Nothing here filters on missingness either, because the vignette is explicit
-that precursors need no missing-value filtering, and those gaps are exactly what `dpc()` recovers.
+skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum
+information. Nothing here filters on missingness either, because the vignette says precursors
+need no missing-value filtering, and those gaps are what `dpc()` recovers.
 
 ```{r limpa-filters}
 summary_repaired <- step_summary(y, "repaired", signal_start)
@@ -287,9 +287,8 @@ quality weight per sample, which absorbs some of this but is not aimed at it.
 
 ## Guard
 
-One assertion, run after every filter. It exists to fail: it catches a broken repair,
-which deletes muscle through the `Proteotypic` flag, and an over-reaching contaminant rule, which
-deletes it directly.
+One assertion, run after every filter. It catches a broken repair, which deletes muscle through
+the `Proteotypic` flag, and an over-reaching contaminant rule, which deletes it directly.
 
 ```{r guard}
 survivors <- unlist(str_split(str_to_upper(y$genes$Genes), ";"))

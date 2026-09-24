@@ -1,15 +1,8 @@
-# Answer two questions about every tested set: how well it separates the study's groups, and
-# whether it tracks the phenotype. The unit is the set, with no collapse and no grouping, and
-# results are read per database so each collection carries its own chance expectation. Four
-# independently curated collections agreeing is stronger than any single grouping of them.
-#
-# Every comparison here is paired. Pre versus post is the same leg twice; BFR versus high load
-# is two legs of one person. AUC comes from pROC as the effect-size descriptor and the p-value
-# from the paired Wilcoxon signed-rank test. An unpaired p would answer for a design this study
-# did not run.
-#
-# Nominal p is read against chance_expectation, which carries the count a table that size
-# returns under the null, per database. BH within database and task is reported beside it.
+# Per set, uncollapsed: how well it separates the study groups (pROC AUC as effect size, paired
+# Wilcoxon signed-rank p) and whether it tracks phenotype. Every comparison is paired: pre/post is
+# one leg twice, BFR/HLRT two legs of one person; an unpaired p fits a design not run.
+# Nominal p is read per database against chance_expectation, with BH within database and task
+# beside it; agreement across independent collections beats any single grouping of them.
 # baseline_BFR_vs_HLRT is the empirical floor, because no signal can exist there.
 
 suppressPackageStartupMessages({
@@ -81,8 +74,8 @@ delta_pairs <- pair_by_treatment(legs, "leg_id")
 delta_set <- set_score[, legs$T2] - set_score[, legs$T1]
 colnames(delta_set) <- legs$leg_id
 
-# Each task names the matrix it reads and the two paired column sets. `favours` is the group an
-# AUC above 0.5 points to, which is what makes the direction readable on the figures.
+# Each task names its matrix and two paired column sets. `favours` is the group an AUC above 0.5
+# points to, so the figures can state direction.
 tasks <- list(
   pre_vs_post_BFR = list(
     matrix = "score", positive = filter(legs, treatment == "BFR")$T2,
@@ -108,9 +101,9 @@ tasks <- list(
   )
 )
 
-# pROC::roc() auto-orients by default: on a case whose true directional AUC is 0.194 it returns
-# 0.806. direction = "<" pins it, without which every below-chance set flips and the red/blue
-# encoding on the figures inverts silently.
+# pROC::roc() auto-orients by default: a case with true directional AUC 0.194 returns 0.806.
+# direction = "<" pins it; without it every below-chance set flips and the figures' red/blue
+# encoding silently inverts.
 fit_roc <- function(values, spec) {
   labels <- rep(c("neg", "pos"), c(length(spec$negative), length(spec$positive)))
   pROC::roc(labels, values[c(spec$negative, spec$positive)],
@@ -179,16 +172,15 @@ paired_outcome <- map(set_names(names(outcomes)), function(name) {
   value[delta_pairs$BFR] - value[delta_pairs$HLRT]
 })
 
-# cor.test computes the exact Spearman p at these sample sizes. The t approximation this
-# replaced was off by up to 9e-4, which is enough to move a result across the 0.05 line the
-# figures report against.
+# cor.test gives the exact Spearman p at these sample sizes. The t approximation is off by up
+# to 9e-4, enough to move a result across the 0.05 line the figures report against.
 spearman_by_row <- function(values, outcome) {
   usable <- !is.na(outcome)
   values <- values[, usable, drop = FALSE]
   outcome <- outcome[usable]
   # Ties make cor.test fall back from the exact p to its approximation and warn each time.
-  # Reading the two fields off the htest rather than tidying it runs ten times faster over the
-  # 32,000 tests this stage performs, and returns the same numbers to the bit.
+  # Reading two fields off the htest, not tidying it, is ten times faster over the 32,000 tests
+  # here and returns the same numbers to the bit.
   fits <- suppressWarnings(apply(values, 1, \(row) {
     test <- stats::cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
@@ -246,33 +238,53 @@ chance_expectation <- bind_rows(
 
 # ---- figures: one per comparison, significant results only --------------------------------
 
-# A task can reach nominal p in hundreds of sets, so a figure shows the strongest few from each
-# collection rather than everything. Reading the collections side by side is the point: the
-# full map of every set against every task and outcome lives in the workbook.
-per_database <- 2
+# Every set reaching nominal p gets a panel, 16 to a page, by collection then p. Paging changes
+# how many files a figure writes, so the previous run's figures are cleared first.
+unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
 
-# The computed geometry assumes square panels, which the ROC and association grids are. A figure
-# whose facets are not square passes its own width and height.
-save_faceted <- function(plot, name, n_panels, columns, panel = 2.6, header = 2.1,
-                         width = 1.2 + columns * panel,
-                         height = header + ceiling(n_panels / columns) * panel) {
-  figure <- plot +
-    theme_minimal(base_size = 10) +
-    theme(
-      strip.text = element_text(size = 7.6, lineheight = 1.3, margin = margin(3, 3, 5, 3)),
-      panel.grid.minor = element_blank(),
-      panel.spacing = unit(5, "mm"),
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 9, colour = "grey30"),
-      plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40"),
-      legend.position = "top"
-    )
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
+figure_theme <- theme_minimal(base_size = 10) +
+  theme(
+    strip.text = element_text(size = 7.6, lineheight = 1.3, margin = margin(3, 3, 5, 3)),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(5, "mm"),
+    plot.title = element_text(face = "bold", size = 13),
+    plot.subtitle = element_text(size = 9, colour = "grey30"),
+    plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40"),
+    plot.tag = element_text(size = 9, colour = "grey30"),
+    plot.tag.position = "topright",
+    legend.position = "top"
+  )
+
+# One PDF holding every page. A single-page figure also gets a PNG; paged ones do not, since
+# a PNG per page adds about 50 MB to the repository on every re-run.
+save_pages <- function(pages, name, width, height) {
+  if (length(pages) == 1) {
+    ggsave(file.path(figure_dir, paste0(name, ".png")), pages[[1]],
       width = width, height = height, dpi = 220, bg = "white"
     )
+  }
+  pdf(file.path(figure_dir, paste0(name, ".pdf")), width = width, height = height, bg = "white")
+  walk(pages, print)
+  invisible(dev.off())
+}
+
+# `draw` builds the plot from one page's rows. Each page gets only its own panels, since a
+# paginating facet builds every panel for every page.
+save_paged <- function(data, draw, name, scales = "fixed", panel = 2.6, header = 2.1,
+                       strip = 0) {
+  n_panels <- nlevels(data$panel)
+  columns <- min(4, n_panels)
+  rows <- min(4, ceiling(n_panels / columns))
+  page_of <- (as.integer(data$panel) - 1) %/% (columns * rows) + 1
+  n_pages <- max(page_of)
+  pages <- map(seq_len(n_pages), \(page) {
+    draw(droplevels(data[page_of == page, ])) +
+      facet_wrap(~panel, ncol = columns, nrow = rows, scales = scales) +
+      labs(tag = if (n_pages > 1) sprintf("page %d of %d", page, n_pages)) +
+      figure_theme
   })
-  message("drew ", name, ": ", n_panels, " panels")
+  save_pages(pages, name, width = 1.2 + columns * panel, height = header + rows * (panel + strip))
+  message("drew ", name, ": ", n_panels, " panels on ", n_pages, " pages")
   n_panels
 }
 chance_line <- paste0(
@@ -287,23 +299,22 @@ draw_roc_figure <- function(task_name) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
     filter(task == task_name, p_paired < 0.05) |>
-    slice_min(p_paired, n = per_database, by = database, with_ties = FALSE) |>
     arrange(database, p_paired)
   if (!nrow(hits)) {
     message("no set reaches nominal p for ", task_name)
     return(0L)
   }
   values <- if (spec$matrix == "delta") delta_set else set_score
-  curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, ...) {
+  curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, fdr, ...) {
     coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
-      # An AUC below 0.5 means the set separates the other way, which is a result about
-      # direction rather than a failure, so it is coloured instead of hidden.
+      # An AUC below 0.5 separates the other way: a direction, not a failure, so it is
+      # coloured, not hidden.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = paste0(
         database, ": ", enrichVolcano::ev_clean_label(pathway),
-        "\nAUC ", sprintf("%.2f", auc), "    p = ", signif(p_paired, 2)
+        "\nAUC ", sprintf("%.2f", auc), "   p ", signif(p_paired, 2), "   q ", signif(fdr, 2)
       )
     )
   }) |>
@@ -311,15 +322,13 @@ draw_roc_figure <- function(task_name) {
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
 
-  columns <- min(4, nrow(hits))
-  save_faceted(
-    ggplot(curves, aes(fpr, tpr, colour = direction, fill = direction)) +
+  save_paged(curves, \(page) {
+    ggplot(page, aes(fpr, tpr, colour = direction, fill = direction)) +
       geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
       geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
       geom_step(linewidth = 0.8, direction = "hv") +
       scale_colour_manual(values = c(higher = "#B2182B", lower = "#2166AC"), guide = "none") +
       scale_fill_manual(values = c(higher = "#B2182B", lower = "#2166AC"), guide = "none") +
-      facet_wrap(~panel, ncol = columns) +
       coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
       scale_x_continuous(breaks = c(0, 0.5, 1)) +
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
@@ -329,42 +338,39 @@ draw_roc_figure <- function(task_name) {
           "singscore per set, %d paired %s, AUC with direction fixed", length(spec$positive),
           spec$unit
         ),
-        caption = sprintf(
+        caption = stringr::str_wrap(width = 190, sprintf(
           paste(
-            "Strongest %d sets per collection of %d reaching nominal p. Red separates higher in",
+            "All %d sets reaching nominal p, by collection then p. Red separates higher in",
             "%s, blue lower. Shading is area under the curve, dashed line chance.",
-            "p from the paired Wilcoxon signed-rank test. %s"
+            "p from the paired Wilcoxon signed-rank test, q from BH within collection and task.",
+            "%s"
           ),
-          per_database, sum(set_auc$task == task_name & set_auc$p_paired < 0.05),
-          spec$favours, chance_line
-        )
-      ),
-    paste0("roc_", task_name), nrow(hits), columns
-  )
+          nrow(hits), spec$favours, chance_line
+        ))
+      )
+  }, paste0("roc_", task_name), strip = 0.6)
 }
-# The baseline control is tested and reported, in chance_expectation and in the README, but
-# it gets no figure: it exists to say what the method returns when nothing is there, which is
-# a number to read rather than a panel to present.
+# The baseline control is reported in chance_expectation and the README but not drawn: it shows
+# what the method returns when nothing is there, a number to read, not a panel to present.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 roc_drawn <- map_int(set_names(drawn_tasks), draw_roc_figure)
 
 draw_association_figure <- function(which_analysis, title, subtitle) {
   hits <- set_association |>
     filter(analysis == which_analysis, p < 0.05) |>
-    slice_min(p, n = per_database, by = database, with_ties = FALSE) |>
     arrange(database, p)
   if (!nrow(hits)) {
     message("no set reaches nominal p for ", which_analysis)
     return(0L)
   }
-  points <- pmap(hits, function(set_id, database, pathway, outcome, n, r, p, ...) {
+  points <- pmap(hits, function(set_id, database, pathway, outcome, n, r, p, fdr, ...) {
     arms <- by_arm |>
       filter(set_id == !!set_id, outcome == !!outcome) |>
       mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
     tibble(
       panel = paste0(
         database, ": ", enrichVolcano::ev_clean_label(pathway), "   vs   ", outcome,
-        "\nr = ", sprintf("%+.2f", r), "    p = ", signif(p, 2)
+        "\nr = ", sprintf("%+.2f", r), "   p ", signif(p, 2), "   q ", signif(fdr, 2)
       ),
       d_score = delta_set[set_id, ], d_outcome = leg_phenotype[[outcome]],
       treatment = leg_phenotype$treatment, caption = paste(arms$text, collapse = "\n")
@@ -373,19 +379,17 @@ draw_association_figure <- function(which_analysis, title, subtitle) {
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
 
-  columns <- min(4, nrow(hits))
-  save_faceted(
-    ggplot(points, aes(d_score, d_outcome, colour = treatment, fill = treatment)) +
+  save_paged(points, \(page) {
+    ggplot(page, aes(d_score, d_outcome, colour = treatment, fill = treatment)) +
       geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.6) +
       geom_point(size = 1.9, alpha = 0.9) +
       geom_text(
-        data = distinct(points, panel, caption), inherit.aes = FALSE,
+        data = distinct(page, panel, caption), inherit.aes = FALSE,
         aes(x = -Inf, y = Inf, label = caption), family = "mono",
         hjust = -0.05, vjust = 1.25, size = 2.3, lineheight = 1.25, colour = "grey25"
       ) +
-      facet_wrap(~panel, scales = "free", ncol = columns) +
       scale_y_continuous(expand = expansion(mult = c(0.06, 0.3))) +
       scale_colour_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
       scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
@@ -393,20 +397,16 @@ draw_association_figure <- function(which_analysis, title, subtitle) {
         x = "change in set score, T2 - T1, one point per leg",
         y = "change in phenotype", title = title,
         subtitle = sprintf("Spearman, %s analysis, %s", which_analysis, subtitle),
-        caption = sprintf(
+        caption = stringr::str_wrap(width = 220, sprintf(
           paste(
-            "Strongest %d set-outcome pairs per collection of %d reaching nominal p.",
-            "Lines are fitted within each arm; the header r is the %s correlation",
-            "that selected the panel. %s"
+            "All %d set-outcome pairs reaching nominal p, by collection then p.",
+            "Lines are fitted within each arm; the header r is the %s correlation,",
+            "q from BH within collection and outcome. %s"
           ),
-          per_database,
-          sum(set_association$analysis == which_analysis & set_association$p < 0.05),
-          which_analysis, chance_line
-        )
-      ),
-    paste0("association_", which_analysis), nrow(hits), columns,
-    panel = 3.1, header = 2.4
-  )
+          nrow(hits), which_analysis, chance_line
+        ))
+      )
+  }, paste0("association_", which_analysis), scales = "free", panel = 3.1, header = 2.4)
 }
 invisible(draw_association_figure(
   "pooled", "Training response against phenotype, all legs", "65 legs, both arms pooled"
@@ -415,18 +415,16 @@ invisible(draw_association_figure(
   "differential", "BFR minus HLRT, within participant", "32 paired participants"
 ))
 
-# Every collection with a nominal hit is represented on each figure that was drawn.
+# Every set reaching nominal p on a drawn task has a panel.
 stopifnot(all(map_lgl(drawn_tasks, \(task_name) {
-  available <- filter(set_auc, task == task_name, p_paired < 0.05)
-  roc_drawn[[task_name]] == min(nrow(available), per_database * n_distinct(available$database))
+  roc_drawn[[task_name]] == sum(set_auc$task == task_name & set_auc$p_paired < 0.05)
 })))
-# Whether a collection clears chance is the headline, so it gets a panel of its own rather
-# than living only in a sheet.
+# Whether a collection clears chance is the headline, so it gets its own panel, not just a sheet.
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))
-save_faceted(
-  ggplot(chance_figure, aes(ratio, database, fill = ratio > 1)) +
+save_pages(
+  list(ggplot(chance_figure, aes(ratio, database, fill = ratio > 1)) +
     geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
     geom_col(width = 0.65) +
     geom_text(aes(label = sprintf("%d of %d", nominal, features)),
@@ -447,8 +445,9 @@ save_faceted(
         "Table: c_data/05_classify_and_associate_sets.xlsx, chance_expectation sheet."
       )
     ) +
-    theme(panel.grid.major.y = element_blank()),
-  "chance_by_database", n_distinct(chance_figure$comparison), 1,
+    figure_theme +
+    theme(panel.grid.major.y = element_blank())),
+  "chance_by_database",
   width = 6.5, height = 8
 )
 
@@ -509,9 +508,9 @@ saveRDS(
   compress = "xz"
 )
 combined <- file.path(figure_dir, "05_classify_and_associate_sets_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
+figures <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
+invisible(qpdf::pdf_combine(sort(figures), combined))
 message(
   "wrote 05_classify_and_associate_sets.xlsx (", length(sheets) + 1, " sheets) and a ",
-  length(pages), "-page figure PDF"
+  qpdf::pdf_length(combined), "-page figure PDF"
 )
