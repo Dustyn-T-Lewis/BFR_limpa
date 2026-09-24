@@ -19,8 +19,8 @@ execute:
 protein's change tracks how much the muscle changed. The contrast model cannot
 answer it, because a contrast compares group means and carries no per-leg outcome.
 
-Two framings. **Pooled** takes all 65 legs and correlates each protein's pre-to-post change with
-that leg's phenotype change. **Differential** takes the 32 participants with both legs and asks
+Two framings. Pooled takes all 65 legs and correlates each protein's pre-to-post change with
+that leg's phenotype change. Differential takes the 32 participants with both legs and asks
 whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference
 in phenotype, which removes every between-participant confound.
 
@@ -35,7 +35,7 @@ phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 hits are expected at p < 0.05, so nothing here is read at nominal p. BH within each analysis and
 outcome is the reported quantity.
 
-## Pairing
+## A leg counts only with both timepoints
 
 A leg contributes only when both timepoints were acquired, which is what makes a change score
 definable. S06's left leg has T1 only, so it drops here and nowhere else.
@@ -60,7 +60,7 @@ colnames(paired) <- pairs$participant
 tibble(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
 ```
 
-## Outcomes
+## Four ultrasound changes are the outcomes
 
 Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area is the size
 outcome; echo intensity is the quality one, and falls when muscle composition improves.
@@ -81,7 +81,7 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 })
 ```
 
-## Correlations
+## Spearman correlations throughout
 
 Spearman throughout, since neither a protein change nor an echo intensity change is expected to
 be normal. Ties make `cor.test` fall back from its exact p to the approximation and warn on every
@@ -117,7 +117,7 @@ results <- map(set_names(outcomes), \(name) {
   relocate(analysis, outcome, protein, gene)
 ```
 
-## What survives
+## Read the ratio to chance first
 
 ```{r summary}
 summary_table <- results |>

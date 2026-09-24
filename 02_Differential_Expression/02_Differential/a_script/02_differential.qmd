@@ -31,7 +31,7 @@ d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.r
 stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 ```
 
-## Fit
+## dpcDE() fits the model with one quality weight per sample
 
 `sample.weights = TRUE` estimates one quality weight per sample. Biopsies differed in how much
 blood they carried, and removing the contaminant rows does not undo what that did to the sample
@@ -57,15 +57,16 @@ tibble(group = proteins$targets$group, weight = sample_weights) |>
   )
 ```
 
-Effect size the interaction could detect at 80% power, two-sided 0.05. Without it, a contrast
-returning no hits says nothing about effects smaller than this number.
+Effect size the interaction could detect at 80% power, two-sided 0.05. A contrast returning no
+hits says nothing about effects smaller than this number, so quote the two together. The
+interaction has returned no hits under every variant tried.
 
 ```{r detectable-effect}
 se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
 round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
-## Results
+## BH runs within each contrast, never across them
 
 Benjamini-Hochberg runs within each contrast and never across them. The five share participants
 and the interaction is a difference of two of the others, so pooling them would not control
@@ -93,7 +94,7 @@ contrast_summary |>
   mutate(min_adj_p = signif(min_adj_p, 3))
 ```
 
-## Is a contrast empty, or is it being tested conservatively
+## Three numbers separate an empty contrast from a conservative test
 
 Three numbers together, because each misleads alone. `propTrueNull()` estimates the null
 proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null
@@ -132,7 +133,7 @@ true null by construction. So the interaction returning nothing says that no bet
 difference is detectable under a test that is under-calling, which is a weaker claim than the two
 training modes producing equivalent proteomes.
 
-## Significant and large enough
+## treat() tests against a 1.15-fold floor
 
 `treat()` tests against a fold-change floor rather than against zero, and unlike filtering on
 logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.15)`
@@ -146,7 +147,7 @@ ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
 enframe(colSums(decideTests(ft) != 0), "contrast", "n_q_05")
 ```
 
-## The pi score
+## The pi score ranks and selects nothing
 
 `pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID
 22321699), so it ranks as the published `-log10(p) * |log2FC|` does. It controls no error rate, so
@@ -171,7 +172,7 @@ results |>
   select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
 ```
 
-## Outputs
+## fit.rds holds the complete model
 
 `DEP_matrix` is one row per protein and three columns per contrast, which is the shape for reading
 across contrasts and for handing to a later stage. The long form it is built from is not written:
@@ -206,7 +207,7 @@ write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential
 dim(dep_matrix)
 ```
 
-## Negative control
+## Two untrained legs should not differ
 
 Two untrained legs of the same person should not differ. If they do, the cause is upstream, and
 the difference is itself a result.
