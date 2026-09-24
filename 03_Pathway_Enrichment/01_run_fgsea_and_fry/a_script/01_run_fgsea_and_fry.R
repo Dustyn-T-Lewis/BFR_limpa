@@ -1,7 +1,7 @@
-# fgsea and fry, side by side; neither is simply better. fgsea is competitive on moderated t and
-# assumes exchangeable proteins, which they are not. fry is self-contained and rotates residuals
-# of the participant design, so correlation cannot inflate its null; under the global training
-# effect it flags about a third of sets.
+# fgsea and fry, side by side. fgsea is competitive on moderated t and assumes exchangeable
+# proteins, which they are not. fry is self-contained and rotates residuals of the participant
+# design, so correlation cannot inflate its null; under the global training effect it flags about
+# a third of sets.
 
 pacman::p_load(
   here, dplyr, tibble, tidyr, purrr, stringr, limma, ggplot2, patchwork, readxl, writexl
@@ -126,7 +126,6 @@ set_summary <- set_tests |>
 print(as.data.frame(set_summary))
 
 
-# ---- figures: S1 to S7, one A4 page each ---------------------------------------------------
 
 supplement <- function(number, title, text, tags = "A") {
   plot_annotation(
