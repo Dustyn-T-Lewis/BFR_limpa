@@ -1,45 +1,12 @@
 # 01_Preprocess / 01_Filtering
 
-Reads the DIA-NN report and removes rows. Drops no sample, filters nothing on missing values.
+Reads the DIA-NN report and removes precursor rows. It drops no sample and filters nothing on
+missing values.
 
-| | |
-|---|---|
-| Script | `a_script/01_filter.qmd` |
-| Reads | `00_Input/report.parquet`, `00_Input/metadata.csv` |
-| Writes | `c_data/precursors_filtered.rds`, `c_data/01_filter.xlsx` |
+- Reads: `00_Input/report.parquet`, `00_Input/metadata.csv`
+- Writes: `c_data/precursors_filtered.rds` (read by `02_Quantification`), `c_data/01_filter.xlsx`
+  (`overview`, `filter_log`, `contaminants_removed`), `b_reports/01_filter.html`
+- Run: `quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports`,
+  about ten seconds.
 
-```sh
-quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports
-```
-
-Only `precursors_filtered.rds` is read downstream. The workbook records what this stage did: an `overview` sheet
-listing the others, then `filter_log` and `contaminants_removed`.
-
-## What it does
-
-1. Read the report with `readDIANN()`.
-2. Rename columns from MS run names to our sample IDs, dropping one discarded injection. Every
-   metadata run must match a report column, or the sample would silently become all-NA.
-3. Repair the search database fault and drop reversed decoys.
-4. Remove peptides mapping to several proteins, then groups holding several proteins.
-5. Remove blood, plasma, skin and antibody proteins, reporting each cell's contaminant share.
-
-## Contaminant repair
-
-The contaminant database appended to the search FASTA in DIA-NN repeats proteins the human FASTA 
-lists, so creatine kinase and myoglobin are tagged as contaminants and look ambiguous. Left
-alone, step 4 deletes them along with other muscle proteins. So we drop only the entries that are
-contaminant-only, then strip the tag from the rest.
-
-## Contaminants
-
-147 gene symbols plus four family patterns, defined in the notebook. Symbols were screened against
-single-cell muscle expression, not whole-tissue values, which are themselves blood-contaminated.
-
-A group counts as contamination only when every gene name on it does. One protein can carry
-several names, so testing the first would get it wrong both ways.
-
-### Note
-
-One assertion: all 28 symbols in `must_keep` must survive. It catches both a broken repair and a
-contaminant rule that reaches too far.
+The notebook gives the reason for each filter beside its code.

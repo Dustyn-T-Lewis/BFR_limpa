@@ -2,16 +2,13 @@
 
 Correlates each protein's pre-to-post change with the leg's change in muscle size and quality.
 
-| | |
-|---|---|
-| Script | `a_script/03_phenotype.qmd` |
-| Reads | `proteins.rds`, `00_Input/phenotype.csv` |
-| Writes | `c_data/03_phenotype.xlsx` |
+- Reads: `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`
+- Writes: `c_data/03_phenotype.xlsx` (`overview`, `summary`, `correlations`),
+  `b_reports/03_phenotype.html`
+- Run: `quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd --output-dir ../b_reports`,
+  about ten seconds.
 
-A contrast compares group means and cannot use a per-leg outcome, so this is a separate question.
-Pooled: 65 legs, protein change against phenotype change. Differential: 32 participants,
-the BFR-minus-HLRT difference in a protein against the same difference in phenotype, which removes
-between-participant confounds. Spearman throughout; BH within each analysis and outcome.
+## No protein tracks the phenotype after correction
 
 | Analysis | Outcome | n | Nominal | Ratio to chance | BH < 0.05 |
 |---|---|---:|---:|---:|---:|
