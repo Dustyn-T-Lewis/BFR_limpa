@@ -9,8 +9,8 @@ this one list.
   `04_run_singscore`), `c_data/00_build_gene_sets.xlsx` (`overview`, `collection_summary`,
   `set_catalog`, `protein_gene_map`, `mapping_summary`; `01_`, `04_` and `05_` read the catalogue
   and the map). It draws nothing, so it has no `b_reports/`.
-- Run: `Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R`, about
-  five seconds.
+- Run: `Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R`, 4
+  seconds.
 
 ## MSigDB 2026.1.Hs is frozen with a checksum
 

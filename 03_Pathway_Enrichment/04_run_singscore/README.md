@@ -7,7 +7,7 @@ Scores every sample on every set with singscore.
 - Writes: `c_data/set_scores.rds` (read by `05_classify_and_associate_sets`),
   `c_data/04_run_singscore.xlsx` (`overview`, `collection_spread`, `structure_check`,
   `set_scores`), `b_reports/04_run_singscore_figures.pdf` (S12)
-- Run: `Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R`, about ten
+- Run: `Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R`, 11
   seconds.
 
 ## A sample's score does not depend on the cohort

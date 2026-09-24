@@ -8,4 +8,4 @@ Fits the model on the five contrasts and writes the results.
   (`overview`, `DEP_matrix` with `logFC`, `P.Value` and `adj.P.Val` per protein and contrast,
   `contrast_summary`), `b_reports/02_differential.html`
 - Run: `quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports`,
-  a few seconds.
+  17 seconds.

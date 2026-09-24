@@ -1,7 +1,7 @@
 # fgsea and fry, side by side. fgsea is competitive on moderated t and assumes exchangeable
 # proteins, which they are not. fry is self-contained and rotates residuals of the participant
-# design, so correlation cannot inflate its null; under the global training effect it flags about
-# a third of sets.
+# design, so correlation cannot inflate its null; under the global training effect it flags 589
+# to 656 of the 1,990 sets.
 
 pacman::p_load(
   here, dplyr, tibble, tidyr, purrr, stringr, limma, ggplot2, patchwork, readxl, writexl

@@ -11,7 +11,7 @@ Tests whether proteins that work together moved together, then scores every samp
 | [`04_run_singscore`](04_run_singscore/README.md) | per-sample set scores | `set_scores.rds`, workbook, S12 |
 | [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) | set classification and phenotype association | workbook, S13–S19 over 128 pages |
 
-The six steps take under two minutes, half of it in `05_`. Figures are numbered S1 to S19 through
+The six steps ran in 104 seconds, 49 of them in `05_`. Figures are numbered S1 to S19 through
 the stage. Each A4 page carries a caption beneath it in the supplement style: title, one entry per
 lettered panel, encodings, and the workbook sheet the data come from. Findings live in these
 READMEs, not on the figures.

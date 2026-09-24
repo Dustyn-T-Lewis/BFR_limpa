@@ -8,7 +8,7 @@ Fits the detection curve, rolls precursors up to proteins, filters on detection 
 - Writes: `c_data/proteins.rds`, `c_data/02_quantify.xlsx` (`overview`, `dpc_parameters`,
   `protein_quality`), `b_reports/02_quantify.html`
 - Run: `quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-dir ../b_reports`,
-  about ten seconds.
+  9 seconds.
 
 ## dpcQuant() runs by hand, outside the notebook
 

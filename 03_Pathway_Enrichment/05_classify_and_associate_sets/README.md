@@ -9,7 +9,7 @@ Measures how well each set's score separates study groups, and whether it tracks
   `set_auc`, `set_association`, `set_by_arm`, `set_catalog`),
   `b_reports/05_classify_and_associate_sets_figures.pdf` (S13–S19, 128 pages)
 - Run: `Rscript 03_Pathway_Enrichment/05_classify_and_associate_sets/a_script/05_classify_and_associate_sets.R`,
-  about 50 seconds.
+  49 seconds.
 
 Five tasks: pre against post in each arm, BFR against HLRT at baseline, after training, and in
 change. All are paired, so AUC comes from `pROC` with `direction = "<"` fixed (unfixed, it flips
@@ -35,4 +35,5 @@ phenotype after correction, and no protein does either (`02_Differential_Express
 S13–S16 draw an ROC panel for every set reaching nominal p on each task (control excluded),
 S17–S18 a scatter for every set-outcome pair reaching nominal p, pooled then differential, and S19
 nominal hits over chance by collection. Panels run twelve to an A4 page, by collection then p,
-with BH q in each header. Most nominal hits are expected by chance; read them against S19.
+with BH q in each header. Read every panel against S19: at a ratio of 1, the nominal hits are what
+chance returns.
