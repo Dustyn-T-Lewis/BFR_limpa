@@ -2207,9 +2207,9 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#design" id="toc-design" class="nav-link active" data-scroll-target="#design">Design</a></li>
-  <li><a href="#is-a-fixed-participant-term-enough" id="toc-is-a-fixed-participant-term-enough" class="nav-link" data-scroll-target="#is-a-fixed-participant-term-enough">Is a fixed participant term enough</a></li>
-  <li><a href="#contrasts" id="toc-contrasts" class="nav-link" data-scroll-target="#contrasts">Contrasts</a></li>
+  <li><a href="#participant-is-a-fixed-block" id="toc-participant-is-a-fixed-block" class="nav-link active" data-scroll-target="#participant-is-a-fixed-block">Participant is a fixed block</a></li>
+  <li><a href="#the-within-leg-correlation-is-checked-not-modelled" id="toc-the-within-leg-correlation-is-checked-not-modelled" class="nav-link" data-scroll-target="#the-within-leg-correlation-is-checked-not-modelled">The within-leg correlation is checked, not modelled</a></li>
+  <li><a href="#the-interaction-is-primary-and-bfr_pre-hlrt_pre-is-the-control" id="toc-the-interaction-is-primary-and-bfr_pre-hlrt_pre-is-the-control" class="nav-link" data-scroll-target="#the-interaction-is-primary-and-bfr_pre-hlrt_pre-is-the-control">The interaction is primary and BFR_Pre-HLRT_Pre is the control</a></li>
   </ul>
 </nav>
 </div>
@@ -2235,7 +2235,7 @@ vertical-align: -.125em;
 </header>
 
 
-<p>limpa works with any design limma accepts. This notebook builds one and checks it, apart from the fit.</p>
+<p>limpa works with any design limma accepts. This notebook builds one and checks it, apart from the fit, so a design problem surfaces in seconds.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, limma, purrr, tibble, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2250,9 +2250,9 @@ treatment T1 T2
      HLRT 33 33</code></pre>
 </div>
 </div>
-<section id="design" class="level2">
-<h2 class="anchored" data-anchor-id="design">Design</h2>
-<p>Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block. Fixed rather than random because every contrast the study asks for sits within one person (limma User’s Guide §9.4.2). <code>sex</code> is constant within participant, so this design cannot test it.</p>
+<section id="participant-is-a-fixed-block" class="level2">
+<h2 class="anchored" data-anchor-id="participant-is-a-fixed-block">Participant is a fixed block</h2>
+<p>Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block: 131 rows by 36 columns, four group means and 32 participant dummies, 95 residual degrees of freedom. Fixed rather than random because every contrast the study asks for sits within one person (limma User’s Guide §9.4.2), which is what makes pre-to-post paired. <code>sex</code> is constant within participant, so this design cannot test it. One participant contributes three cells rather than four, so the group columns are participant-adjusted cell means.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group <span class="sc">+</span> participant, <span class="at">data =</span> targets)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># makeContrasts() parses its arguments as R code, so a column left named &quot;group2E-T1&quot; would</span></span>
@@ -2276,8 +2276,8 @@ treatment T1 T2
 </div>
 </div>
 </section>
-<section id="is-a-fixed-participant-term-enough" class="level2">
-<h2 class="anchored" data-anchor-id="is-a-fixed-participant-term-enough">Is a fixed participant term enough</h2>
+<section id="the-within-leg-correlation-is-checked-not-modelled" class="level2">
+<h2 class="anchored" data-anchor-id="the-within-leg-correlation-is-checked-not-modelled">The within-leg correlation is checked, not modelled</h2>
 <p>Samples share a participant, and within that they share a leg. The participant term removes the first exactly; the second stays in the residual. If the leg-level correlation were large, the within-leg contrasts would be tested too conservatively and the between-leg ones too liberally.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>leg_id <span class="ot">&lt;-</span> <span class="fu">paste</span>(targets<span class="sc">$</span>participant, targets<span class="sc">$</span>leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)</span>
@@ -2291,10 +2291,10 @@ treatment T1 T2
 <pre><code>[1] 0.027</code></pre>
 </div>
 </div>
-<p>The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it describes the matrix rather than the model. That is enough for a near-zero check. When the number sits near zero, as it has on this data, <code>02_Differential</code> calls <code>dpcDE()</code> without <code>block =</code>. If the correlation ever rose, the fix is <code>block = leg_id</code> in the next notebook, but no branch and no warning will tell you. Read the row on every rerun.</p>
+<p>The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it describes the matrix rather than the model. That is enough for a near-zero check. When the number sits near zero, as it has on this data, <code>02_Differential</code> calls <code>dpcDE()</code> without <code>block =</code>. If the correlation ever rose, the fix is <code>block = leg_id</code> in the next notebook, but <code>leg_id</code> is not saved, and no branch and no warning will tell you. Read the row on every rerun.</p>
 </section>
-<section id="contrasts" class="level2">
-<h2 class="anchored" data-anchor-id="contrasts">Contrasts</h2>
+<section id="the-interaction-is-primary-and-bfr_pre-hlrt_pre-is-the-control" class="level2">
+<h2 class="anchored" data-anchor-id="the-interaction-is-primary-and-bfr_pre-hlrt_pre-is-the-control">The interaction is primary and BFR_Pre-HLRT_Pre is the control</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>contrasts <span class="ot">&lt;-</span> <span class="fu">makeContrasts</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Post-Pre</span><span class="st">`</span> <span class="ot">=</span> BFR_T2 <span class="sc">-</span> BFR_T1,</span>
@@ -2320,7 +2320,55 @@ Levels    Modality_x_Time_Interaction
   HLRT_T2                          -1</code></pre>
 </div>
 </div>
-<p>The five carry three different roles, and the manuscript should read them that way. <code>Modality_x_Time_Interaction</code> is the <strong>primary</strong> comparison and the question the study was designed to answer. <code>BFR_Pre-HLRT_Pre</code> is the <strong>negative control</strong>: two legs of one person before either was trained, so it must find nothing. The remaining three are <strong>descriptive</strong>. <code>Modality_x_Time_Interaction</code> equals <code>BFR_Post-HLRT_Post</code> minus <code>BFR_Pre-HLRT_Pre</code> exactly, so these are not five independent questions.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Role</th>
+<th>Compares</th>
+<th>Reads as</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Modality_x_Time_Interaction</code></td>
+<td>primary</td>
+<td>difference of the two time effects</td>
+<td>the study question</td>
+</tr>
+<tr class="even">
+<td><code>BFR_Pre-HLRT_Pre</code></td>
+<td>negative control</td>
+<td>two legs before training</td>
+<td>must find nothing</td>
+</tr>
+<tr class="odd">
+<td><code>BFR_Post-Pre</code></td>
+<td>descriptive</td>
+<td>one leg over time</td>
+<td>what restricted training did</td>
+</tr>
+<tr class="even">
+<td><code>HLRT_Post-Pre</code></td>
+<td>descriptive</td>
+<td>the other leg over time</td>
+<td>what conventional training did</td>
+</tr>
+<tr class="odd">
+<td><code>BFR_Post-HLRT_Post</code></td>
+<td>descriptive</td>
+<td>two legs after training</td>
+<td>leg difference at the end</td>
+</tr>
+</tbody>
+</table>
+<p><code>Modality_x_Time_Interaction</code> equals <code>BFR_Post-HLRT_Post</code> minus <code>BFR_Pre-HLRT_Pre</code> exactly, so these are not five independent questions. Report the primary and the control as the result; the other three describe what happened on the way.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
