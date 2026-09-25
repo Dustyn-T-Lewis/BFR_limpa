@@ -8,7 +8,7 @@ participant except one participant whose post-training biopsy from one leg was n
 The primary comparison is the interaction: whether blood-flow restriction alters the muscle
 proteome differently than heavy load.
 
-## Stages 01 to 03 run; 04 and 05 are planned
+## Three stages run, two are planned
 
 | Stage | Contents | State |
 |---|---|---|
@@ -52,7 +52,7 @@ The block above ran in 155 seconds. `dpcQuant()` takes about 100 minutes and run
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`. Its output is committed, so re-run
 it only when the precursor matrix changes.
 
-## limpa treats a missing value as evidence of low abundance
+## limpa reads a missing value as low
 
 Half of a DIA matrix is missing, and low-abundance peptides are missed more often than
 abundant ones. limpa models that relationship instead of imputing a replacement. Every protein

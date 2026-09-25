@@ -1,6 +1,6 @@
 ---
 title: "03 · Protein against phenotype"
-subtitle: "Every protein correlated with the ultrasound outcomes"
+subtitle: "Proteins against ultrasound outcomes"
 format:
   html:
     toc: true
@@ -154,8 +154,8 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Per analysis and outcome: nominal hits against chance, BH hits, best FDR",
-    "Spearman r, p and BH FDR for every protein, outcome and analysis"
+    "Hits against chance per outcome",
+    "Spearman r, p and FDR per protein"
   )
 )
 out <- here("02_Differential_Expression", "03_Phenotype", "c_data")

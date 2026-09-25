@@ -1,4 +1,4 @@
-# 02_Differential_Expression / 03_Phenotype
+# 03_Phenotype
 
 Correlates each protein's pre-to-post change with the leg's change in muscle size and quality.
 

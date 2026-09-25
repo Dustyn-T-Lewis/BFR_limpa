@@ -31,7 +31,7 @@ d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.r
 stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 ```
 
-## dpcDE() fits the model with one quality weight per sample
+## dpcDE() fits with sample weights
 
 `sample.weights = TRUE` estimates one quality weight per sample. Biopsies differed in how much
 blood they carried, and removing the contaminant rows does not undo what that did to the sample
@@ -66,7 +66,7 @@ se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
 round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
-## BH runs within each contrast, never across them
+## BH runs within each contrast
 
 The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control
 anything that can be stated.
@@ -93,7 +93,7 @@ contrast_summary |>
   mutate(min_adj_p = signif(min_adj_p, 3))
 ```
 
-## Three numbers separate an empty contrast from a conservative test
+## Empty or conservative: three checks
 
 Each number misleads alone. `propTrueNull()` estimates the null
 proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null
@@ -197,8 +197,8 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "One row per protein: logFC, p and BH-adjusted p for each of the five contrasts",
-    "Per contrast: proteins tested, hits at FDR 0.05 and 0.10, smallest adjusted p"
+    "logFC, p and BH p per contrast",
+    "Hits per contrast at FDR 0.05 and 0.10"
   )
 )
 write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential.xlsx"))

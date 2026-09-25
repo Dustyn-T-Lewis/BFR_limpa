@@ -1,4 +1,4 @@
-# 01_Preprocess / 02_Quantification
+# 02_Quantification
 
 Fits the detection curve, rolls precursors up to proteins, filters on detection and normalises.
 

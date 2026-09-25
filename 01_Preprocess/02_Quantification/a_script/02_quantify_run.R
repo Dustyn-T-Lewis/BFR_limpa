@@ -1,5 +1,4 @@
 # Run by hand when the precursor matrix changes; about 100 minutes per dpcQuant() call.
-# 02_quantify.qmd only loads what this writes, so a render never starts one.
 #   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R
 #   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 

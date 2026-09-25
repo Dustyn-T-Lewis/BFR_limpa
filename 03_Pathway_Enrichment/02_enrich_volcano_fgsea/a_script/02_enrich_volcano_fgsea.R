@@ -1,6 +1,5 @@
-# Protein volcanoes with collapse-surviving fgsea sets ringed. Computes nothing. Two claims share
-# a panel: colour and count badges read protein-level BH FDR, rings read set-level fgsea FDR.
-# The pre-training control is not drawn; 01_run_fgsea_and_fry reports it.
+# Protein volcanoes with fgsea rings. Colour reads protein BH FDR, rings read set FDR. The
+# control is not drawn.
 
 pacman::p_load(here, dplyr, tibble, purrr, stringr, ggplot2, patchwork, readxl)
 
@@ -38,9 +37,7 @@ make_volcano <- function(contrast, rank_by = "fdr") {
   points <- filter(protein_results, .data$contrast == .env$contrast)
   ring <- fgsea_results |>
     filter(.data$contrast == .env$contrast) |>
-    # With five overlapping collections two ringed sets can share a name once the ring
-    # strips the prefix: GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION would label
-    # two arcs identically.
+    # Once the prefix goes, GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION share a label.
     mutate(
       stem = sub("^[A-Z0-9]+_", "", pathway),
       pathway = if_else(
@@ -115,12 +112,12 @@ fdr_order <- c(
 pi_order <- c("BFR_Post-Pre", "HLRT_Post-Pre")
 figures <- list(
   wrap_plots(map(fdr_order, make_volcano), ncol = 2) +
-    supplement(8, "Protein volcanoes with the strongest fgsea sets ringed", paste(
+    supplement(8, "Protein volcanoes with fgsea rings", paste(
       panel_list(fdr_order), "Points are proteins, coloured when BH FDR < 0.05 within the",
       "contrast, with the five lowest-FDR proteins named.", ring_text
     )),
   wrap_plots(map(pi_order, make_volcano, rank_by = "pi"), ncol = 1) +
-    supplement(9, "Training volcanoes labelled by pi-score", paste(
+    supplement(9, "Training volcanoes, pi-score labels", paste(
       panel_list(pi_order), "As S8 Figure, but the five proteins named are those with the",
       "smallest pi-score, P.Value^|logFC| (Xiao et al. 2014). Pi controls no error rate, so no",
       "protein named here is a discovery.", ring_text

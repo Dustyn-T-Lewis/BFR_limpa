@@ -1,4 +1,4 @@
-# 03_Pathway_Enrichment / 02_enrich_volcano_fgsea
+# 02_enrich_volcano_fgsea
 
 Draws protein volcanoes with the collapse-surviving fgsea sets ringed. Computes nothing.
 

@@ -1,7 +1,6 @@
-# fgsea and fry, side by side. fgsea is competitive on moderated t and assumes exchangeable
-# proteins, which they are not. fry is self-contained and rotates residuals of the participant
-# design, so correlation cannot inflate its null; under the global training effect it flags 589
-# to 656 of the 1,990 sets.
+# fgsea is competitive and assumes exchangeable proteins, which they are not. fry is
+# self-contained, so correlation cannot inflate its null; on training it flags 589 to 656 of the
+# 1,990 sets.
 
 pacman::p_load(
   here, dplyr, tibble, tidyr, purrr, stringr, limma, ggplot2, patchwork, readxl, writexl
@@ -25,9 +24,8 @@ stopifnot(
   identical(rownames(proteins$E), protein_map$protein)
 )
 
-# All five contrasts, BH once per contrast as upstream applied it; re-adjusting on the mapped
-# subset would change what every FDR here means. pi_score is the Xiao et al. (2014, PMID
-# 22321699) score: it controls no error rate, so it orders a contrast and selects nothing.
+# BH stays as 02_Differential applied it. pi_score (Xiao et al. 2014, PMID 22321699) orders a
+# contrast and selects nothing.
 protein_results <- map(set_names(contrast_names), function(contrast) {
   topTable(fit, coef = contrast, number = Inf, adjust.method = "BH", sort.by = "none") |>
     rownames_to_column("protein") |>
@@ -57,10 +55,9 @@ ranked <- ranked[contrast_names]
 set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
 
-# fry indexes rows of proteins$E, so sets map back through the representative protein of each
-# symbol. limma reads y$weights, so limpa's per-observation precision reaches fry: a protein
-# rebuilt largely from missing precursors counts for less. fry takes no block argument, because
-# 01_Design fixes participant in the design and the residual within-leg correlation is 0.027.
+# fry indexes rows of proteins$E through each symbol's representative protein, and reads
+# limpa's precision through y$weights. No block: participant is fixed and the within-leg
+# correlation is 0.027.
 gene_map <- filter(protein_map, selected)
 set_rows <- map(sets, \(genes) {
   match(gene_map$protein[match(genes, gene_map$gene)], protein_map$protein)
@@ -90,10 +87,9 @@ set_tests <- bind_rows(
   })
 )
 
-# Four collections overlap: glycolysis is tested in Hallmark, KEGG, Reactome and GO.
-# collapsePathways re-runs each significant set conditioned on a stronger set's leading edge and
-# keeps it only if it stands alone. It needs the results, so it runs after testing, and it
-# prunes without re-adjusting, so the surviving FDR is conservative, not inflated.
+# Collections overlap (glycolysis sits in all four). collapsePathways keeps a significant set only
+# if it stands alone given a stronger set's leading edge. It prunes without re-adjusting, so the
+# surviving FDR is conservative.
 main_sets <- map(set_names(contrast_names), function(contrast) {
   significant <- fgsea_raw[[contrast]][padj < 0.05][order(pval)]
   if (nrow(significant) < 2) {
@@ -181,7 +177,7 @@ dotplot_figure <- function(rows, number, name, by_database = FALSE) {
     ncol = 1, guides = "collect"
   ) +
     supplement(
-      number, paste("Strongest fgsea sets after collapse,", name),
+      number, paste("Top fgsea sets,", name),
       paste0(
         paste(sprintf("(%s) %s.", LETTERS[seq_along(by_contrast)], names(by_contrast)),
           collapse = " "
@@ -217,7 +213,7 @@ figures <- c(figures, list(
     theme_minimal(base_size = 10) +
     theme(legend.position = "bottom") +
     supplement(
-      length(figures) + 1, "Significant fgsea sets before and after collapse",
+      length(figures) + 1, "Collapse, before and after",
       paste(
         "Sets at FDR 0.05 per collection and contrast, before and after collapsePathways, which",
         "keeps a set only if it stands alone given a stronger set's leading edge. Data: set_tests",
@@ -242,10 +238,10 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Sets per contrast significant by fgsea, by fgsea after collapse, and by fry, at FDR 0.05",
-    "Proteins per contrast up and down at FDR 0.05",
-    "Every set, contrast and method; main marks fgsea collapse survivors; leadingEdge is ;-joined",
-    "Every protein and contrast from the saved fit, with its gene mapping and pi score"
+    "Significant sets per contrast and method",
+    "Proteins up and down at FDR 0.05",
+    "Every set test; main marks collapse survivors",
+    "Every protein and contrast from the fit"
   )
 )
 write_xlsx(

@@ -1,4 +1,4 @@
-# 03_Pathway_Enrichment / 03_enrich_scatter_fgsea
+# 03_enrich_scatter_fgsea
 
 Plots each set's BFR_Post-Pre NES against its HLRT_Post-Pre NES.
 
@@ -8,7 +8,7 @@ Plots each set's BFR_Post-Pre NES against its HLRT_Post-Pre NES.
 - Run: `Rscript 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.R`,
   3 seconds.
 
-## BFR and HLRT NES correlate at rho 0.83 across all sets
+## BFR and HLRT NES: rho 0.83
 
 | Population | Sets | rho | Significant | Discordant |
 |---|---:|---:|---:|---:|

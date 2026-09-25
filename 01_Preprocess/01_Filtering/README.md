@@ -1,4 +1,4 @@
-# 01_Preprocess / 01_Filtering
+# 01_Filtering
 
 Reads the DIA-NN report and removes precursor rows. It drops no sample and filters nothing on
 missing values.
