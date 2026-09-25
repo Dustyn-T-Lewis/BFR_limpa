@@ -2207,9 +2207,9 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#dpcde-fits-the-model-with-one-quality-weight-per-sample" id="toc-dpcde-fits-the-model-with-one-quality-weight-per-sample" class="nav-link active" data-scroll-target="#dpcde-fits-the-model-with-one-quality-weight-per-sample">dpcDE() fits the model with one quality weight per sample</a></li>
-  <li><a href="#bh-runs-within-each-contrast-never-across-them" id="toc-bh-runs-within-each-contrast-never-across-them" class="nav-link" data-scroll-target="#bh-runs-within-each-contrast-never-across-them">BH runs within each contrast, never across them</a></li>
-  <li><a href="#three-numbers-separate-an-empty-contrast-from-a-conservative-test" id="toc-three-numbers-separate-an-empty-contrast-from-a-conservative-test" class="nav-link" data-scroll-target="#three-numbers-separate-an-empty-contrast-from-a-conservative-test">Three numbers separate an empty contrast from a conservative test</a></li>
+  <li><a href="#dpcde-fits-with-sample-weights" id="toc-dpcde-fits-with-sample-weights" class="nav-link active" data-scroll-target="#dpcde-fits-with-sample-weights">dpcDE() fits with sample weights</a></li>
+  <li><a href="#bh-runs-within-each-contrast" id="toc-bh-runs-within-each-contrast" class="nav-link" data-scroll-target="#bh-runs-within-each-contrast">BH runs within each contrast</a></li>
+  <li><a href="#empty-or-conservative-three-checks" id="toc-empty-or-conservative-three-checks" class="nav-link" data-scroll-target="#empty-or-conservative-three-checks">Empty or conservative: three checks</a></li>
   <li><a href="#treat-tests-against-a-1.15-fold-floor" id="toc-treat-tests-against-a-1.15-fold-floor" class="nav-link" data-scroll-target="#treat-tests-against-a-1.15-fold-floor">treat() tests against a 1.15-fold floor</a></li>
   <li><a href="#the-pi-score-ranks-and-selects-nothing" id="toc-the-pi-score-ranks-and-selects-nothing" class="nav-link" data-scroll-target="#the-pi-score-ranks-and-selects-nothing">The pi score ranks and selects nothing</a></li>
   <li><a href="#fit.rds-holds-the-complete-model" id="toc-fit.rds-holds-the-complete-model" class="nav-link" data-scroll-target="#fit.rds-holds-the-complete-model">fit.rds holds the complete model</a></li>
@@ -2250,8 +2250,8 @@ vertical-align: -.125em;
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># every protein against the wrong samples and report nothing.</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<section id="dpcde-fits-the-model-with-one-quality-weight-per-sample" class="level2">
-<h2 class="anchored" data-anchor-id="dpcde-fits-the-model-with-one-quality-weight-per-sample">dpcDE() fits the model with one quality weight per sample</h2>
+<section id="dpcde-fits-with-sample-weights" class="level2">
+<h2 class="anchored" data-anchor-id="dpcde-fits-with-sample-weights">dpcDE() fits with sample weights</h2>
 <p><code>sample.weights = TRUE</code> estimates one quality weight per sample. Biopsies differed in how much blood they carried, and removing the contaminant rows does not undo what that did to the sample underneath.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, d<span class="sc">$</span>design, <span class="at">sample.weights =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2331,8 +2331,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="bh-runs-within-each-contrast-never-across-them" class="level2">
-<h2 class="anchored" data-anchor-id="bh-runs-within-each-contrast-never-across-them">BH runs within each contrast, never across them</h2>
+<section id="bh-runs-within-each-contrast" class="level2">
+<h2 class="anchored" data-anchor-id="bh-runs-within-each-contrast">BH runs within each contrast</h2>
 <p>The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control anything that can be stated.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), \(cn) {</span>
@@ -2408,8 +2408,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="three-numbers-separate-an-empty-contrast-from-a-conservative-test" class="level2">
-<h2 class="anchored" data-anchor-id="three-numbers-separate-an-empty-contrast-from-a-conservative-test">Three numbers separate an empty contrast from a conservative test</h2>
+<section id="empty-or-conservative-three-checks" class="level2">
+<h2 class="anchored" data-anchor-id="empty-or-conservative-three-checks">Empty or conservative: three checks</h2>
 <p>Each number misleads alone. <code>propTrueNull()</code> estimates the null proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null from a conservative one. Median |t| is 0.674 under a calibrated null, so a value below that means the tests are conservative. <code>p_below_0.2</code> is 0.2 under a uniform null, so a value below that means the distribution rises toward 1 rather than being flat.</p>
 <p>Read the between-leg contrasts against <code>BFR_Pre-HLRT_Pre</code>, not against theory. That contrast is a true null by construction, and whatever it returns is what a null looks like in this design.</p>
 <div class="cell">
@@ -2799,8 +2799,8 @@ vertical-align: -.125em;
 <span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="fu">map_int</span>(sheets, nrow),</span>
 <span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">columns =</span> <span class="fu">map_int</span>(sheets, ncol),</span>
 <span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
-<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;One row per protein: logFC, p and BH-adjusted p for each of the five contrasts&quot;</span>,</span>
-<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Per contrast: proteins tested, hits at FDR 0.05 and 0.10, smallest adjusted p&quot;</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;logFC, p and BH p per contrast&quot;</span>,</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Hits per contrast at FDR 0.05 and 0.10&quot;</span></span>
 <span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(out, <span class="st">&quot;02_differential.xlsx&quot;</span>))</span>
