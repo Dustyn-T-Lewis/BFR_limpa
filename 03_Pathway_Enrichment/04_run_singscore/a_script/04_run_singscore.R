@@ -1,6 +1,5 @@
-# Score every sample on every set with singscore. Scores rest on within-sample ranks, so they do
-# not move when the cohort changes, as a paired within-participant design needs. No p-value, no
-# contrast. 05_classify_and_associate_sets reads set_scores.rds.
+# singscore per sample and set. Within-sample ranks, so a score ignores the cohort. No p-value,
+# no contrast.
 
 pacman::p_load(here, dplyr, tibble, purrr, stringr, ggplot2, patchwork, readxl, writexl)
 
@@ -97,14 +96,13 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Per collection: sets, median score and median dispersion",
-    "Variance each leading component explains, and the share of it participant explains",
-    "The set by sample singscore matrix; 05_classify_and_associate_sets reads set_scores.rds"
+    "Median score and dispersion per collection",
+    "Variance and participant share per component",
+    "Set by sample scores; 05 reads the rds"
   )
 )
-# 05 reads the matrix from rds: singscore values carry exact rank ties, and a round trip through
-# the workbook changes the last bit of some. A broken tie switches the Wilcoxon and Spearman tests
-# from the approximate p to the exact one.
+# 05 reads the rds: Excel changes the last bit of some scores, which breaks rank ties and moves
+# the Wilcoxon and Spearman p.
 saveRDS(scores, file.path(stage, "c_data", "set_scores.rds"))
 write_xlsx(
   c(list(overview = overview), sheets),

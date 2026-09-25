@@ -7,9 +7,8 @@ out <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 cache_dir <- file.path(out, "cache")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 
-# Membership shifts between MSigDB releases, so one is pinned. The first run fetches it and
-# writes a snapshot with an md5; later runs verify the snapshot and need neither network nor
-# msigdbr.
+# Membership shifts between MSigDB releases, so one is frozen with an md5; later runs need
+# neither network nor msigdbr.
 msigdb_release <- "2026.1.Hs"
 collection_specs <- list(
   Hallmark = list("H", NULL),
@@ -62,9 +61,8 @@ frozen <- readRDS(cache_file)
 membership <- frozen$membership
 message("frozen: ", frozen$db_version, ", ", n_distinct(membership$set_id), " sets")
 
-# Set tests need one row per gene. A row with no symbol or several is dropped, not split:
-# splitting invents measurements nobody made. Among rows sharing a symbol, the one with the most
-# observed precursors represents it, chosen once and without reading any fold change.
+# One row per gene. Rows with no symbol or several are dropped, not split. The protein with the
+# most observed precursors represents a shared symbol, chosen without reading any fold change.
 protein_map <- proteins$genes |>
   rownames_to_column("protein") |>
   mutate(
@@ -135,10 +133,8 @@ slim_offspring <- AnnotationDbi::mget(
 )
 slim_offspring <- slim_offspring[!is.na(slim_offspring)]
 
-# A slim set is every measured gene annotated to the term or any term beneath it. It is built
-# from the full frozen membership, not the qualifying subset, so a gene survives when its GO:BP
-# set fails the size filter. Slim terms are broad by design, so the 15-to-500 rule reads measured
-# size, the size that decides whether a set is testable here.
+# A slim set is every measured gene under the term, taken from the full membership so a gene
+# survives when its GO:BP set fails the size filter. The 15-to-500 rule reads measured size.
 go_genes <- membership |>
   filter(database == "GOBP") |>
   with(split(gene, source_id))
@@ -184,9 +180,9 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Sets per collection in the frozen release, how many qualify, median measured size",
-    "Every set with its source and measured size; qualifies marks the tested ones",
-    "Every protein, its gene symbol, and whether it represents that symbol in set tests",
+    "Sets per collection, tested, median size",
+    "Every set; qualifies marks the tested",
+    "Protein to gene, and the representative",
     "Proteins per mapping outcome"
   )
 )

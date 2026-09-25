@@ -11,7 +11,7 @@ Study data. No code.
 `report.parquet` is too large for git and sits on the `data-v1` release. The download command is
 in the root README.
 
-## Treatment comes from metadata.csv, not the leg letter
+## Treatment comes from metadata.csv
 
 Run names contain `D` and `E` (right and left). Which leg got restriction was counterbalanced, so
 the letter gives the side only. `metadata.csv` carries `treatment` as its own column, done by hand.
@@ -26,7 +26,7 @@ The MS run name, our sample ID, and participant plus leg. `metadata.csv` holds a
 Training volume is one number for the whole leg. Stored once per MS sample it would repeat, and
 summing the column would report twice the real volume.
 
-## Eight vastus lateralis pre-CSA values were corrected on 2026-09-19
+## Eight VL pre-CSA values corrected on 2026-09-19
 
 The CV between the two pre-training VL CSA measurements was high, so the ultrasound images were
 re-analysed. `vl_csa_pre_cm2` changed for 8 legs (S07, S10, S11, S18 ×2, S21, S24, S29). Nothing

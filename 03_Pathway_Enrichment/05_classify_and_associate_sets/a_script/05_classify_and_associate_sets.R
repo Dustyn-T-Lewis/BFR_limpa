@@ -1,9 +1,6 @@
-# Per set, uncollapsed: how well it separates the study groups (pROC AUC as effect size, paired
-# Wilcoxon signed-rank p) and whether it tracks phenotype. Every comparison is paired: pre/post is
-# one leg twice, BFR/HLRT two legs of one person; an unpaired p fits a design not run.
-# Nominal p is read per database against chance_expectation, with BH within database and task
-# beside it; agreement across independent collections beats any single grouping of them.
-# baseline_BFR_vs_HLRT is the empirical floor, because no signal can exist there.
+# Per set: AUC and paired Wilcoxon p for each task, Spearman against phenotype. Every comparison
+# is paired. Nominal p is read against chance_expectation per collection, BH beside it.
+# baseline_BFR_vs_HLRT is the empirical floor.
 
 pacman::p_load(here, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
 
@@ -73,9 +70,7 @@ tasks <- list(
   )
 )
 
-# pROC::roc() auto-orients by default: a case with true directional AUC 0.194 returns 0.806.
-# direction = "<" pins it; without it every below-chance set flips and the figures' red/blue
-# encoding silently inverts.
+# pROC::roc() auto-orients: a true AUC of 0.194 comes back 0.806. direction = "<" pins it.
 fit_roc <- function(values, spec) {
   pROC::roc(
     controls = values[spec$negative], cases = values[spec$positive],
@@ -128,9 +123,8 @@ spearman_by_row <- function(values, outcome) {
   usable <- !is.na(outcome)
   values <- values[, usable, drop = FALSE]
   outcome <- outcome[usable]
-  # Ties make cor.test fall back from the exact p to its approximation and warn each time.
-  # Reading two fields off the htest, not tidying it, is ten times faster over the 32,000 tests
-  # here and returns the same numbers to the bit.
+  # Ties make cor.test warn and fall back to its approximation. Reading two fields off the htest
+  # is ten times faster than tidying it over the 32,000 tests.
   fits <- suppressWarnings(apply(values, 1, \(row) {
     test <- cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
@@ -257,7 +251,7 @@ roc_figure <- function(task_name, number) {
       scale_x_continuous(breaks = c(0, 0.5, 1)) +
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
       labs(x = "1 - specificity", y = "sensitivity")
-  }, number, paste("ROC curves for set scores,", spec$label), paste(
+  }, number, paste("ROC,", spec$label), paste(
     sprintf(
       "ROC curves for all %d sets whose singscore separates the groups at nominal p, across %d",
       nrow(hits), length(spec$positive)
@@ -325,11 +319,11 @@ drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 figures <- c(
   imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 12 + i)) |> list_flatten(),
   association_figure(
-    "pooled", 17, "Training response against phenotype, all legs",
+    "pooled", 17, "Set change against phenotype, all legs",
     sprintf("%d legs, both arms pooled", nrow(legs))
   ),
   association_figure(
-    "differential", 18, "BFR minus HLRT against phenotype, within participant",
+    "differential", 18, "BFR minus HLRT against phenotype",
     sprintf("%d paired participants", nrow(delta_pairs))
   )
 )
@@ -350,7 +344,7 @@ figures <- c(figures, list(
     scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
-      caption = supplement(19, "Nominal hits relative to chance, by collection", paste(
+      caption = supplement(19, "Nominal hits over chance", paste(
         "Paired Wilcoxon per set across", nrow(collection_sizes), "collections, uncorrected p.",
         "Bar length is observed nominal hits divided by the count that collection returns under",
         "the null; red clears 1, grey does not. Labels give observed of tested. Data:",
@@ -382,11 +376,11 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Nominal hits against chance, per collection. Read this first",
-    "How well each set separates each task. AUC from ranks, p from the paired test",
-    "Set against phenotype change: pooled, then within participant",
-    "The same correlation computed inside BFR and inside HLRT, descriptive",
-    "Every tested set with its collection and measured size"
+    "Nominal hits against chance. Read first",
+    "AUC and paired p per set and task",
+    "Set against phenotype, pooled and paired",
+    "The same correlation within each arm",
+    "Tested sets, collection and size"
   )
 )
 write_xlsx(

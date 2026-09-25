@@ -1,4 +1,4 @@
-# 03_Pathway_Enrichment / 00_build_gene_sets
+# 00_build_gene_sets
 
 Freezes the gene sets, maps proteins to genes and applies the size filter. Every later step reads
 this one list.
@@ -12,13 +12,13 @@ this one list.
 - Run: `Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R`, 4
   seconds.
 
-## MSigDB 2026.1.Hs is frozen with a checksum
+## MSigDB 2026.1.Hs is frozen
 
 The first run fetches four MSigDB collections (release 2026.1.Hs) through `msigdbr` and writes an
 RDS with an md5. Later runs verify the checksum and need neither network nor `msigdbr`. Restore
 the RDS and its `.md5` together; move both aside to rebuild.
 
-## 1,990 sets across five collections are tested
+## 1,990 sets are tested
 
 | Collection | In source | Tested | Median measured |
 |---|---:|---:|---:|

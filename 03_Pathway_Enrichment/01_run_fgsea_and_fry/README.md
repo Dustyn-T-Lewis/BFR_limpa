@@ -1,4 +1,4 @@
-# 03_Pathway_Enrichment / 01_run_fgsea_and_fry
+# 01_run_fgsea_and_fry
 
 Tests every set on every contrast with fgsea and fry, and marks the non-redundant fgsea hits.
 
@@ -20,7 +20,7 @@ fgsea ranks proteins by moderated t, seeded. fry reads `proteins$E` with limpa's
 fgsea-only. `leadingEdge` holds `;`-joined gene symbols, which `02_enrich_volcano_fgsea` matches
 to point labels.
 
-## Collapse runs after testing, not before
+## Collapse runs after testing
 
 All sets are tested and BH corrects within each contrast. `collapsePathways` then re-tests each
 significant set against a stronger set's leading edge and marks survivors `main = TRUE`; it deletes
@@ -28,7 +28,7 @@ nothing. Deduplicating before testing lost two thirds of the discoveries (363 to
 training): a redundancy filter removes significant sets, not hopeless ones (Bourgon et al., PNAS
 2010).
 
-## fry finds nothing on any between-leg contrast
+## fry finds nothing between legs
 
 | Contrast | fgsea | after collapse | fry |
 |---|---:|---:|---:|

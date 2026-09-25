@@ -1,6 +1,6 @@
 ---
 title: "01 · Design"
-subtitle: "Design matrix and the five contrasts"
+subtitle: "Design matrix and five contrasts"
 format:
   html:
     toc: true
@@ -77,7 +77,7 @@ sits near zero, as it has on this data, `02_Differential` calls `dpcDE()` withou
 If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but `leg_id` is
 not saved, and no branch and no warning will tell you. Read the row on every rerun.
 
-## The interaction is primary and BFR_Pre-HLRT_Pre is the control
+## One primary contrast, one control
 
 ```{r contrasts}
 contrasts <- makeContrasts(
@@ -117,7 +117,7 @@ overview <- tibble(
   sheet = names(sheets),
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
-  description = "Consensus within-leg correlation with participant as a fixed term"
+  description = "Within-leg correlation, participant fixed"
 )
 write_xlsx(c(list(overview = overview), sheets), file.path(out, "01_design.xlsx"))
 ```

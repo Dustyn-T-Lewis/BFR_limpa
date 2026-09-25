@@ -1,6 +1,4 @@
-# NES in the two training contrasts on one pair of axes: fgsea scores each set once per contrast,
-# so the scatter asks whether both modalities move the same biology. No new test; reshapes the
-# 01_run_fgsea_and_fry output.
+# BFR against HLRT NES per set: do both modalities move the same biology? No new test.
 
 pacman::p_load(
   here, dplyr, tidyr, tibble, purrr, stringr, ggplot2, ggrepel, patchwork, readxl, writexl
@@ -115,7 +113,7 @@ figure_all <- wrap_plots(
     guides(colour = "none", size = "none"),
   ncol = 2, guides = "collect"
 ) +
-  supplement(10, "Set-level agreement between the two training responses", paste(
+  supplement(10, "NES agreement, BFR against HLRT", paste(
     sprintf(
       "fgsea NES for each of %d sets in %s (x) against %s (y), BH within contrast.",
       nrow(paired), x_contrast, y_contrast
@@ -144,7 +142,7 @@ figure_curated <- (
   ) / (quadrant(TRUE) | quadrant(FALSE))
 ) +
   plot_layout(guides = "collect", heights = c(1, 1)) +
-  supplement(11, "Set-level agreement within Hallmark and GO Slim", paste(
+  supplement(11, "NES agreement, Hallmark and GO Slim", paste(
     sprintf("(A) All %d Hallmark and GO Slim sets, whose members do not nest.", nrow(curated)),
     "(B, C) The significant ones rescaled by direction so each can be named. Axes, colours",
     "and point size as in S10 Figure. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
@@ -186,9 +184,9 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Spearman rho and sign agreement of NES between the two training contrasts, per population",
-    "Sets significant in one arm with NES of opposite sign in the other",
-    "Every set with its NES and adjusted p in both training contrasts"
+    "NES agreement between training contrasts",
+    "Sets with opposite NES signs",
+    "NES and adjusted p, both contrasts"
   )
 )
 write_xlsx(

@@ -1,6 +1,6 @@
 ---
 title: "02 · Quantification"
-subtitle: "Detection probability curve, protein roll-up, detection filter, normalisation"
+subtitle: "Roll-up, detection filter, normalisation"
 format:
   html:
     toc: true
@@ -30,7 +30,7 @@ primary_file <- file.path(checkpoints, "proteins_slope_0.7.rds")
 sensitivity_file <- file.path(checkpoints, "proteins_slope_fitted.rds")
 ```
 
-## Missingness is plotted against intensity first
+## Missingness first
 
 ```{r ave-vs-mis}
 plotAveVsMis(y)
@@ -40,7 +40,7 @@ A downward trend means detection depends on intensity and the DPC has something 
 flat cloud would mean missingness is closer to random, where limpa still works but gains
 less over simpler methods.
 
-## The fitted DPC slope falls below the band limpa calls typical
+## The fitted slope is below typical
 
 ```{r dpc}
 dpcest <- dpc(y$E)
@@ -100,7 +100,7 @@ proteins <- readRDS(primary_file)
 `r format(nrow(y), big.mark = ",")` precursors. The matrix has no missing values; what varies
 is each value's standard error.
 
-## The detection filter uses the smallest group size, 32
+## Detection filter at 32 samples
 
 `filterByDetection()` runs after `dpcQuant()` and before DE, and returns a logical vector.
 For a small experiment the help suggests setting `n.samples` to the smallest group size.
@@ -126,7 +126,7 @@ recovered 371 of them, of which exactly one reached BH < 0.05 in any contrast, w
 larger test set tightened the BH threshold enough to push 14 and 29 previously significant
 proteins back above 0.05 on the two training contrasts.
 
-## Normalisation is measured before and after cyclic loess
+## Cyclic loess, measured both sides
 
 limpa places normalisation after `dpcQuant()` and before `dpcDE()` and performs none itself,
 because DIA-NN normalises the precursors, as it did here (`Precursor.Normalised`). Normalised precursors do not make a
@@ -263,7 +263,7 @@ Refitting the five contrasts under each slope is not done here. Done separately,
 107 proteins on the two training contrasts under the preset against 82 and 114 under the fitted
 slope, with the negative control and the interaction empty under both.
 
-## proteins.rds carries a standard error beside every abundance
+## proteins.rds keeps the standard errors
 
 `proteins.rds` holds abundance, standard error and detected-precursor count per protein per
 sample. Every sub-stage of `02_Differential_Expression` reads it, as do `00_build_gene_sets`,
@@ -277,8 +277,8 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Intercept and slope of the fitted detection probability curve",
-    "Per protein: precursors, observed proportion, mean abundance, standard error, observations"
+    "Fitted DPC intercept and slope",
+    "Per-protein coverage, abundance and standard error"
   )
 )
 

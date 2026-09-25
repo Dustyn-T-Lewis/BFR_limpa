@@ -1,6 +1,6 @@
 ---
 title: "01 · Filtering"
-subtitle: "DIA-NN report to a filtered precursor matrix"
+subtitle: "DIA-NN report to filtered precursors"
 format:
   html:
     toc: true
@@ -35,9 +35,8 @@ step_summary <- function(elist, step, signal_start) {
   )
 }
 
-# Four gene families, each anchored at both ends: an unanchored IGH/IGK/IGL/KRT/SPRR prefix
-# also matches IGHMBP2, IGLON5 and KRTCAP2, which muscle expresses. Built from a vector so a
-# "|" dropped at a line wrap cannot silently widen the pattern.
+# Anchored at both ends: a bare IGH/IGK/IGL/KRT/SPRR prefix also matches IGHMBP2, IGLON5 and
+# KRTCAP2, which muscle expresses. Built from a vector so a lost "|" cannot widen it.
 contaminant_families <- str_c(
   "^(",
   str_c(
@@ -72,9 +71,8 @@ contaminant_symbols <- c(
   "SHBG", "SLC4A1", "SPTA1", "TF", "TTR", "TUBB1", "VTN", "VWF"
 )
 
-# Asserted to survive every filter below: muscle proteins the annotation repair rescues, plus
-# proteins that are blood-abundant but muscle-expressed on HPA myonuclei data. ANK1 is small
-# ankyrin-1, a sarcoplasmic reticulum protein.
+# Must survive every filter: muscle proteins the repair rescues, and blood-abundant proteins
+# HPA myonuclei data show in muscle. ANK1 is small ankyrin-1, a sarcoplasmic reticulum protein.
 must_keep <- c(
   "MB", "ACTA1", "ALDOA", "TPM2", "ENO1", "GPI", "CKM", "MYH1",
   "MYH2", "MYH7", "TTN", "DES", "PYGM", "CASQ1", "PVALB", "MYH13",
@@ -83,7 +81,7 @@ must_keep <- c(
 )
 ```
 
-## readDIANN() reads Protein.Ids on top of its defaults
+## readDIANN() adds Protein.Ids
 
 `Protein.Ids` is not one of `readDIANN()`'s default `annotation.columns`, and the repair below
 cannot run without it. It is added to the defaults, not substituted for them, so `Protein.Names`
@@ -105,7 +103,7 @@ y <- readDIANN(
 dim(y)
 ```
 
-## Runs become sample IDs by case-insensitive match
+## Runs map to sample IDs
 
 Columns come back named by DIA-NN `Run`. Matching them case-insensitively against `metadata$run`
 renames columns to `sample_id`, absorbs a run the instrument wrote `Cl_MDR_7E-T2` against
@@ -131,7 +129,7 @@ c(runs_in_report = length(i) + length(runs_dropped), samples_kept = ncol(y))
 runs_dropped
 ```
 
-## The cRAP annotation is repaired before any filter
+## The cRAP repair comes first
 
 The contaminant database appended to the search FASTA repeats proteins the human FASTA already
 lists, so myoglobin is reported as `P02144;cRAP-P02144` with `Proteotypic = 0`. Dropping every
@@ -199,7 +197,7 @@ reads zero for every row. They carry `r signif(removal_counts$pct_signal[2], 2)`
 signal, but they inflate the protein count and would surface as nonsense identifiers in any
 enrichment.
 
-## limpa's two precursor filters run on the repaired annotation
+## limpa's filters run after the repair
 
 Both run on the repaired annotation, in the vignette's order. `filterSingletonPeptides()` is
 skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum
@@ -250,9 +248,7 @@ removed <- tibble(
   ) |>
   arrange(desc(pct_signal))
 
-# Contamination heavier in one cell than another would be a systematic shift landing on a
-# contrast, not noise. Summarised over the four treatment-by-timepoint cells so an imbalance
-# by treatment shows up as well as one by visit.
+# Uneven contamination across the four treatment-by-timepoint cells would land on a contrast.
 contaminant_fraction <- colSums(2^y$E[contaminant, , drop = FALSE], na.rm = TRUE) /
   colSums(2^y$E, na.rm = TRUE)
 round(tapply(contaminant_fraction, y$targets$group, median), 4)
@@ -268,7 +264,7 @@ why the per-member rule is needed. `r nrow(removed)` distinct symbol strings wer
 carrying `r round(sum(removed$pct_signal), 2)`% of the starting signal.
 
 ::: callout-note
-## The contaminant fraction is compared across cells, not adjusted for
+## The contaminant fraction is compared, not adjusted
 
 The medians above compare the four cells and show a gross imbalance in how bloody the biopsies
 were. They do not show a small one. Nothing adjusts for the fraction and no test is run on it.
@@ -277,7 +273,7 @@ between visits. `02_Differential` estimates one quality weight per sample; the w
 part of this and is not aimed at it.
 :::
 
-## One assertion protects the muscle proteins
+## One assertion guards muscle
 
 All 28 symbols in `must_keep` must survive. The assertion runs after the last filter. It catches a broken repair, which deletes muscle through
 the `Proteotypic` flag, and an over-reaching contaminant rule, which deletes it directly.
@@ -305,8 +301,8 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Precursors, protein groups and share of starting signal after each filter",
-    "Contaminant symbol strings removed, how each matched, and the signal it carried"
+    "Rows, groups and signal after each filter",
+    "Removed contaminants and their signal"
   )
 )
 

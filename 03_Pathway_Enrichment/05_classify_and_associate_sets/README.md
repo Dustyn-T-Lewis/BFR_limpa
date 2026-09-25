@@ -1,4 +1,4 @@
-# 03_Pathway_Enrichment / 05_classify_and_associate_sets
+# 05_classify_and_associate_sets
 
 Measures how well each set's score separates study groups, and whether it tracks the phenotype.
 
@@ -16,7 +16,7 @@ change. All are paired, so AUC comes from `pROC` with `direction = "<"` fixed (u
 below-chance sets) and p from the paired Wilcoxon test. Associations use Spearman `cor.test`,
 pooled over 65 legs and differential over 32 participants.
 
-## Training clears chance in every collection; no between-leg task does
+## Only training clears chance
 
 Nominal hits over chance, per collection. Each collection is read against its own chance count
 (5% of its sets), with BH within collection and task.
