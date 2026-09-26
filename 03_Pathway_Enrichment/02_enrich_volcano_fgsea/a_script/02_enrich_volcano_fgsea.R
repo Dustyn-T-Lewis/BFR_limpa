@@ -1,7 +1,7 @@
 # Protein volcanoes with fgsea rings. Colour reads protein BH FDR, rings read set FDR. The
 # control is not drawn.
 
-pacman::p_load(here, dplyr, tibble, purrr, stringr, ggplot2, patchwork, readxl)
+pacman::p_load(here, dplyr, purrr, stringr, ggplot2, patchwork, readxl)
 
 tests <- here(
   "03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"
@@ -25,7 +25,7 @@ da <- enrichVolcano::as_da(
 )
 # Default palette: red up, blue down, dark blue to dark red NES ramp.
 ring_theme <- enrichVolcano::plot_theme(
-  base_size = 10, base_family = "sans", palette = "default", ns = "#9a9a9a"
+  base_size = 10, base_family = "sans", ns = "#9a9a9a"
 )
 # Contrast names carry their own algebra and are the panel titles. Only the interaction needs
 # expanding: a difference of differences has no one-line name.
@@ -33,10 +33,10 @@ contrast_subtitle <- c(
   Modality_x_Time_Interaction = "(BFR_Post - BFR_Pre) - (HLRT_Post - HLRT_Pre)"
 )
 
-make_volcano <- function(contrast, rank_by = "fdr") {
-  points <- filter(protein_results, .data$contrast == .env$contrast)
+make_volcano <- function(cn, rank_by = "fdr") {
+  points <- filter(protein_results, contrast == cn)
   ring <- fgsea_results |>
-    filter(.data$contrast == .env$contrast) |>
+    filter(contrast == cn) |>
     # Once the prefix goes, GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION share a label.
     mutate(
       stem = sub("^[A-Z0-9]+_", "", pathway),
@@ -45,29 +45,24 @@ make_volcano <- function(contrast, rank_by = "fdr") {
         paste0(pathway, " ", database), pathway
       )
     )
-  labels <- if (rank_by == "pi") {
-    arrange(points, pi_score, protein)
+  if (rank_by == "pi") {
+    labels <- arrange(points, pi_score, protein)
+    note <- "Labels ranked by pi-score; colours and counts use BH FDR"
   } else {
-    arrange(filter(points, adj.P.Val < 0.05), adj.P.Val, P.Value, protein)
+    labels <- arrange(filter(points, adj.P.Val < 0.05), adj.P.Val, P.Value, protein)
+    note <- "Protein significance: BH FDR < 0.05"
   }
   labels <- head(labels$label, 5)
-  note <- if (rank_by == "pi") {
-    "Labels ranked by pi-score; colours and counts use BH FDR"
-  } else {
-    "Protein significance: BH FDR < 0.05"
-  }
   enrichment <- ring |>
     select(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
     enrichVolcano::as_enrichment(enrichment_test = "fgsea")
   # The ring draws the twelve survivors with the lowest adjusted p, in either direction.
   enrichVolcano::plot_volcano_ring(
     da, enrichment,
-    contrast = contrast, collapse = FALSE, n_terms = 12,
-    p_threshold = 0.05, logfc_threshold = 0,
-    title = contrast,
-    subtitle = paste(na.omit(c(contrast_subtitle[contrast], note)), collapse = "\n"),
+    contrast = cn, collapse = FALSE, title = cn,
+    subtitle = paste(na.omit(c(contrast_subtitle[cn], note)), collapse = "\n"),
     label_mode = if (length(labels)) "by_genes" else "none",
-    label_genes = labels, label_n = 5,
+    label_genes = labels,
     label_size = 2.6, axis_size = 2.6, count_size = 2.8,
     point_size = 0.9, theme = ring_theme
   ) +

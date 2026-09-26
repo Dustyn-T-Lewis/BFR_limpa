@@ -2,7 +2,7 @@
 # is paired. Nominal p is read against chance_expectation per collection, BH beside it.
 # baseline_BFR_vs_HLRT is the empirical floor.
 
-pacman::p_load(here, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
 
 stage <- here("03_Pathway_Enrichment", "05_classify_and_associate_sets")
 set_catalog <- read_excel(
@@ -20,8 +20,6 @@ set_score <- set_score[catalog$set_id, ]
 collection_sizes <- count(catalog, database)
 message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
 
-
-
 targets$leg_id <- paste(targets$participant, targets$leg, sep = "_")
 by_timepoint <- targets |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
@@ -31,7 +29,6 @@ legs <- filter(by_timepoint, !is.na(T1), !is.na(T2)) |> arrange(participant, tre
 # One row per participant holding both of their legs, for whichever column identifies them.
 pair_by_treatment <- function(data, column) {
   data |>
-    filter(!is.na(.data[[column]])) |>
     select(participant, treatment, value = all_of(column)) |>
     pivot_wider(names_from = treatment, values_from = value) |>
     filter(!is.na(BFR), !is.na(HLRT))
@@ -43,29 +40,29 @@ delta_pairs <- pair_by_treatment(legs, "leg_id")
 delta_set <- set_score[, legs$T2] - set_score[, legs$T1]
 colnames(delta_set) <- legs$leg_id
 
-# Each task names its matrix and two paired column sets. `favours` is the group an AUC above 0.5
+# Each task holds its matrix and two paired column sets. `favours` is the group an AUC above 0.5
 # points to, so the figures can state direction.
 tasks <- list(
   pre_vs_post_BFR = list(
-    matrix = "score", positive = filter(legs, treatment == "BFR")$T2,
+    values = set_score, positive = filter(legs, treatment == "BFR")$T2,
     negative = filter(legs, treatment == "BFR")$T1,
     label = "Pre to post, BFR", favours = "post", unit = "legs"
   ),
   pre_vs_post_HLRT = list(
-    matrix = "score", positive = filter(legs, treatment == "HLRT")$T2,
+    values = set_score, positive = filter(legs, treatment == "HLRT")$T2,
     negative = filter(legs, treatment == "HLRT")$T1,
     label = "Pre to post, HLRT", favours = "post", unit = "legs"
   ),
   baseline_BFR_vs_HLRT = list(
-    matrix = "score", positive = baseline$BFR, negative = baseline$HLRT,
+    values = set_score, positive = baseline$BFR, negative = baseline$HLRT,
     label = "Baseline BFR vs HLRT (control)", favours = "BFR", unit = "participants"
   ),
   post_BFR_vs_HLRT = list(
-    matrix = "score", positive = post$BFR, negative = post$HLRT,
+    values = set_score, positive = post$BFR, negative = post$HLRT,
     label = "Post BFR vs HLRT", favours = "BFR", unit = "participants"
   ),
   delta_BFR_vs_HLRT = list(
-    matrix = "delta", positive = delta_pairs$BFR, negative = delta_pairs$HLRT,
+    values = delta_set, positive = delta_pairs$BFR, negative = delta_pairs$HLRT,
     label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
   )
 )
@@ -80,7 +77,7 @@ fit_roc <- function(values, spec) {
 # The argument is `spec`, not `task`: tibble() builds a `task` column first, and a later
 # `task$label` in the same call would read that column instead of the argument.
 set_auc <- imap(tasks, function(spec, name) {
-  values <- if (spec$matrix == "delta") delta_set else set_score
+  values <- spec$values
   tibble(
     task = name, task_label = spec$label, set_id = rownames(values),
     n_pairs = length(spec$positive),
@@ -93,8 +90,6 @@ set_auc <- imap(tasks, function(spec, name) {
   list_rbind() |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p_paired, "BH"), .by = c(task, database))
-
-
 
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
 # A duplicated phenotype row would silently misalign every leg below.
@@ -176,8 +171,6 @@ chance_expectation <- bind_rows(
   )
 print(as.data.frame(filter(chance_expectation, analysis == "classification")))
 
-
-
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
@@ -205,12 +198,11 @@ set_label <- function(database, pathway) {
 # Every set reaching nominal p gets a panel, twelve to a page, by collection then p. `draw` builds
 # the plot from one page's rows: a paginating facet would build every panel for every page.
 paginate <- function(data, draw, number, title, text, scales = "fixed") {
-  page_of <- (as.integer(data$panel) - 1) %/% 12 + 1
-  n_pages <- max(page_of)
-  map(seq_len(n_pages), \(page) {
-    draw(droplevels(data[page_of == page, ])) +
+  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
+  imap(unname(pages), \(page, i) {
+    draw(droplevels(page)) +
       facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
-      labs(caption = supplement(number, title, text, page, n_pages)) +
+      labs(caption = supplement(number, title, text, i, length(pages))) +
       figure_theme
   })
 }
@@ -220,7 +212,7 @@ roc_figure <- function(task_name, number) {
   hits <- set_auc |>
     filter(task == task_name, p_paired < 0.05) |>
     arrange(database, p_paired)
-  values <- if (spec$matrix == "delta") delta_set else set_score
+  values <- spec$values
   curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, fdr, ...) {
     coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
     tibble(
@@ -362,8 +354,6 @@ pdf(
 walk(figures, print)
 invisible(dev.off())
 
-
-
 sheets <- list(
   chance_expectation = chance_expectation,
   set_auc = arrange(set_auc, p_paired),
@@ -371,10 +361,10 @@ sheets <- list(
   set_by_arm = by_arm,
   set_catalog = catalog
 )
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "Nominal hits against chance, per collection. Read this first.",
     "How well each set separates each task. AUC from ranks, p from paired test.",

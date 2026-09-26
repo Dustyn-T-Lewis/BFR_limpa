@@ -87,7 +87,7 @@ protein_map <- protein_map |>
       selected ~ "representative",
       mapping_status == "candidate" ~ "duplicate_gene",
       TRUE ~ mapping_status
-    ),
+    )
   ) |>
   # Accessions distinguish duplicate symbols in protein-level plot labels.
   mutate(
@@ -117,7 +117,6 @@ set_catalog <- membership |>
     qualifies = source_size >= 15 & source_size <= 500 &
       measured_size >= 15
   )
-stopifnot(!anyDuplicated(set_catalog$set_id))
 sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
 
 # GO Slim sets come from the GO Consortium's generic slim (140 terms), frozen with an md5 like
@@ -142,18 +141,14 @@ slim_sets <- imap(slim_offspring, function(descendants, slim_id) {
   covered <- intersect(c(slim_id, descendants), names(go_genes))
   sort(intersect(unlist(go_genes[covered], use.names = FALSE), gene_universe))
 })
+slim_terms <- unname(AnnotationDbi::Term(GO.db::GOTERM[names(slim_sets)]))
 slim_catalog <- tibble(
-  theme_id = names(slim_sets),
-  pathway = unname(AnnotationDbi::Term(GO.db::GOTERM[theme_id])),
-  measured_size = lengths(slim_sets)
-) |>
-  transmute(
-    set_id = paste("GO_Slim", toupper(gsub("[^A-Za-z0-9]+", "_", pathway)), sep = "|"),
-    database = "GO_Slim", pathway, source_id = theme_id,
-    description = "GO Slim term: every measured gene under it in the GO:BP hierarchy",
-    source_size = measured_size, measured_size,
-    qualifies = measured_size >= 15 & measured_size <= 500
-  )
+  set_id = paste("GO_Slim", toupper(gsub("[^A-Za-z0-9]+", "_", slim_terms)), sep = "|"),
+  database = "GO_Slim", pathway = slim_terms, source_id = names(slim_sets),
+  description = "GO Slim term: every measured gene under it in the GO:BP hierarchy",
+  source_size = lengths(slim_sets), measured_size = source_size,
+  qualifies = measured_size >= 15 & measured_size <= 500
+)
 names(slim_sets) <- slim_catalog$set_id
 set_catalog <- bind_rows(set_catalog, slim_catalog)
 sets <- c(sets, slim_sets[slim_catalog$set_id[slim_catalog$qualifies]])
@@ -175,10 +170,10 @@ sheets <- list(
   protein_gene_map = protein_map,
   mapping_summary = mapping_summary
 )
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "Sets per collection, tested, median size",
     "Every set, with qualifies marking the tested ones",

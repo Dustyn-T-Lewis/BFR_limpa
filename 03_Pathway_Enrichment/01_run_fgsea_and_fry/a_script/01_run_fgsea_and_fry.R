@@ -58,10 +58,8 @@ fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSiz
 # fry indexes rows of proteins$E through each symbol's representative protein, and reads
 # limpa's precision through y$weights. No block: participant is fixed and the within-leg
 # correlation is 0.027.
-gene_map <- filter(protein_map, selected)
-set_rows <- map(sets, \(genes) {
-  match(gene_map$protein[match(genes, gene_map$gene)], protein_map$protein)
-})
+selected_rows <- which(protein_map$selected)
+set_rows <- map(sets, \(genes) selected_rows[match(genes, protein_map$gene[selected_rows])])
 proteins$weights <- fit$EList$weights
 
 # Both packages return their own BH column over the list they were given: fgsea's padj and
@@ -98,11 +96,11 @@ main_sets <- map(set_names(contrast_names), function(contrast) {
   fgsea::collapsePathways(significant, sets, ranked[[contrast]], pval.threshold = 0.05)$mainPathways
 })
 
-main_lookup <- imap(main_sets, \(ids, cn) tibble(contrast = cn, set_id = ids, kept = TRUE)) |>
-  list_rbind()
 set_tests <- set_tests |>
-  left_join(main_lookup, by = c("contrast", "set_id")) |>
-  mutate(main = if_else(method == "fgsea", coalesce(kept, FALSE), NA), kept = NULL) |>
+  mutate(
+    main = if_else(method == "fgsea", set_id %in% main_sets[[contrast[1]]], NA),
+    .by = contrast
+  ) |>
   left_join(
     select(set_catalog, set_id, database, pathway, source_size, description),
     by = "set_id"
@@ -120,8 +118,6 @@ set_summary <- set_tests |>
     .by = contrast
   )
 print(as.data.frame(set_summary))
-
-
 
 supplement <- function(number, title, text, tags = "A") {
   plot_annotation(
@@ -193,7 +189,7 @@ dotplot_figure <- function(rows, number, name, by_database = FALSE) {
 
 figures <- c(
   list(dotplot_figure(survivors, 1, "all collections", by_database = TRUE)),
-  imap(unname(collections), \(db, i) {
+  imap(collections, \(db, i) {
     dotplot_figure(filter(survivors, database == db), i + 1, db)
   })
 )
@@ -233,10 +229,10 @@ sheets <- list(
   set_tests = mutate(set_tests, leadingEdge = map_chr(leadingEdge, paste, collapse = ";")),
   protein_results = protein_results
 )
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "Significant sets per contrast and method",
     "Proteins up and down at FDR 0.05",
