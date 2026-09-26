@@ -2207,13 +2207,13 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#dpcde-fits-with-sample-weights" id="toc-dpcde-fits-with-sample-weights" class="nav-link active" data-scroll-target="#dpcde-fits-with-sample-weights">dpcDE() fits with sample weights</a></li>
-  <li><a href="#bh-runs-within-each-contrast" id="toc-bh-runs-within-each-contrast" class="nav-link" data-scroll-target="#bh-runs-within-each-contrast">BH runs within each contrast</a></li>
-  <li><a href="#empty-or-conservative-three-checks" id="toc-empty-or-conservative-three-checks" class="nav-link" data-scroll-target="#empty-or-conservative-three-checks">Empty or conservative: three checks</a></li>
-  <li><a href="#treat-tests-against-a-1.15-fold-floor" id="toc-treat-tests-against-a-1.15-fold-floor" class="nav-link" data-scroll-target="#treat-tests-against-a-1.15-fold-floor">treat() tests against a 1.15-fold floor</a></li>
-  <li><a href="#the-pi-score-ranks-and-selects-nothing" id="toc-the-pi-score-ranks-and-selects-nothing" class="nav-link" data-scroll-target="#the-pi-score-ranks-and-selects-nothing">The pi score ranks and selects nothing</a></li>
-  <li><a href="#fit.rds-holds-the-complete-model" id="toc-fit.rds-holds-the-complete-model" class="nav-link" data-scroll-target="#fit.rds-holds-the-complete-model">fit.rds holds the complete model</a></li>
-  <li><a href="#two-untrained-legs-should-not-differ" id="toc-two-untrained-legs-should-not-differ" class="nav-link" data-scroll-target="#two-untrained-legs-should-not-differ">Two untrained legs should not differ</a></li>
+  <li><a href="#fit" id="toc-fit" class="nav-link active" data-scroll-target="#fit">Fit</a></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a></li>
+  <li><a href="#is-a-contrast-empty-or-is-it-being-tested-conservatively" id="toc-is-a-contrast-empty-or-is-it-being-tested-conservatively" class="nav-link" data-scroll-target="#is-a-contrast-empty-or-is-it-being-tested-conservatively">Is a contrast empty, or is it being tested conservatively</a></li>
+  <li><a href="#significant-and-large-enough" id="toc-significant-and-large-enough" class="nav-link" data-scroll-target="#significant-and-large-enough">Significant and large enough</a></li>
+  <li><a href="#the-pi-score" id="toc-the-pi-score" class="nav-link" data-scroll-target="#the-pi-score">The pi score</a></li>
+  <li><a href="#outputs" id="toc-outputs" class="nav-link" data-scroll-target="#outputs">Outputs</a></li>
+  <li><a href="#negative-control" id="toc-negative-control" class="nav-link" data-scroll-target="#negative-control">Negative control</a></li>
   </ul>
 </nav>
 </div>
@@ -2250,8 +2250,8 @@ vertical-align: -.125em;
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># every protein against the wrong samples and report nothing.</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<section id="dpcde-fits-with-sample-weights" class="level2">
-<h2 class="anchored" data-anchor-id="dpcde-fits-with-sample-weights">dpcDE() fits with sample weights</h2>
+<section id="fit" class="level2">
+<h2 class="anchored" data-anchor-id="fit">Fit</h2>
 <p><code>sample.weights = TRUE</code> estimates one quality weight per sample. Biopsies differed in how much blood they carried, and removing the contaminant rows does not undo what that did to the sample underneath.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, d<span class="sc">$</span>design, <span class="at">sample.weights =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2331,8 +2331,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="bh-runs-within-each-contrast" class="level2">
-<h2 class="anchored" data-anchor-id="bh-runs-within-each-contrast">BH runs within each contrast</h2>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">Results</h2>
 <p>The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control anything that can be stated.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), \(cn) {</span>
@@ -2408,8 +2408,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="empty-or-conservative-three-checks" class="level2">
-<h2 class="anchored" data-anchor-id="empty-or-conservative-three-checks">Empty or conservative: three checks</h2>
+<section id="is-a-contrast-empty-or-is-it-being-tested-conservatively" class="level2">
+<h2 class="anchored" data-anchor-id="is-a-contrast-empty-or-is-it-being-tested-conservatively">Is a contrast empty, or is it being tested conservatively</h2>
 <p>Each number misleads alone. <code>propTrueNull()</code> estimates the null proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null from a conservative one. Median |t| is 0.674 under a calibrated null, so a value below that means the tests are conservative. <code>p_below_0.2</code> is 0.2 under a uniform null, so a value below that means the distribution rises toward 1 rather than being flat.</p>
 <p>Read the between-leg contrasts against <code>BFR_Pre-HLRT_Pre</code>, not against theory. That contrast is a true null by construction, and whatever it returns is what a null looks like in this design.</p>
 <div class="cell">
@@ -2490,8 +2490,8 @@ vertical-align: -.125em;
 </div>
 <p>The two within-leg contrasts spike at zero against a roughly flat background. The three between-leg contrasts slope upward instead, the negative control among them, and that control is a true null by construction. So the interaction returning nothing says that no between-modality difference is detectable under a test that is under-calling, which is a weaker claim than the two training modes producing equivalent proteomes.</p>
 </section>
-<section id="treat-tests-against-a-1.15-fold-floor" class="level2">
-<h2 class="anchored" data-anchor-id="treat-tests-against-a-1.15-fold-floor">treat() tests against a 1.15-fold floor</h2>
+<section id="significant-and-large-enough" class="level2">
+<h2 class="anchored" data-anchor-id="significant-and-large-enough">Significant and large enough</h2>
 <p><code>treat()</code> tests against a fold-change floor rather than against zero, and unlike filtering on logFC afterwards it controls an error rate. It is stringent by construction: <code>lfc = log2(1.15)</code> tests the null that |logFC| is at most 0.202. One floor is fixed in advance rather than swept, so the count reads as a property of that threshold rather than of the data. <code>robust = TRUE</code> matches the moderation used for the main fit, and is passed explicitly because <code>treat()</code> defaults to <code>FALSE</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ft <span class="ot">&lt;-</span> <span class="fu">treat</span>(fit, <span class="at">lfc =</span> <span class="fu">log2</span>(<span class="fl">1.15</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
@@ -2532,8 +2532,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="the-pi-score-ranks-and-selects-nothing" class="level2">
-<h2 class="anchored" data-anchor-id="the-pi-score-ranks-and-selects-nothing">The pi score ranks and selects nothing</h2>
+<section id="the-pi-score" class="level2">
+<h2 class="anchored" data-anchor-id="the-pi-score">The pi score</h2>
 <p><code>pi_score</code> is <code>P.Value^abs(logFC)</code>, equal to <code>10^(-pi)</code> for the score of Xiao et al. (2014, PMID 22321699), so it ranks as the published <code>-log10(p) * |log2FC|</code> does. It controls no error rate, so it ranks within a contrast and selects nothing.</p>
 <p>It rewards large <code>|logFC|</code>, and here the largest fold changes come from the proteins with the fewest detected precursors, whose values lean on DPC recovery. The observation count is reported alongside so that is visible.</p>
 <p>It is applied to the two contrasts that carry signal. Ranking the interaction would produce a table of its largest fold changes in a contrast whose <code>propTrueNull</code> sits at its ceiling, which invites reading structure into noise no matter what the caption says.</p>
@@ -2778,8 +2778,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="fit.rds-holds-the-complete-model" class="level2">
-<h2 class="anchored" data-anchor-id="fit.rds-holds-the-complete-model">fit.rds holds the complete model</h2>
+<section id="outputs" class="level2">
+<h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
 <p><code>DEP_matrix</code> is one row per protein and three columns per contrast, which is the shape for reading across contrasts and for handing to a later stage. The long form it is built from is not written: <code>fit.rds</code> holds the complete fit, so nothing is lost by dropping it.</p>
 <p>Written before the negative control is checked, so a failure leaves the evidence on disk. The workbook carries full precision; only the tables printed above are rounded.</p>
 <div class="cell">
@@ -2794,10 +2794,10 @@ vertical-align: -.125em;
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(fit, <span class="fu">file.path</span>(out, <span class="st">&quot;fit.rds&quot;</span>))</span>
 <span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">DEP_matrix =</span> dep_matrix, <span class="at">contrast_summary =</span> contrast_summary)</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
 <span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets),</span>
-<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="fu">map_int</span>(sheets, nrow),</span>
-<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">columns =</span> <span class="fu">map_int</span>(sheets, ncol),</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="fu">sapply</span>(sheets, nrow),</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">columns =</span> <span class="fu">sapply</span>(sheets, ncol),</span>
 <span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
 <span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;logFC, p and BH p per contrast&quot;</span>,</span>
 <span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Hits per contrast at FDR 0.05 and 0.10&quot;</span></span>
@@ -2811,8 +2811,8 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
-<section id="two-untrained-legs-should-not-differ" class="level2">
-<h2 class="anchored" data-anchor-id="two-untrained-legs-should-not-differ">Two untrained legs should not differ</h2>
+<section id="negative-control" class="level2">
+<h2 class="anchored" data-anchor-id="negative-control">Negative control</h2>
 <p>If two untrained legs of the same person differ, the cause is upstream, and the difference is itself a result.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>nc <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> d<span class="sc">$</span>negative_control)</span>
