@@ -22,7 +22,7 @@ message("scores: ", nrow(scores), " sets x ", ncol(scores), " samples")
 # together, high that they scatter. multiScore returns it beside the scores at no extra cost.
 set_spread <- set_catalog |>
   filter(qualifies) |>
-  transmute(set_id, database) |>
+  select(set_id, database) |>
   mutate(
     score = rowMeans(scores[set_id, ]),
     dispersion = rowMeans(scored$Dispersions[set_id, ])
@@ -36,7 +36,7 @@ print(as.data.frame(collection_spread))
 
 # Participant identity dominates the raw scores, so the phenotype analysis uses the within-leg
 # change, never the raw value. targets rows follow the matrix columns.
-components <- prcomp(t(scores), scale. = FALSE)
+components <- prcomp(t(scores))
 structure_check <- tibble(
   component = paste0("PC", 1:4),
   variance_explained = round(summary(components)$importance[2, 1:4], 3),
@@ -94,10 +94,10 @@ sheets <- list(
   structure_check = structure_check,
   set_scores = rownames_to_column(as.data.frame(scores), "set_id")
 )
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "Median score and dispersion per collection",
     "Variance and participant share per component",

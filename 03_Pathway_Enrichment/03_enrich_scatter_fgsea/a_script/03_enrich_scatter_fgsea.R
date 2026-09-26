@@ -1,7 +1,7 @@
 # BFR against HLRT NES per set: do both modalities move the same biology? No new test.
 
 pacman::p_load(
-  here, dplyr, tidyr, tibble, purrr, stringr, ggplot2, ggrepel, patchwork, readxl, writexl
+  here, dplyr, tidyr, purrr, stringr, ggplot2, ggrepel, patchwork, readxl, writexl
 )
 
 stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
@@ -157,12 +157,11 @@ print(figure_all)
 print(figure_curated)
 invisible(dev.off())
 
-summary_table <- bind_rows(
-  mutate(concordance(paired), population = "all collections"),
-  mutate(concordance(survivors), population = "collapse survivors"),
-  mutate(concordance(curated), population = "Hallmark and GO Slim")
+summary_table <- list(
+  "all collections" = paired, "collapse survivors" = survivors, "Hallmark and GO Slim" = curated
 ) |>
-  relocate(population)
+  map(concordance) |>
+  list_rbind(names_to = "population")
 print(as.data.frame(summary_table))
 
 export <- paired |>
@@ -179,10 +178,10 @@ sheets <- list(
   discordant = filter(export, discordant, significance != "NS"),
   nes_scatter = export
 )
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "NES agreement between training contrasts",
     "Sets with opposite NES signs",
