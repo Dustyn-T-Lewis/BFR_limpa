@@ -48,15 +48,15 @@ legs <- targets |>
   pivot_wider(names_from = timepoint, values_from = sample_id) |>
   filter(!is.na(T1), !is.na(T2)) |>
   arrange(participant, treatment)
-pairs <- legs |>
+leg_pairs <- legs |>
   select(participant, treatment, leg_id) |>
   pivot_wider(names_from = treatment, values_from = leg_id) |>
   filter(!is.na(BFR), !is.na(HLRT))
 
 delta <- proteins$E[, legs$T2] - proteins$E[, legs$T1]
 colnames(delta) <- legs$leg_id
-paired <- delta[, pairs$BFR] - delta[, pairs$HLRT]
-colnames(paired) <- pairs$participant
+paired <- delta[, leg_pairs$BFR] - delta[, leg_pairs$HLRT]
+colnames(paired) <- leg_pairs$participant
 tibble(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
 ```
 
@@ -77,7 +77,7 @@ leg_phenotype <- legs |>
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
 paired_outcome <- map(set_names(outcomes), function(name) {
   value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
-  value[pairs$BFR] - value[pairs$HLRT]
+  value[leg_pairs$BFR] - value[leg_pairs$HLRT]
 })
 ```
 
@@ -149,10 +149,10 @@ ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
 
 ```{r write}
 sheets <- list(summary = summary_table, correlations = arrange(results, fdr))
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "Hits against chance per outcome",
     "Spearman r, p and FDR per protein"
