@@ -251,7 +251,7 @@ roc_figure <- function(task_name, number) {
       scale_x_continuous(breaks = c(0, 0.5, 1)) +
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
       labs(x = "1 - specificity", y = "sensitivity")
-  }, number, paste("ROC,", spec$label), paste(
+  }, number, spec$label, paste(
     sprintf(
       "ROC curves for all %d sets whose singscore separates the groups at nominal p, across %d",
       nrow(hits), length(spec$positive)
@@ -319,11 +319,11 @@ drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 figures <- c(
   imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 12 + i)) |> list_flatten(),
   association_figure(
-    "pooled", 17, "Set change against phenotype, all legs",
+    "pooled", 17, "Training response against phenotype, all legs",
     sprintf("%d legs, both arms pooled", nrow(legs))
   ),
   association_figure(
-    "differential", 18, "BFR minus HLRT against phenotype",
+    "differential", 18, "BFR minus HLRT, within participant",
     sprintf("%d paired participants", nrow(delta_pairs))
   )
 )
@@ -344,7 +344,7 @@ figures <- c(figures, list(
     scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
-      caption = supplement(19, "Nominal hits over chance", paste(
+      caption = supplement(19, "Nominal hits relative to chance, by collection", paste(
         "Paired Wilcoxon per set across", nrow(collection_sizes), "collections, uncorrected p.",
         "Bar length is observed nominal hits divided by the count that collection returns under",
         "the null; red clears 1, grey does not. Labels give observed of tested. Data:",
@@ -376,11 +376,11 @@ overview <- tibble(
   rows = map_int(sheets, nrow),
   columns = map_int(sheets, ncol),
   description = c(
-    "Nominal hits against chance. Read first",
-    "AUC and paired p per set and task",
-    "Set against phenotype, pooled and paired",
-    "The same correlation within each arm",
-    "Tested sets, collection and size"
+    "Nominal hits against chance, per collection. Read this first.",
+    "How well each set separates each task. AUC from ranks, p from paired test.",
+    "Set against phenotype change: pooled, then within participant.",
+    "The same correlation computed inside BFR and inside HLRT, descriptive.",
+    "Every tested set with its collection and measured size."
   )
 )
 write_xlsx(

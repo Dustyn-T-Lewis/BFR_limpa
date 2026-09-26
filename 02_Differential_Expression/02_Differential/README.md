@@ -1,4 +1,4 @@
-# 02_Differential
+# 02_Differential_Expression / 02_Differential
 
 Fits the model on the five contrasts and writes the results.
 

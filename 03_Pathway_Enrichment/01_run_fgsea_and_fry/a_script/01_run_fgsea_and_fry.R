@@ -177,7 +177,7 @@ dotplot_figure <- function(rows, number, name, by_database = FALSE) {
     ncol = 1, guides = "collect"
   ) +
     supplement(
-      number, paste("Top fgsea sets,", name),
+      number, paste("Ten strongest collapse survivors,", name),
       paste0(
         paste(sprintf("(%s) %s.", LETTERS[seq_along(by_contrast)], names(by_contrast)),
           collapse = " "
@@ -213,7 +213,7 @@ figures <- c(figures, list(
     theme_minimal(base_size = 10) +
     theme(legend.position = "bottom") +
     supplement(
-      length(figures) + 1, "Collapse, before and after",
+      length(figures) + 1, "Significant sets before and after collapse",
       paste(
         "Sets at FDR 0.05 per collection and contrast, before and after collapsePathways, which",
         "keeps a set only if it stands alone given a stronger set's leading edge. Data: set_tests",

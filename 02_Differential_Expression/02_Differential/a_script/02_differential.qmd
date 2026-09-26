@@ -31,7 +31,7 @@ d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.r
 stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 ```
 
-## dpcDE() fits with sample weights
+## Fit
 
 `sample.weights = TRUE` estimates one quality weight per sample. Biopsies differed in how much
 blood they carried, and removing the contaminant rows does not undo what that did to the sample
@@ -66,7 +66,7 @@ se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
 round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
-## BH runs within each contrast
+## Results
 
 The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control
 anything that can be stated.
@@ -93,7 +93,7 @@ contrast_summary |>
   mutate(min_adj_p = signif(min_adj_p, 3))
 ```
 
-## Empty or conservative: three checks
+## Is a contrast empty, or is it being tested conservatively
 
 Each number misleads alone. `propTrueNull()` estimates the null
 proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null
@@ -132,7 +132,7 @@ true null by construction. So the interaction returning nothing says that no bet
 difference is detectable under a test that is under-calling, which is a weaker claim than the two
 training modes producing equivalent proteomes.
 
-## treat() tests against a 1.15-fold floor
+## Significant and large enough
 
 `treat()` tests against a fold-change floor rather than against zero, and unlike filtering on
 logFC afterwards it controls an error rate. It is stringent by construction: `lfc = log2(1.15)`
@@ -146,7 +146,7 @@ ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
 enframe(colSums(decideTests(ft) != 0), "contrast", "n_q_05")
 ```
 
-## The pi score ranks and selects nothing
+## The pi score
 
 `pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID
 22321699), so it ranks as the published `-log10(p) * |log2FC|` does. It controls no error rate, so
@@ -171,7 +171,7 @@ results |>
   select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
 ```
 
-## fit.rds holds the complete model
+## Outputs
 
 `DEP_matrix` is one row per protein and three columns per contrast, which is the shape for reading
 across contrasts and for handing to a later stage. The long form it is built from is not written:
@@ -206,7 +206,7 @@ write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential
 dim(dep_matrix)
 ```
 
-## Two untrained legs should not differ
+## Negative control
 
 If two untrained legs of the same person differ, the cause is upstream, and the difference is
 itself a result.

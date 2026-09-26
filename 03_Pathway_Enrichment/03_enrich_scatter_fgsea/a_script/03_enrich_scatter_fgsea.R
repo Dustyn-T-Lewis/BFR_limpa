@@ -113,7 +113,7 @@ figure_all <- wrap_plots(
     guides(colour = "none", size = "none"),
   ncol = 2, guides = "collect"
 ) +
-  supplement(10, "NES agreement, BFR against HLRT", paste(
+  supplement(10, "NES concordance, all collections", paste(
     sprintf(
       "fgsea NES for each of %d sets in %s (x) against %s (y), BH within contrast.",
       nrow(paired), x_contrast, y_contrast
@@ -142,7 +142,7 @@ figure_curated <- (
   ) / (quadrant(TRUE) | quadrant(FALSE))
 ) +
   plot_layout(guides = "collect", heights = c(1, 1)) +
-  supplement(11, "NES agreement, Hallmark and GO Slim", paste(
+  supplement(11, "NES concordance, Hallmark and GO Slim", paste(
     sprintf("(A) All %d Hallmark and GO Slim sets, whose members do not nest.", nrow(curated)),
     "(B, C) The significant ones rescaled by direction so each can be named. Axes, colours",
     "and point size as in S10 Figure. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."

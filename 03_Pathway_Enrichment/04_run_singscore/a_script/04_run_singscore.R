@@ -58,12 +58,15 @@ figure <- wrap_plots(
     geom_point(alpha = 0.4, size = 0.8) +
     scale_colour_brewer(palette = "Dark2", name = NULL) +
     guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
-    labs(x = "mean score across samples", y = "mean dispersion across samples") +
+    labs(
+      x = "mean score across samples", y = "mean dispersion across samples",
+      title = "Set score against dispersion"
+    ) +
     theme_minimal(base_size = 10),
   ggplot(group_scores, aes(score, group)) +
     geom_violin(fill = "grey85", colour = NA) +
     geom_boxplot(width = 0.12, outlier.shape = NA, linewidth = 0.3) +
-    labs(x = "singscore", y = NULL) +
+    labs(x = "singscore", y = NULL, title = "Score distribution by study group") +
     theme_minimal(base_size = 10),
   ncol = 1, heights = c(1.4, 1)
 ) +
@@ -98,7 +101,7 @@ overview <- tibble(
   description = c(
     "Median score and dispersion per collection",
     "Variance and participant share per component",
-    "Set by sample scores; 05 reads the rds"
+    "Set by sample score matrix"
   )
 )
 # 05 reads the rds: Excel changes the last bit of some scores, which breaks rank ties and moves

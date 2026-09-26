@@ -8,7 +8,7 @@ participant except one participant whose post-training biopsy from one leg was n
 The primary comparison is the interaction: whether blood-flow restriction alters the muscle
 proteome differently than heavy load.
 
-## Three stages run, two are planned
+## Stages
 
 | Stage | Contents | State |
 |---|---|---|
@@ -19,15 +19,13 @@ proteome differently than heavy load.
 | `04_Network/` | proteins that move together | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-## Every sub-stage runs on its own
-
 Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report in stages 01
 and 02, one figure PDF per step in stage 03) and `c_data/` (one workbook of tables, plus an `.rds`
 where a later step needs the R object). Stages 01 and 02 are Quarto notebooks; stage 03 is plain R
 scripts. Data passes through disk, so any sub-stage re-runs from a fresh session. No notebook uses
 knitr caching. "Planned" means only a README exists.
 
-## One block runs the whole pipeline
+## Running the pipeline
 
 `00_Input/report.parquet` is too large for git. From the repo root:
 
@@ -52,7 +50,7 @@ The block above ran in 155 seconds. `dpcQuant()` takes about 100 minutes and run
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`. Its output is committed, so re-run
 it only when the precursor matrix changes.
 
-## limpa reads a missing value as low
+## Approach
 
 Half of a DIA matrix is missing, and low-abundance peptides are missed more often than
 abundant ones. limpa models that relationship instead of imputing a replacement. Every protein
@@ -62,7 +60,7 @@ the downstream statistics.
 So nothing is filtered on missingness before quantification, and the protein matrix never goes
 to a standard linear model.
 
-## Dependencies are not pinned
+## Dependencies
 
 Every script loads its packages with `pacman::p_load()`, which installs any that are missing.
 Stages 01 and 02 use `pacman`, `here`, `limpa`, `limma`, `nanoparquet` (read by `readDIANN()`),

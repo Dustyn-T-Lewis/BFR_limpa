@@ -1,4 +1,4 @@
-# 02_Quantification
+# 01_Preprocess / 02_Quantification
 
 Fits the detection curve, rolls precursors up to proteins, filters on detection and normalises.
 
@@ -9,8 +9,6 @@ Fits the detection curve, rolls precursors up to proteins, filters on detection 
   `protein_quality`), `b_reports/02_quantify.html`
 - Run: `quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-dir ../b_reports`,
   9 seconds.
-
-## dpcQuant() runs by hand, outside the notebook
 
 `dpcQuant()` costs about 100 minutes per call, so `a_script/02_quantify_run.R` computes it and
 `02_quantify.qmd` only loads the result. A render cannot start a long run. Run the script when the

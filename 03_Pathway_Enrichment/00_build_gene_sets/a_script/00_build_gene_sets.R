@@ -181,7 +181,7 @@ overview <- tibble(
   columns = map_int(sheets, ncol),
   description = c(
     "Sets per collection, tested, median size",
-    "Every set; qualifies marks the tested",
+    "Every set, with qualifies marking the tested ones",
     "Protein to gene, and the representative",
     "Proteins per mapping outcome"
   )

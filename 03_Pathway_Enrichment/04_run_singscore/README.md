@@ -10,7 +10,7 @@ Scores every sample on every set with singscore.
 - Run: `Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R`, 11
   seconds.
 
-## Scores ignore the cohort
+## Notes
 
 singscore ranks proteins within each sample. It carries no p-value and never sees a contrast.
 Measured here, dropping 51 of 131 samples changed singscore values by 0 and GSVA values by up to
@@ -22,7 +22,7 @@ use within-leg change.
 S12: (A) mean score against mean dispersion per set, coloured by collection; (B) score
 distribution by study group. Reactome scores highest and disperses least.
 
-## 05 reads the scores as rds
+## Outputs
 
 The score matrix is written twice: as a sheet for reading, and as `set_scores.rds`, which
 `05_classify_and_associate_sets` reads. singscore values carry exact rank ties, and a trip through
