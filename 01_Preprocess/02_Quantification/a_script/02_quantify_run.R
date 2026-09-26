@@ -9,10 +9,10 @@ out <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
 
 if ("--sensitivity" %in% commandArgs(trailingOnly = TRUE)) {
   proteins <- dpcQuant(y, "Protein.Group", dpc = dpc(y$E))
-  file <- file.path(out, "proteins_slope_fitted.rds")
+  path <- file.path(out, "proteins_slope_fitted.rds")
 } else {
   proteins <- dpcQuant(y, "Protein.Group", dpc.slope = 0.7)
-  file <- file.path(out, "proteins_slope_0.7.rds")
+  path <- file.path(out, "proteins_slope_0.7.rds")
 }
-saveRDS(proteins, file)
-message("wrote ", file)
+saveRDS(proteins, path)
+message("wrote ", path)

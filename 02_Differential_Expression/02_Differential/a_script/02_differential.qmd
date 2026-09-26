@@ -192,10 +192,10 @@ dep_matrix <- results |>
 out <- here("02_Differential_Expression", "02_Differential", "c_data")
 saveRDS(fit, file.path(out, "fit.rds"))
 sheets <- list(DEP_matrix = dep_matrix, contrast_summary = contrast_summary)
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = c(
     "logFC, p and BH p per contrast",
     "Hits per contrast at FDR 0.05 and 0.10"

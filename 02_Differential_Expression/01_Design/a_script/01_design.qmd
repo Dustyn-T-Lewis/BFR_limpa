@@ -19,7 +19,7 @@ limpa works with any design limma accepts. This notebook builds one and checks i
 the fit, so a design problem surfaces in seconds.
 
 ```{r setup}
-pacman::p_load(here, limma, purrr, tibble, writexl)
+pacman::p_load(here, limma, tibble, writexl)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
@@ -80,7 +80,7 @@ not saved, and no branch and no warning will tell you. Read the row on every rer
 ## Contrasts
 
 ```{r contrasts}
-contrasts <- makeContrasts(
+contrast_matrix <- makeContrasts(
   `BFR_Post-Pre` = BFR_T2 - BFR_T1,
   `HLRT_Post-Pre` = HLRT_T2 - HLRT_T1,
   `BFR_Pre-HLRT_Pre` = BFR_T1 - HLRT_T1,
@@ -88,7 +88,7 @@ contrasts <- makeContrasts(
   Modality_x_Time_Interaction = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
   levels = design
 )
-contrasts[rowSums(abs(contrasts)) > 0, ]
+contrast_matrix[rowSums(abs(contrast_matrix)) > 0, ]
 ```
 
 | Name | Role | Compares | Reads as |
@@ -107,16 +107,16 @@ other three describe what happened on the way.
 out <- here("02_Differential_Expression", "01_Design", "c_data")
 saveRDS(
   list(
-    design = design, contrasts = contrasts,
+    design = design, contrasts = contrast_matrix,
     negative_control = "BFR_Pre-HLRT_Pre"
   ),
   file.path(out, "design.rds")
 )
 sheets <- list(correlation_strata = strata)
-overview <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  columns = map_int(sheets, ncol),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
   description = "Within-leg correlation, participant fixed"
 )
 write_xlsx(c(list(overview = overview), sheets), file.path(out, "01_design.xlsx"))
