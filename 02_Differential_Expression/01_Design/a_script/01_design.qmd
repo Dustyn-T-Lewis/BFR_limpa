@@ -16,15 +16,10 @@ execute:
 ---
 
 limpa works with any design limma accepts. This notebook builds one and checks it, apart from
-the fit.
+the fit, so a design problem surfaces in seconds.
 
 ```{r setup}
-library(here)
-library(limpa)
-library(limma)
-library(dplyr)
-library(tibble)
-library(writexl)
+pacman::p_load(here, limma, tibble, writexl)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
@@ -34,9 +29,12 @@ with(targets, table(treatment, timepoint))
 
 ## Design
 
-Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block.
+Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block: 131
+rows by 36 columns, four group means and 32 participant dummies, 95 residual degrees of freedom.
 Fixed rather than random because every contrast the study asks for sits within one person
-(limma User's Guide §9.4.2). `sex` is constant within participant, so this design cannot test it.
+(limma User's Guide §9.4.2), which is what makes pre-to-post paired. `sex` is constant within
+participant, so this design cannot test it. One participant contributes three cells rather than
+four, so the group columns are participant-adjusted cell means.
 
 ```{r design}
 design <- model.matrix(~ 0 + group + participant, data = targets)
@@ -47,7 +45,7 @@ rownames(design) <- targets$sample_id
 
 # Rank deficiency would make the contrasts inestimable and surface as silent NA coefficients.
 stopifnot(
-  qr(design)$rank == ncol(design),
+  is.fullrank(design),
   identical(make.names(colnames(design)), colnames(design))
 )
 
@@ -68,50 +66,60 @@ leg_id <- paste(targets$participant, targets$leg, sep = "_")
 
 strata <- tibble(
   level = "within leg, participant fixed (unweighted matrix correlation)",
-  correlation = duplicateCorrelation(proteins$E, design,
-    block = leg_id
-  )$consensus.correlation
+  correlation = duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
 )
-mutate(strata, correlation = round(correlation, 3))
+round(strata$correlation, 3)
 ```
 
 The estimate runs on the bare matrix, without the precision and sample weights the fit uses, so it
 describes the matrix rather than the model. That is enough for a near-zero check. When the number
 sits near zero, as it has on this data, `02_Differential` calls `dpcDE()` without `block =`.
-If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but no branch
-and no warning will tell you. Read the row on every rerun.
+If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but `leg_id` is
+not saved, and no branch and no warning will tell you. Read the row on every rerun.
 
 ## Contrasts
 
 ```{r contrasts}
-contrasts <- makeContrasts(
-  `BFR_Post-Pre`       = BFR_T2 - BFR_T1,
-  `HLRT_Post-Pre`      = HLRT_T2 - HLRT_T1,
-  `BFR_Pre-HLRT_Pre`   = BFR_T1 - HLRT_T1,
+contrast_matrix <- makeContrasts(
+  `BFR_Post-Pre` = BFR_T2 - BFR_T1,
+  `HLRT_Post-Pre` = HLRT_T2 - HLRT_T1,
+  `BFR_Pre-HLRT_Pre` = BFR_T1 - HLRT_T1,
   `BFR_Post-HLRT_Post` = BFR_T2 - HLRT_T2,
   Modality_x_Time_Interaction = (BFR_T2 - BFR_T1) - (HLRT_T2 - HLRT_T1),
   levels = design
 )
-contrasts[rowSums(abs(contrasts)) > 0, ]
+contrast_matrix[rowSums(abs(contrast_matrix)) > 0, ]
 ```
 
-The five carry three different roles, and the manuscript should read them that way. `Modality_x_Time_Interaction`
-is the **primary** comparison and the question the study was designed to answer.
-`BFR_Pre-HLRT_Pre` is the **negative control**: two legs of one person before either was trained,
-so it must find nothing. The remaining three are **descriptive**. `Modality_x_Time_Interaction` equals
-`BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so these are not five independent
-questions.
+| Name | Role | Compares | Reads as |
+|---|---|---|---|
+| `Modality_x_Time_Interaction` | primary | difference of the two time effects | the study question |
+| `BFR_Pre-HLRT_Pre` | negative control | two legs before training | must find nothing |
+| `BFR_Post-Pre` | descriptive | one leg over time | what restricted training did |
+| `HLRT_Post-Pre` | descriptive | the other leg over time | what conventional training did |
+| `BFR_Post-HLRT_Post` | descriptive | two legs after training | leg difference at the end |
+
+`Modality_x_Time_Interaction` equals `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so
+these are not five independent questions. Report the primary and the control as the result; the
+other three describe what happened on the way.
 
 ```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
 saveRDS(
   list(
-    design = design, contrasts = contrasts,
+    design = design, contrasts = contrast_matrix,
     negative_control = "BFR_Pre-HLRT_Pre"
   ),
   file.path(out, "design.rds")
 )
-write_xlsx(list(correlation_strata = strata), file.path(out, "01_design.xlsx"))
+sheets <- list(correlation_strata = strata)
+overview <- data.frame(
+  sheet = names(sheets),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
+  description = "Within-leg correlation, participant fixed"
+)
+write_xlsx(c(list(overview = overview), sheets), file.path(out, "01_design.xlsx"))
 ```
 
 ```{r session}

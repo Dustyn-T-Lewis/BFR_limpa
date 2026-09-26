@@ -1,13 +1,12 @@
 # BFR Proteomics
 
-DIA mass-spectrometry proteomics from a unilateral resistance training trial. Each
-participant trained one leg with blood-flow restriction and the other with conventional
-high load, with biopsies taken from both legs before and after training. 33 participants
-and 131 MS runs: four samples per participant, except one participant whose
-post-training biopsy from one leg was not acquired.
+DIA mass-spectrometry proteomics from a unilateral resistance training trial. Each participant
+trained one leg with blood-flow restriction and the other with conventional high load. Biopsies
+came from both legs before and after training: 33 participants and 131 MS runs, four samples per
+participant except one participant whose post-training biopsy from one leg was not acquired.
 
-The primary comparison is the interaction: whether blood-flow restriction alters the
-muscle proteome differently than heavy load.
+The primary comparison is the interaction: whether blood-flow restriction alters the muscle
+proteome differently than heavy load.
 
 ## Stages
 
@@ -20,22 +19,20 @@ muscle proteome differently than heavy load.
 | `04_Network/` | proteins that move together | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-Each sub-stage holds `a_script/` (code), `b_reports/` (HTML reports or figures) and `c_data/`
-(outputs). Stages 01 and 02 are Quarto notebooks; stage 03 is plain R scripts. Data passes
-through disk, so any sub-stage re-runs on its own. "Planned" means only a README exists.
+Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report in stages 01
+and 02, one figure PDF per step in stage 03) and `c_data/` (one workbook of tables, plus an `.rds`
+where a later step needs the R object). Stages 01 and 02 are Quarto notebooks; stage 03 is plain R
+scripts. Data passes through disk, so any sub-stage re-runs from a fresh session. No notebook uses
+knitr caching. "Planned" means only a README exists.
 
-## Data
+## Running the pipeline
 
 `00_Input/report.parquet` is too large for git. From the repo root:
 
 ```sh
 curl -L -o 00_Input/report.parquet \
   https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/download/data-v1/report.parquet
-```
 
-## Running the pipeline
-
-```sh
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd        --output-dir ../b_reports
 quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-dir ../b_reports
 
@@ -49,24 +46,25 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-Everything above takes minutes. `dpcQuant()` takes about 100 and runs separately, from
+The block above ran in 155 seconds. `dpcQuant()` takes about 100 minutes and runs separately, from
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`. Its output is committed, so re-run
 it only when the precursor matrix changes.
 
 ## Approach
 
-Quantification uses limpa. Roughly half of a DIA matrix is missing, and missingness is
-not random: low-abundance peptides are missed more often than abundant ones. limpa models
-that relationship and treats a missing value as evidence of low abundance rather than
-imputing a replacement. Every protein receives an estimate in every sample along with a
-standard error, and that uncertainty propagates into the downstream statistics.
+Half of a DIA matrix is missing, and low-abundance peptides are missed more often than
+abundant ones. limpa models that relationship instead of imputing a replacement. Every protein
+gets an estimate in every sample with a standard error, and the standard error propagates into
+the downstream statistics.
 
-Two consequences for the workflow: do not filter on missingness before quantification, and
-do not pass the protein matrix to a standard linear model.
+So nothing is filtered on missingness before quantification, and the protein matrix never goes
+to a standard linear model.
 
 ## Dependencies
 
-`limpa`, `limma`, `here`, `nanoparquet`, `writexl`, `readr`, `dplyr`, `tidyr`, `tibble`, `purrr`,
-`stringr`, `ggplot2`. Stage 03 adds `fgsea`, `singscore`, `msigdbr`, `GO.db`,
-`GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`, `patchwork`, `qpdf` and `enrichVolcano` (not on
-CRAN). Versions are not pinned.
+Every script loads its packages with `pacman::p_load()`, which installs any that are missing.
+Stages 01 and 02 use `pacman`, `here`, `limpa`, `limma`, `nanoparquet` (read by `readDIANN()`),
+`readr`, `writexl`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`. Stage 03 adds
+`readxl`, `fgsea`, `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`,
+`patchwork` and `enrichVolcano` 2.0.0 or later (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on
+CRAN).

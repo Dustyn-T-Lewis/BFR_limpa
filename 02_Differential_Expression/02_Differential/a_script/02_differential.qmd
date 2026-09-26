@@ -21,15 +21,7 @@ replaces `lmFit()`. `proteins.rds` arrives already normalised, from
 `01_Preprocess/02_Quantification`.
 
 ```{r setup}
-library(here)
-library(limpa)
-library(limma)
-library(dplyr)
-library(ggplot2)
-library(purrr)
-library(tibble)
-library(tidyr)
-library(writexl)
+pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tibble, tidyr, writexl)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
@@ -46,7 +38,7 @@ blood they carried, and removing the contaminant rows does not undo what that di
 underneath.
 
 ```{r fit}
-fit <- dpcDE(proteins, d$design, sample.weights = TRUE, plot = TRUE)
+fit <- dpcDE(proteins, d$design, sample.weights = TRUE)
 # Captured before contrasts.fit(), which does not carry $targets through.
 sample_weights <- fit$targets$sample.weight
 fit <- contrasts.fit(fit, d$contrasts)
@@ -65,8 +57,9 @@ tibble(group = proteins$targets$group, weight = sample_weights) |>
   )
 ```
 
-Effect size the interaction could detect at 80% power, two-sided 0.05. Without it, a contrast
-returning no hits says nothing about effects smaller than this number.
+Effect size the interaction could detect at 80% power, two-sided 0.05. A contrast returning no
+hits says nothing about effects smaller than this number, so quote the two together. The
+interaction has returned no hits under every variant tried.
 
 ```{r detectable-effect}
 se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
@@ -75,8 +68,7 @@ round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0
 
 ## Results
 
-Benjamini-Hochberg runs within each contrast and never across them. The five share participants
-and the interaction is a difference of two of the others, so pooling them would not control
+The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control
 anything that can be stated.
 
 ```{r results}
@@ -87,8 +79,7 @@ results <- map(colnames(d$contrasts), \(cn) {
     rownames_to_column("protein") |>
     mutate(contrast = cn, .before = 1)
 }) |>
-  list_rbind() |>
-  mutate(pi_score = P.Value^abs(logFC))
+  list_rbind()
 
 contrast_summary <- results |>
   summarise(
@@ -104,7 +95,7 @@ contrast_summary |>
 
 ## Is a contrast empty, or is it being tested conservatively
 
-Three numbers together, because each misleads alone. `propTrueNull()` estimates the null
+Each number misleads alone. `propTrueNull()` estimates the null
 proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null
 from a conservative one. Median \|t\| is 0.674 under a calibrated null, so a value below that
 means the tests are conservative. `p_below_0.2` is 0.2 under a uniform null, so a value below that
@@ -129,11 +120,7 @@ background is signal; a distribution sloping up toward 1 is a test running conse
 #| fig-height: 5
 ggplot(results, aes(P.Value)) +
   geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
-  geom_hline(
-    aes(yintercept = h),
-    summarise(results, h = n() / 20, .by = contrast),
-    linetype = 2, colour = "firebrick"
-  ) +
+  geom_hline(yintercept = nrow(proteins) / 20, linetype = 2, colour = "firebrick") +
   facet_wrap(~contrast) +
   labs(x = "p", y = "proteins", caption = "dashed line marks a flat null") +
   theme_minimal()
@@ -156,15 +143,7 @@ to `FALSE`.
 
 ```{r treat}
 ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
-contrast_names <- colnames(fit$coefficients)
-
-tibble(
-  contrast = contrast_names,
-  n_q_05 = map_int(
-    contrast_names,
-    \(cn) sum(topTreat(ft, coef = cn, number = Inf)$adj.P.Val < 0.05)
-  )
-)
+enframe(colSums(decideTests(ft) != 0), "contrast", "n_q_05")
 ```
 
 ## The pi score
@@ -186,6 +165,7 @@ obs_per_sample <- rowMeans(proteins$other$n.observations)
 
 results |>
   filter(contrast %in% c("BFR_Post-Pre", "HLRT_Post-Pre")) |>
+  mutate(pi_score = P.Value^abs(logFC)) |>
   slice_min(pi_score, n = 10, by = contrast) |>
   mutate(mean_obs = round(obs_per_sample[protein], 2)) |>
   select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
@@ -211,18 +191,25 @@ dep_matrix <- results |>
 
 out <- here("02_Differential_Expression", "02_Differential", "c_data")
 saveRDS(fit, file.path(out, "fit.rds"))
-write_xlsx(
-  list(DEP_matrix = dep_matrix, contrast_summary = contrast_summary),
-  file.path(out, "02_differential.xlsx")
+sheets <- list(DEP_matrix = dep_matrix, contrast_summary = contrast_summary)
+overview <- data.frame(
+  sheet = names(sheets),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
+  description = c(
+    "logFC, p and BH p per contrast",
+    "Hits per contrast at FDR 0.05 and 0.10"
+  )
 )
+write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential.xlsx"))
 
 dim(dep_matrix)
 ```
 
 ## Negative control
 
-Two untrained legs of the same person should not differ. If they do, the cause is upstream, and
-the difference is itself a result.
+If two untrained legs of the same person differ, the cause is upstream, and the difference is
+itself a result.
 
 ```{r negative-control}
 nc <- filter(results, contrast == d$negative_control)

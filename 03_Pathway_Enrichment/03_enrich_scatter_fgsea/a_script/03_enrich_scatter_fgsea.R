@@ -1,33 +1,18 @@
-# NES in the two training contrasts on one pair of axes: fgsea scores each set once per contrast,
-# so the scatter asks whether both modalities move the same biology. No new test; reshapes the
-# 01_run_fgsea_and_fry output.
+# BFR against HLRT NES per set: do both modalities move the same biology? No new test.
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tidyr)
-  library(tibble)
-  library(purrr)
-  library(ggplot2)
-  library(patchwork)
-})
+pacman::p_load(
+  here, dplyr, tidyr, purrr, stringr, ggplot2, ggrepel, patchwork, readxl, writexl
+)
 
 stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
-figure_dir <- file.path(stage, "b_reports")
-out <- file.path(stage, "c_data")
-walk(c(figure_dir, out), dir.create, recursive = TRUE, showWarnings = FALSE)
-
-inputs <- c(set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds")
-paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) stop("Run 01_run_fgsea_and_fry first.")
-fg <- readRDS(paths[["set_tests"]])
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
+set_tests <- read_excel(
+  here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"),
+  "set_tests"
 )
 
 x_contrast <- "BFR_Post-Pre"
 y_contrast <- "HLRT_Post-Pre"
-paired <- fg$set_tests |>
+paired <- set_tests |>
   filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
   mutate(contrast = if_else(contrast == x_contrast, "x", "y")) |>
   pivot_wider(
@@ -45,9 +30,8 @@ paired <- fg$set_tests |>
     # only, so the opposite sign rests on the other arm's null.
     discordant = sign(NES_x) != sign(NES_y),
     survivor = main_x | main_y,
-    label = enrichVolcano::ev_clean_label(pathway)
+    label = enrichVolcano::clean_label(pathway)
   )
-stopifnot(nrow(paired) > 0, !anyNA(paired$NES_x), !anyNA(paired$NES_y))
 
 concordance <- function(data) {
   test <- suppressWarnings(cor.test(data$NES_x, data$NES_y, method = "spearman"))
@@ -71,16 +55,11 @@ nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
   shown <- filter(data, significance != "NS")
   stats <- concordance(data)
   # A rank correlation over a handful of points is noise, so rho appears only from 30 sets up.
+  rho <- if (stats$sets >= 30) sprintf(" | rho %.2f", stats$rho) else ""
   caption <- sprintf(
-    "%d sets | %d significant | %d discordant",
-    stats$sets, stats$significant, stats$discordant
+    "%d sets | %d significant%s | %d discordant",
+    stats$sets, stats$significant, rho, stats$discordant
   )
-  if (stats$sets >= 30) {
-    caption <- sprintf(
-      "%d sets | %d significant | rho %.2f | %d discordant",
-      stats$sets, stats$significant, stats$rho, stats$discordant
-    )
-  }
   ggplot(data, aes(NES_x, NES_y)) +
     geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
     geom_vline(xintercept = 0, colour = "grey85", linewidth = 0.3) +
@@ -90,7 +69,7 @@ nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
       colour = "grey82", size = 0.45, alpha = 0.3
     ) +
     geom_point(aes(colour = significance, size = n), data = shown, alpha = 0.85) +
-    ggrepel::geom_text_repel(
+    geom_text_repel(
       data = labelled, aes(label = label), size = 2.3, colour = "grey15",
       segment.colour = "grey60", segment.size = 0.25, min.segment.length = 0,
       max.overlaps = Inf, seed = 1, force = 6, lineheight = 0.85
@@ -112,93 +91,79 @@ nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
     )
 }
 
-save_composite <- function(figure, name, width, height) {
-  walk(c("png", "pdf"), \(extension) {
-    ggsave(file.path(figure_dir, paste0(name, ".", extension)), figure,
-      width = width, height = height, dpi = 300, bg = "white"
-    )
-  })
-  message("wrote ", name)
-}
-
-page_labels <- function(title, subtitle, caption) {
+supplement <- function(number, title, text) {
   plot_annotation(
-    title = title, subtitle = subtitle, caption = caption, tag_levels = "A",
+    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 115),
+    tag_levels = "A",
     theme = theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 8.5, colour = "grey30"),
-      plot.caption = element_text(size = 7.5, colour = "grey45", hjust = 0)
+      plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
+      plot.caption.position = "plot"
     )
   )
 }
 
-# Composite one: all collections, collapse survivors, and the discordant sets on their own axes.
+# Figure one: all collections, collapse survivors, and the discordant sets on their own axes.
 discordant_sets <- filter(paired, discordant, significance != "NS")
 survivors <- filter(paired, survivor)
-composite_all <- wrap_plots(
+figure_all <- wrap_plots(
   nes_panel(paired, "All collections"),
   nes_panel(survivors, "Collapse survivors"),
   # Too few points for a size key, and patchwork will not merge guide sets that differ.
   nes_panel(discordant_sets, "Discordant", labelled = discordant_sets, pad = 0.35) +
     guides(colour = "none", size = "none"),
-  nrow = 1
+  ncol = 2, guides = "collect"
 ) +
-  page_labels(
-    "NES concordance, all collections",
-    sprintf("fgsea NES per contrast, %d sets, BH within contrast", nrow(paired)),
-    paste(
-      "One point per gene set, scored in both training contrasts. Dashed line is identity;",
-      "grey points reach neither threshold. Discordant sets sit on opposite sides of zero and",
-      "are significant in one arm only. Panel C rescales those eight.",
-      "Table: c_data/nes_scatter.csv."
-    )
-  ) +
-  plot_layout(guides = "collect") &
+  supplement(10, "NES concordance, all collections", paste(
+    sprintf(
+      "fgsea NES for each of %d sets in %s (x) against %s (y), BH within contrast.",
+      nrow(paired), x_contrast, y_contrast
+    ),
+    "(A) Every set. (B) Sets that survived collapsePathways in either contrast.",
+    sprintf(
+      "(C) The %d discordant sets, on opposite sides of zero and significant in one arm only,",
+      nrow(discordant_sets)
+    ),
+    "rescaled so each can be named. Dashed line is identity; grey points reach neither",
+    "threshold; point size is gene count. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
+  )) &
   theme(legend.position = "bottom")
-save_composite(composite_all, "01_nes_concordance_all", 13, 6)
 
-# Composite two: the two collections whose members do not nest, then each concordant quadrant
+# Figure two: the two collections whose members do not nest, then each concordant quadrant
 # scaled to its own points so every set can be named.
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
 quadrant <- function(direction) {
   rows <- filter(curated, significance != "NS", (NES_x > 0) == direction)
   nes_panel(rows, if (direction) "Up in both" else "Down in both", labelled = rows, pad = 0.22)
 }
-composite_curated <- (
+figure_curated <- (
   nes_panel(
     curated, "Hallmark and GO Slim",
     labelled = slice_min(filter(curated, significance != "NS"), padj_x + padj_y, n = 8)
-  ) | (quadrant(TRUE) / quadrant(FALSE))
+  ) / (quadrant(TRUE) | quadrant(FALSE))
 ) +
-  page_labels(
-    "NES concordance, Hallmark and GO Slim",
-    sprintf("fgsea NES per contrast, %d non-nesting sets, BH within contrast", nrow(curated)),
-    paste(
-      "Panel A is every Hallmark and GO Slim set; B and C rescale the significant ones by",
-      "direction so each can be named. Point size is gene count, colour the contrast a set",
-      "reached FDR 0.05 in. Table: c_data/nes_scatter.csv."
-    )
-  ) +
-  plot_layout(guides = "collect") &
+  plot_layout(guides = "collect", heights = c(1, 1)) +
+  supplement(11, "NES concordance, Hallmark and GO Slim", paste(
+    sprintf("(A) All %d Hallmark and GO Slim sets, whose members do not nest.", nrow(curated)),
+    "(B, C) The significant ones rescaled by direction so each can be named. Axes, colours",
+    "and point size as in S10 Figure. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
+  )) &
   theme(legend.position = "bottom")
-save_composite(composite_curated, "02_nes_concordance_curated", 12, 7)
 
-summary_table <- bind_rows(
-  mutate(concordance(paired), population = "all collections"),
-  mutate(concordance(survivors), population = "collapse survivors"),
-  mutate(concordance(curated), population = "Hallmark and GO Slim")
+pdf(
+  file.path(stage, "b_reports", "03_enrich_scatter_fgsea_figures.pdf"),
+  width = 8.27, height = 11.69
+)
+print(figure_all)
+print(figure_curated)
+invisible(dev.off())
+
+summary_table <- list(
+  "all collections" = paired, "collapse survivors" = survivors, "Hallmark and GO Slim" = curated
 ) |>
-  relocate(population)
+  map(concordance) |>
+  list_rbind(names_to = "population")
 print(as.data.frame(summary_table))
-stopifnot(
-  nrow(discordant_sets) == sum(paired$discordant & paired$significance != "NS"),
-  sum(curated$significance != "NS") == nrow(filter(curated, significance != "NS"))
-)
 
-packages <- c("here", "fgsea", "dplyr", "ggplot2", "ggrepel", "patchwork", "enrichVolcano")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
-)
 export <- paired |>
   transmute(
     set_id, database, pathway, label,
@@ -208,16 +173,24 @@ export <- paired |>
     significance = as.character(significance), discordant, survivor
   ) |>
   arrange(significance, desc(abs(nes_x) + abs(nes_y)))
-readr::write_csv(export, file.path(out, "nes_scatter.csv"))
-writexl::write_xlsx(
-  list(
-    concordance = summary_table,
-    discordant = filter(export, discordant, significance != "NS"),
-    nes_scatter = export, input_manifest = manifest, package_versions = versions
-  ),
-  file.path(out, "03_enrich_scatter_fgsea.xlsx")
+sheets <- list(
+  concordance = summary_table,
+  discordant = filter(export, discordant, significance != "NS"),
+  nes_scatter = export
 )
-combined <- file.path(figure_dir, "03_enrich_scatter_fgsea_figures.pdf")
-pages <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(pages), combined))
-message("wrote 03_enrich_scatter_fgsea.xlsx and a ", length(pages), "-page figure PDF")
+overview <- data.frame(
+  sheet = names(sheets),
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
+  description = c(
+    "NES agreement between training contrasts",
+    "Sets with opposite NES signs",
+    "NES and adjusted p, both contrasts"
+  )
+)
+write_xlsx(
+  c(list(overview = overview), sheets),
+  file.path(stage, "c_data", "03_enrich_scatter_fgsea.xlsx")
+)
+message("wrote 03_enrich_scatter_fgsea.xlsx and a 2-page figure PDF")
+sessionInfo()

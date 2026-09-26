@@ -1,57 +1,24 @@
-# Per set, uncollapsed: how well it separates the study groups (pROC AUC as effect size, paired
-# Wilcoxon signed-rank p) and whether it tracks phenotype. Every comparison is paired: pre/post is
-# one leg twice, BFR/HLRT two legs of one person; an unpaired p fits a design not run.
-# Nominal p is read per database against chance_expectation, with BH within database and task
-# beside it; agreement across independent collections beats any single grouping of them.
-# baseline_BFR_vs_HLRT is the empirical floor, because no signal can exist there.
+# Per set: AUC and paired Wilcoxon p for each task, Spearman against phenotype. Every comparison
+# is paired. Nominal p is read against chance_expectation per collection, BH beside it.
+# baseline_BFR_vs_HLRT is the empirical floor.
 
-suppressPackageStartupMessages({
-  library(here)
-  library(dplyr)
-  library(tibble)
-  library(tidyr)
-  library(purrr)
-  library(ggplot2)
-})
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
 
 stage <- here("03_Pathway_Enrichment", "05_classify_and_associate_sets")
-out <- file.path(stage, "c_data")
-figure_dir <- file.path(stage, "b_reports")
-for (path in c(out, figure_dir)) dir.create(path, recursive = TRUE, showWarnings = FALSE)
-
-inputs <- c(
-  gene_sets = "03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds",
-  set_tests = "03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/set_tests.rds",
-  singscore = "03_Pathway_Enrichment/04_run_singscore/c_data/singscore.rds",
-  proteins = "01_Preprocess/02_Quantification/c_data/proteins.rds",
-  phenotype = "00_Input/phenotype.csv"
+set_catalog <- read_excel(
+  here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "00_build_gene_sets.xlsx"),
+  "set_catalog"
 )
-paths <- map_chr(inputs, here)
-if (!all(file.exists(paths))) {
-  stop(
-    "Run 00 through 02 first. Missing: ",
-    paste(inputs[!file.exists(paths)], collapse = ", ")
-  )
-}
-set_catalog <- readRDS(paths[["gene_sets"]])$set_catalog
-fgsea_results <- readRDS(paths[["set_tests"]])$set_tests |> filter(method == "fgsea")
-set_score <- readRDS(paths[["singscore"]])$scores
-targets <- readRDS(paths[["proteins"]])$targets
-phenotype <- readr::read_csv(paths[["phenotype"]], show_col_types = FALSE)
-manifest <- tibble(
-  input = names(inputs), path = unname(inputs), md5 = unname(tools::md5sum(paths))
-)
+set_score <- readRDS(here("03_Pathway_Enrichment", "04_run_singscore", "c_data", "set_scores.rds"))
+targets <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))$targets
+phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 
 catalog <- set_catalog |>
   filter(qualifies) |>
   select(set_id, database, pathway, measured_size)
-stopifnot(setequal(catalog$set_id, rownames(set_score)))
 set_score <- set_score[catalog$set_id, ]
 collection_sizes <- count(catalog, database)
 message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
-
-
-# ---- the five classification tasks -------------------------------------------------------
 
 targets$leg_id <- paste(targets$participant, targets$leg, sep = "_")
 by_timepoint <- targets |>
@@ -62,7 +29,6 @@ legs <- filter(by_timepoint, !is.na(T1), !is.na(T2)) |> arrange(participant, tre
 # One row per participant holding both of their legs, for whichever column identifies them.
 pair_by_treatment <- function(data, column) {
   data |>
-    filter(!is.na(.data[[column]])) |>
     select(participant, treatment, value = all_of(column)) |>
     pivot_wider(names_from = treatment, values_from = value) |>
     filter(!is.na(BFR), !is.na(HLRT))
@@ -74,100 +40,74 @@ delta_pairs <- pair_by_treatment(legs, "leg_id")
 delta_set <- set_score[, legs$T2] - set_score[, legs$T1]
 colnames(delta_set) <- legs$leg_id
 
-# Each task names its matrix and two paired column sets. `favours` is the group an AUC above 0.5
+# Each task holds its matrix and two paired column sets. `favours` is the group an AUC above 0.5
 # points to, so the figures can state direction.
 tasks <- list(
   pre_vs_post_BFR = list(
-    matrix = "score", positive = filter(legs, treatment == "BFR")$T2,
+    values = set_score, positive = filter(legs, treatment == "BFR")$T2,
     negative = filter(legs, treatment == "BFR")$T1,
     label = "Pre to post, BFR", favours = "post", unit = "legs"
   ),
   pre_vs_post_HLRT = list(
-    matrix = "score", positive = filter(legs, treatment == "HLRT")$T2,
+    values = set_score, positive = filter(legs, treatment == "HLRT")$T2,
     negative = filter(legs, treatment == "HLRT")$T1,
     label = "Pre to post, HLRT", favours = "post", unit = "legs"
   ),
   baseline_BFR_vs_HLRT = list(
-    matrix = "score", positive = baseline$BFR, negative = baseline$HLRT,
+    values = set_score, positive = baseline$BFR, negative = baseline$HLRT,
     label = "Baseline BFR vs HLRT (control)", favours = "BFR", unit = "participants"
   ),
   post_BFR_vs_HLRT = list(
-    matrix = "score", positive = post$BFR, negative = post$HLRT,
+    values = set_score, positive = post$BFR, negative = post$HLRT,
     label = "Post BFR vs HLRT", favours = "BFR", unit = "participants"
   ),
   delta_BFR_vs_HLRT = list(
-    matrix = "delta", positive = delta_pairs$BFR, negative = delta_pairs$HLRT,
+    values = delta_set, positive = delta_pairs$BFR, negative = delta_pairs$HLRT,
     label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
   )
 )
 
-# pROC::roc() auto-orients by default: a case with true directional AUC 0.194 returns 0.806.
-# direction = "<" pins it; without it every below-chance set flips and the figures' red/blue
-# encoding silently inverts.
+# pROC::roc() auto-orients: a true AUC of 0.194 comes back 0.806. direction = "<" pins it.
 fit_roc <- function(values, spec) {
-  labels <- rep(c("neg", "pos"), c(length(spec$negative), length(spec$positive)))
-  pROC::roc(labels, values[c(spec$negative, spec$positive)],
-    levels = c("neg", "pos"), direction = "<", quiet = TRUE
+  pROC::roc(
+    controls = values[spec$negative], cases = values[spec$positive],
+    direction = "<", quiet = TRUE
   )
 }
-classify <- function(values, spec) {
-  tibble(feature = rownames(values), n_pairs = length(spec$positive)) |>
-    mutate(
-      auc = apply(values, 1, \(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
-      p_paired = apply(values, 1, \(row) {
-        suppressWarnings(
-          stats::wilcox.test(row[spec$positive], row[spec$negative], paired = TRUE)$p.value
-        )
-      })
-    )
-}
-run_tasks <- function(score_matrix, delta_matrix) {
-  # The argument is `spec`, not `task`: mutate() creates a `task` column first, and a later
-  # `task$label` in the same call would read that column instead of the argument.
-  imap(tasks, function(spec, name) {
-    values <- if (spec$matrix == "delta") delta_matrix else score_matrix
-    classify(values, spec) |>
-      mutate(task = name, task_label = spec$label, .before = 1)
-  }) |>
-    list_rbind()
-}
-set_auc <- run_tasks(set_score, delta_set) |>
-  rename(set_id = feature) |>
+# The argument is `spec`, not `task`: tibble() builds a `task` column first, and a later
+# `task$label` in the same call would read that column instead of the argument.
+set_auc <- imap(tasks, function(spec, name) {
+  values <- spec$values
+  tibble(
+    task = name, task_label = spec$label, set_id = rownames(values),
+    n_pairs = length(spec$positive),
+    auc = apply(values, 1, \(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
+    p_paired = apply(values, 1, \(row) {
+      suppressWarnings(wilcox.test(row[spec$positive], row[spec$negative], paired = TRUE)$p.value)
+    })
+  )
+}) |>
+  list_rbind() |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p_paired, "BH"), .by = c(task, database))
 
-# Each collection gets its own denominator, so a 41-set collection is not read against a
-# 1,366-set one. BH is applied inside the same two-way split for the same reason.
-auc_counts <- set_auc |>
-  summarise(
-    features = n(), nominal = sum(p_paired < 0.05), expected = round(n() * 0.05, 1),
-    fdr_sig = sum(fdr < 0.05), max_auc = round(max(auc), 2),
-    .by = c(task, task_label, database, n_pairs)
-  ) |>
-  mutate(analysis = "classification", .before = 1)
-print(as.data.frame(
-  auc_counts |>
-    mutate(ratio = round(nominal / expected, 2)) |>
-    select(task, database, features, nominal, expected, ratio, fdr_sig) |>
-    arrange(task, database)
-))
-
-# ---- phenotype association ---------------------------------------------------------------
-
-outcomes <- c(
-  vl_csa = "vl_csa_post_cm2 - vl_csa_pre_cm2",
-  vl_echo = "vl_echo_post_au - vl_echo_pre_au",
-  rf_csa = "rf_csa_post_cm2 - rf_csa_pre_cm2",
-  rf_echo = "rf_echo_post_au - rf_echo_pre_au"
-)
+outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
+# A duplicated phenotype row would silently misalign every leg below.
 leg_phenotype <- legs |>
-  left_join(select(phenotype, -treatment), by = c("participant", "leg")) |>
-  mutate(!!!set_names(map(outcomes, rlang::parse_expr), names(outcomes)))
-
+  left_join(
+    select(phenotype, -treatment),
+    by = c("participant", "leg"), relationship = "one-to-one"
+  ) |>
+  mutate(
+    vl_csa = vl_csa_post_cm2 - vl_csa_pre_cm2,
+    vl_echo = vl_echo_post_au - vl_echo_pre_au,
+    rf_csa = rf_csa_post_cm2 - rf_csa_pre_cm2,
+    rf_echo = rf_echo_post_au - rf_echo_pre_au
+  )
 
 paired_set <- delta_set[, delta_pairs$BFR] - delta_set[, delta_pairs$HLRT]
 colnames(paired_set) <- delta_pairs$participant
-paired_outcome <- map(set_names(names(outcomes)), function(name) {
+paired_outcome <- map(set_names(outcomes), function(name) {
   value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
   value[delta_pairs$BFR] - value[delta_pairs$HLRT]
 })
@@ -178,114 +118,71 @@ spearman_by_row <- function(values, outcome) {
   usable <- !is.na(outcome)
   values <- values[, usable, drop = FALSE]
   outcome <- outcome[usable]
-  # Ties make cor.test fall back from the exact p to its approximation and warn each time.
-  # Reading two fields off the htest, not tidying it, is ten times faster over the 32,000 tests
-  # here and returns the same numbers to the bit.
+  # Ties make cor.test warn and fall back to its approximation. Reading two fields off the htest
+  # is ten times faster than tidying it over the 32,000 tests.
   fits <- suppressWarnings(apply(values, 1, \(row) {
-    test <- stats::cor.test(row, outcome, method = "spearman")
+    test <- cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
   }))
   tibble(
-    feature = rownames(values), n = length(outcome),
+    set_id = rownames(values), n = length(outcome),
     r = unname(fits["r", ]), p = unname(fits["p", ])
   )
 }
-associate <- function(values, paired_values) {
-  imap(outcomes, \(expression, name) {
-    bind_rows(
-      mutate(spearman_by_row(values, leg_phenotype[[name]]), analysis = "pooled"),
-      mutate(spearman_by_row(paired_values, paired_outcome[[name]]), analysis = "differential")
-    ) |>
-      mutate(outcome = name)
-  }) |>
-    list_rbind() |>
-    relocate(analysis, outcome)
-}
-set_association <- associate(delta_set, paired_set) |>
-  rename(set_id = feature) |>
+set_association <- map(set_names(outcomes), \(name) {
+  bind_rows(
+    pooled = spearman_by_row(delta_set, leg_phenotype[[name]]),
+    differential = spearman_by_row(paired_set, paired_outcome[[name]]),
+    .id = "analysis"
+  ) |>
+    mutate(outcome = name)
+}) |>
+  list_rbind() |>
+  relocate(analysis, outcome) |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome, database))
 
 by_arm <- map(set_names(c("BFR", "HLRT")), function(arm) {
   keep <- leg_phenotype$treatment == arm
-  imap(outcomes, \(expression, name) {
+  map(set_names(outcomes), \(name) {
     spearman_by_row(delta_set[, keep, drop = FALSE], leg_phenotype[[name]][keep]) |>
       mutate(outcome = name)
   }) |>
     list_rbind()
 }) |>
-  list_rbind(names_to = "treatment") |>
-  rename(set_id = feature)
+  list_rbind(names_to = "treatment")
 
+# Each collection gets its own denominator, so a 41-set collection is not read against a
+# 1,366-set one. BH is applied inside the same two-way split for the same reason.
 chance_expectation <- bind_rows(
-  select(auc_counts, analysis,
-    comparison = task_label, database, n_pairs,
-    features, nominal, expected, fdr_sig
+  transmute(set_auc,
+    analysis = "classification", comparison = task_label, database, n_pairs,
+    p = p_paired, fdr
   ),
-  set_association |>
-    summarise(
-      features = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
-      fdr_sig = sum(fdr < 0.05), .by = c(analysis, outcome, database, n)
-    ) |>
-    mutate(analysis = paste0("association: ", analysis)) |>
-    select(analysis,
-      comparison = outcome, database, n_pairs = n,
-      features, nominal, expected, fdr_sig
-    )
+  transmute(set_association,
+    analysis = paste0("association: ", analysis), comparison = outcome, database,
+    n_pairs = n, p, fdr
+  )
 ) |>
-  mutate(ratio = round(nominal / pmax(expected, 0.1), 2)) |>
-  relocate(ratio, .after = expected)
+  summarise(
+    features = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
+    ratio = round(nominal / expected, 2), fdr_sig = sum(fdr < 0.05),
+    .by = c(analysis, comparison, database, n_pairs)
+  )
+print(as.data.frame(filter(chance_expectation, analysis == "classification")))
 
-# ---- figures: one per comparison, significant results only --------------------------------
-
-# Every set reaching nominal p gets a panel, 16 to a page, by collection then p. Paging changes
-# how many files a figure writes, so the previous run's figures are cleared first.
-unlink(list.files(figure_dir, "[.](png|pdf)$", full.names = TRUE))
-
-figure_theme <- theme_minimal(base_size = 10) +
+figure_theme <- theme_minimal(base_size = 9) +
   theme(
-    strip.text = element_text(size = 7.6, lineheight = 1.3, margin = margin(3, 3, 5, 3)),
+    strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
     panel.grid.minor = element_blank(),
-    panel.spacing = unit(5, "mm"),
-    plot.title = element_text(face = "bold", size = 13),
-    plot.subtitle = element_text(size = 9, colour = "grey30"),
-    plot.caption = element_text(hjust = 0, size = 7.5, colour = "grey40"),
-    plot.tag = element_text(size = 9, colour = "grey30"),
-    plot.tag.position = "topright",
+    panel.spacing = unit(4, "mm"),
+    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
+    plot.caption.position = "plot",
     legend.position = "top"
   )
-
-# One PDF holding every page. A single-page figure also gets a PNG; paged ones do not, since
-# a PNG per page adds about 50 MB to the repository on every re-run.
-save_pages <- function(pages, name, width, height) {
-  if (length(pages) == 1) {
-    ggsave(file.path(figure_dir, paste0(name, ".png")), pages[[1]],
-      width = width, height = height, dpi = 220, bg = "white"
-    )
-  }
-  pdf(file.path(figure_dir, paste0(name, ".pdf")), width = width, height = height, bg = "white")
-  walk(pages, print)
-  invisible(dev.off())
-}
-
-# `draw` builds the plot from one page's rows. Each page gets only its own panels, since a
-# paginating facet builds every panel for every page.
-save_paged <- function(data, draw, name, scales = "fixed", panel = 2.6, header = 2.1,
-                       strip = 0) {
-  n_panels <- nlevels(data$panel)
-  columns <- min(4, n_panels)
-  rows <- min(4, ceiling(n_panels / columns))
-  page_of <- (as.integer(data$panel) - 1) %/% (columns * rows) + 1
-  n_pages <- max(page_of)
-  pages <- map(seq_len(n_pages), \(page) {
-    draw(droplevels(data[page_of == page, ])) +
-      facet_wrap(~panel, ncol = columns, nrow = rows, scales = scales) +
-      labs(tag = if (n_pages > 1) sprintf("page %d of %d", page, n_pages)) +
-      figure_theme
-  })
-  save_pages(pages, name, width = 1.2 + columns * panel, height = header + rows * (panel + strip))
-  message("drew ", name, ": ", n_panels, " panels on ", n_pages, " pages")
-  n_panels
+supplement <- function(number, title, text, page = 1, n_pages = 1) {
+  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
+  str_wrap(sprintf("S%d Figure%s. %s. %s", number, pages, title, text), 115)
 }
 chance_line <- paste0(
   "Nominal p, uncorrected. Each collection is read against its own expectation: ",
@@ -294,17 +191,28 @@ chance_line <- paste0(
     collection_sizes$n * 0.05, collection_sizes$n
   ), collapse = ", "), "."
 )
+set_label <- function(database, pathway) {
+  str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
+}
 
-draw_roc_figure <- function(task_name) {
+# Every set reaching nominal p gets a panel, twelve to a page, by collection then p. `draw` builds
+# the plot from one page's rows: a paginating facet would build every panel for every page.
+paginate <- function(data, draw, number, title, text, scales = "fixed") {
+  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
+  imap(unname(pages), \(page, i) {
+    draw(droplevels(page)) +
+      facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
+      labs(caption = supplement(number, title, text, i, length(pages))) +
+      figure_theme
+  })
+}
+
+roc_figure <- function(task_name, number) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
     filter(task == task_name, p_paired < 0.05) |>
     arrange(database, p_paired)
-  if (!nrow(hits)) {
-    message("no set reaches nominal p for ", task_name)
-    return(0L)
-  }
-  values <- if (spec$matrix == "delta") delta_set else set_score
+  values <- spec$values
   curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, fdr, ...) {
     coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
     tibble(
@@ -313,7 +221,7 @@ draw_roc_figure <- function(task_name) {
       # coloured, not hidden.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = paste0(
-        database, ": ", enrichVolcano::ev_clean_label(pathway),
+        set_label(database, pathway),
         "\nAUC ", sprintf("%.2f", auc), "   p ", signif(p_paired, 2), "   q ", signif(fdr, 2)
       )
     )
@@ -322,55 +230,44 @@ draw_roc_figure <- function(task_name) {
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
 
-  save_paged(curves, \(page) {
+  paginate(curves, \(page) {
     ggplot(page, aes(fpr, tpr, colour = direction, fill = direction)) +
       geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
       geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
-      geom_step(linewidth = 0.8, direction = "hv") +
-      scale_colour_manual(values = c(higher = "#B2182B", lower = "#2166AC"), guide = "none") +
-      scale_fill_manual(values = c(higher = "#B2182B", lower = "#2166AC"), guide = "none") +
+      geom_step(linewidth = 0.7, direction = "hv") +
+      scale_colour_manual(
+        values = c(higher = "#B2182B", lower = "#2166AC"), aesthetics = c("colour", "fill"),
+        guide = "none"
+      ) +
       coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
       scale_x_continuous(breaks = c(0, 0.5, 1)) +
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
-      labs(
-        x = "1 - specificity", y = "sensitivity", title = spec$label,
-        subtitle = sprintf(
-          "singscore per set, %d paired %s, AUC with direction fixed", length(spec$positive),
-          spec$unit
-        ),
-        caption = stringr::str_wrap(width = 190, sprintf(
-          paste(
-            "All %d sets reaching nominal p, by collection then p. Red separates higher in",
-            "%s, blue lower. Shading is area under the curve, dashed line chance.",
-            "p from the paired Wilcoxon signed-rank test, q from BH within collection and task.",
-            "%s"
-          ),
-          nrow(hits), spec$favours, chance_line
-        ))
-      )
-  }, paste0("roc_", task_name), strip = 0.6)
+      labs(x = "1 - specificity", y = "sensitivity")
+  }, number, spec$label, paste(
+    sprintf(
+      "ROC curves for all %d sets whose singscore separates the groups at nominal p, across %d",
+      nrow(hits), length(spec$positive)
+    ),
+    sprintf("paired %s, by collection then p. AUC has its direction fixed: red", spec$unit),
+    sprintf("separates higher in %s, blue lower.", spec$favours),
+    "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
+    "signed-rank test, q from BH within collection and task.", chance_line,
+    "Data: set_auc sheet of 05_classify_and_associate_sets.xlsx."
+  ))
 }
-# The baseline control is reported in chance_expectation and the README but not drawn: it shows
-# what the method returns when nothing is there, a number to read, not a panel to present.
-drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
-roc_drawn <- map_int(set_names(drawn_tasks), draw_roc_figure)
 
-draw_association_figure <- function(which_analysis, title, subtitle) {
+association_figure <- function(which_analysis, number, title, population) {
   hits <- set_association |>
     filter(analysis == which_analysis, p < 0.05) |>
     arrange(database, p)
-  if (!nrow(hits)) {
-    message("no set reaches nominal p for ", which_analysis)
-    return(0L)
-  }
   points <- pmap(hits, function(set_id, database, pathway, outcome, n, r, p, fdr, ...) {
     arms <- by_arm |>
       filter(set_id == !!set_id, outcome == !!outcome) |>
       mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
     tibble(
       panel = paste0(
-        database, ": ", enrichVolcano::ev_clean_label(pathway), "   vs   ", outcome,
-        "\nr = ", sprintf("%+.2f", r), "   p ", signif(p, 2), "   q ", signif(fdr, 2)
+        set_label(database, pathway), "\nvs ", outcome,
+        "   r = ", sprintf("%+.2f", r), "   p ", signif(p, 2), "   q ", signif(fdr, 2)
       ),
       d_score = delta_set[set_id, ], d_outcome = leg_phenotype[[outcome]],
       treatment = leg_phenotype$treatment, caption = paste(arms$text, collapse = "\n")
@@ -379,52 +276,56 @@ draw_association_figure <- function(which_analysis, title, subtitle) {
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
 
-  save_paged(points, \(page) {
+  paginate(points, \(page) {
     ggplot(page, aes(d_score, d_outcome, colour = treatment, fill = treatment)) +
       geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
-      geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.6) +
-      geom_point(size = 1.9, alpha = 0.9) +
+      geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.5) +
+      geom_point(size = 1.2, alpha = 0.9) +
       geom_text(
         data = distinct(page, panel, caption), inherit.aes = FALSE,
         aes(x = -Inf, y = Inf, label = caption), family = "mono",
-        hjust = -0.05, vjust = 1.25, size = 2.3, lineheight = 1.25, colour = "grey25"
+        hjust = -0.05, vjust = 1.25, size = 1.9, lineheight = 1.2, colour = "grey25"
       ) +
-      scale_y_continuous(expand = expansion(mult = c(0.06, 0.3))) +
-      scale_colour_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
-      scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
-      labs(
-        x = "change in set score, T2 - T1, one point per leg",
-        y = "change in phenotype", title = title,
-        subtitle = sprintf("Spearman, %s analysis, %s", which_analysis, subtitle),
-        caption = stringr::str_wrap(width = 220, sprintf(
-          paste(
-            "All %d set-outcome pairs reaching nominal p, by collection then p.",
-            "Lines are fitted within each arm; the header r is the %s correlation,",
-            "q from BH within collection and outcome. %s"
-          ),
-          nrow(hits), which_analysis, chance_line
-        ))
-      )
-  }, paste0("association_", which_analysis), scales = "free", panel = 3.1, header = 2.4)
+      scale_y_continuous(expand = expansion(mult = c(0.06, 0.35))) +
+      scale_colour_manual(
+        values = c(BFR = "#B2182B", HLRT = "#2166AC"), aesthetics = c("colour", "fill"),
+        name = NULL
+      ) +
+      labs(x = "change in set score, T2 - T1, one point per leg", y = "change in phenotype")
+  }, number, title, paste(
+    sprintf(
+      "All %d set-outcome pairs whose Spearman correlation reaches nominal p in the %s",
+      nrow(hits), which_analysis
+    ),
+    sprintf("analysis (%s), by collection then p.", population),
+    "Lines are fitted within each arm; the header r is the", which_analysis, "correlation and",
+    "the inset gives it within each arm. q from BH within collection and outcome.", chance_line,
+    "Data: set_association and set_by_arm sheets of 05_classify_and_associate_sets.xlsx."
+  ), scales = "free")
 }
-invisible(draw_association_figure(
-  "pooled", "Training response against phenotype, all legs", "65 legs, both arms pooled"
-))
-invisible(draw_association_figure(
-  "differential", "BFR minus HLRT, within participant", "32 paired participants"
-))
 
-# Every set reaching nominal p on a drawn task has a panel.
-stopifnot(all(map_lgl(drawn_tasks, \(task_name) {
-  roc_drawn[[task_name]] == sum(set_auc$task == task_name & set_auc$p_paired < 0.05)
-})))
-# Whether a collection clears chance is the headline, so it gets its own panel, not just a sheet.
+# The baseline control is reported in chance_expectation and the README but not drawn: it shows
+# what the method returns when nothing is there.
+drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
+figures <- c(
+  imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 12 + i)) |> list_flatten(),
+  association_figure(
+    "pooled", 17, "Training response against phenotype, all legs",
+    sprintf("%d legs, both arms pooled", nrow(legs))
+  ),
+  association_figure(
+    "differential", 18, "BFR minus HLRT, within participant",
+    sprintf("%d paired participants", nrow(delta_pairs))
+  )
+)
+
+# Whether a collection clears chance is the headline, so it gets its own figure beside the sheet.
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))
-save_pages(
-  list(ggplot(chance_figure, aes(ratio, database, fill = ratio > 1)) +
+figures <- c(figures, list(
+  ggplot(chance_figure, aes(ratio, database, fill = ratio > 1)) +
     geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
     geom_col(width = 0.65) +
     geom_text(aes(label = sprintf("%d of %d", nominal, features)),
@@ -435,82 +336,46 @@ save_pages(
     scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
-      title = "Nominal hits relative to chance, by collection",
-      subtitle = sprintf(
-        "paired Wilcoxon per set, %d collections, uncorrected p", nrow(collection_sizes)
-      ),
-      caption = paste(
+      caption = supplement(19, "Nominal hits relative to chance, by collection", paste(
+        "Paired Wilcoxon per set across", nrow(collection_sizes), "collections, uncorrected p.",
         "Bar length is observed nominal hits divided by the count that collection returns under",
-        "the null. Red clears 1, grey does not. Labels give observed of tested.",
-        "Table: c_data/05_classify_and_associate_sets.xlsx, chance_expectation sheet."
-      )
+        "the null; red clears 1, grey does not. Labels give observed of tested. Data:",
+        "chance_expectation sheet of 05_classify_and_associate_sets.xlsx."
+      ))
     ) +
     figure_theme +
-    theme(panel.grid.major.y = element_blank())),
-  "chance_by_database",
-  width = 6.5, height = 8
-)
+    theme(panel.grid.major.y = element_blank())
+))
 
-# ---- one workbook -------------------------------------------------------------------------
-
-packages <- c("here", "fgsea", "pROC", "dplyr", "purrr", "ggplot2", "enrichVolcano")
-versions <- tibble(
-  package = packages, version = map_chr(packages, \(p) as.character(packageVersion(p)))
+pdf(
+  file.path(stage, "b_reports", "05_classify_and_associate_sets_figures.pdf"),
+  width = 8.27, height = 11.69
 )
-set_detail <- catalog |>
-  left_join(
-    fgsea_results |>
-      filter(contrast == "BFR_Post-Pre") |>
-      select(set_id, bfr_nes = NES, bfr_p = p),
-    by = "set_id"
-  ) |>
-  arrange(database, bfr_p)
+walk(figures, print)
+invisible(dev.off())
 
 sheets <- list(
   chance_expectation = chance_expectation,
   set_auc = arrange(set_auc, p_paired),
   set_association = arrange(set_association, p),
   set_by_arm = by_arm,
-  set_catalog = set_detail,
-  set_scores = rownames_to_column(as.data.frame(set_score), "set_id"),
-  input_manifest = manifest,
-  package_versions = versions
+  set_catalog = catalog
 )
-descriptions <- c(
-  chance_expectation = "Nominal hits against chance, per collection. Read this first.",
-  set_auc = "How well each set separates each task. AUC from ranks, p from paired test.",
-  set_association = "Set against phenotype change: pooled, then within participant.",
-  set_by_arm = "The same correlation computed inside BFR and inside HLRT, descriptive.",
-  set_catalog = "Every tested set with its collection and training NES.",
-  set_scores = "The set by sample score matrix the analyses above were computed on.",
-  input_manifest = "Which files were read and their checksums.",
-  package_versions = "Package versions at the time of the run."
-)
-read_me <- tibble(
+overview <- data.frame(
   sheet = names(sheets),
-  rows = map_int(sheets, nrow),
-  holds = unname(descriptions[names(sheets)])
+  rows = sapply(sheets, nrow),
+  columns = sapply(sheets, ncol),
+  description = c(
+    "Nominal hits against chance, per collection. Read this first.",
+    "How well each set separates each task. AUC from ranks, p from paired test.",
+    "Set against phenotype change: pooled, then within participant.",
+    "The same correlation computed inside BFR and inside HLRT, descriptive.",
+    "Every tested set with its collection and measured size."
+  )
 )
-writexl::write_xlsx(
-  c(list(read_me = read_me), sheets),
-  file.path(out, "05_classify_and_associate_sets.xlsx")
+write_xlsx(
+  c(list(overview = overview), sheets),
+  file.path(stage, "c_data", "05_classify_and_associate_sets.xlsx")
 )
-saveRDS(
-  list(
-    catalog = catalog, set_auc = set_auc, set_association = set_association,
-    by_arm = by_arm, chance_expectation = chance_expectation,
-    provenance = list(
-      created_utc = format(Sys.time(), tz = "UTC", usetz = TRUE),
-      inputs = manifest, packages = versions
-    )
-  ),
-  file.path(out, "set_results.rds"),
-  compress = "xz"
-)
-combined <- file.path(figure_dir, "05_classify_and_associate_sets_figures.pdf")
-figures <- setdiff(list.files(figure_dir, "[.]pdf$", full.names = TRUE), combined)
-invisible(qpdf::pdf_combine(sort(figures), combined))
-message(
-  "wrote 05_classify_and_associate_sets.xlsx (", length(sheets) + 1, " sheets) and a ",
-  qpdf::pdf_length(combined), "-page figure PDF"
-)
+message("wrote 05_classify_and_associate_sets.xlsx and a ", length(figures), "-page figure PDF")
+sessionInfo()

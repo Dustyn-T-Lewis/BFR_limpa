@@ -8,14 +8,8 @@ Study data.
 | `metadata.csv` | one MS sample, 131 rows | `01_Preprocess/01_Filtering` |
 | `phenotype.csv` | one leg, 70 rows | `02_Differential_Expression/03_Phenotype`, `03_Pathway_Enrichment/05_classify_and_associate_sets` |
 
-## Get report.parquet
-
-Too large for git, so it is attached to a release. From the repo root:
-
-```sh
-curl -L -o 00_Input/report.parquet \
-  https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/download/data-v1/report.parquet
-```
+`report.parquet` is too large for git and sits on the `data-v1` release. The download command is
+in the root README.
 
 ## Notes
 
