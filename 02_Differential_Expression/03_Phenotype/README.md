@@ -1,4 +1,4 @@
-# 03_Phenotype
+# 02_Differential_Expression / 03_Phenotype
 
 Correlates each protein's pre-to-post change with the leg's change in muscle size and quality.
 
@@ -8,7 +8,7 @@ Correlates each protein's pre-to-post change with the leg's change in muscle siz
 - Run: `quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd --output-dir ../b_reports`,
   5 seconds.
 
-## No protein tracks the phenotype after correction
+## Results
 
 | Analysis | Outcome | n | Nominal | Ratio to chance | BH < 0.05 |
 |---|---|---:|---:|---:|---:|

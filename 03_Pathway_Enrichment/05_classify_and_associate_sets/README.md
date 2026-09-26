@@ -16,7 +16,7 @@ change. All are paired, so AUC comes from `pROC` with `direction = "<"` fixed (u
 below-chance sets) and p from the paired Wilcoxon test. Associations use Spearman `cor.test`,
 pooled over 65 legs and differential over 32 participants.
 
-## Only training clears chance
+## Results
 
 Nominal hits over chance, per collection. Each collection is read against its own chance count
 (5% of its sets), with BH within collection and task.

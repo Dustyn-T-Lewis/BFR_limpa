@@ -1,4 +1,4 @@
-# 01_Design
+# 02_Differential_Expression / 01_Design
 
 Builds the design matrix and the five contrasts, and measures the within-leg correlation they
 assume is small.

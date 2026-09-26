@@ -1,6 +1,6 @@
 ---
 title: "01 · Design"
-subtitle: "Design matrix and five contrasts"
+subtitle: "Design matrix and the five contrasts"
 format:
   html:
     toc: true
@@ -27,7 +27,7 @@ targets <- proteins$targets
 with(targets, table(treatment, timepoint))
 ```
 
-## Participant is a fixed block
+## Design
 
 Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block: 131
 rows by 36 columns, four group means and 32 participant dummies, 95 residual degrees of freedom.
@@ -55,7 +55,7 @@ c(
 )
 ```
 
-## The within-leg correlation is checked, not modelled
+## Is a fixed participant term enough
 
 Samples share a participant, and within that they share a leg. The participant term removes the
 first exactly; the second stays in the residual. If the leg-level correlation were large, the
@@ -77,7 +77,7 @@ sits near zero, as it has on this data, `02_Differential` calls `dpcDE()` withou
 If the correlation ever rose, the fix is `block = leg_id` in the next notebook, but `leg_id` is
 not saved, and no branch and no warning will tell you. Read the row on every rerun.
 
-## One primary contrast, one control
+## Contrasts
 
 ```{r contrasts}
 contrasts <- makeContrasts(

@@ -20,7 +20,7 @@ fgsea ranks proteins by moderated t, seeded. fry reads `proteins$E` with limpa's
 fgsea-only. `leadingEdge` holds `;`-joined gene symbols, which `02_enrich_volcano_fgsea` matches
 to point labels.
 
-## Collapse runs after testing
+## Methods
 
 All sets are tested and BH corrects within each contrast. `collapsePathways` then re-tests each
 significant set against a stronger set's leading edge and marks survivors `main = TRUE`; it deletes
@@ -28,7 +28,7 @@ nothing. Deduplicating before testing lost two thirds of the discoveries (363 to
 training): a redundancy filter removes significant sets, not hopeless ones (Bourgon et al., PNAS
 2010).
 
-## fry finds nothing between legs
+## Results
 
 | Contrast | fgsea | after collapse | fry |
 |---|---:|---:|---:|

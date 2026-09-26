@@ -112,12 +112,12 @@ fdr_order <- c(
 pi_order <- c("BFR_Post-Pre", "HLRT_Post-Pre")
 figures <- list(
   wrap_plots(map(fdr_order, make_volcano), ncol = 2) +
-    supplement(8, "Protein volcanoes with fgsea rings", paste(
+    supplement(8, "Protein volcanoes with collapse-surviving fgsea sets ringed", paste(
       panel_list(fdr_order), "Points are proteins, coloured when BH FDR < 0.05 within the",
       "contrast, with the five lowest-FDR proteins named.", ring_text
     )),
   wrap_plots(map(pi_order, make_volcano, rank_by = "pi"), ncol = 1) +
-    supplement(9, "Training volcanoes, pi-score labels", paste(
+    supplement(9, "Protein volcanoes labelled by pi-score", paste(
       panel_list(pi_order), "As S8 Figure, but the five proteins named are those with the",
       "smallest pi-score, P.Value^|logFC| (Xiao et al. 2014). Pi controls no error rate, so no",
       "protein named here is a discovery.", ring_text

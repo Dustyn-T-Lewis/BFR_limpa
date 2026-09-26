@@ -12,13 +12,13 @@ this one list.
 - Run: `Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R`, 4
   seconds.
 
-## MSigDB 2026.1.Hs is frozen
+## Snapshot
 
 The first run fetches four MSigDB collections (release 2026.1.Hs) through `msigdbr` and writes an
 RDS with an md5. Later runs verify the checksum and need neither network nor `msigdbr`. Restore
 the RDS and its `.md5` together; move both aside to rebuild.
 
-## 1,990 sets are tested
+## Collections
 
 | Collection | In source | Tested | Median measured |
 |---|---:|---:|---:|
@@ -39,7 +39,7 @@ with an md5). Each holds every measured gene annotated to the slim term or any t
 GO:BP. Genes come from the full membership, not the tested subset, and the size rule reads
 measured size. Built otherwise, *protein folding* kept 19 of its 129 genes.
 
-## One protein represents each gene
+## One protein per gene
 
 Proteins with no symbol or several symbols are left out of set tests rather than split. Where
 several proteins share a symbol, the one with the most observed precursors represents it.

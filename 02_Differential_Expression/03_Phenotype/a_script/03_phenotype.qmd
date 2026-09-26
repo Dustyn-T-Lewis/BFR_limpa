@@ -1,6 +1,6 @@
 ---
 title: "03 · Protein against phenotype"
-subtitle: "Proteins against ultrasound outcomes"
+subtitle: "Every protein correlated with the ultrasound outcomes"
 format:
   html:
     toc: true
@@ -35,7 +35,7 @@ phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 hits are expected at p < 0.05, so nothing here is read at nominal p. BH within each analysis and
 outcome is the reported quantity.
 
-## A leg counts only with both timepoints
+## Pairing
 
 A leg contributes only when both timepoints were acquired, which is what makes a change score
 definable. S06's left leg has T1 only, so it drops here and nowhere else.
@@ -60,7 +60,7 @@ colnames(paired) <- pairs$participant
 tibble(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
 ```
 
-## Four ultrasound changes are the outcomes
+## Outcomes
 
 Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area is the size
 outcome; echo intensity is the quality one, and falls when muscle composition improves.
@@ -81,7 +81,7 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 })
 ```
 
-## Spearman correlations throughout
+## Correlations
 
 Neither a protein change nor an echo intensity change is expected to be normal, so every
 correlation is Spearman. Ties make `cor.test` fall back from its exact p to the approximation and warn on every
@@ -117,7 +117,7 @@ results <- map(set_names(outcomes), \(name) {
   relocate(analysis, outcome, protein, gene)
 ```
 
-## Read the ratio to chance first
+## What survives
 
 ```{r summary}
 summary_table <- results |>

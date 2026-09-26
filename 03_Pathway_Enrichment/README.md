@@ -16,7 +16,7 @@ the stage. Each A4 page carries a caption beneath it in the supplement style: ti
 lettered panel, encodings, and the workbook sheet the data come from. Findings live in these
 READMEs, not on the figures.
 
-## fgsea and fry answer different questions
+## Methods
 
 fgsea is competitive: does a set sit at one end of the protein ranking? fry is self-contained:
 did the set move at all under the fitted design? Both run on the same 1,990 sets and both ship.
