@@ -1,5 +1,5 @@
 ---
-title: "03 · Protein against phenotype"
+title: "03 · Protein association"
 subtitle: "Every protein correlated with the ultrasound outcomes"
 format:
   html:
@@ -24,7 +24,7 @@ legs and correlates the BFR minus HLRT difference in protein with the same diffe
 so anything constant within a participant cancels.
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, readxl, writexl)
+pacman::p_load(here, dplyr, tidyr, purrr, tibble, stringr, ggplot2, readr, readxl, writexl)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
@@ -170,6 +170,75 @@ Both pooled CSA outcomes hold about twice the expected count; the other six sit 
 that changed with training vary more across legs, which gives them more power in a pooled
 correlation.
 
+## Figures
+
+Every protein–outcome pair at nominal p is drawn in `b_reports/03_protein_association_figures.pdf`,
+twelve to a page, one block per analysis and outcome, smallest p first. Pooled panels show one
+point per leg, coloured by arm; differential panels show one point per participant.
+
+```{r figures}
+blocks <- results |>
+  filter(p < 0.05) |>
+  arrange(analysis, outcome, p) |>
+  mutate(panel = sprintf(
+    "%s  %s\n%s   r = %+.2f   p %s   q %s",
+    coalesce(gene, protein), protein, outcome, r, signif(p, 2), signif(fdr, 2)
+  )) |>
+  split(~ analysis + outcome, drop = TRUE, sep = ", ")
+blocks <- blocks[paste(rep(c("pooled", "differential"), each = 4), outcomes, sep = ", ")]
+points_for <- function(hit) {
+  pooled <- hit$analysis == "pooled"
+  tibble(
+    panel = hit$panel,
+    change_protein = if (pooled) delta[hit$protein, ] else paired[hit$protein, ],
+    change_outcome = if (pooled) leg_phenotype[[hit$outcome]] else paired_outcome[[hit$outcome]],
+    arm = if (pooled) leg_phenotype$treatment else "BFR minus HLRT"
+  )
+}
+pages <- imap(blocks, \(block, name) {
+  points <- map(seq_len(nrow(block)), \(i) points_for(block[i, ])) |>
+    list_rbind() |>
+    mutate(panel = factor(panel, unique(panel)))
+  chunks <- split(points, (as.integer(points$panel) - 1) %/% 12)
+  imap(unname(chunks), \(page, i) {
+    ggplot(droplevels(page), aes(change_protein, change_outcome, colour = arm)) +
+      geom_point(size = 1.1, alpha = 0.85) +
+      geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.5) +
+      facet_wrap(~panel, ncol = 3, nrow = 4, scales = "free") +
+      scale_colour_manual(
+        values = c(BFR = "#B2182B", HLRT = "#2166AC", `BFR minus HLRT` = "grey30"), name = NULL
+      ) +
+      labs(
+        x = "change in protein, log2", y = "change in outcome",
+        caption = str_wrap(sprintf(
+          paste(
+            "%s (page %d of %d). %d proteins reach nominal p; chance alone gives about %d of %s.",
+            "Spearman r and p; q is BH within analysis and outcome. Data: correlations sheet of",
+            "03_protein_association.xlsx."
+          ),
+          name, i, length(chunks), nrow(block), round(nrow(proteins) * 0.05),
+          format(nrow(proteins), big.mark = ",")
+        ), 110)
+      ) +
+      theme_minimal(base_size = 9) +
+      theme(
+        strip.text = element_text(size = 7), legend.position = "top",
+        plot.caption = element_text(hjust = 0, size = 8.5), plot.caption.position = "plot"
+      )
+  })
+}) |>
+  list_flatten()
+pdf(
+  here(
+    "02_Differential_Expression", "03_Protein_Association", "b_reports",
+    "03_protein_association_figures.pdf"
+  ),
+  width = 8.27, height = 11.69
+)
+walk(pages, print)
+invisible(dev.off())
+```
+
 ```{r write}
 sheets <- list(
   summary = summary_table,
@@ -184,8 +253,8 @@ overview <- data.frame(
     "Spearman r, p and FDR per protein"
   )
 )
-out <- here("02_Differential_Expression", "03_Phenotype", "c_data")
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "03_phenotype.xlsx"))
+out <- here("02_Differential_Expression", "03_Protein_Association", "c_data")
+write_xlsx(c(list(overview = overview), sheets), file.path(out, "03_protein_association.xlsx"))
 ```
 
 ```{r session}
