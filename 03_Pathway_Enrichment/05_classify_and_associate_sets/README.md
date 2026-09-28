@@ -36,5 +36,5 @@ the phenotype after correction, and no protein does either
 S13–S16 draw an ROC panel for every set reaching nominal p on each task except the control.
 S17–S18 draw a scatter for every set and outcome pair reaching nominal p, pooled and then
 differential, and S19 shows nominal hits against chance by collection. Panels run twelve to an A4
-page, ordered by collection and then p, with the BH q in each header. Read every panel against
+page, smallest p first, with the BH q in each header. Read every panel against
 S19: where the ratio is 1, the nominal hits are what chance returns.
