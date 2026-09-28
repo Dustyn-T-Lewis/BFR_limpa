@@ -25,7 +25,7 @@ whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-hig
 in phenotype, which removes every between-participant confound.
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, writexl)
+pacman::p_load(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, readxl, writexl)
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
@@ -147,14 +147,52 @@ ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
   theme(panel.grid.major.y = element_blank(), legend.position = "top")
 ```
 
+## Training hits among the leads
+
+A training hit is a protein at BH < 0.05 in either Post-Pre contrast of `02_Differential`. The
+table counts training hits at nominal p for each outcome, against the count expected if nominal
+hits fell at random, with a one-sided Fisher test.
+
+```{r training-overlap}
+dep_matrix <- read_excel(
+  here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
+  "DEP_matrix"
+)
+training_hits <- dep_matrix |>
+  filter(`BFR_Post-Pre_adj.P.Val` < 0.05 | `HLRT_Post-Pre_adj.P.Val` < 0.05) |>
+  pull(protein)
+training_overlap <- results |>
+  mutate(training = protein %in% training_hits) |>
+  summarise(
+    training_hits = sum(training),
+    nominal = sum(training & p < 0.05),
+    expected = round(sum(training) * mean(p < 0.05), 1),
+    fisher_p = signif(
+      fisher.test(table(p < 0.05, training), alternative = "greater")$p.value, 2
+    ),
+    .by = c(analysis, outcome)
+  ) |>
+  arrange(analysis, outcome)
+training_overlap
+```
+
+Both pooled CSA outcomes hold about twice the expected count, and the other six sit at chance.
+Proteins that changed with training vary more across legs, which gives them more power in a
+pooled correlation.
+
 ```{r write}
-sheets <- list(summary = summary_table, correlations = arrange(results, fdr))
+sheets <- list(
+  summary = summary_table,
+  training_overlap = training_overlap,
+  correlations = arrange(results, fdr)
+)
 overview <- data.frame(
   sheet = names(sheets),
   rows = sapply(sheets, nrow),
   columns = sapply(sheets, ncol),
   description = c(
     "Hits against chance per outcome",
+    "Training hits at nominal p against chance",
     "Spearman r, p and FDR per protein"
   )
 )
