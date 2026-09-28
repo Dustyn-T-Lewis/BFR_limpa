@@ -6,7 +6,7 @@ MSigDB snapshot and GO Slim OBO in `c_data/cache/`, each beside its `.md5`.
 
 `01_run_fgsea_and_fry` and `04_run_singscore` read the tested sets, `c_data/gene_sets.rds`.
 `c_data/00_build_gene_sets.xlsx` holds the set catalogue (`set_catalog`) and protein-to-gene map
-(`protein_gene_map`) that `01_`, `04_` and `05_` read, plus counts per collection and mapping
+(`protein_gene_map`) that `01_`, `04_`, `05_` and `06_` read, plus counts per collection and mapping
 outcome. The step draws nothing, so it has no `b_reports/`.
 
 ```sh

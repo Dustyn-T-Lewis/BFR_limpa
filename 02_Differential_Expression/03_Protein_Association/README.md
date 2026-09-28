@@ -1,13 +1,16 @@
-# 02_Differential_Expression / 03_Phenotype
+# 02_Differential_Expression / 03_Protein_Association
 
 This step correlates each protein's pre-to-post change with the same leg's change in muscle size and
 quality. It reads `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`
 and the training hits in `02_Differential/c_data/02_differential.xlsx`, and writes Spearman r, p and
-FDR per protein and outcome, plus the counts below, to `c_data/03_phenotype.xlsx`;
-`b_reports/03_phenotype.html` is the report.
+FDR per protein and outcome, plus the counts below, to `c_data/03_protein_association.xlsx`.
+`b_reports/` holds one PDF per outcome (`03_association_vl_csa.pdf` and so on), drawing every
+protein at nominal p twelve to a page with the within-arm correlations inset, and `03_chance.pdf`,
+the hits against chance. The `protein_by_arm` sheet repeats each correlation inside BFR and inside
+HLRT, for description only.
 
 ```sh
-quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd --output-dir ../b_reports
+Rscript 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.R
 ```
 
 Pooled correlations use all 65 legs. Differential ones use 32 participants, correlating the BFR
@@ -31,5 +34,5 @@ Of the 130 training hits in either arm, 14 reach nominal p against pooled vl_csa
 expected (one-sided Fisher p 0.022), and 12 against pooled rf_csa where 5.7 are expected (p 0.011).
 The other six pairs sit at chance.
 
-Classification is left to `02_Differential`, whose fitted model beats a paired Wilcoxon test on 32
-pairs.
+Protein classification by ROC is `04_Protein_Classification`; `02_Differential` gives the
+model-based group test. Set-level association is `03_Pathway_Enrichment/06_set_association`.

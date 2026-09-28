@@ -6,7 +6,7 @@ Study data.
 |---|---|---|
 | `report.parquet` | one precursor in one MS run | `01_Preprocess/01_Filtering` |
 | `metadata.csv` | one MS sample, 131 rows | `01_Preprocess/01_Filtering` |
-| `phenotype.csv` | one leg, 70 rows | `02_Differential_Expression/03_Phenotype`, `03_Pathway_Enrichment/05_classify_and_associate_sets` |
+| `phenotype.csv` | one leg, 70 rows | `02_Differential_Expression/03_Protein_Association`, `03_Pathway_Enrichment/06_set_association` |
 
 `report.parquet` is too large for git; it sits on the `data-v1` release, with the download command
 in the root README.
