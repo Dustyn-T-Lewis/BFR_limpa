@@ -20,7 +20,10 @@ collections <- names(collection_specs)
 cache_file <- file.path(cache_dir, paste0(
   "msigdb_", msigdb_release, "_", paste(collections, collapse = "-"), ".rds"
 ))
-checksum_file <- paste0(cache_file, ".md5")
+md5_ok <- function(f) {
+  file.exists(paste0(f, ".md5")) &&
+    identical(unname(tools::md5sum(f)), readLines(paste0(f, ".md5"), warn = FALSE))
+}
 
 if (!file.exists(cache_file)) {
   message("fetching ", length(collections), " collections from msigdbr")
@@ -50,11 +53,9 @@ if (!file.exists(cache_file)) {
     membership = list_rbind(fetched)
   )
   saveRDS(frozen, cache_file, compress = "xz")
-  writeLines(unname(tools::md5sum(cache_file)), checksum_file)
+  writeLines(unname(tools::md5sum(cache_file)), paste0(cache_file, ".md5"))
 }
-if (!file.exists(checksum_file) || !identical(
-  unname(tools::md5sum(cache_file)), readLines(checksum_file, warn = FALSE)
-)) {
+if (!md5_ok(cache_file)) {
   stop("MSigDB cache checksum missing or mismatched. Restore the RDS and its .md5 together.")
 }
 frozen <- readRDS(cache_file)
@@ -100,7 +101,6 @@ gene_universe <- protein_map$gene[protein_map$selected]
 # Labels are what the volcanoes print, and a collision would put two proteins on one point.
 stopifnot(!anyDuplicated(protein_map$label))
 mapping_summary <- count(protein_map, mapping_status, name = "proteins")
-print(mapping_summary)
 message("measured gene universe: ", length(gene_universe))
 
 # Size is the only pre-test filter. The measured bar counts detected proteins, which govern
@@ -114,22 +114,19 @@ set_catalog <- membership |>
   mutate(
     source_size = lengths(sets_full)[set_id],
     measured_size = lengths(sets_measured)[set_id],
-    qualifies = source_size >= 15 & source_size <= 500 &
-      measured_size >= 15
+    qualifies = between(source_size, 15, 500) & measured_size >= 15
   )
 sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
 
 # GO Slim sets come from the GO Consortium's generic slim (140 terms), frozen with an md5 like
 # the MSigDB snapshot.
 slim_file <- file.path(cache_dir, "goslim_generic.obo")
-stopifnot(
-  file.exists(slim_file),
-  identical(unname(tools::md5sum(slim_file)), readLines(paste0(slim_file, ".md5"), warn = FALSE))
-)
+stopifnot(md5_ok(slim_file))
 slim_offspring <- AnnotationDbi::mget(
   GSEABase::ids(GSEABase::getOBOCollection(slim_file)), GO.db::GOBPOFFSPRING,
   ifnotfound = NA
 )
+# Keeps BP terms only: CC and MF slim terms have no GO:BP offspring entry.
 slim_offspring <- slim_offspring[!is.na(slim_offspring)]
 
 # A slim set is every measured gene under the term, taken from the full membership so a gene
@@ -147,7 +144,7 @@ slim_catalog <- tibble(
   database = "GO_Slim", pathway = slim_terms, source_id = names(slim_sets),
   description = "GO Slim term: every measured gene under it in the GO:BP hierarchy",
   source_size = lengths(slim_sets), measured_size = source_size,
-  qualifies = measured_size >= 15 & measured_size <= 500
+  qualifies = between(measured_size, 15, 500)
 )
 names(slim_sets) <- slim_catalog$set_id
 set_catalog <- bind_rows(set_catalog, slim_catalog)
@@ -161,7 +158,6 @@ collection_summary <- set_catalog |>
     median_measured = median(measured_size[qualifies]), .by = database
   ) |>
   arrange(match(database, c(collections, "GO_Slim")))
-print(collection_summary)
 message("qualifying sets: ", length(sets))
 
 sheets <- list(
@@ -171,9 +167,7 @@ sheets <- list(
   mapping_summary = mapping_summary
 )
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "Sets per collection, tested, median size",
     "Every set, with qualifies marking the tested ones",
@@ -183,5 +177,4 @@ overview <- data.frame(
 )
 saveRDS(sets, file.path(out, "gene_sets.rds"), compress = "xz")
 write_xlsx(c(list(overview = overview), sheets), file.path(out, "00_build_gene_sets.xlsx"))
-message("wrote gene_sets.rds and 00_build_gene_sets.xlsx")
 sessionInfo()

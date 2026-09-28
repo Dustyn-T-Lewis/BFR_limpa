@@ -19,11 +19,22 @@ gene_to_label <- with(
 )
 fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) unname(gene_to_label[genes]))
 
+# Once the prefix goes, GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION share a label.
+enrichment <- fgsea_results |>
+  mutate(
+    stem = sub("^[A-Z0-9]+_", "", pathway),
+    pathway = if_else(
+      duplicated(stem) | duplicated(stem, fromLast = TRUE), paste0(pathway, " ", database), pathway
+    ),
+    .by = contrast
+  ) |>
+  select(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
+  enrichVolcano::as_enrichment(enrichment_test = "fgsea")
+
 da <- enrichVolcano::as_da(
   select(protein_results, protein, gene = label, contrast, logFC, t, P.Value, adj.P.Val),
   species = NULL
 )
-# Default palette: red up, blue down, dark blue to dark red NES ramp.
 ring_theme <- enrichVolcano::plot_theme(
   base_size = 10, base_family = "sans", ns = "#9a9a9a"
 )
@@ -35,16 +46,6 @@ contrast_subtitle <- c(
 
 make_volcano <- function(cn, rank_by = "fdr") {
   points <- filter(protein_results, contrast == cn)
-  ring <- fgsea_results |>
-    filter(contrast == cn) |>
-    # Once the prefix goes, GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION share a label.
-    mutate(
-      stem = sub("^[A-Z0-9]+_", "", pathway),
-      pathway = if_else(
-        duplicated(stem) | duplicated(stem, fromLast = TRUE),
-        paste0(pathway, " ", database), pathway
-      )
-    )
   if (rank_by == "pi") {
     labels <- arrange(points, pi_score, protein)
     note <- "Labels ranked by pi-score; colours and counts use BH FDR"
@@ -53,9 +54,6 @@ make_volcano <- function(cn, rank_by = "fdr") {
     note <- "Protein significance: BH FDR < 0.05"
   }
   labels <- head(labels$label, 5)
-  enrichment <- ring |>
-    select(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
-    enrichVolcano::as_enrichment(enrichment_test = "fgsea")
   # The ring draws the twelve survivors with the lowest adjusted p, in either direction.
   enrichVolcano::plot_volcano_ring(
     da, enrichment,
@@ -119,9 +117,11 @@ figures <- list(
     ))
 )
 
-figure_dir <- here("03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports")
-pdf(file.path(figure_dir, "02_enrich_volcano_fgsea_figures.pdf"), width = 8.27, height = 11.69)
+figure_file <- "02_enrich_volcano_fgsea_figures.pdf"
+pdf(
+  here("03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports", figure_file),
+  width = 8.27, height = 11.69
+)
 walk(figures, print)
 invisible(dev.off())
-message("wrote a ", length(figures), "-page figure PDF")
 sessionInfo()

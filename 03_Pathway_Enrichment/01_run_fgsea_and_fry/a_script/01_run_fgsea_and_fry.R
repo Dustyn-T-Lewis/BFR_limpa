@@ -42,15 +42,13 @@ protein_summary <- protein_results |>
     down = sum(adj.P.Val < 0.05 & logFC < 0),
     min_fdr = signif(min(adj.P.Val), 3), .by = contrast
   )
-print(protein_summary)
 
 # One vector per contrast, representative proteins only, keyed by gene symbol so fgsea's
 # leadingEdge comes back in the namespace the volcanoes label with.
-ranked <- protein_results |>
-  filter(selected) |>
-  split(~contrast) |>
-  map(\(result) set_names(result$t, result$gene))
-ranked <- ranked[contrast_names]
+# Order matters: the seeded fgsea calls below draw their permutations in this order.
+ranked <- map(set_names(contrast_names), \(cn) {
+  with(filter(protein_results, selected, contrast == cn), set_names(t, gene))
+})
 
 set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
@@ -107,8 +105,7 @@ set_tests <- set_tests |>
   ) |>
   relocate(contrast, method, set_id, database, pathway)
 
-# Sets called per test and contrast, and how many survived collapse. The negative control sits
-# in the table unflagged, for comparison.
+# The negative control sits in the table unflagged, for comparison.
 set_summary <- set_tests |>
   summarise(
     sets = n_distinct(set_id),
@@ -117,7 +114,6 @@ set_summary <- set_tests |>
     fry = sum(method == "fry" & padj < 0.05),
     .by = contrast
   )
-print(as.data.frame(set_summary))
 
 supplement <- function(number, title, text, tags = "A") {
   plot_annotation(
@@ -209,7 +205,7 @@ figures <- c(figures, list(
     theme_minimal(base_size = 10) +
     theme(legend.position = "bottom") +
     supplement(
-      length(figures) + 1, "Significant sets before and after collapse",
+      7, "Significant sets before and after collapse",
       paste(
         "Sets at FDR 0.05 per collection and contrast, before and after collapsePathways, which",
         "keeps a set only if it stands alone given a stronger set's leading edge. Data: set_tests",
@@ -230,9 +226,7 @@ sheets <- list(
   protein_results = protein_results
 )
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "Significant sets per contrast and method",
     "Proteins up and down at FDR 0.05",
@@ -244,5 +238,4 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "01_run_fgsea_and_fry.xlsx")
 )
-message("wrote 01_run_fgsea_and_fry.xlsx and a ", length(figures), "-page figure PDF")
 sessionInfo()
