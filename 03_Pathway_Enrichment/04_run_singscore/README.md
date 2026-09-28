@@ -7,7 +7,7 @@ This step scores every sample on every set with singscore, from
 The score matrix is written twice: as a sheet in `c_data/04_run_singscore.xlsx`, beside
 per-collection medians and the principal-component check, and as `c_data/set_scores.rds`, which
 `05_classify_and_associate_sets` reads. singscore values carry exact rank ties, and Excel changes
-the last bit of some, which breaks ties and moves 05's Wilcoxon and Spearman p by up to 10%. S12 is
+the last bit of some, which breaks ties and moves 05's Wilcoxon and Spearman p by up to 10%. S11 is
 in `b_reports/04_run_singscore_figures.pdf`.
 
 ```sh
@@ -21,5 +21,5 @@ design needs that stability.
 Participant dominates the raw scores (PC1 explains 33.6% of variance, participant 0.64 of PC1), so
 later steps use within-leg change.
 
-S12 plots each set's mean score against mean dispersion by collection, and the score distribution
+S11 plots each set's mean score against mean dispersion by collection, and the score distribution
 per study group. Reactome scores highest and disperses least.

@@ -71,7 +71,7 @@ figure <- wrap_plots(
 ) +
   plot_annotation(
     caption = str_wrap(paste(
-      "S12 Figure. singscore across the cohort.",
+      "S11 Figure. singscore across the cohort.",
       sprintf("(A) One point per set, %d sets, score and dispersion averaged", nrow(scores)),
       sprintf("over %d samples.", ncol(scores)),
       "Dispersion is the spread of a set's member ranks within a sample: low means members sit",
