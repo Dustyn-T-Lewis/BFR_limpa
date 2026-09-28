@@ -1,6 +1,6 @@
 # BFR against HLRT NES per set: do both modalities move the same biology? No new test.
 
-pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
 
 stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
 set_tests <- read_excel(
@@ -41,66 +41,42 @@ concordance <- function(data) {
   )
 }
 
-# plot_scatter() hides a set under collapse = TRUE unless collapsePathways kept it in a contrast.
-enrichment <- set_tests |>
-  filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
-  transmute(
-    contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge,
-    dedup_status = if_else(main, "kept", "redundant")
-  ) |>
-  enrichVolcano::as_enrichment(enrichment_test = "fgsea")
-scatter <- function(...) {
-  enrichVolcano::plot_scatter(
-    enrichment, x_contrast, y_contrast, ..., label_n = 10,
-    theme = enrichVolcano::plot_theme(base_size = 9, base_family = "sans")
-  )
-}
-
-supplement <- function(number, title, text, tags = "A") {
-  plot_annotation(
-    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 100),
-    tag_levels = tags,
-    theme = theme(
-      plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-      plot.caption.position = "plot"
-    )
-  )
-}
-scatter_text <- paste(
-  "Points are fgsea sets; grey reach neither threshold, coloured are significant (BH < 0.05",
-  "within contrast) in one or both. Shaded quadrants move the same way in both contrasts, with",
-  "their counts in the corners; dashed line is identity. The subtitle gives Spearman's rho",
-  "across the plotted sets. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
-)
-
 survivors <- filter(paired, survivor)
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
-figures <- list(
-  wrap_plots(
-    scatter(collapse = FALSE) + labs(title = "All collections"),
-    scatter(collapse = TRUE) + labs(title = "Collapse survivors"),
-    ncol = 1
-  ) +
-    supplement(10, "NES concordance, all collections", paste(
+enrichment <- set_tests |>
+  filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
+  transmute(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
+  enrichVolcano::as_enrichment(enrichment_test = "fgsea")
+figure <- enrichVolcano::plot_scatter(
+  enrichment, x_contrast, y_contrast,
+  databases = c("Hallmark", "GO_Slim"), collapse = FALSE,
+  theme = enrichVolcano::plot_theme(base_size = 9, base_family = "sans")
+) +
+  labs(
+    title = "Hallmark and GO Slim",
+    caption = str_wrap(paste(
+      "S10 Figure. NES concordance, Hallmark and GO Slim.",
       sprintf(
-        "fgsea NES for each of %d sets in %s (x) against %s (y). (A) Every set. (B) Sets that",
-        nrow(paired), x_contrast, y_contrast
+        "fgsea NES for the %d Hallmark and GO Slim sets in %s (x) against %s (y).",
+        nrow(curated), x_contrast, y_contrast
       ),
-      "survived collapsePathways in either contrast.", scatter_text
-    )),
-  scatter(databases = c("Hallmark", "GO_Slim"), collapse = FALSE) +
-    labs(title = "Hallmark and GO Slim") +
-    supplement(11, "NES concordance, Hallmark and GO Slim", paste(
-      sprintf("All %d Hallmark and GO Slim sets, whose members do not nest.", nrow(curated)),
-      scatter_text
-    ), tags = NULL)
-)
+      "These two collections do not nest, so no branch of the GO:BP hierarchy weights rho.",
+      "Grey sets reach neither threshold; coloured ones are significant (BH < 0.05 within",
+      "contrast) in one or both. Shaded quadrants move the same way in both contrasts, with",
+      "their counts in the corners; dashed line is identity. The subtitle gives Spearman's rho.",
+      "Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
+    ), 100)
+  ) +
+  theme(
+    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
+    plot.caption.position = "plot"
+  )
 
 pdf(
   file.path(stage, "b_reports", "03_enrich_scatter_fgsea_figures.pdf"),
   width = 8.27, height = 11.69
 )
-walk(figures, print)
+print(figure)
 invisible(dev.off())
 
 summary_table <- list(

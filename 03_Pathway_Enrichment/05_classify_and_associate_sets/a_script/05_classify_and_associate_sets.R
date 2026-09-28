@@ -302,13 +302,13 @@ association_figure <- function(which_analysis, number, title, population) {
 # what the method returns when nothing is there.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 figures <- c(
-  imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 12 + i)) |> list_flatten(),
+  imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 11 + i)) |> list_flatten(),
   association_figure(
-    "pooled", 17, "Training response against phenotype, all legs",
+    "pooled", 16, "Training response against phenotype, all legs",
     sprintf("%d legs, both arms pooled", nrow(legs))
   ),
   association_figure(
-    "differential", 18, "BFR minus HLRT, within participant",
+    "differential", 17, "BFR minus HLRT, within participant",
     sprintf("%d paired participants", nrow(delta_pairs))
   )
 )
@@ -328,7 +328,7 @@ figures <- c(figures, list(
     scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
-      caption = caption_text(19, "Nominal hits relative to chance, by collection", paste(
+      caption = caption_text(18, "Nominal hits relative to chance, by collection", paste(
         "Paired Wilcoxon per set across", nrow(collection_sizes), "collections, uncorrected p.",
         "Bar length is observed nominal hits divided by the count that collection returns under",
         "the null; red clears 1, grey does not. Labels give observed of tested. Data:",

@@ -14,8 +14,8 @@ scores every sample on every set and saves the matrix as `set_scores.rds`.
 [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) asks how well those
 scores separate the study groups and whether they track the phenotype.
 
-Figures run S1 to S19 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10–S11 from `03_`, S12
-from `04_`, and S13–S19 from `05_` over 128 pages. Each A4 page has a supplement-style caption with
+Figures run S1 to S18 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
+from `04_`, and S12–S18 from `05_` over 128 pages. Each A4 page has a supplement-style caption with
 the title, one entry per lettered panel, the encodings and the source sheet. Findings live in these
 READMEs, not on the figures.
 
