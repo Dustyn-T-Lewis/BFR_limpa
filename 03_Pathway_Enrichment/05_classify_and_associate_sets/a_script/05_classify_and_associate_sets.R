@@ -20,18 +20,18 @@ set_score <- set_score[catalog$set_id, ]
 collection_sizes <- count(catalog, database)
 message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
 
-targets$leg_id <- paste(targets$participant, targets$leg, sep = "_")
 by_timepoint <- targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = timepoint, values_from = sample_id)
-legs <- filter(by_timepoint, !is.na(T1), !is.na(T2)) |> arrange(participant, treatment)
+legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
 
 # One row per participant holding both of their legs, for whichever column identifies them.
 pair_by_treatment <- function(data, column) {
   data |>
     select(participant, treatment, value = all_of(column)) |>
     pivot_wider(names_from = treatment, values_from = value) |>
-    filter(!is.na(BFR), !is.na(HLRT))
+    drop_na(BFR, HLRT)
 }
 baseline <- pair_by_treatment(by_timepoint, "T1")
 post <- pair_by_treatment(by_timepoint, "T2")
@@ -42,15 +42,14 @@ colnames(delta_set) <- legs$leg_id
 
 # Each task holds its matrix and two paired column sets. `favours` is the group an AUC above 0.5
 # points to, so the figures can state direction.
+arm <- split(legs, legs$treatment)
 tasks <- list(
   pre_vs_post_BFR = list(
-    values = set_score, positive = filter(legs, treatment == "BFR")$T2,
-    negative = filter(legs, treatment == "BFR")$T1,
+    values = set_score, positive = arm$BFR$T2, negative = arm$BFR$T1,
     label = "Pre to post, BFR", favours = "post", unit = "legs"
   ),
   pre_vs_post_HLRT = list(
-    values = set_score, positive = filter(legs, treatment == "HLRT")$T2,
-    negative = filter(legs, treatment == "HLRT")$T1,
+    values = set_score, positive = arm$HLRT$T2, negative = arm$HLRT$T1,
     label = "Pre to post, HLRT", favours = "post", unit = "legs"
   ),
   baseline_BFR_vs_HLRT = list(
@@ -115,9 +114,6 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 # cor.test gives the exact Spearman p at these sample sizes. The t approximation is off by up
 # to 9e-4, enough to move a result across the 0.05 line the figures report against.
 spearman_by_row <- function(values, outcome) {
-  usable <- !is.na(outcome)
-  values <- values[, usable, drop = FALSE]
-  outcome <- outcome[usable]
   # Ties make cor.test warn and fall back to its approximation. Reading two fields off the htest
   # is ten times faster than tidying it over the 32,000 tests.
   fits <- suppressWarnings(apply(values, 1, \(row) {
@@ -125,7 +121,7 @@ spearman_by_row <- function(values, outcome) {
     c(r = unname(test$estimate), p = test$p.value)
   }))
   tibble(
-    set_id = rownames(values), n = length(outcome),
+    set_id = rownames(values), n = sum(!is.na(outcome)),
     r = unname(fits["r", ]), p = unname(fits["p", ])
   )
 }
@@ -142,10 +138,10 @@ set_association <- map(set_names(outcomes), \(name) {
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome, database))
 
-by_arm <- map(set_names(c("BFR", "HLRT")), function(arm) {
-  keep <- leg_phenotype$treatment == arm
+by_arm <- map(set_names(c("BFR", "HLRT")), \(treatment) {
+  keep <- leg_phenotype$treatment == treatment
   map(set_names(outcomes), \(name) {
-    spearman_by_row(delta_set[, keep, drop = FALSE], leg_phenotype[[name]][keep]) |>
+    spearman_by_row(delta_set[, keep], leg_phenotype[[name]][keep]) |>
       mutate(outcome = name)
   }) |>
     list_rbind()
@@ -169,7 +165,6 @@ chance_expectation <- bind_rows(
     ratio = round(nominal / expected, 2), fdr_sig = sum(fdr < 0.05),
     .by = c(analysis, comparison, database, n_pairs)
   )
-print(as.data.frame(filter(chance_expectation, analysis == "classification")))
 
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
@@ -180,7 +175,7 @@ figure_theme <- theme_minimal(base_size = 9) +
     plot.caption.position = "plot",
     legend.position = "top"
   )
-supplement <- function(number, title, text, page = 1, n_pages = 1) {
+caption_text <- function(number, title, text, page = 1, n_pages = 1) {
   pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
   str_wrap(sprintf("S%d Figure%s. %s. %s", number, pages, title, text), 115)
 }
@@ -202,7 +197,7 @@ paginate <- function(data, draw, number, title, text, scales = "fixed") {
   imap(unname(pages), \(page, i) {
     draw(droplevels(page)) +
       facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
-      labs(caption = supplement(number, title, text, i, length(pages))) +
+      labs(caption = caption_text(number, title, text, i, length(pages))) +
       figure_theme
   })
 }
@@ -212,16 +207,15 @@ roc_figure <- function(task_name, number) {
   hits <- set_auc |>
     filter(task == task_name, p_paired < 0.05) |>
     arrange(p_paired)
-  values <- spec$values
   curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, fdr, ...) {
-    coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
+    coordinates <- pROC::coords(fit_roc(spec$values[set_id, ], spec), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
       # An AUC below 0.5 separates the groups the other way, so it is coloured by direction.
       direction = if_else(auc >= 0.5, "higher", "lower"),
-      panel = paste0(
-        set_label(database, pathway),
-        "\nAUC ", sprintf("%.2f", auc), "   p ", signif(p_paired, 2), "   q ", signif(fdr, 2)
+      panel = sprintf(
+        "%s\nAUC %.2f   p %s   q %s", set_label(database, pathway), auc, signif(p_paired, 2),
+        signif(fdr, 2)
       )
     )
   }) |>
@@ -264,9 +258,9 @@ association_figure <- function(which_analysis, number, title, population) {
       filter(set_id == !!set_id, outcome == !!outcome) |>
       mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
     tibble(
-      panel = paste0(
-        set_label(database, pathway), "\nvs ", outcome,
-        "   r = ", sprintf("%+.2f", r), "   p ", signif(p, 2), "   q ", signif(fdr, 2)
+      panel = sprintf(
+        "%s\nvs %s   r = %+.2f   p %s   q %s", set_label(database, pathway), outcome, r,
+        signif(p, 2), signif(fdr, 2)
       ),
       d_score = delta_set[set_id, ], d_outcome = leg_phenotype[[outcome]],
       treatment = leg_phenotype$treatment, caption = paste(arms$text, collapse = "\n")
@@ -319,7 +313,6 @@ figures <- c(
   )
 )
 
-# Whether each collection clears chance gets its own figure beside the sheet.
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))
@@ -335,7 +328,7 @@ figures <- c(figures, list(
     scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
     labs(
       x = "observed nominal hits / chance expectation", y = NULL,
-      caption = supplement(19, "Nominal hits relative to chance, by collection", paste(
+      caption = caption_text(19, "Nominal hits relative to chance, by collection", paste(
         "Paired Wilcoxon per set across", nrow(collection_sizes), "collections, uncorrected p.",
         "Bar length is observed nominal hits divided by the count that collection returns under",
         "the null; red clears 1, grey does not. Labels give observed of tested. Data:",
@@ -361,9 +354,7 @@ sheets <- list(
   set_catalog = catalog
 )
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "Nominal hits against chance, per collection. Read this first.",
     "How well each set separates each task. AUC from ranks, p from paired test.",
@@ -376,5 +367,4 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "05_classify_and_associate_sets.xlsx")
 )
-message("wrote 05_classify_and_associate_sets.xlsx and a ", length(figures), "-page figure PDF")
 sessionInfo()

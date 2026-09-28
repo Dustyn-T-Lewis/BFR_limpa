@@ -6,11 +6,12 @@ pacman::p_load(here, dplyr, tibble, purrr, stringr, ggplot2, patchwork, readxl, 
 stage <- here("03_Pathway_Enrichment", "04_run_singscore")
 gene_sets <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 sets <- readRDS(file.path(gene_sets, "gene_sets.rds"))
-set_catalog <- read_excel(file.path(gene_sets, "00_build_gene_sets.xlsx"), "set_catalog")
-protein_map <- read_excel(file.path(gene_sets, "00_build_gene_sets.xlsx"), "protein_gene_map")
+book <- file.path(gene_sets, "00_build_gene_sets.xlsx")
+set_catalog <- read_excel(book, "set_catalog")
+protein_map <- read_excel(book, "protein_gene_map")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 
-# Sets are keyed on gene symbols.
+# Sets are keyed on gene symbols, so rows are renamed from protein to representative gene.
 gene_map <- filter(protein_map, selected)
 gene_matrix <- proteins$E[gene_map$protein, ]
 rownames(gene_matrix) <- gene_map$gene
@@ -32,7 +33,6 @@ collection_spread <- set_spread |>
     sets = n(), median_score = round(median(score), 4),
     median_dispersion = round(median(dispersion), 1), .by = database
   )
-print(as.data.frame(collection_spread))
 
 # Participant identity dominates the raw scores, so the phenotype analysis uses the within-leg
 # change, never the raw value. targets rows follow the matrix columns.
@@ -44,7 +44,6 @@ structure_check <- tibble(
     summary(lm(components$x[, i] ~ proteins$targets$participant))$r.squared
   }), 3), NA, NA)
 )
-print(structure_check)
 
 # singscore's plotDispersion and plotRankDensity draw one signature at a time. These cohort-scale
 # views are plain ggplots over the score and dispersion matrices multiScore already returned.
@@ -95,9 +94,7 @@ sheets <- list(
   set_scores = rownames_to_column(as.data.frame(scores), "set_id")
 )
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "Median score and dispersion per collection",
     "Variance and participant share per component",
@@ -111,5 +108,4 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "04_run_singscore.xlsx")
 )
-message("wrote set_scores.rds, 04_run_singscore.xlsx and a 1-page figure PDF")
 sessionInfo()

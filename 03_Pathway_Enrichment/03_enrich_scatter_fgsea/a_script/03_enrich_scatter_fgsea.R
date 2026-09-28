@@ -47,8 +47,8 @@ set_colours <- set_names(
   c("#6A3D9A", "#D7301F", "#2B6CB0"), c("Both", x_contrast, y_contrast)
 )
 
-# Builds all six panels. `labelled` is the subset that gets names, so a dense cloud and a
-# zoomed handful differ only in what is passed in.
+# `labelled` is the subset that gets names, so a dense cloud and a zoomed handful differ only in
+# what is passed in.
 nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
   span <- range(c(data$NES_x, data$NES_y))
   limit <- span + c(-1, 1) * diff(span) * pad
@@ -102,7 +102,7 @@ supplement <- function(number, title, text) {
   )
 }
 
-# Figure one: all collections, collapse survivors, and the discordant sets on their own axes.
+# S10: all collections, collapse survivors, and the discordant sets on their own axes.
 discordant_sets <- filter(paired, discordant, significance != "NS")
 survivors <- filter(paired, survivor)
 figure_all <- wrap_plots(
@@ -128,7 +128,7 @@ figure_all <- wrap_plots(
   )) &
   theme(legend.position = "bottom")
 
-# Figure two: the two collections whose members do not nest, then each concordant quadrant
+# S11: the two collections whose members do not nest, then each concordant quadrant
 # scaled to its own points so every set can be named.
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
 quadrant <- function(direction) {
@@ -162,7 +162,6 @@ summary_table <- list(
 ) |>
   map(concordance) |>
   list_rbind(names_to = "population")
-print(as.data.frame(summary_table))
 
 export <- paired |>
   transmute(
@@ -179,9 +178,7 @@ sheets <- list(
   nes_scatter = export
 )
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "NES agreement between training contrasts",
     "Sets with opposite NES signs",
@@ -192,5 +189,4 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "03_enrich_scatter_fgsea.xlsx")
 )
-message("wrote 03_enrich_scatter_fgsea.xlsx and a 2-page figure PDF")
 sessionInfo()
