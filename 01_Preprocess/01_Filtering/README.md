@@ -1,12 +1,14 @@
 # 01_Preprocess / 01_Filtering
 
-Reads the DIA-NN report and removes precursor rows. It drops no sample and filters nothing on
+This step reads the DIA-NN report and the sample metadata from `00_Input/report.parquet` and
+`00_Input/metadata.csv`, and removes precursor rows. It drops no sample and filters nothing on
 missing values.
 
-- Reads: `00_Input/report.parquet`, `00_Input/metadata.csv`
-- Writes: `c_data/precursors_filtered.rds` (read by `02_Quantification`), `c_data/01_filter.xlsx`
-  (`overview`, `filter_log`, `contaminants_removed`), `b_reports/01_filter.html`
-- Run: `quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports`,
-  12 seconds.
+The filtered precursors are saved as `c_data/precursors_filtered.rds`, which `02_Quantification`
+reads. `c_data/01_filter.xlsx` records the rows, groups and signal left after each filter, and
+every contaminant removed with its signal. The rendered notebook, `b_reports/01_filter.html`,
+gives the reason for each filter beside its code.
 
-The notebook gives the reason for each filter beside its code.
+```sh
+quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports
+```

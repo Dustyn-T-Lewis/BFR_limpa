@@ -1,8 +1,5 @@
 # 04 · Network
 
-Planned. No code yet.
-
-Intent: find proteins that move together in this data, whether or not a curated database has
-grouped them, and ask whether those groups respond differently to the two training modalities.
-
-Methods are not chosen.
+Planned, with no code yet. The aim is to find proteins that move together in this data, whether or
+not a curated database has grouped them, and to ask whether those groups respond differently to
+the two training modalities. No method has been chosen.
