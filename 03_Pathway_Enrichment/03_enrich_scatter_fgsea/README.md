@@ -19,6 +19,6 @@ No set significant in both arms changes sign: both modalities moved the same pat
 amounts, which is why the interaction is empty. A set is discordant when its two NES have opposite
 signs; all eight are significant in one arm only, with the other at p 0.43 to 0.99.
 
-S10 shows all sets, collapse survivors and discordant sets. S11 shows Hallmark and GO Slim, whose
-sets do not nest, then each concordant quadrant rescaled so every significant set is named. GO:BP's
-overlapping branches would weight rho toward the largest branch.
+S10 draws all sets and the collapse survivors with `enrichVolcano::plot_scatter()`; S11 draws
+Hallmark and GO Slim, whose sets do not nest, since GO:BP's overlapping branches would weight rho
+toward the largest branch. The discordant sets are listed in the workbook.
