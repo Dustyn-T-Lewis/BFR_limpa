@@ -1,8 +1,6 @@
 # BFR against HLRT NES per set: do both modalities move the same biology? No new test.
 
-pacman::p_load(
-  here, dplyr, tidyr, purrr, stringr, ggplot2, ggrepel, patchwork, readxl, writexl
-)
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)
 
 stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
 set_tests <- read_excel(
@@ -43,118 +41,66 @@ concordance <- function(data) {
   )
 }
 
-set_colours <- set_names(
-  c("#6A3D9A", "#D7301F", "#2B6CB0"), c("Both", x_contrast, y_contrast)
-)
-
-# `labelled` is the subset that gets names, so a dense cloud and a zoomed handful differ only in
-# what is passed in.
-nes_panel <- function(data, title, labelled = data[0, ], pad = 0.12) {
-  span <- range(c(data$NES_x, data$NES_y))
-  limit <- span + c(-1, 1) * diff(span) * pad
-  shown <- filter(data, significance != "NS")
-  stats <- concordance(data)
-  # A rank correlation over a handful of points is noise, so rho appears only from 30 sets up.
-  rho <- if (stats$sets >= 30) sprintf(" | rho %.2f", stats$rho) else ""
-  caption <- sprintf(
-    "%d sets | %d significant%s | %d discordant",
-    stats$sets, stats$significant, rho, stats$discordant
+# plot_scatter() hides a set under collapse = TRUE unless collapsePathways kept it in a contrast.
+enrichment <- set_tests |>
+  filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
+  transmute(
+    contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge,
+    dedup_status = if_else(main, "kept", "redundant")
+  ) |>
+  enrichVolcano::as_enrichment(enrichment_test = "fgsea")
+scatter <- function(...) {
+  enrichVolcano::plot_scatter(
+    enrichment, x_contrast, y_contrast, ..., label_n = 10,
+    theme = enrichVolcano::plot_theme(base_size = 9, base_family = "sans")
   )
-  ggplot(data, aes(NES_x, NES_y)) +
-    geom_hline(yintercept = 0, colour = "grey85", linewidth = 0.3) +
-    geom_vline(xintercept = 0, colour = "grey85", linewidth = 0.3) +
-    geom_abline(slope = 1, linetype = "dashed", colour = "grey45", linewidth = 0.4) +
-    geom_point(
-      data = filter(data, significance == "NS"),
-      colour = "grey82", size = 0.45, alpha = 0.3
-    ) +
-    geom_point(aes(colour = significance, size = n), data = shown, alpha = 0.85) +
-    geom_text_repel(
-      data = labelled, aes(label = label), size = 2.3, colour = "grey15",
-      segment.colour = "grey60", segment.size = 0.25, min.segment.length = 0,
-      max.overlaps = Inf, seed = 1, force = 6, lineheight = 0.85
-    ) +
-    scale_colour_manual(values = set_colours, name = "significant in", drop = FALSE) +
-    scale_size_continuous(
-      range = c(1, 4.5), name = "genes",
-      limits = range(paired$n), breaks = c(50, 150, 300)
-    ) +
-    coord_fixed(xlim = limit, ylim = limit) +
-    labs(
-      x = paste("NES,", x_contrast), y = paste("NES,", y_contrast),
-      title = title, subtitle = caption
-    ) +
-    theme_minimal(base_size = 9) +
-    theme(
-      plot.title = element_text(face = "bold", size = 10),
-      plot.subtitle = element_text(size = 7.5, colour = "grey30")
-    )
 }
 
-supplement <- function(number, title, text) {
+supplement <- function(number, title, text, tags = "A") {
   plot_annotation(
-    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 115),
-    tag_levels = "A",
+    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 100),
+    tag_levels = tags,
     theme = theme(
       plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
       plot.caption.position = "plot"
     )
   )
 }
+scatter_text <- paste(
+  "Points are fgsea sets; grey reach neither threshold, coloured are significant (BH < 0.05",
+  "within contrast) in one or both. Shaded quadrants move the same way in both contrasts, with",
+  "their counts in the corners; dashed line is identity. The subtitle gives Spearman's rho",
+  "across the plotted sets. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
+)
 
-# S10: all collections, collapse survivors, and the discordant sets on their own axes.
-discordant_sets <- filter(paired, discordant, significance != "NS")
 survivors <- filter(paired, survivor)
-figure_all <- wrap_plots(
-  nes_panel(paired, "All collections"),
-  nes_panel(survivors, "Collapse survivors"),
-  # Too few points for a size key, and patchwork will not merge guide sets that differ.
-  nes_panel(discordant_sets, "Discordant", labelled = discordant_sets, pad = 0.35) +
-    guides(colour = "none", size = "none"),
-  ncol = 2, guides = "collect"
-) +
-  supplement(10, "NES concordance, all collections", paste(
-    sprintf(
-      "fgsea NES for each of %d sets in %s (x) against %s (y), BH within contrast.",
-      nrow(paired), x_contrast, y_contrast
-    ),
-    "(A) Every set. (B) Sets that survived collapsePathways in either contrast.",
-    sprintf(
-      "(C) The %d discordant sets, on opposite sides of zero and significant in one arm only,",
-      nrow(discordant_sets)
-    ),
-    "rescaled so each can be named. Dashed line is identity; grey points reach neither",
-    "threshold; point size is gene count. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
-  )) &
-  theme(legend.position = "bottom")
-
-# S11: the two collections whose members do not nest, then each concordant quadrant
-# scaled to its own points so every set can be named.
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
-quadrant <- function(direction) {
-  rows <- filter(curated, significance != "NS", (NES_x > 0) == direction)
-  nes_panel(rows, if (direction) "Up in both" else "Down in both", labelled = rows, pad = 0.22)
-}
-figure_curated <- (
-  nes_panel(
-    curated, "Hallmark and GO Slim",
-    labelled = slice_min(filter(curated, significance != "NS"), padj_x + padj_y, n = 8)
-  ) / (quadrant(TRUE) | quadrant(FALSE))
-) +
-  plot_layout(guides = "collect", heights = c(1, 1)) +
-  supplement(11, "NES concordance, Hallmark and GO Slim", paste(
-    sprintf("(A) All %d Hallmark and GO Slim sets, whose members do not nest.", nrow(curated)),
-    "(B, C) The significant ones rescaled by direction so each can be named. Axes, colours",
-    "and point size as in S10 Figure. Data: nes_scatter sheet of 03_enrich_scatter_fgsea.xlsx."
-  )) &
-  theme(legend.position = "bottom")
+figures <- list(
+  wrap_plots(
+    scatter(collapse = FALSE) + labs(title = "All collections"),
+    scatter(collapse = TRUE) + labs(title = "Collapse survivors"),
+    ncol = 1
+  ) +
+    supplement(10, "NES concordance, all collections", paste(
+      sprintf(
+        "fgsea NES for each of %d sets in %s (x) against %s (y). (A) Every set. (B) Sets that",
+        nrow(paired), x_contrast, y_contrast
+      ),
+      "survived collapsePathways in either contrast.", scatter_text
+    )),
+  scatter(databases = c("Hallmark", "GO_Slim"), collapse = FALSE) +
+    labs(title = "Hallmark and GO Slim") +
+    supplement(11, "NES concordance, Hallmark and GO Slim", paste(
+      sprintf("All %d Hallmark and GO Slim sets, whose members do not nest.", nrow(curated)),
+      scatter_text
+    ), tags = NULL)
+)
 
 pdf(
   file.path(stage, "b_reports", "03_enrich_scatter_fgsea_figures.pdf"),
   width = 8.27, height = 11.69
 )
-print(figure_all)
-print(figure_curated)
+walk(figures, print)
 invisible(dev.off())
 
 summary_table <- list(
