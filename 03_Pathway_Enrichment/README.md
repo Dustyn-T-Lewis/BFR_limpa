@@ -15,8 +15,8 @@ sample on every set and saves the matrix as `set_scores.rds`.
 study groups, and [`06_set_association`](06_set_association/README.md) whether they track the
 phenotype.
 
-Figures run S1 to S18 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
-from `04_`, S12–S16 from `05_` and S17–S18 from `06_`, with one PDF per collection in each. Each A4
+Figures run S1 to S19 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
+from `04_`, S12–S16 from `05_` and S17–S19 from `06_`, with one PDF per collection in each. Each A4
 page has a supplement-style caption with the title, one entry per lettered panel, the encodings and
 the source sheet. Findings live in these READMEs, not on the figures.
 

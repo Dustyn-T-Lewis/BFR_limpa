@@ -4,8 +4,10 @@ This step correlates each protein's pre-to-post change with the same leg's chang
 quality. It reads `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`
 and the training hits in `02_Differential/c_data/02_differential.xlsx`, and writes Spearman r, p and
 FDR per protein and outcome, plus the counts below, to `c_data/03_protein_association.xlsx`.
-`b_reports/03_protein_association_figures.pdf` opens with hits against chance per outcome, then
-draws every protein-outcome pair at nominal p, twelve to a page, one block per analysis and outcome.
+`b_reports/` holds one PDF per outcome (`03_association_vl_csa.pdf` and so on), drawing every
+protein at nominal p twelve to a page with the within-arm correlations inset, and `03_chance.pdf`,
+the hits against chance. The `protein_by_arm` sheet repeats each correlation inside BFR and inside
+HLRT, for description only.
 
 ```sh
 Rscript 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.R

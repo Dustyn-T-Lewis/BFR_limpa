@@ -1,5 +1,6 @@
-# Per set: Spearman correlation of the singscore change with each phenotype change, pooled over legs
-# and within participant. Nominal p is read against chance_expectation per collection, BH beside it.
+# Per set: Spearman correlation of the singscore change with each phenotype change, pooled over
+# legs and within participant. Nominal p is read against chance_expectation per collection, BH
+# beside it.
 
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
 
@@ -15,7 +16,7 @@ phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 catalog <- set_catalog |>
   filter(qualifies) |>
   select(set_id, database, pathway, measured_size)
-set_score <- set_score[catalog$set_id, ]
+values <- set_score[catalog$set_id, ]
 collection_sizes <- count(catalog, database)
 message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
 
@@ -34,11 +35,12 @@ pair_by_treatment <- function(data, column) {
 }
 delta_pairs <- pair_by_treatment(legs, "leg_id")
 
-delta_set <- set_score[, legs$T2] - set_score[, legs$T1]
-colnames(delta_set) <- legs$leg_id
+delta <- values[, legs$T2] - values[, legs$T1]
+colnames(delta) <- legs$leg_id
 
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
-# A duplicated phenotype row would silently misalign every leg below.
+# A duplicated phenotype row would silently misalign every leg below. Echo intensity falls as
+# muscle composition improves.
 leg_phenotype <- legs |>
   left_join(
     select(phenotype, -treatment),
@@ -50,19 +52,16 @@ leg_phenotype <- legs |>
     rf_csa = rf_csa_post_cm2 - rf_csa_pre_cm2,
     rf_echo = rf_echo_post_au - rf_echo_pre_au
   )
-
-paired_set <- delta_set[, delta_pairs$BFR] - delta_set[, delta_pairs$HLRT]
-colnames(paired_set) <- delta_pairs$participant
-paired_outcome <- map(set_names(outcomes), function(name) {
+paired <- delta[, delta_pairs$BFR] - delta[, delta_pairs$HLRT]
+colnames(paired) <- delta_pairs$participant
+paired_outcome <- map(set_names(outcomes), \(name) {
   value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
   value[delta_pairs$BFR] - value[delta_pairs$HLRT]
 })
 
-# cor.test gives the exact Spearman p at these sample sizes. The t approximation is off by up
-# to 9e-4, enough to move a result across the 0.05 line the figures report against.
+# cor.test gives the exact Spearman p at these sample sizes; the t approximation is off by up to
+# 9e-4. Ties make it warn and fall back to the approximation, so the warnings are suppressed.
 spearman_by_row <- function(values, outcome) {
-  # Ties make cor.test warn and fall back to its approximation. Reading two fields off the htest
-  # is ten times faster than tidying it over the 32,000 tests.
   fits <- suppressWarnings(apply(values, 1, \(row) {
     test <- cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
@@ -74,8 +73,8 @@ spearman_by_row <- function(values, outcome) {
 }
 set_association <- map(set_names(outcomes), \(name) {
   bind_rows(
-    pooled = spearman_by_row(delta_set, leg_phenotype[[name]]),
-    differential = spearman_by_row(paired_set, paired_outcome[[name]]),
+    pooled = spearman_by_row(delta, leg_phenotype[[name]]),
+    differential = spearman_by_row(paired, paired_outcome[[name]]),
     .id = "analysis"
   ) |>
     mutate(outcome = name)
@@ -84,11 +83,10 @@ set_association <- map(set_names(outcomes), \(name) {
   relocate(analysis, outcome) |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome, database))
-
 by_arm <- map(set_names(c("BFR", "HLRT")), \(treatment) {
   keep <- leg_phenotype$treatment == treatment
   map(set_names(outcomes), \(name) {
-    spearman_by_row(delta_set[, keep], leg_phenotype[[name]][keep]) |>
+    spearman_by_row(delta[, keep], leg_phenotype[[name]][keep]) |>
       mutate(outcome = name)
   }) |>
     list_rbind()
@@ -117,9 +115,43 @@ figure_theme <- theme_minimal(base_size = 9) +
     plot.caption.position = "plot",
     legend.position = "top"
   )
-caption_text <- function(number, title, text, page = 1, n_pages = 1) {
+caption_text <- function(title, text, page = 1, n_pages = 1) {
   pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
-  str_wrap(sprintf("S%d Figure%s. %s. %s", number, pages, title, text), 115)
+  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
+}
+# Twelve panels to a page. `draw` builds the plot from one page's rows: a paginating facet would
+# build every panel for every page.
+paginate <- function(data, draw, title, text, scales = "fixed") {
+  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
+  imap(unname(pages), \(page, i) {
+    draw(droplevels(page)) +
+      facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
+      labs(caption = caption_text(title, text, i, length(pages))) +
+      figure_theme
+  })
+}
+chance_page <- function(data, y, facet, title, text) {
+  ggplot(data, aes(ratio, .data[[y]], fill = ratio > 1)) +
+    geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+    geom_col(width = 0.65) +
+    geom_text(
+      aes(label = sprintf("%d of %d", nominal, features)),
+      hjust = -0.12, size = 2.5, colour = "grey25"
+    ) +
+    facet_wrap(vars(.data[[facet]]), ncol = 1) +
+    scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
+    labs(
+      x = "observed nominal hits / chance expectation", y = NULL,
+      caption = caption_text(title, text)
+    ) +
+    figure_theme +
+    theme(panel.grid.major.y = element_blank())
+}
+write_pdf <- function(pages, name) {
+  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
+  walk(pages, print)
+  invisible(dev.off())
 }
 chance_line <- function(db) {
   n <- collection_sizes$n[collection_sizes$database == db]
@@ -129,19 +161,6 @@ set_label <- function(database, pathway) {
   str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
 }
 
-# Every set-outcome pair reaching nominal p gets a panel, twelve to a page, smallest p first.
-# `draw` builds the plot from one page's rows: a paginating facet would build every panel for
-# every page.
-paginate <- function(data, draw, number, title, text, scales = "fixed") {
-  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
-  imap(unname(pages), \(page, i) {
-    draw(droplevels(page)) +
-      facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
-      labs(caption = caption_text(number, title, text, i, length(pages))) +
-      figure_theme
-  })
-}
-
 association_figure <- function(which_analysis, number, title, population, db) {
   hits <- set_association |>
     filter(analysis == which_analysis, database == db, p < 0.05) |>
@@ -149,24 +168,23 @@ association_figure <- function(which_analysis, number, title, population, db) {
   if (nrow(hits) == 0) {
     return(list())
   }
-  points <- pmap(hits, function(set_id, database, pathway, outcome, n, r, p, fdr, ...) {
+  points <- pmap(hits, function(set_id, database, pathway, outcome, r, p, fdr, ...) {
     arms <- by_arm |>
       filter(set_id == !!set_id, outcome == !!outcome) |>
       mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
     tibble(
       panel = sprintf(
-        "%s\nvs %s   r = %+.2f   p %s   q %s", set_label(database, pathway), outcome, r,
-        signif(p, 2), signif(fdr, 2)
+        "%s\nvs %s   r = %+.2f   p %s   q %s",
+        set_label(database, pathway), outcome, r, signif(p, 2), signif(fdr, 2)
       ),
-      d_score = delta_set[set_id, ], d_outcome = leg_phenotype[[outcome]],
+      change = delta[set_id, ], d_outcome = leg_phenotype[[outcome]],
       treatment = leg_phenotype$treatment, caption = paste(arms$text, collapse = "\n")
     )
   }) |>
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
-
   paginate(points, \(page) {
-    ggplot(page, aes(d_score, d_outcome, colour = treatment, fill = treatment)) +
+    ggplot(page, aes(change, d_outcome, colour = treatment, fill = treatment)) +
       geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.5) +
@@ -182,7 +200,8 @@ association_figure <- function(which_analysis, number, title, population, db) {
         name = NULL
       ) +
       labs(x = "change in set score, T2 - T1, one point per leg", y = "change in phenotype")
-  }, number, paste0(title, ", ", db), paste(
+  }, sprintf("S%d Figure", number), paste(
+    paste0(title, ", ", db, "."),
     sprintf(
       "All %d %s set-outcome pairs whose Spearman correlation reaches nominal p in the %s",
       nrow(hits), db, which_analysis
@@ -194,12 +213,6 @@ association_figure <- function(which_analysis, number, title, population, db) {
   ), scales = "free")
 }
 
-
-write_pdf <- function(pages, name) {
-  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
-  walk(pages, print)
-  invisible(dev.off())
-}
 # One file per collection, so each can be read on its own.
 walk(unique(catalog$database), \(db) {
   write_pdf(
@@ -216,6 +229,15 @@ walk(unique(catalog$database), \(db) {
     paste0("06_association_", db, ".pdf")
   )
 })
+write_pdf(list(chance_page(
+  mutate(chance_expectation, panel = paste0(sub("association: ", "", analysis), ", ", comparison)),
+  "database", "panel", "S19 Figure", paste(
+    "Nominal hits relative to chance, by collection. Spearman per set, uncorrected p. Bar length",
+    "is observed nominal hits divided by the count that collection returns under the null; red",
+    "clears 1, grey does not. Labels give observed of tested. Data: chance_expectation sheet of",
+    "06_set_association.xlsx."
+  )
+)), "06_chance_by_collection.pdf")
 
 sheets <- list(
   chance_expectation = chance_expectation,
