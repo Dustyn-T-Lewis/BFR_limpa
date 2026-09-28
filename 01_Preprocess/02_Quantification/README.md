@@ -24,3 +24,5 @@ slope. The second writes only `c_data/quant_runs/proteins_slope_fitted.rds`, the
 at the fitted slope, which the notebook reads when it is present. The two can run at the same
 time. Both files are committed, so a fresh clone renders without running either. Nothing ties a
 checkpoint to the precursors it came from, so rerunning `01_Filtering` means rerunning this too.
+
+Protein groups are not capped. Titin's holds 3,245 precursors, where the median group holds 7.
