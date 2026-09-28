@@ -11,3 +11,7 @@ notebook is `b_reports/02_differential.html`.
 ```sh
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 ```
+
+The notebook ends by refitting the model on the fitted-slope run (0.488). BFR training has 82 hits
+there against 60 at the preset 0.7, and HLRT training 114 against 107, with 57 and 99 found under
+both. The other three contrasts have none under either slope.

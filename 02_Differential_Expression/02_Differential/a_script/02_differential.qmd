@@ -25,6 +25,9 @@ pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tibble, tidyr, writexl
 
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+fitted_slope_file <- here(
+  "01_Preprocess", "02_Quantification", "c_data", "quant_runs", "proteins_slope_fitted.rds"
+)
 
 # Same samples in the same order. limma compares only the counts, so a reordering would fit
 # every protein against the wrong samples and report nothing.
@@ -223,6 +226,31 @@ slice_min(nc, P.Value, n = 5) |>
 
 The hit count is printed rather than asserted, so a difference lands in the report, not in a
 halted render.
+
+## Slope sensitivity
+
+The protein table uses the preset DPC slope of 0.7. This refits the same model on the fitted-slope
+run (0.488) after the same detection filter and normalisation. Rows count BH hits at 0.05 under
+each slope, and the proteins significant under both.
+
+```{r slope-sensitivity}
+#| eval: !expr file.exists(fitted_slope_file)
+fitted_slope <- readRDS(fitted_slope_file)
+fitted_slope <- fitted_slope[
+  filterByDetection(fitted_slope, n.samples = min(table(fitted_slope$targets$group))),
+]
+fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
+refit <- dpcDE(fitted_slope, d$design, sample.weights = TRUE) |>
+  contrasts.fit(d$contrasts) |>
+  eBayes(robust = TRUE)
+primary_hits <- decideTests(fit) != 0
+refit_hits <- decideTests(refit)[rownames(primary_hits), ] != 0
+rbind(
+  slope_0.7 = colSums(primary_hits),
+  slope_0.488 = colSums(refit_hits),
+  both = colSums(primary_hits & refit_hits)
+)
+```
 
 ```{r session}
 sessionInfo()
