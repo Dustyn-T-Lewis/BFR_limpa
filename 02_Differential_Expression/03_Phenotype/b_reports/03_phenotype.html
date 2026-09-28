@@ -2211,6 +2211,7 @@ vertical-align: -.125em;
   <li><a href="#outcomes" id="toc-outcomes" class="nav-link" data-scroll-target="#outcomes">Outcomes</a></li>
   <li><a href="#correlations" id="toc-correlations" class="nav-link" data-scroll-target="#correlations">Correlations</a></li>
   <li><a href="#what-survives" id="toc-what-survives" class="nav-link" data-scroll-target="#what-survives">What survives</a></li>
+  <li><a href="#training-hits-among-the-leads" id="toc-training-hits-among-the-leads" class="nav-link" data-scroll-target="#training-hits-among-the-leads">Training hits among the leads</a></li>
   </ul>
 </nav>
 </div>
@@ -2239,7 +2240,7 @@ vertical-align: -.125em;
 <p><code>02_Differential</code> asks which proteins changed between groups. This asks whether a protein’s change tracks how much the muscle changed. The contrast model cannot answer it, because a contrast compares group means and carries no per-leg outcome.</p>
 <p>Two framings. Pooled takes all 65 legs and correlates each protein’s pre-to-post change with that leg’s phenotype change. Differential takes the 32 participants with both legs and asks whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference in phenotype, which removes every between-participant confound.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, writexl)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2491,22 +2492,136 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
+</section>
+<section id="training-hits-among-the-leads" class="level2">
+<h2 class="anchored" data-anchor-id="training-hits-among-the-leads">Training hits among the leads</h2>
+<p>A training hit is a protein at BH &lt; 0.05 in either Post-Pre contrast of <code>02_Differential</code>. The table counts training hits at nominal p for each outcome, against the count expected if nominal hits fell at random, with a one-sided Fisher test.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">summary =</span> summary_table, <span class="at">correlations =</span> <span class="fu">arrange</span>(results, fdr))</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="fu">sapply</span>(sheets, nrow),</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">columns =</span> <span class="fu">sapply</span>(sheets, ncol),</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Hits against chance per outcome&quot;</span>,</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Spearman r, p and FDR per protein&quot;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Phenotype&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(out, <span class="st">&quot;03_phenotype.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>dep_matrix <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_differential.xlsx&quot;</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;DEP_matrix&quot;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>training_hits <span class="ot">&lt;-</span> dep_matrix <span class="sc">|&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="st">`</span><span class="at">BFR_Post-Pre_adj.P.Val</span><span class="st">`</span> <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">|</span> <span class="st">`</span><span class="at">HLRT_Post-Pre_adj.P.Val</span><span class="st">`</span> <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(protein)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>training_overlap <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">training =</span> protein <span class="sc">%in%</span> training_hits) <span class="sc">|&gt;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">training_hits =</span> <span class="fu">sum</span>(training),</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">nominal =</span> <span class="fu">sum</span>(training <span class="sc">&amp;</span> p <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">expected =</span> <span class="fu">round</span>(<span class="fu">sum</span>(training) <span class="sc">*</span> <span class="fu">mean</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="dv">1</span>),</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">fisher_p =</span> <span class="fu">signif</span>(</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">fisher.test</span>(<span class="fu">table</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>, training), <span class="at">alternative =</span> <span class="st">&quot;greater&quot;</span>)<span class="sc">$</span>p.value, <span class="dv">2</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(analysis, outcome)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(analysis, outcome)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>training_overlap</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">analysis</th>
+<th style="text-align: left;">outcome</th>
+<th style="text-align: right;">training_hits</th>
+<th style="text-align: right;">nominal</th>
+<th style="text-align: right;">expected</th>
+<th style="text-align: right;">fisher_p</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">differential</td>
+<td style="text-align: left;">rf_csa</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">7.2</td>
+<td style="text-align: right;">0.430</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">differential</td>
+<td style="text-align: left;">rf_echo</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">0.380</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">differential</td>
+<td style="text-align: left;">vl_csa</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">6.2</td>
+<td style="text-align: right;">0.760</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">differential</td>
+<td style="text-align: left;">vl_echo</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">5.6</td>
+<td style="text-align: right;">0.100</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">pooled</td>
+<td style="text-align: left;">rf_csa</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">5.7</td>
+<td style="text-align: right;">0.011</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">pooled</td>
+<td style="text-align: left;">rf_echo</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4.8</td>
+<td style="text-align: right;">0.960</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">pooled</td>
+<td style="text-align: left;">vl_csa</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">7.8</td>
+<td style="text-align: right;">0.022</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">pooled</td>
+<td style="text-align: left;">vl_echo</td>
+<td style="text-align: right;">130</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">5.4</td>
+<td style="text-align: right;">0.980</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>Both pooled CSA outcomes hold about twice the expected count, and the other six sit at chance. Proteins that changed with training vary more across legs, which gives them more power in a pooled correlation.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">summary =</span> summary_table,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">training_overlap =</span> training_overlap,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">correlations =</span> <span class="fu">arrange</span>(results, fdr)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets),</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">rows =</span> <span class="fu">sapply</span>(sheets, nrow),</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">columns =</span> <span class="fu">sapply</span>(sheets, ncol),</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Hits against chance per outcome&quot;</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Training hits at nominal p against chance&quot;</span>,</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Spearman r, p and FDR per protein&quot;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Phenotype&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(out, <span class="st">&quot;03_phenotype.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
@@ -2526,8 +2641,8 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] writexl_1.5.4 readr_2.2.0   ggplot2_4.0.3 tibble_3.3.1  purrr_1.2.2  
-[6] tidyr_1.3.2   dplyr_1.2.1   here_1.0.2   
+[1] writexl_1.5.4 readxl_1.4.5  readr_2.2.0   ggplot2_4.0.3 tibble_3.3.1 
+[6] purrr_1.2.2   tidyr_1.3.2   dplyr_1.2.1   here_1.0.2   
 
 loaded via a namespace (and not attached):
  [1] bit_4.6.0          limma_3.68.1       gtable_0.3.6       jsonlite_2.0.0    
@@ -2539,8 +2654,8 @@ loaded via a namespace (and not attached):
 [25] bit64_4.8.0        otel_0.2.0         cli_3.6.6          withr_3.0.2       
 [29] magrittr_2.0.5     digest_0.6.39      grid_4.6.0         vroom_1.7.1       
 [33] hms_1.1.4          lifecycle_1.0.5    vctrs_0.7.3        evaluate_1.0.5    
-[37] glue_1.8.1         farver_2.1.2       pacman_0.5.1       rmarkdown_2.31    
-[41] tools_4.6.0        pkgconfig_2.0.3    htmltools_0.5.9   </code></pre>
+[37] glue_1.8.1         cellranger_1.1.0   farver_2.1.2       pacman_0.5.1      
+[41] rmarkdown_2.31     tools_4.6.0        pkgconfig_2.0.3    htmltools_0.5.9   </code></pre>
 </div>
 </div>
 </section>

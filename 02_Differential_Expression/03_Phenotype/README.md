@@ -2,7 +2,8 @@
 
 This step correlates each protein's pre-to-post change with the same leg's change in muscle size
 and quality. It reads the protein table from `01_Preprocess/02_Quantification/c_data/proteins.rds`
-and the ultrasound outcomes from `00_Input/phenotype.csv`. `c_data/03_phenotype.xlsx` holds the
+and the ultrasound outcomes from `00_Input/phenotype.csv`, and the training hits from
+`02_Differential/c_data/02_differential.xlsx`. `c_data/03_phenotype.xlsx` holds the
 Spearman r, p and FDR for every protein and outcome, and the hit counts below. The rendered
 notebook is `b_reports/03_phenotype.html`.
 
@@ -28,6 +29,10 @@ the outcome.
 Chance is 152 nominal hits from 3,042 proteins. Nothing survives BH, and the best adjusted p is
 0.281. With 32 pairs the smallest paired correlation the test can resolve is about 0.5, so this is
 a null at that resolution.
+
+Of the 130 proteins that changed with training in either arm, 14 reach nominal p against pooled
+vl_csa where 7.8 are expected (one-sided Fisher p 0.022), and 12 against pooled rf_csa where 5.7
+are expected (p 0.011). The other six outcome and analysis pairs sit at chance.
 
 Classification is left to `02_Differential`, whose fitted model beats a paired Wilcoxon test on 32
 pairs.
