@@ -15,14 +15,14 @@ execute:
   message: false
 ---
 
-`02_Differential` asks which proteins changed between groups. This asks whether a
-protein's change tracks how much the muscle changed. The contrast model cannot
-answer it, because a contrast compares group means and carries no per-leg outcome.
+`02_Differential` asks which proteins changed between groups. This asks whether a protein's change
+tracks how much the muscle changed, which a contrast cannot answer: it compares group means and
+carries no per-leg outcome.
 
-Two framings. Pooled takes all 65 legs and correlates each protein's pre-to-post change with
-that leg's phenotype change. Differential takes the 32 participants with both legs and asks
-whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference
-in phenotype, which removes every between-participant confound.
+Pooled correlates each protein's pre-to-post change with the phenotype change across all 65 legs.
+Differential takes the 32 participants with both legs and correlates the BFR-minus-high-load
+difference in protein with the same difference in phenotype, removing every between-participant
+confound.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, readxl, writexl)
@@ -31,14 +31,14 @@ proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "protei
 phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 ```
 
-`r format(nrow(proteins), big.mark = ",")` proteins mean `r round(nrow(proteins) * 0.05)` nominal
-hits are expected at p < 0.05, so no single protein is read at nominal p. BH within each analysis and
+`r format(nrow(proteins), big.mark = ",")` proteins give `r round(nrow(proteins) * 0.05)` nominal
+hits at p < 0.05 by chance, so no single protein is read at nominal p. BH within each analysis and
 outcome is the reported quantity.
 
 ## Pairing
 
-A leg contributes only when both timepoints were acquired, which is what makes a change score
-definable. S06's left leg has T1 only, so it drops here and nowhere else.
+A leg needs both timepoints for a change score. S06's left leg has T1 only, so it drops here and
+nowhere else.
 
 ```{r pairs}
 targets <- proteins$targets |>
@@ -62,8 +62,8 @@ tibble(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
 
 ## Outcomes
 
-Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area is the size
-outcome; echo intensity is the quality one, and falls when muscle composition improves.
+Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area measures size; echo
+intensity measures quality and falls as composition improves.
 
 ```{r outcomes}
 leg_phenotype <- legs |>
@@ -83,9 +83,8 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 
 ## Correlations
 
-Neither a protein change nor an echo intensity change is expected to be normal, so every
-correlation is Spearman. Ties make `cor.test` fall back from its exact p to the approximation and warn on every
-call, so the warnings are suppressed rather than printed 24,336 times.
+Neither change is expected to be normal, so every correlation is Spearman. Ties make `cor.test` fall
+back to its approximation and warn on every call, so the 24,336 warnings are suppressed.
 
 ```{r correlate}
 spearman_by_row <- function(values, outcome) {
@@ -131,8 +130,8 @@ summary_table <- results |>
 summary_table
 ```
 
-Read `ratio` first. A value near 1 means the nominal count is what `r format(nrow(proteins), big.mark = ",")` tests return when
-nothing is there, whatever the smallest p happens to be.
+Read `ratio` first: near 1, the nominal count is what `r format(nrow(proteins), big.mark = ",")`
+tests return when nothing is there, whatever the smallest p.
 
 ```{r figure}
 #| fig-width: 7
@@ -149,9 +148,9 @@ ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
 
 ## Training hits among the leads
 
-A training hit is a protein at BH < 0.05 in either Post-Pre contrast of `02_Differential`. The
-table counts training hits at nominal p for each outcome, against the count expected if nominal
-hits fell at random, with a one-sided Fisher test.
+A training hit is a protein at BH < 0.05 in either Post-Pre contrast of `02_Differential`. The table
+counts training hits at nominal p per outcome against the count expected by chance, with a one-sided
+Fisher test.
 
 ```{r training-overlap}
 dep_matrix <- read_excel(
@@ -176,9 +175,9 @@ training_overlap <- results |>
 training_overlap
 ```
 
-Both pooled CSA outcomes hold about twice the expected count, and the other six sit at chance.
-Proteins that changed with training vary more across legs, which gives them more power in a
-pooled correlation.
+Both pooled CSA outcomes hold about twice the expected count; the other six sit at chance. Proteins
+that changed with training vary more across legs, which gives them more power in a pooled
+correlation.
 
 ```{r write}
 sheets <- list(
