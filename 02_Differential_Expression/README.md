@@ -12,3 +12,11 @@ ultrasound outcomes and writes `03_protein_association.xlsx` and a PDF of every 
 [`04_Protein_Classification`](04_Protein_Classification/README.md) measures how well each protein
 separates the study groups and writes one ROC PDF per task. The first two are Quarto notebooks,
 since they hold the limpa steps; the last two are plain R scripts.
+
+## What each step answers
+
+| Step | Question | Answer |
+|---|---|---|
+| `02_Differential` | Which proteins change? | 60 with BFR training and 107 with HLRT at FDR 0.05; none between the arms or in the interaction. |
+| `03_Protein_Association` | Does a protein's change track the phenotype? | No protein survives BH. |
+| `04_Protein_Classification` | Does a protein separate the groups? | 53 on BFR training and 220 on HLRT after BH; BFR against HLRT sits at chance. |

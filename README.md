@@ -48,7 +48,7 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-The block takes about three and a half minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
+The block takes about four minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
 only when the precursor matrix changes.
 
