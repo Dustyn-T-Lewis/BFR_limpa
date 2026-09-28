@@ -195,7 +195,7 @@ set_label <- function(database, pathway) {
   str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
 }
 
-# Every set reaching nominal p gets a panel, twelve to a page, by collection then p. `draw` builds
+# Every set reaching nominal p gets a panel, twelve to a page, smallest p first. `draw` builds
 # the plot from one page's rows: a paginating facet would build every panel for every page.
 paginate <- function(data, draw, number, title, text, scales = "fixed") {
   pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
@@ -211,7 +211,7 @@ roc_figure <- function(task_name, number) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
     filter(task == task_name, p_paired < 0.05) |>
-    arrange(database, p_paired)
+    arrange(p_paired)
   values <- spec$values
   curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, fdr, ...) {
     coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
@@ -248,7 +248,7 @@ roc_figure <- function(task_name, number) {
       "ROC curves for all %d sets whose singscore separates the groups at nominal p, across %d",
       nrow(hits), length(spec$positive)
     ),
-    sprintf("paired %s, by collection then p. AUC has its direction fixed: red", spec$unit),
+    sprintf("paired %s, smallest p first. AUC has its direction fixed: red", spec$unit),
     sprintf("separates higher in %s, blue lower.", spec$favours),
     "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
     "signed-rank test, q from BH within collection and task.", chance_line,
@@ -259,7 +259,7 @@ roc_figure <- function(task_name, number) {
 association_figure <- function(which_analysis, number, title, population) {
   hits <- set_association |>
     filter(analysis == which_analysis, p < 0.05) |>
-    arrange(database, p)
+    arrange(p)
   points <- pmap(hits, function(set_id, database, pathway, outcome, n, r, p, fdr, ...) {
     arms <- by_arm |>
       filter(set_id == !!set_id, outcome == !!outcome) |>
@@ -298,7 +298,7 @@ association_figure <- function(which_analysis, number, title, population) {
       "All %d set-outcome pairs whose Spearman correlation reaches nominal p in the %s",
       nrow(hits), which_analysis
     ),
-    sprintf("analysis (%s), by collection then p.", population),
+    sprintf("analysis (%s), smallest p first.", population),
     "Lines are fitted within each arm; the header r is the", which_analysis, "correlation and",
     "the inset gives it within each arm. q from BH within collection and outcome.", chance_line,
     "Data: set_association and set_by_arm sheets of 05_classify_and_associate_sets.xlsx."
