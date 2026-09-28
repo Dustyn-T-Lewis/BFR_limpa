@@ -6,9 +6,9 @@ This step scores every sample on every set with singscore, from
 
 The score matrix is written twice: as a sheet in `c_data/04_run_singscore.xlsx`, beside
 per-collection medians and the principal-component check, and as `c_data/set_scores.rds`, which
-`05_classify_and_associate_sets` reads. singscore values carry exact rank ties, and Excel changes
-the last bit of some, which breaks ties and moves 05's Wilcoxon and Spearman p by up to 10%. S11 is
-in `b_reports/04_run_singscore_figures.pdf`.
+`05_set_classification` and `06_set_association` read. singscore values carry exact rank ties, and
+Excel changes the last bit of some, which breaks ties and moves 05's Wilcoxon and Spearman p by up
+to 10%. S11 is in `b_reports/04_run_singscore_figures.pdf`.
 
 ```sh
 Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R

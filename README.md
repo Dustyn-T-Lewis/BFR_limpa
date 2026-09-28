@@ -38,10 +38,10 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
-quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd       --output-dir ../b_reports
+quarto render 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd --output-dir ../b_reports
 
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
-         03_enrich_scatter_fgsea 04_run_singscore 05_classify_and_associate_sets; do
+         03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association; do
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
 ```

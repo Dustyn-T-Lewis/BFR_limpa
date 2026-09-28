@@ -226,10 +226,10 @@ Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 
 ## Outputs
 
-`proteins.rds` holds abundance, standard error and detected-precursor count per protein and
-sample. Every sub-stage of `02_Differential_Expression` reads it, as do `00_build_gene_sets`,
-`01_run_fgsea_and_fry`, `04_run_singscore` and `05_classify_and_associate_sets`. Keep the `.rds`:
-abundances alone lose the standard errors.
+`proteins.rds` holds abundance, standard error and detected-precursor count per protein and sample.
+Every sub-stage of `02_Differential_Expression` reads it, as do `00_build_gene_sets`,
+`01_run_fgsea_and_fry`, `04_run_singscore`, `05_set_classification` and `06_set_association`. Keep
+the `.rds`: abundances alone lose the standard errors.
 
 ```{r write}
 sheets <- list(dpc_parameters = dpc_parameters, protein_quality = protein_quality)
