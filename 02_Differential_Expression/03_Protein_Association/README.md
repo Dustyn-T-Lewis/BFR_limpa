@@ -4,12 +4,11 @@ This step correlates each protein's pre-to-post change with the same leg's chang
 quality. It reads `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`
 and the training hits in `02_Differential/c_data/02_differential.xlsx`, and writes Spearman r, p and
 FDR per protein and outcome, plus the counts below, to `c_data/03_protein_association.xlsx`.
-`b_reports/03_protein_association.html` is the report, and
-`b_reports/03_protein_association_figures.pdf` draws every protein-outcome pair at nominal p, twelve
-to a page, one block per analysis and outcome.
+`b_reports/03_protein_association_figures.pdf` opens with hits against chance per outcome, then
+draws every protein-outcome pair at nominal p, twelve to a page, one block per analysis and outcome.
 
 ```sh
-quarto render 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd --output-dir ../b_reports
+Rscript 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.R
 ```
 
 Pooled correlations use all 65 legs. Differential ones use 32 participants, correlating the BFR
@@ -33,5 +32,5 @@ Of the 130 training hits in either arm, 14 reach nominal p against pooled vl_csa
 expected (one-sided Fisher p 0.022), and 12 against pooled rf_csa where 5.7 are expected (p 0.011).
 The other six pairs sit at chance.
 
-Protein classification is `02_Differential`, whose fitted model beats a paired Wilcoxon test on 32
-pairs. Set-level association is `03_Pathway_Enrichment/06_set_association`.
+Protein classification by ROC is `04_Protein_Classification`; `02_Differential` gives the
+model-based group test. Set-level association is `03_Pathway_Enrichment/06_set_association`.

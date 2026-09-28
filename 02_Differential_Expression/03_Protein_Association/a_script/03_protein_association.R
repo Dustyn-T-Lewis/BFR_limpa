@@ -1,44 +1,15 @@
----
-title: "03 · Protein association"
-subtitle: "Every protein correlated with the ultrasound outcomes"
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    embed-resources: true
-    df-print: kable
-    fig-width: 7
-    fig-height: 5
-    fig-dpi: 150
-    fig-align: center
-execute:
-  message: false
----
+# Each protein's pre-to-post change against the same leg's change in muscle size and quality.
+# Pooled uses all legs; differential uses participants with both legs and correlates the BFR minus
+# HLRT differences, so anything constant within a participant cancels. BH within analysis and
+# outcome.
 
-Each protein's pre-to-post change is correlated with the same leg's change in muscle size and
-quality. The contrasts in `02_Differential` compare group means and have no per-leg outcome to
-correlate against.
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
 
-The pooled analysis uses all 65 legs. The differential analysis uses the 32 participants with both
-legs and correlates the BFR minus HLRT difference in protein with the same difference in phenotype,
-so anything constant within a participant cancels.
-
-```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, tibble, stringr, ggplot2, readr, readxl, writexl)
-
+stage <- here("02_Differential_Expression", "03_Protein_Association")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
-```
 
-With `r format(nrow(proteins), big.mark = ",")` proteins, about `r round(nrow(proteins) * 0.05)`
-reach p < 0.05 by chance, so results are read after BH within each analysis and outcome.
-
-## Pairing
-
-A leg needs both timepoints for a change score. S06's left leg has T1 only, so it drops here and
-nowhere else.
-
-```{r pairs}
+# A leg needs both timepoints for a change score; S06's left leg has T1 only.
 legs <- proteins$targets |>
   mutate(leg_id = paste(participant, leg, sep = "_")) |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
@@ -54,15 +25,8 @@ delta <- proteins$E[, legs$T2] - proteins$E[, legs$T1]
 colnames(delta) <- legs$leg_id
 paired <- delta[, leg_pairs$BFR] - delta[, leg_pairs$HLRT]
 colnames(paired) <- leg_pairs$participant
-c(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
-```
 
-## Outcomes
-
-Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area measures size; echo
-intensity measures quality and falls as composition improves.
-
-```{r outcomes}
+# Echo intensity falls as muscle composition improves.
 leg_phenotype <- legs |>
   left_join(select(phenotype, -treatment), by = c("participant", "leg")) |>
   mutate(
@@ -76,14 +40,8 @@ paired_outcome <- map(set_names(outcomes), \(name) {
   value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
   value[leg_pairs$BFR] - value[leg_pairs$HLRT]
 })
-```
 
-## Correlations
-
-Neither change is expected to be normal, so every correlation is Spearman. Ties make `cor.test` fall
-back to its approximation and warn on every call, so the 24,336 warnings are suppressed.
-
-```{r correlate}
+# Ties make cor.test fall back to its approximation and warn on every one of 24,336 calls.
 spearman_by_row <- function(values, outcome) {
   fits <- suppressWarnings(apply(values, 1, \(row) {
     test <- cor.test(row, outcome, method = "spearman")
@@ -105,11 +63,7 @@ results <- map(set_names(outcomes), \(name) {
   mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome)) |>
   mutate(gene = proteins$genes$Genes[match(protein, rownames(proteins$genes))]) |>
   relocate(analysis, outcome, protein, gene)
-```
 
-## What survives
-
-```{r summary}
 summary_table <- results |>
   summarise(
     proteins = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
@@ -118,37 +72,13 @@ summary_table <- results |>
   ) |>
   mutate(ratio = round(nominal / expected, 2)) |>
   arrange(analysis, outcome)
-summary_table
-```
 
-`ratio` divides the nominal count by that chance count. Near 1, the nominal hits are what
-`r format(nrow(proteins), big.mark = ",")` tests return when nothing is there, whatever the smallest
-p.
-
-```{r figure}
-#| fig-height: 4
-ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
-  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
-  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
-  scale_fill_manual(values = c(pooled = "#B2182B", differential = "#2166AC"), name = NULL) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  labs(x = "nominal hits / chance expectation", y = NULL) +
-  theme_minimal(base_size = 10) +
-  theme(panel.grid.major.y = element_blank(), legend.position = "top")
-```
-
-## Training hits among the leads
-
-A training hit is a protein at BH < 0.05 in either Post-Pre contrast of `02_Differential`. The table
-counts training hits at nominal p per outcome against the count expected by chance, with a one-sided
-Fisher test.
-
-```{r training-overlap}
-dep_matrix <- read_excel(
+# Training hits are BH < 0.05 in either Post-Pre contrast. They vary more across legs, which gives
+# them more power in a pooled correlation, so an excess here is a lead, not a finding.
+training_hits <- read_excel(
   here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
   "DEP_matrix"
-)
-training_hits <- dep_matrix |>
+) |>
   filter(`BFR_Post-Pre_adj.P.Val` < 0.05 | `HLRT_Post-Pre_adj.P.Val` < 0.05) |>
   pull(protein)
 training_overlap <- results |>
@@ -163,20 +93,28 @@ training_overlap <- results |>
     .by = c(analysis, outcome)
   ) |>
   arrange(analysis, outcome)
-training_overlap
-```
 
-Both pooled CSA outcomes hold about twice the expected count; the other six sit at chance. Proteins
-that changed with training vary more across legs, which gives them more power in a pooled
-correlation.
+chance_page <- ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
+  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  scale_fill_manual(values = c(pooled = "#B2182B", differential = "#2166AC"), name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    x = "nominal hits / chance expectation", y = NULL,
+    caption = str_wrap(paste(
+      "Nominal hits relative to chance, per outcome.", format(nrow(proteins), big.mark = ","),
+      "proteins give about",
+      round(nrow(proteins) * 0.05), "nominal hits by chance, so a ratio near 1 is what the tests",
+      "return when nothing is there. Data: summary sheet of 03_protein_association.xlsx."
+    ), 110)
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.y = element_blank(), legend.position = "top",
+    plot.caption = element_text(hjust = 0, size = 8.5), plot.caption.position = "plot"
+  )
 
-## Figures
-
-Every protein–outcome pair at nominal p is drawn in `b_reports/03_protein_association_figures.pdf`,
-twelve to a page, one block per analysis and outcome, smallest p first. Pooled panels show one
-point per leg, coloured by arm; differential panels show one point per participant.
-
-```{r figures}
+# Every pair at nominal p, twelve to a page, one block per analysis and outcome, smallest p first.
 blocks <- results |>
   filter(p < 0.05) |>
   arrange(analysis, outcome, p) |>
@@ -229,17 +167,12 @@ pages <- imap(blocks, \(block, name) {
 }) |>
   list_flatten()
 pdf(
-  here(
-    "02_Differential_Expression", "03_Protein_Association", "b_reports",
-    "03_protein_association_figures.pdf"
-  ),
+  file.path(stage, "b_reports", "03_protein_association_figures.pdf"),
   width = 8.27, height = 11.69
 )
-walk(pages, print)
+walk(c(list(chance_page), pages), print)
 invisible(dev.off())
-```
 
-```{r write}
 sheets <- list(
   summary = summary_table,
   training_overlap = training_overlap,
@@ -253,10 +186,7 @@ overview <- data.frame(
     "Spearman r, p and FDR per protein"
   )
 )
-out <- here("02_Differential_Expression", "03_Protein_Association", "c_data")
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "03_protein_association.xlsx"))
-```
-
-```{r session}
+write_xlsx(
+  c(list(overview = overview), sheets), file.path(stage, "c_data", "03_protein_association.xlsx")
+)
 sessionInfo()
-```
