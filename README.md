@@ -1,9 +1,9 @@
 # BFR Proteomics
 
-DIA mass-spectrometry proteomics from a unilateral resistance training trial. Each participant
-trained one leg with blood-flow restriction and the other with conventional high load. Biopsies
-came from both legs before and after training: 33 participants and 131 MS runs, four samples per
-participant except one participant whose post-training biopsy from one leg was not acquired.
+DIA mass-spectrometry proteomics from a unilateral resistance training trial: each participant
+trained one leg with blood-flow restriction and the other with conventional high load. Both legs
+were biopsied before and after training, giving 131 MS runs from 33 participants; one post-training
+biopsy from one leg was not acquired.
 
 The primary comparison is the interaction: whether blood-flow restriction alters the muscle
 proteome differently than heavy load.
@@ -19,11 +19,11 @@ proteome differently than heavy load.
 | `04_Network/` | proteins that move together | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report in stages 01
-and 02, one figure PDF per step in stage 03) and `c_data/` (one workbook of tables, plus an `.rds`
-where a later step needs the R object). Stages 01 and 02 are Quarto notebooks; stage 03 is plain R
-scripts. Data passes through disk, so any sub-stage re-runs from a fresh session. No notebook uses
-knitr caching. "Planned" means only a README exists.
+Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report in stages 01 and
+02, one figure PDF per step in stage 03) and `c_data/` (one workbook of tables, plus an `.rds` where
+a later step needs the R object). Stages 01 and 02 are Quarto notebooks; stage 03 is plain R
+scripts. Data passes through disk, so any sub-stage reruns from a fresh session, and no notebook
+caches. "Planned" means only a README exists.
 
 ## Running the pipeline
 
@@ -46,19 +46,16 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
 done
 ```
 
-The block above ran in 155 seconds. `dpcQuant()` takes about 100 minutes and runs separately, from
-`01_Preprocess/02_Quantification/a_script/02_quantify_run.R`. Its output is committed, so re-run
-it only when the precursor matrix changes.
+The block ran in 155 seconds. `dpcQuant()` takes about 100 minutes, so it runs separately from
+`01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
+only when the precursor matrix changes.
 
 ## Approach
 
-Half of a DIA matrix is missing, and low-abundance peptides are missed more often than
-abundant ones. limpa models that relationship instead of imputing a replacement. Every protein
-gets an estimate in every sample with a standard error, and the standard error propagates into
-the downstream statistics.
-
-So nothing is filtered on missingness before quantification, and the protein matrix never goes
-to a standard linear model.
+Half of a DIA matrix is missing, and low-abundance peptides go missing more often. limpa models that
+instead of imputing, giving every protein an estimate and a standard error in every sample, and the
+standard error carries into the downstream statistics. So nothing is filtered on missingness before
+quantification, and the protein matrix never goes to a standard linear model.
 
 ## Dependencies
 

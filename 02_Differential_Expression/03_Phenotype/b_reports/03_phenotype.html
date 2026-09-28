@@ -2237,18 +2237,18 @@ vertical-align: -.125em;
 </header>
 
 
-<p><code>02_Differential</code> asks which proteins changed between groups. This asks whether a protein’s change tracks how much the muscle changed. The contrast model cannot answer it, because a contrast compares group means and carries no per-leg outcome.</p>
-<p>Two framings. Pooled takes all 65 legs and correlates each protein’s pre-to-post change with that leg’s phenotype change. Differential takes the 32 participants with both legs and asks whether the BFR-minus-high-load difference in a protein tracks the BFR-minus-high-load difference in phenotype, which removes every between-participant confound.</p>
+<p><code>02_Differential</code> asks which proteins changed between groups. This asks whether a protein’s change tracks how much the muscle changed, which a contrast cannot answer: it compares group means and carries no per-leg outcome.</p>
+<p>Pooled correlates each protein’s pre-to-post change with the phenotype change across all 65 legs. Differential takes the 32 participants with both legs and correlates the BFR-minus-high-load difference in protein with the same difference in phenotype, removing every between-participant confound.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>3,042 proteins mean 152 nominal hits are expected at p &lt; 0.05, so no single protein is read at nominal p. BH within each analysis and outcome is the reported quantity.</p>
+<p>3,042 proteins give 152 nominal hits at p &lt; 0.05 by chance, so no single protein is read at nominal p. BH within each analysis and outcome is the reported quantity.</p>
 <section id="pairing" class="level2">
 <h2 class="anchored" data-anchor-id="pairing">Pairing</h2>
-<p>A leg contributes only when both timepoints were acquired, which is what makes a change score definable. S06’s left leg has T1 only, so it drops here and nowhere else.</p>
+<p>A leg needs both timepoints for a change score. S06’s left leg has T1 only, so it drops here and nowhere else.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets <span class="sc">|&gt;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>))</span>
@@ -2291,7 +2291,7 @@ vertical-align: -.125em;
 </section>
 <section id="outcomes" class="level2">
 <h2 class="anchored" data-anchor-id="outcomes">Outcomes</h2>
-<p>Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area is the size outcome; echo intensity is the quality one, and falls when muscle composition improves.</p>
+<p>Four ultrasound measures, each as a post-minus-pre change. Cross-sectional area measures size; echo intensity measures quality and falls as composition improves.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>leg_phenotype <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(phenotype, <span class="sc">-</span>treatment), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>)) <span class="sc">|&gt;</span></span>
@@ -2310,7 +2310,7 @@ vertical-align: -.125em;
 </section>
 <section id="correlations" class="level2">
 <h2 class="anchored" data-anchor-id="correlations">Correlations</h2>
-<p>Neither a protein change nor an echo intensity change is expected to be normal, so every correlation is Spearman. Ties make <code>cor.test</code> fall back from its exact p to the approximation and warn on every call, so the warnings are suppressed rather than printed 24,336 times.</p>
+<p>Neither change is expected to be normal, so every correlation is Spearman. Ties make <code>cor.test</code> fall back to its approximation and warn on every call, so the 24,336 warnings are suppressed.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>spearman_by_row <span class="ot">&lt;-</span> <span class="cf">function</span>(values, outcome) {</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  usable <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(outcome)</span>
@@ -2474,7 +2474,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>Read <code>ratio</code> first. A value near 1 means the nominal count is what 3,042 tests return when nothing is there, whatever the smallest p happens to be.</p>
+<p>Read <code>ratio</code> first: near 1, the nominal count is what 3,042 tests return when nothing is there, whatever the smallest p.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(summary_table, <span class="fu">aes</span>(ratio, outcome, <span class="at">fill =</span> analysis)) <span class="sc">+</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>, <span class="at">colour =</span> <span class="st">&quot;grey40&quot;</span>) <span class="sc">+</span></span>
@@ -2495,7 +2495,7 @@ vertical-align: -.125em;
 </section>
 <section id="training-hits-among-the-leads" class="level2">
 <h2 class="anchored" data-anchor-id="training-hits-among-the-leads">Training hits among the leads</h2>
-<p>A training hit is a protein at BH &lt; 0.05 in either Post-Pre contrast of <code>02_Differential</code>. The table counts training hits at nominal p for each outcome, against the count expected if nominal hits fell at random, with a one-sided Fisher test.</p>
+<p>A training hit is a protein at BH &lt; 0.05 in either Post-Pre contrast of <code>02_Differential</code>. The table counts training hits at nominal p per outcome against the count expected by chance, with a one-sided Fisher test.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>dep_matrix <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_differential.xlsx&quot;</span>),</span>
@@ -2600,7 +2600,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>Both pooled CSA outcomes hold about twice the expected count, and the other six sit at chance. Proteins that changed with training vary more across legs, which gives them more power in a pooled correlation.</p>
+<p>Both pooled CSA outcomes hold about twice the expected count; the other six sit at chance. Proteins that changed with training vary more across legs, which gives them more power in a pooled correlation.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">summary =</span> summary_table,</span>

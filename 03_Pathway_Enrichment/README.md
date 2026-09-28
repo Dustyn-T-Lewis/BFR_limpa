@@ -14,15 +14,14 @@ scores every sample on every set and saves the matrix as `set_scores.rds`.
 [`05_classify_and_associate_sets`](05_classify_and_associate_sets/README.md) asks how well those
 scores separate the study groups and whether they track the phenotype.
 
-Figures are numbered S1 to S19 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10–S11
-from `03_`, S12 from `04_`, and S13–S19 from `05_`, which run over 128 pages. Each A4 page carries
-a caption beneath it in the supplement style, with the title, one entry per lettered panel, the
-encodings and the workbook sheet the data come from. Findings are written in these READMEs, not on
-the figures.
+Figures run S1 to S19 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10–S11 from `03_`, S12
+from `04_`, and S13–S19 from `05_` over 128 pages. Each A4 page has a supplement-style caption with
+the title, one entry per lettered panel, the encodings and the source sheet. Findings live in these
+READMEs, not on the figures.
 
 ## Methods
 
-fgsea is a competitive test. It asks whether a set sits toward one end of the protein ranking. fry
-is self-contained and asks whether the set moved at all under the fitted design. Both run on the
-same 1,990 sets and both ship. fgsea assumes proteins are exchangeable, which co-regulated sets
-violate, and fry does not assume it.
+fgsea is competitive: it asks whether a set sits toward one end of the protein ranking, and assumes
+exchangeable proteins, which co-regulated sets violate. fry is self-contained: it asks whether the
+set moved at all under the fitted design, with no such assumption. Both run on the same 1,990 sets
+and both ship.

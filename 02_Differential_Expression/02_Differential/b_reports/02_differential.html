@@ -2240,7 +2240,7 @@ vertical-align: -.125em;
 </header>
 
 
-<p>limpa’s sequence for a contrast-based analysis is <code>dpcDE</code>, <code>contrasts.fit</code>, <code>eBayes</code>, <code>topTable</code>. <code>dpcDE()</code> is the only entry point that reads the standard errors <code>dpcQuant()</code> produced, so it replaces <code>lmFit()</code>. <code>proteins.rds</code> arrives already normalised, from <code>01_Preprocess/02_Quantification</code>.</p>
+<p>limpa’s contrast sequence is <code>dpcDE</code>, <code>contrasts.fit</code>, <code>eBayes</code>, <code>topTable</code>. <code>dpcDE()</code> replaces <code>lmFit()</code> because only it reads the standard errors from <code>dpcQuant()</code>. <code>proteins.rds</code> arrives normalised from <code>01_Preprocess/02_Quantification</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, limpa, limma, dplyr, ggplot2, purrr, tibble, tidyr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2256,7 +2256,7 @@ vertical-align: -.125em;
 </div>
 <section id="fit" class="level2">
 <h2 class="anchored" data-anchor-id="fit">Fit</h2>
-<p><code>sample.weights = TRUE</code> estimates one quality weight per sample. Biopsies differed in how much blood they carried, and removing the contaminant rows does not undo what that did to the sample underneath.</p>
+<p><code>sample.weights = TRUE</code> estimates one quality weight per sample, because removing contaminant rows does not undo what a bloody biopsy did to the sample.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, d<span class="sc">$</span>design, <span class="at">sample.weights =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
@@ -2277,7 +2277,7 @@ vertical-align: -.125em;
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">contrasts.fit</span>(fit, d<span class="sc">$</span>contrasts)</span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit, <span class="at">robust =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Weights downweight a sample in proportion to how noisy it looks; none is dropped. The downweighting should fall evenly across the four cells, because uneven weighting would act like a covariate nobody declared.</p>
+<p>Weights scale with how noisy a sample looks; none is dropped. They should fall evenly across the four cells, since uneven weighting acts as an undeclared covariate.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">group =</span> proteins<span class="sc">$</span>targets<span class="sc">$</span>group, <span class="at">weight =</span> sample_weights) <span class="sc">|&gt;</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
@@ -2325,7 +2325,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>Effect size the interaction could detect at 80% power, two-sided 0.05. A contrast returning no hits says nothing about effects smaller than this number, so quote the two together. The interaction has returned no hits under every variant tried.</p>
+<p>Effect size the interaction could detect at 80% power, two-sided 0.05. An empty contrast says nothing about smaller effects, so quote the two together. The interaction has returned no hits under every variant tried.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> fit<span class="sc">$</span>stdev.unscaled[, <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>] <span class="sc">*</span> <span class="fu">sqrt</span>(fit<span class="sc">$</span>s2.post)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">quantile</span>(se <span class="sc">*</span> (<span class="fu">qt</span>(<span class="fl">0.975</span>, fit<span class="sc">$</span>df.total) <span class="sc">+</span> <span class="fu">qt</span>(<span class="fl">0.80</span>, fit<span class="sc">$</span>df.total)), <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.9</span>)), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2337,7 +2337,7 @@ vertical-align: -.125em;
 </section>
 <section id="results" class="level2">
 <h2 class="anchored" data-anchor-id="results">Results</h2>
-<p>The five contrasts share participants and the interaction is a difference of two of the others, so pooling them would not control anything that can be stated.</p>
+<p>BH runs within each contrast: the five share participants and the interaction is a difference of two others, so pooling them would control nothing that can be stated.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), \(cn) {</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># sort.by = &quot;none&quot; keeps every contrast in the matrix&#39;s own protein order, so the five</span></span>
@@ -2414,8 +2414,8 @@ vertical-align: -.125em;
 </section>
 <section id="is-a-contrast-empty-or-is-it-being-tested-conservatively" class="level2">
 <h2 class="anchored" data-anchor-id="is-a-contrast-empty-or-is-it-being-tested-conservatively">Is a contrast empty, or is it being tested conservatively</h2>
-<p>Each number misleads alone. <code>propTrueNull()</code> estimates the null proportion from the p-value distribution, and saturates at 1, so it cannot separate a flat null from a conservative one. Median |t| is 0.674 under a calibrated null, so a value below that means the tests are conservative. <code>p_below_0.2</code> is 0.2 under a uniform null, so a value below that means the distribution rises toward 1 rather than being flat.</p>
-<p>Read the between-leg contrasts against <code>BFR_Pre-HLRT_Pre</code>, not against theory. That contrast is a true null by construction, and whatever it returns is what a null looks like in this design.</p>
+<p>Each number misleads alone. <code>propTrueNull()</code> estimates the null proportion from the p-value distribution but saturates at 1, so it cannot separate a flat null from a conservative one. Median |t| is 0.674 under a calibrated null and <code>p_below_0.2</code> is 0.2 under a uniform one; values below these mean conservative tests and a distribution rising toward 1.</p>
+<p>Read the between-leg contrasts against <code>BFR_Pre-HLRT_Pre</code>, a true null by construction, rather than against theory.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
@@ -2476,7 +2476,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>All three numbers read the same histogram, so it is drawn directly. A spike at zero on a flat background is signal; a distribution sloping up toward 1 is a test running conservative.</p>
+<p>All three numbers read the same histogram, drawn below: a spike at zero on a flat background is signal; a slope up toward 1 is a conservative test.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(results, <span class="fu">aes</span>(P.Value)) <span class="sc">+</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.05</span>, <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">fill =</span> <span class="st">&quot;grey35&quot;</span>) <span class="sc">+</span></span>
@@ -2492,11 +2492,11 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>The two within-leg contrasts spike at zero against a roughly flat background. The three between-leg contrasts slope upward instead, the negative control among them, and that control is a true null by construction. So the interaction returning nothing says that no between-modality difference is detectable under a test that is under-calling, which is a weaker claim than the two training modes producing equivalent proteomes.</p>
+<p>The two within-leg contrasts spike at zero on a roughly flat background. The three between-leg contrasts slope upward, the negative control among them. So the empty interaction means no between-modality difference is detectable under an under-calling test, a weaker claim than equivalent proteomes.</p>
 </section>
 <section id="significant-and-large-enough" class="level2">
 <h2 class="anchored" data-anchor-id="significant-and-large-enough">Significant and large enough</h2>
-<p><code>treat()</code> tests against a fold-change floor rather than against zero, and unlike filtering on logFC afterwards it controls an error rate. It is stringent by construction: <code>lfc = log2(1.15)</code> tests the null that |logFC| is at most 0.202. One floor is fixed in advance rather than swept, so the count reads as a property of that threshold rather than of the data. <code>robust = TRUE</code> matches the moderation used for the main fit, and is passed explicitly because <code>treat()</code> defaults to <code>FALSE</code>.</p>
+<p><code>treat()</code> tests against a fold-change floor and, unlike filtering on logFC afterwards, controls an error rate. <code>lfc = log2(1.15)</code> tests the null that |logFC| is at most 0.202. The floor is fixed in advance, not swept, so the count belongs to that threshold. <code>robust = TRUE</code> matches the main fit and is explicit because <code>treat()</code> defaults to <code>FALSE</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ft <span class="ot">&lt;-</span> <span class="fu">treat</span>(fit, <span class="at">lfc =</span> <span class="fu">log2</span>(<span class="fl">1.15</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">enframe</span>(<span class="fu">colSums</span>(<span class="fu">decideTests</span>(ft) <span class="sc">!=</span> <span class="dv">0</span>), <span class="st">&quot;contrast&quot;</span>, <span class="st">&quot;n_q_05&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2539,8 +2539,8 @@ vertical-align: -.125em;
 <section id="the-pi-score" class="level2">
 <h2 class="anchored" data-anchor-id="the-pi-score">The pi score</h2>
 <p><code>pi_score</code> is <code>P.Value^abs(logFC)</code>, equal to <code>10^(-pi)</code> for the score of Xiao et al. (2014, PMID 22321699), so it ranks as the published <code>-log10(p) * |log2FC|</code> does. It controls no error rate, so it ranks within a contrast and selects nothing.</p>
-<p>It rewards large <code>|logFC|</code>, and here the largest fold changes come from the proteins with the fewest detected precursors, whose values lean on DPC recovery. The observation count is reported alongside so that is visible.</p>
-<p>It is applied to the two contrasts that carry signal. Ranking the interaction would produce a table of its largest fold changes in a contrast whose <code>propTrueNull</code> sits at its ceiling, which invites reading structure into noise no matter what the caption says.</p>
+<p>It rewards large <code>|logFC|</code>, and the largest fold changes here come from proteins with the fewest detected precursors, whose values lean on DPC recovery; the observation count sits alongside.</p>
+<p>It is applied only to the two contrasts that carry signal. On the interaction, whose <code>propTrueNull</code> sits at its ceiling, it would rank noise.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>obs_per_sample <span class="ot">&lt;-</span> <span class="fu">rowMeans</span>(proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2784,8 +2784,8 @@ vertical-align: -.125em;
 </section>
 <section id="outputs" class="level2">
 <h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
-<p><code>DEP_matrix</code> is one row per protein and three columns per contrast, which is the shape for reading across contrasts and for handing to a later stage. The long form it is built from is not written: <code>fit.rds</code> holds the complete fit, so nothing is lost by dropping it.</p>
-<p>Written before the negative control is checked, so a failure leaves the evidence on disk. The workbook carries full precision; only the tables printed above are rounded.</p>
+<p><code>DEP_matrix</code> has one row per protein and three columns per contrast, for reading across contrasts and for later stages. The long form is not written, since <code>fit.rds</code> holds the complete fit.</p>
+<p>It is written before the negative control is checked, so a failure leaves the evidence on disk. The workbook keeps full precision; only printed tables are rounded.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>dep_matrix <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, NPrec, contrast, logFC, P.Value, adj.P.Val) <span class="sc">|&gt;</span></span>
@@ -2881,11 +2881,11 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>The hit count is printed rather than asserted, so a difference lands in the report, not in a halted render.</p>
+<p>The hit count is printed, not asserted, so a difference lands in the report instead of halting the render.</p>
 </section>
 <section id="slope-sensitivity" class="level2">
 <h2 class="anchored" data-anchor-id="slope-sensitivity">Slope sensitivity</h2>
-<p>The protein table uses the preset DPC slope of 0.7. This refits the same model on the fitted-slope run (0.488) after the same detection filter and normalisation. Rows count BH hits at 0.05 under each slope, and the proteins significant under both.</p>
+<p>This refits the model on the fitted-slope run (0.488), with the same detection filter and normalisation as the preset 0.7. Rows count BH hits at 0.05 under each slope and under both.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fitted_slope <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(fitted_slope_file)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>fitted_slope <span class="ot">&lt;-</span> fitted_slope[</span>

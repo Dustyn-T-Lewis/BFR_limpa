@@ -2239,7 +2239,7 @@ vertical-align: -.125em;
 </header>
 
 
-<p><code>readDIANN()</code> reads the DIA-NN report, applies q-value cutoffs and returns log2 precursor intensities. Every step after it removes rows and never columns: annotation artefacts of the search FASTA, precursors shared between protein groups, compound groups, and proteins skeletal muscle does not express. No sample is dropped and no missing value is filtered.</p>
+<p><code>readDIANN()</code> reads the DIA-NN report, applies q-value cutoffs and returns log2 precursor intensities. Every later step removes rows, never columns: annotation artefacts of the search FASTA, precursors shared between protein groups, compound groups, and proteins skeletal muscle does not express. Nothing is filtered on missing values.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, limpa, dplyr, stringr, purrr, readr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2302,8 +2302,8 @@ vertical-align: -.125em;
 </div>
 <section id="read" class="level2">
 <h2 class="anchored" data-anchor-id="read">Read</h2>
-<p><code>Protein.Ids</code> is not one of <code>readDIANN()</code>’s default <code>annotation.columns</code>, and the repair below cannot run without it. It is added to the defaults, not substituted for them, so <code>Protein.Names</code> still comes through for later annotation.</p>
-<p>Everything else stays at the defaults. <code>q.cutoffs = 0.01</code> over <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code> is the set the vignette recommends for a match-between-runs search. <code>intensity.column = &quot;Precursor.Normalised&quot;</code> is DIA-NN’s normalised column, which is why nothing here normalises again. <code>log = TRUE</code> means <code>y$E</code> arrives on the log2 scale, so never log it twice.</p>
+<p>The repair below needs <code>Protein.Ids</code>, which <code>readDIANN()</code> does not read by default, so it is added to the default <code>annotation.columns</code> and <code>Protein.Names</code> still comes through.</p>
+<p>Everything else is default: <code>q.cutoffs = 0.01</code> over <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code>, as the vignette recommends for a match-between-runs search; <code>intensity.column = &quot;Precursor.Normalised&quot;</code>, already normalised by DIA-NN, so this stage does not normalise again; and <code>log = TRUE</code>, so <code>y$E</code> is already log2.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">readDIANN</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;report.parquet&quot;</span>),</span>
@@ -2323,7 +2323,7 @@ vertical-align: -.125em;
 </section>
 <section id="map-runs-to-samples" class="level2">
 <h2 class="anchored" data-anchor-id="map-runs-to-samples">Map runs to samples</h2>
-<p>Columns come back named by DIA-NN <code>Run</code>. Matching them case-insensitively against <code>metadata$run</code> renames columns to <code>sample_id</code>, absorbs a run the instrument wrote <code>Cl_MDR_7E-T2</code> against <code>CL_MDR_7E-T2</code> in the sheet, and drops the discarded S08 injection, which is in the report but not the sheet.</p>
+<p>Columns arrive named by DIA-NN <code>Run</code>. A case-insensitive match against <code>metadata$run</code> renames them to <code>sample_id</code>, absorbs <code>Cl_MDR_7E-T2</code> (written <code>CL_MDR_7E-T2</code> in the sheet), and drops the discarded S08 injection, which is in the report but not the sheet.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">str_to_lower</span>(metadata<span class="sc">$</span>run), <span class="fu">str_to_lower</span>(<span class="fu">colnames</span>(y)))</span>
@@ -2352,9 +2352,9 @@ vertical-align: -.125em;
 </section>
 <section id="repair-the-annotation" class="level2">
 <h2 class="anchored" data-anchor-id="repair-the-annotation">Repair the annotation</h2>
-<p>The contaminant database appended to the search FASTA repeats proteins the human FASTA already lists, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it. Only the groups where every member is cRAP go; the rest have the prefix stripped.</p>
-<p>Order matters, because <code>Genes</code> carries the prefix too. One of the six cRAP-only symbols here is <code>cRAP-MB</code>: strip first and it becomes <code>MB</code>, which <code>must_keep</code> requires to survive, so precursors of a contaminant standard would merge into human myoglobin unnoticed. Two more cRAP-only rows carry no gene symbol at all, so no symbol list could catch them either.</p>
-<p>Stripping also repairs <code>Proteotypic</code>, which is why the muscle survives. <code>filterNonProteotypicPeptides()</code> believes the flag, and on the unrepaired annotation it deleted 13 of the <code>must_keep</code> symbols when that was last measured.</p>
+<p>The contaminant database appended to the search FASTA repeats proteins the human FASTA already lists, so myoglobin is reported as <code>P02144;cRAP-P02144</code> with <code>Proteotypic = 0</code>. Dropping every group that mentions <code>cRAP</code> would take CKM, MB, ALDOA, CAT, DES and FABP3 with it, so only groups where every member is cRAP go, and the rest have the prefix stripped.</p>
+<p>Order matters because <code>Genes</code> carries the prefix too. Stripping first would turn <code>cRAP-MB</code>, one of the six cRAP-only symbols here, into <code>MB</code>, which <code>must_keep</code> protects, and a contaminant standard would merge into human myoglobin unnoticed. Two more cRAP-only rows carry no gene symbol, so no symbol list could catch them.</p>
+<p>Stripping also repairs <code>Proteotypic</code>. <code>filterNonProteotypicPeptides()</code> trusts that flag, and on the unrepaired annotation it deleted 13 <code>must_keep</code> symbols when last measured.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">str_split</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Ids, <span class="st">&quot;;&quot;</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>crap_only <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(members, \(m) <span class="fu">all</span>(<span class="fu">str_starts</span>(m, <span class="st">&quot;cRAP-&quot;</span>)))</span>
@@ -2425,11 +2425,11 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>Reversed decoys are a second fault in the same chunk. The search FASTA already contained them, so DIA-NN scored them as targets and its own decoy column reads zero for every row. They carry 0.0011% of the starting signal, but they inflate the protein count and would surface as nonsense identifiers in any enrichment.</p>
+<p>The chunk also drops reversed decoys. The search FASTA already contained them, so DIA-NN scored them as targets and its decoy column reads zero throughout. They carry 0.0011% of the starting signal, yet inflate the protein count and would surface as nonsense identifiers in enrichment.</p>
 </section>
 <section id="limpas-precursor-filters" class="level2">
 <h2 class="anchored" data-anchor-id="limpas-precursor-filters">limpa’s precursor filters</h2>
-<p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is skipped: the vignette calls it optional and recommends keeping all proteins to retain maximum information. Nothing here filters on missingness either, because the vignette says precursors need no missing-value filtering, and those gaps are what <code>dpc()</code> recovers.</p>
+<p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is skipped, since the vignette calls it optional and recommends keeping all proteins. Nothing is filtered on missingness: the vignette says precursors need none, and <code>dpc()</code> models those gaps.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>summary_repaired <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>, signal_start)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2442,8 +2442,8 @@ vertical-align: -.125em;
 </section>
 <section id="contaminants" class="level2">
 <h2 class="anchored" data-anchor-id="contaminants">Contaminants</h2>
-<p>A needle biopsy bleeds and passes through skin, so a large share of signal here is blood, plasma, skin and antibody protein that muscle fibres do not express. Removal happens before quantification because <code>dpc()</code> fits one curve across every precursor and <code>dpcQuant()</code> estimates its prior from the global data, so contaminants left in place would shape the missing-value model that every muscle protein is then quantified through.</p>
-<p><code>contaminant_symbols</code> holds 147 gene symbols and <code>contaminant_families</code> four family patterns. <code>filterCompoundProteins()</code> removes groups holding several proteins, but one protein can still carry several gene symbols, so a test on the first symbol fails both ways. A group counts as contamination only when every one of its symbols does, which keeps myoglobin when DIA-NN reports it alongside a second name.</p>
+<p>A needle biopsy bleeds and passes through skin, so much of the signal is blood, plasma, skin and antibody protein that muscle fibres do not express. It is removed before quantification because <code>dpc()</code> fits one curve across every precursor and <code>dpcQuant()</code> takes its prior from the global data, so contaminants would shape the model every muscle protein is quantified through.</p>
+<p><code>contaminant_symbols</code> holds 147 gene symbols and <code>contaminant_families</code> four family patterns. One protein can carry several gene symbols even after <code>filterCompoundProteins()</code>, so testing the first symbol fails both ways. A group is contamination only when every symbol on it is, which keeps myoglobin when DIA-NN lists a second name.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>gene_symbols <span class="ot">&lt;-</span> <span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>n_multi <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">lengths</span>(gene_symbols) <span class="sc">&gt;</span> <span class="dv">1</span>)</span>
@@ -2613,7 +2613,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>9 of the groups tested list more than one gene symbol, which is why the per-member rule is needed. 211 distinct symbol strings were removed, carrying 27.95% of the starting signal.</p>
+<p>9 tested groups list more than one symbol. 211 distinct symbol strings were removed, carrying 27.95% of the starting signal.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -2624,13 +2624,13 @@ vertical-align: -.125em;
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>The medians above compare the four cells and show a gross imbalance in how bloody the biopsies were. They do not show a small one. Nothing adjusts for the fraction and no test is run on it. Blood takes MS duty cycle away from muscle protein, and biopsy technique varies between legs and between visits. <code>02_Differential</code> estimates one quality weight per sample; the weight absorbs part of this and is not aimed at it.</p>
+<p>The medians above can reveal a gross imbalance in blood content between the four cells, not a small one. Nothing adjusts for the fraction or tests it. Blood takes MS duty cycle from muscle protein, and biopsy technique varies between legs and visits. The per-sample quality weight in <code>02_Differential</code> absorbs part of this without targeting it.</p>
 </div>
 </div>
 </section>
 <section id="guard" class="level2">
 <h2 class="anchored" data-anchor-id="guard">Guard</h2>
-<p>All 28 symbols in <code>must_keep</code> must survive. The assertion runs after the last filter. It catches a broken repair, which deletes muscle through the <code>Proteotypic</code> flag, and an over-reaching contaminant rule, which deletes it directly.</p>
+<p>After the last filter, all 28 <code>must_keep</code> symbols must survive. That catches a broken repair, which deletes muscle through <code>Proteotypic</code>, and an over-reaching contaminant rule, which deletes it directly.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>))</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(must_keep <span class="sc">%in%</span> survivors))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2638,7 +2638,7 @@ vertical-align: -.125em;
 </section>
 <section id="outputs" class="level2">
 <h2 class="anchored" data-anchor-id="outputs">Outputs</h2>
-<p><code>precursors_filtered.rds</code> is read by <code>01_Preprocess/02_Quantification</code>. <code>01_filter.xlsx</code> is the record of what this stage did; its first sheet lists the others.</p>
+<p><code>01_Preprocess/02_Quantification</code> reads <code>precursors_filtered.rds</code>. <code>01_filter.xlsx</code> records what this stage did, with an overview as its first sheet.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  summary_repaired, summary_proteotypic, summary_compound, summary_contaminants</span>
