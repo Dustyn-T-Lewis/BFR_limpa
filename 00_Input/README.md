@@ -15,7 +15,7 @@ in the root README.
 
 Treatment is not the leg letter. Run names contain `D` and `E` (right and left). Which leg
 got restriction was counterbalanced, so the letter gives the side only. `metadata.csv` carries
-`treatment` as its own column, done by hand.
+`treatment` as its own column, entered by hand.
 
 The same sample has three names: the MS run name, our sample ID, and participant plus leg.
 `metadata.csv` holds all three and `01_Filtering` reconciles them once.

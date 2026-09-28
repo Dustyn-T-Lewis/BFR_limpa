@@ -1,30 +1,28 @@
 # 04_run_singscore
 
-Scores every sample on every set with singscore.
+This step scores every sample on every set with singscore. It reads the sets from
+`00_build_gene_sets/c_data/gene_sets.rds`, the catalogue and protein map from
+`00_build_gene_sets.xlsx`, and the protein table from
+`01_Preprocess/02_Quantification/c_data/proteins.rds`.
 
-- Reads: `00_build_gene_sets/c_data/gene_sets.rds`, `00_build_gene_sets.xlsx` (`set_catalog`,
-  `protein_gene_map`), `01_Preprocess/02_Quantification/c_data/proteins.rds`
-- Writes: `c_data/set_scores.rds` (read by `05_classify_and_associate_sets`),
-  `c_data/04_run_singscore.xlsx` (`overview`, `collection_spread`, `structure_check`,
-  `set_scores`), `b_reports/04_run_singscore_figures.pdf` (S12)
-- Run: `Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R`, 11
-  seconds.
+The score matrix is written twice. `c_data/04_run_singscore.xlsx` has it as a sheet for reading,
+with the median score and dispersion per collection and the principal-component check below.
+`c_data/set_scores.rds` is the copy `05_classify_and_associate_sets` reads. singscore values carry
+exact rank ties, and a trip through Excel changes the last bit of some of them, which breaks the
+ties and moves 05's Wilcoxon and Spearman p-values by up to 10%. Figure S12 is in
+`b_reports/04_run_singscore_figures.pdf`.
 
-## Notes
+```sh
+Rscript 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.R
+```
 
-singscore ranks proteins within each sample. It carries no p-value and never sees a contrast.
-Measured here, dropping 51 of 131 samples changed singscore values by 0 and GSVA values by up to
+singscore ranks proteins within each sample, so a score carries no p-value and never sees a
+contrast. Dropping 51 of the 131 samples changed singscore values by 0 and GSVA values by up to
 0.34, and the paired design needs that stability.
 
-Participant dominates raw scores (PC1 33.6%, of which participant explains 0.64), so later steps
-use within-leg change.
+Participant dominates the raw scores. The first principal component explains 33.6% of the
+variance, and participant explains 0.64 of that component, so later steps use the within-leg
+change.
 
-S12: (A) mean score against mean dispersion per set, coloured by collection; (B) score
-distribution by study group. Reactome scores highest and disperses least.
-
-## Outputs
-
-The score matrix is written twice: as a sheet for reading, and as `set_scores.rds`, which
-`05_classify_and_associate_sets` reads. singscore values carry exact rank ties, and a trip through
-Excel changes the last bit of some of them, which breaks the ties and moves 05's Wilcoxon and
-Spearman p-values by up to 10%.
+S12 plots each set's mean score against its mean dispersion, coloured by collection, and the score
+distribution in each study group. Reactome scores highest and disperses least.
