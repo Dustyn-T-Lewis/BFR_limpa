@@ -179,13 +179,10 @@ caption_text <- function(number, title, text, page = 1, n_pages = 1) {
   pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
   str_wrap(sprintf("S%d Figure%s. %s. %s", number, pages, title, text), 115)
 }
-chance_line <- paste0(
-  "Nominal p, uncorrected. Each collection is read against its own expectation: ",
-  paste(sprintf(
-    "%s %.1f of %d", collection_sizes$database,
-    collection_sizes$n * 0.05, collection_sizes$n
-  ), collapse = ", "), "."
-)
+chance_line <- function(db) {
+  n <- collection_sizes$n[collection_sizes$database == db]
+  sprintf("Nominal p, uncorrected: chance alone returns %.1f of the %d %s sets.", n * 0.05, n, db)
+}
 set_label <- function(database, pathway) {
   str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
 }
@@ -202,11 +199,14 @@ paginate <- function(data, draw, number, title, text, scales = "fixed") {
   })
 }
 
-roc_figure <- function(task_name, number) {
+roc_figure <- function(task_name, number, db) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
-    filter(task == task_name, p_paired < 0.05) |>
+    filter(task == task_name, database == db, p_paired < 0.05) |>
     arrange(p_paired)
+  if (nrow(hits) == 0) {
+    return(list())
+  }
   curves <- pmap(hits, function(set_id, database, pathway, auc, p_paired, fdr, ...) {
     coordinates <- pROC::coords(fit_roc(spec$values[set_id, ], spec), "all")
     tibble(
@@ -236,23 +236,26 @@ roc_figure <- function(task_name, number) {
       scale_x_continuous(breaks = c(0, 0.5, 1)) +
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
       labs(x = "1 - specificity", y = "sensitivity")
-  }, number, spec$label, paste(
+  }, number, paste0(spec$label, ", ", db), paste(
     sprintf(
-      "ROC curves for all %d sets whose singscore separates the groups at nominal p, across %d",
-      nrow(hits), length(spec$positive)
+      "ROC curves for all %d %s sets whose singscore separates the groups at nominal p, across %d",
+      nrow(hits), db, length(spec$positive)
     ),
     sprintf("paired %s, smallest p first. AUC has its direction fixed: red", spec$unit),
     sprintf("separates higher in %s, blue lower.", spec$favours),
     "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
-    "signed-rank test, q from BH within collection and task.", chance_line,
+    "signed-rank test, q from BH within collection and task.", chance_line(db),
     "Data: set_auc sheet of 05_classify_and_associate_sets.xlsx."
   ))
 }
 
-association_figure <- function(which_analysis, number, title, population) {
+association_figure <- function(which_analysis, number, title, population, db) {
   hits <- set_association |>
-    filter(analysis == which_analysis, p < 0.05) |>
+    filter(analysis == which_analysis, database == db, p < 0.05) |>
     arrange(p)
+  if (nrow(hits) == 0) {
+    return(list())
+  }
   points <- pmap(hits, function(set_id, database, pathway, outcome, n, r, p, fdr, ...) {
     arms <- by_arm |>
       filter(set_id == !!set_id, outcome == !!outcome) |>
@@ -286,14 +289,14 @@ association_figure <- function(which_analysis, number, title, population) {
         name = NULL
       ) +
       labs(x = "change in set score, T2 - T1, one point per leg", y = "change in phenotype")
-  }, number, title, paste(
+  }, number, paste0(title, ", ", db), paste(
     sprintf(
-      "All %d set-outcome pairs whose Spearman correlation reaches nominal p in the %s",
-      nrow(hits), which_analysis
+      "All %d %s set-outcome pairs whose Spearman correlation reaches nominal p in the %s",
+      nrow(hits), db, which_analysis
     ),
     sprintf("analysis (%s), smallest p first.", population),
     "Lines are fitted within each arm; the header r is the", which_analysis, "correlation and",
-    "the inset gives it within each arm. q from BH within collection and outcome.", chance_line,
+    "the inset gives it within each arm. q from BH within collection and outcome.", chance_line(db),
     "Data: set_association and set_by_arm sheets of 05_classify_and_associate_sets.xlsx."
   ), scales = "free")
 }
@@ -301,22 +304,36 @@ association_figure <- function(which_analysis, number, title, population) {
 # The baseline control is reported in chance_expectation and the README but not drawn: it shows
 # what the method returns when nothing is there.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
-figures <- c(
-  imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 11 + i)) |> list_flatten(),
-  association_figure(
-    "pooled", 16, "Training response against phenotype, all legs",
-    sprintf("%d legs, both arms pooled", nrow(legs))
-  ),
-  association_figure(
-    "differential", 17, "BFR minus HLRT, within participant",
-    sprintf("%d paired participants", nrow(delta_pairs))
+write_pdf <- function(pages, name) {
+  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
+  walk(pages, print)
+  invisible(dev.off())
+}
+# One file per figure type and collection, so each can be read on its own.
+walk(unique(catalog$database), \(db) {
+  write_pdf(
+    list_flatten(imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 11 + i, db))),
+    paste0("05_classification_", db, ".pdf")
   )
-)
+  write_pdf(
+    c(
+      association_figure(
+        "pooled", 16, "Training response against phenotype, all legs",
+        sprintf("%d legs, both arms pooled", nrow(legs)), db
+      ),
+      association_figure(
+        "differential", 17, "BFR minus HLRT, within participant",
+        sprintf("%d paired participants", nrow(delta_pairs)), db
+      )
+    ),
+    paste0("05_association_", db, ".pdf")
+  )
+})
 
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))
-figures <- c(figures, list(
+write_pdf(list(
   ggplot(chance_figure, aes(ratio, database, fill = ratio > 1)) +
     geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
     geom_col(width = 0.65) +
@@ -337,14 +354,7 @@ figures <- c(figures, list(
     ) +
     figure_theme +
     theme(panel.grid.major.y = element_blank())
-))
-
-pdf(
-  file.path(stage, "b_reports", "05_classify_and_associate_sets_figures.pdf"),
-  width = 8.27, height = 11.69
-)
-walk(figures, print)
-invisible(dev.off())
+), "05_chance_by_collection.pdf")
 
 sheets <- list(
   chance_expectation = chance_expectation,

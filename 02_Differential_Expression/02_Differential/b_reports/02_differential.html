@@ -2337,7 +2337,7 @@ vertical-align: -.125em;
 </section>
 <section id="results" class="level2">
 <h2 class="anchored" data-anchor-id="results">Results</h2>
-<p>BH runs within each contrast: the five share participants and the interaction is a difference of two others, so pooling them would control nothing that can be stated.</p>
+<p>BH runs within each contrast. The five share participants and the interaction is a difference of two others, so pooling them would control nothing that can be stated.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), \(cn) {</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># sort.by = &quot;none&quot; keeps every contrast in the matrix&#39;s own protein order, so the five</span></span>
@@ -2476,7 +2476,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>All three numbers read the same histogram, drawn below: a spike at zero on a flat background is signal; a slope up toward 1 is a conservative test.</p>
+<p>All three numbers read the same histogram, drawn below. A spike at zero on a flat background is signal; a slope up toward 1 is a conservative test.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(results, <span class="fu">aes</span>(P.Value)) <span class="sc">+</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.05</span>, <span class="at">boundary =</span> <span class="dv">0</span>, <span class="at">fill =</span> <span class="st">&quot;grey35&quot;</span>) <span class="sc">+</span></span>

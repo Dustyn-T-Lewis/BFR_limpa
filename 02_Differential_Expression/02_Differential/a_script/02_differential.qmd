@@ -68,7 +68,7 @@ round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0
 
 ## Results
 
-BH runs within each contrast: the five share participants and the interaction is a difference of two
+BH runs within each contrast. The five share participants and the interaction is a difference of two
 others, so pooling them would control nothing that can be stated.
 
 ```{r results}
@@ -112,7 +112,7 @@ results |>
   )
 ```
 
-All three numbers read the same histogram, drawn below: a spike at zero on a flat background is
+All three numbers read the same histogram, drawn below. A spike at zero on a flat background is
 signal; a slope up toward 1 is a conservative test.
 
 ```{r p-histogram}

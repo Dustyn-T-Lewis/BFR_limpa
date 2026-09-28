@@ -2409,7 +2409,7 @@ vertical-align: -.125em;
 </section>
 <section id="limpas-precursor-filters" class="level2">
 <h2 class="anchored" data-anchor-id="limpas-precursor-filters">limpa’s precursor filters</h2>
-<p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is skipped, since the vignette calls it optional and recommends keeping all proteins. Nothing is filtered on missingness: the vignette says precursors need none, and <code>dpc()</code> models those gaps.</p>
+<p>Both run on the repaired annotation, in the vignette’s order. <code>filterSingletonPeptides()</code> is skipped, since the vignette calls it optional and recommends keeping all proteins. Nothing is filtered on missingness, because the vignette says precursors need none and <code>dpc()</code> models those gaps.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterNonProteotypicPeptides</span>(y)</span>

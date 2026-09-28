@@ -59,15 +59,13 @@ DIA-NN with match-between-runs, inside the 0.1-to-1.0 range it calls usable.
 Quantification therefore uses the FAQ's preset: "If `dpcCN()` doesn't give a value in that
 range, it would be reasonable to run `dpcQuant()` with a preset value `dpc.slope=0.7`."
 
-The FAQ says a slope set too low makes the analysis more conservative. Here the reverse held: the
-lower fitted slope gave smaller standard errors and more hits. The preset is the documented
+The FAQ says a slope set too low makes the analysis more conservative. Here the reverse held, with
+the lower fitted slope giving smaller standard errors and more hits. The preset is the documented
 setting and, on this data, the cautious one, chosen before any downstream count was consulted.
 
-::: {.callout-note}
-The visual fit is not diagnostic: `plotDPC()` draws a curve in *unobserved* intensity against
-proportions computed on *observed* intensity, so curve and points disagree by construction. Judge
-the slope.
-:::
+::: {.callout-note} The visual fit is not diagnostic. `plotDPC()` draws a curve in *unobserved*
+intensity against proportions computed on *observed* intensity, so curve and points disagree by
+construction. Judge the slope. :::
 
 ## Roll-up
 
@@ -86,7 +84,7 @@ standard error.
 ## Detection filter
 
 `filterByDetection()` runs between `dpcQuant()` and DE. For a small experiment its help sets
-`n.samples` to the smallest group size: `BFR_T2`, 32 samples, one short because S06_L_T2 is
+`n.samples` to the smallest group size, here `BFR_T2` with 32 samples, one short because S06_L_T2 is
 missing.
 
 It counts detections across all samples, so the bar is cohort-wide and does not guarantee
@@ -112,9 +110,10 @@ the two training contrasts.
 DIA-NN normalised the precursors (`Precursor.Normalised`), but that leaves the protein roll-up
 unnormalised, and limpa normalises nothing itself.
 
-A per-sample shift fixes the spread of per-sample medians but not the MA curve width, which
-cyclic loess targets. The MA curve fits a sample's difference from the all-sample average against
-abundance: flat means a constant offset, travelling means the offset depends on abundance.
+A per-sample shift fixes the spread of per-sample medians but not the MA curve width, which cyclic
+loess targets. The MA curve fits a sample's difference from the all-sample average against
+abundance. A flat curve means a constant offset; a travelling one means the offset depends on
+abundance.
 
 ```{r normalise}
 ma_width <- function(m) {
@@ -132,8 +131,8 @@ after <- c(ma_width = median(ma_width(proteins$E)), median_spread = spread(prote
 round(rbind(before, after), 3)
 ```
 
-Top: every sample's intensity density. Bottom: the sample whose curve travelled furthest before
-normalisation, against the all-sample average.
+The top row shows every sample's intensity density; the bottom row shows the sample whose curve
+travelled furthest before normalisation, against the all-sample average.
 
 ```{r normalise-plots}
 #| fig-height: 8

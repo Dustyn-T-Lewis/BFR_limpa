@@ -15,9 +15,9 @@ scores every sample on every set and saves the matrix as `set_scores.rds`.
 scores separate the study groups and whether they track the phenotype.
 
 Figures run S1 to S18 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
-from `04_`, and S12–S18 from `05_` over 128 pages. Each A4 page has a supplement-style caption with
-the title, one entry per lettered panel, the encodings and the source sheet. Findings live in these
-READMEs, not on the figures.
+from `04_`, and S12–S18 from `05_`, split into one classification and one association PDF per
+collection. Each A4 page has a supplement-style caption with the title, one entry per lettered
+panel, the encodings and the source sheet. Findings live in these READMEs, not on the figures.
 
 ## Methods
 

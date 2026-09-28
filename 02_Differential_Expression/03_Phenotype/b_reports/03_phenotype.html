@@ -2237,15 +2237,15 @@ vertical-align: -.125em;
 </header>
 
 
-<p><code>02_Differential</code> asks which proteins changed between groups. This asks whether a protein’s change tracks how much the muscle changed, which a contrast cannot answer: it compares group means and carries no per-leg outcome.</p>
-<p>Pooled correlates each protein’s pre-to-post change with the phenotype change across all 65 legs. Differential takes the 32 participants with both legs and correlates the BFR-minus-high-load difference in protein with the same difference in phenotype, removing every between-participant confound.</p>
+<p>Each protein’s pre-to-post change is correlated with the same leg’s change in muscle size and quality. The contrasts in <code>02_Differential</code> compare group means and have no per-leg outcome to correlate against.</p>
+<p>The pooled analysis uses all 65 legs. The differential analysis uses the 32 participants with both legs and correlates the BFR minus HLRT difference in protein with the same difference in phenotype, so anything constant within a participant cancels.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, tibble, ggplot2, readr, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>3,042 proteins give 152 nominal hits at p &lt; 0.05 by chance, so no single protein is read at nominal p. BH within each analysis and outcome is the reported quantity.</p>
+<p>With 3,042 proteins, about 152 reach p &lt; 0.05 by chance, so results are read after BH within each analysis and outcome.</p>
 <section id="pairing" class="level2">
 <h2 class="anchored" data-anchor-id="pairing">Pairing</h2>
 <p>A leg needs both timepoints for a change score. S06’s left leg has T1 only, so it drops here and nowhere else.</p>
@@ -2451,7 +2451,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>Read <code>ratio</code> first: near 1, the nominal count is what 3,042 tests return when nothing is there, whatever the smallest p.</p>
+<p><code>ratio</code> divides the nominal count by that chance count. Near 1, the nominal hits are what 3,042 tests return when nothing is there, whatever the smallest p.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(summary_table, <span class="fu">aes</span>(ratio, outcome, <span class="at">fill =</span> analysis)) <span class="sc">+</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>, <span class="at">colour =</span> <span class="st">&quot;grey40&quot;</span>) <span class="sc">+</span></span>
