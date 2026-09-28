@@ -1,39 +1,18 @@
 # Run by hand when the precursor matrix changes; about 100 minutes per dpcQuant() call.
-# 02_quantify.qmd only loads what this writes, so a render never starts one.
 #   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R
 #   Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 
-library(here)
-library(limpa)
+pacman::p_load(here, limpa)
 
-precursors_file <- here(
-  "01_Preprocess", "01_Filtering", "c_data",
-  "precursors_filtered.rds"
-)
+y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 out <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
-dir.create(out, recursive = TRUE, showWarnings = FALSE)
-
-y <- readRDS(precursors_file)
-# Recorded, not enforced: the notebook loads whatever is here. These name the precursor matrix
-# and limpa version behind each run, for reconstructing it later.
-stamp <- unname(tools::md5sum(precursors_file))
-limpa_version <- as.character(packageVersion("limpa"))
-
-write_run <- function(object, file) {
-  saveRDS(
-    list(object = object, input_md5 = stamp, limpa_version = limpa_version), file
-  )
-  message("wrote ", file)
-}
-
-write_run(
-  dpcQuant(y, "Protein.Group", dpc.slope = 0.7),
-  file.path(out, "proteins_slope_0.7.rds")
-)
 
 if ("--sensitivity" %in% commandArgs(trailingOnly = TRUE)) {
-  write_run(
-    dpcQuant(y, "Protein.Group", dpc = dpc(y$E)),
-    file.path(out, "proteins_slope_fitted.rds")
-  )
+  proteins <- dpcQuant(y, "Protein.Group", dpc = dpc(y$E))
+  path <- file.path(out, "proteins_slope_fitted.rds")
+} else {
+  proteins <- dpcQuant(y, "Protein.Group", dpc.slope = 0.7)
+  path <- file.path(out, "proteins_slope_0.7.rds")
 }
+saveRDS(proteins, path)
+message("wrote ", path)

@@ -8,27 +8,20 @@ Study data.
 | `metadata.csv` | one MS sample, 131 rows | `01_Preprocess/01_Filtering` |
 | `phenotype.csv` | one leg, 70 rows | `02_Differential_Expression/03_Phenotype`, `03_Pathway_Enrichment/05_classify_and_associate_sets` |
 
-## Get report.parquet
-
-Too large for git, so it is attached to a release. From the repo root:
-
-```sh
-curl -L -o 00_Input/report.parquet \
-  https://github.com/Dustyn-T-Lewis/BFR_limpa/releases/download/data-v1/report.parquet
-```
+`report.parquet` is too large for git; it sits on the `data-v1` release, with the download command
+in the root README.
 
 ## Notes
 
-Treatment is not the leg letter. Run names contain `D` and `E` (right and left). Which leg
-got restriction was counterbalanced, so the letter gives the side only. `metadata.csv` carries
-`treatment` as its own column, done by hand.
+Treatment is not the leg letter. Run names carry `D` and `E` (right and left), and restriction was
+counterbalanced between sides, so `metadata.csv` carries `treatment` as its own column, entered by
+hand.
 
 The same sample has three names: the MS run name, our sample ID, and participant plus leg.
 `metadata.csv` holds all three and `01_Filtering` reconciles them once.
 
-`phenotype.csv` stays at one row per leg because training volume is one number for the whole
-leg. Stored once per MS sample it would be repeated, and summing the column would report twice
-the real volume.
+`phenotype.csv` has one row per leg because training volume is one number per leg. Stored per MS
+sample, it would repeat, and summing it would double the real volume.
 
 ### Correction (2026-09-19): vastus lateralis pre-CSA, 8 of 70 rows
 

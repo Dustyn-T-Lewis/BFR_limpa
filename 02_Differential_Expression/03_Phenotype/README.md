@@ -1,17 +1,17 @@
 # 02_Differential_Expression / 03_Phenotype
 
-Correlates each protein's pre-to-post change with the leg's change in muscle size and quality.
+This step correlates each protein's pre-to-post change with the same leg's change in muscle size and
+quality. It reads `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`
+and the training hits in `02_Differential/c_data/02_differential.xlsx`, and writes Spearman r, p and
+FDR per protein and outcome, plus the counts below, to `c_data/03_phenotype.xlsx`;
+`b_reports/03_phenotype.html` is the report.
 
-| | |
-|---|---|
-| Script | `a_script/03_phenotype.qmd` |
-| Reads | `proteins.rds`, `00_Input/phenotype.csv` |
-| Writes | `c_data/phenotype.rds`, `c_data/03_phenotype.xlsx` |
+```sh
+quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd --output-dir ../b_reports
+```
 
-A contrast compares group means and cannot use a per-leg outcome, so this is a separate question.
-Pooled: 65 legs, protein change against phenotype change. Differential: 32 participants,
-the BFR-minus-HLRT difference in a protein against the same difference in phenotype, which removes
-between-participant confounds. Spearman throughout; BH within each analysis and outcome.
+Pooled correlations use all 65 legs. Differential ones use 32 participants, correlating the BFR
+minus HLRT change in protein with the same difference in outcome.
 
 | Analysis | Outcome | n | Nominal | Ratio to chance | BH < 0.05 |
 |---|---|---:|---:|---:|---:|
@@ -24,8 +24,12 @@ between-participant confounds. Spearman throughout; BH within each analysis and 
 | differential | rf_csa | 32 | 168 | 1.10 | 0 |
 | differential | rf_echo | 32 | 116 | 0.76 | 0 |
 
-Chance is 152 nominal hits from 3,042 proteins. Nothing survives BH (best 0.281). With 32 pairs
-the resolvable paired correlation is about 0.5, so this is a null at that resolution.
+Chance is 152 nominal hits from 3,042 proteins. Nothing survives BH (best adjusted p 0.281); with 32
+pairs the smallest resolvable paired correlation is about 0.5, so this is a null at that resolution.
 
-Classification is left to `02_Differential`, whose fitted model beats a paired Wilcoxon on 32
+Of the 130 training hits in either arm, 14 reach nominal p against pooled vl_csa where 7.8 are
+expected (one-sided Fisher p 0.022), and 12 against pooled rf_csa where 5.7 are expected (p 0.011).
+The other six pairs sit at chance.
+
+Classification is left to `02_Differential`, whose fitted model beats a paired Wilcoxon test on 32
 pairs.
