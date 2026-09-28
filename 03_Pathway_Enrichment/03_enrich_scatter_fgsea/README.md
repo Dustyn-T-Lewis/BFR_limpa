@@ -1,11 +1,13 @@
 # 03_enrich_scatter_fgsea
 
-Each set's BFR_Post-Pre NES against its HLRT_Post-Pre NES.
+This step compares each set's BFR_Post-Pre NES with its HLRT_Post-Pre NES, from `set_tests` in
+`01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`. `c_data/03_enrich_scatter_fgsea.xlsx` holds
+the concordance table below, the discordant sets and both NES with adjusted p for every set; S10
+is in `b_reports/03_enrich_scatter_fgsea_figures.pdf`.
 
-| | |
-|---|---|
-| Reads | `set_tests.rds` |
-| Writes | 2 composites, `nes_scatter.csv`, `03_enrich_scatter_fgsea.xlsx` |
+```sh
+Rscript 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.R
+```
 
 | Population | Sets | rho | Significant | Discordant |
 |---|---:|---:|---:|---:|
@@ -13,10 +15,10 @@ Each set's BFR_Post-Pre NES against its HLRT_Post-Pre NES.
 | Collapse survivors | 126 | 0.86 | 126 | 3 |
 | Hallmark and GO Slim | 100 | 0.82 | 25 | 0 |
 
-`01_nes_concordance_all`: all sets, collapse survivors, discordant sets.
-`02_nes_concordance_curated`: Hallmark and GO Slim, then each concordant quadrant rescaled so every
-significant set is named. These two collections are used because their sets do not nest; GO:BP's
-overlapping branches would weight rho toward whichever branch is largest.
+No set significant in both arms changes sign: both modalities moved the same pathways by similar
+amounts, which is why the interaction is empty. A set is discordant when its two NES have opposite
+signs; all eight are significant in one arm only, with the other at p 0.43 to 0.99.
 
-A set is discordant when its two NES differ in sign. All eight are significant in one arm only,
-with the other arm at p 0.43 to 0.99.
+S10 draws Hallmark and GO Slim with `enrichVolcano::plot_scatter()`. These collections do not
+nest; GO:BP's overlapping branches would weight rho toward the largest branch. The concordance
+table covers all three populations, and the discordant sets are listed in the workbook.

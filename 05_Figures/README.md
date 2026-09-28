@@ -1,8 +1,5 @@
 # 05 · Figures
 
-Planned. No code yet.
-
-Intent: manuscript figures for a reader who will never run the pipeline, assembled from outputs the
-earlier stages already write. Diagnostics stay in each stage's `b_reports/`.
-
-Panel choice waits until the paper's scope is settled.
+Planned, with no code yet. This stage will assemble manuscript figures from outputs the earlier
+stages already write, for readers who never run the pipeline; diagnostics stay in each stage's
+`b_reports/`. Panel choice waits for the paper's scope and for stage 04.
