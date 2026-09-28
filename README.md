@@ -14,16 +14,17 @@ proteome differently than heavy load.
 |---|---|---|
 | `00_Input/` | study data, no code | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
-| `02_Differential_Expression/` | model fitting, five contrasts, protein against phenotype | ready |
+| `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | proteins that move together | planned |
 | `05_Figures/` | manuscript panels | planned |
 
-Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report in stages 01 and
-02, one figure PDF per step in stage 03) and `c_data/` (one workbook of tables, plus an `.rds` where
-a later step needs the R object). Stages 01 and 02 are Quarto notebooks; stage 03 is plain R
-scripts. Data passes through disk, so any sub-stage reruns from a fresh session, and no notebook
-caches. "Planned" means only a README exists.
+Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report for the Quarto
+notebooks, figure PDFs for the R scripts) and `c_data/` (one workbook of tables, plus an `.rds`
+where a later step needs the R object). The limpa steps (stage 01, `01_Design` and
+`02_Differential`) are Quarto notebooks; every step after the fit is a plain R script. Data passes
+through disk, so any sub-stage reruns from a fresh session, and no notebook caches. "Planned" means
+only a README exists.
 
 ## Running the pipeline
 
@@ -38,15 +39,16 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 
 quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd             --output-dir ../b_reports
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
-quarto render 02_Differential_Expression/03_Phenotype/a_script/03_phenotype.qmd       --output-dir ../b_reports
+Rscript 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.R
+Rscript 02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.R
 
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
-         03_enrich_scatter_fgsea 04_run_singscore 05_classify_and_associate_sets; do
+         03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association; do
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
 ```
 
-The block ran in 155 seconds. `dpcQuant()` takes about 100 minutes, so it runs separately from
+The block takes about four minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
 only when the precursor matrix changes.
 

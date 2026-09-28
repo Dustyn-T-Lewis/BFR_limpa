@@ -176,7 +176,8 @@ and would surface as nonsense identifiers in enrichment.
 
 Both run on the repaired annotation, in the vignette's order. `filterSingletonPeptides()` is
 skipped, since the vignette calls it optional and recommends keeping all proteins. Nothing is
-filtered on missingness: the vignette says precursors need none, and `dpc()` models those gaps.
+filtered on missingness, because the vignette says precursors need none and `dpc()` models those
+gaps.
 
 ```{r limpa-filters}
 filter_log <- step_summary(y, "repaired")
