@@ -186,10 +186,8 @@ y$genes <- y$genes |>
 removal_counts
 ```
 
-Two faults share this chunk. Most groups mentioning `cRAP` keep a human accession and are
-repaired rather than removed, so only the cRAP-only ones go. Reversed decoys are separate: the
-search FASTA already contained them, so DIA-NN scored them as targets and its own decoy column
-reads zero for every row. They carry `r signif(removal_counts$pct_signal[2], 2)`% of the starting
+Reversed decoys are a second fault in the same chunk. The search FASTA already contained them,
+so DIA-NN scored them as targets and its own decoy column reads zero for every row. They carry `r signif(removal_counts$pct_signal[2], 2)`% of the starting
 signal, but they inflate the protein count and would surface as nonsense identifiers in any
 enrichment.
 

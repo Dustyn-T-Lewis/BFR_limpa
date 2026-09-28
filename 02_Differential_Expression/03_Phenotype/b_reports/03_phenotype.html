@@ -2245,7 +2245,7 @@ vertical-align: -.125em;
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>3,042 proteins mean 152 nominal hits are expected at p &lt; 0.05, so nothing here is read at nominal p. BH within each analysis and outcome is the reported quantity.</p>
+<p>3,042 proteins mean 152 nominal hits are expected at p &lt; 0.05, so no single protein is read at nominal p. BH within each analysis and outcome is the reported quantity.</p>
 <section id="pairing" class="level2">
 <h2 class="anchored" data-anchor-id="pairing">Pairing</h2>
 <p>A leg contributes only when both timepoints were acquired, which is what makes a change score definable. S06’s left leg has T1 only, so it drops here and nowhere else.</p>

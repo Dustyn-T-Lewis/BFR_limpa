@@ -32,7 +32,7 @@ phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 ```
 
 `r format(nrow(proteins), big.mark = ",")` proteins mean `r round(nrow(proteins) * 0.05)` nominal
-hits are expected at p < 0.05, so nothing here is read at nominal p. BH within each analysis and
+hits are expected at p < 0.05, so no single protein is read at nominal p. BH within each analysis and
 outcome is the reported quantity.
 
 ## Pairing
