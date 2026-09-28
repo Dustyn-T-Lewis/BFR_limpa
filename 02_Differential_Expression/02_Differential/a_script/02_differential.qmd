@@ -75,7 +75,7 @@ others, so pooling them would control nothing that can be stated.
 results <- map(colnames(d$contrasts), \(cn) {
   # sort.by = "none" keeps every contrast in the matrix's own protein order, so the five
   # blocks line up row for row. topTable() would otherwise sort on the B statistic.
-  topTable(fit, coef = cn, number = Inf, adjust.method = "BH", sort.by = "none") |>
+  topTable(fit, coef = cn, number = Inf, sort.by = "none") |>
     rownames_to_column("protein") |>
     mutate(contrast = cn, .before = 1)
 }) |>
@@ -116,7 +116,6 @@ All three numbers read the same histogram, drawn below: a spike at zero on a fla
 signal; a slope up toward 1 is a conservative test.
 
 ```{r p-histogram}
-#| fig-height: 5
 ggplot(results, aes(P.Value)) +
   geom_histogram(binwidth = 0.05, boundary = 0, fill = "grey35") +
   geom_hline(yintercept = nrow(proteins) / 20, linetype = 2, colour = "firebrick") +
@@ -186,17 +185,13 @@ out <- here("02_Differential_Expression", "02_Differential", "c_data")
 saveRDS(fit, file.path(out, "fit.rds"))
 sheets <- list(DEP_matrix = dep_matrix, contrast_summary = contrast_summary)
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "logFC, p and BH p per contrast",
     "Hits per contrast at FDR 0.05 and 0.10"
   )
 )
 write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential.xlsx"))
-
-dim(dep_matrix)
 ```
 
 ## Negative control

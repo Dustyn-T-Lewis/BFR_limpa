@@ -41,23 +41,22 @@ A leg needs both timepoints for a change score. S06's left leg has T1 only, so i
 nowhere else.
 
 ```{r pairs}
-targets <- proteins$targets |>
-  mutate(leg_id = paste(participant, leg, sep = "_"))
-legs <- targets |>
+legs <- proteins$targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = timepoint, values_from = sample_id) |>
-  filter(!is.na(T1), !is.na(T2)) |>
+  drop_na(T1, T2) |>
   arrange(participant, treatment)
 leg_pairs <- legs |>
   select(participant, treatment, leg_id) |>
   pivot_wider(names_from = treatment, values_from = leg_id) |>
-  filter(!is.na(BFR), !is.na(HLRT))
+  drop_na(BFR, HLRT)
 
 delta <- proteins$E[, legs$T2] - proteins$E[, legs$T1]
 colnames(delta) <- legs$leg_id
 paired <- delta[, leg_pairs$BFR] - delta[, leg_pairs$HLRT]
 colnames(paired) <- leg_pairs$participant
-tibble(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
+c(legs = ncol(delta), participants = ncol(paired), proteins = nrow(delta))
 ```
 
 ## Outcomes
@@ -75,7 +74,7 @@ leg_phenotype <- legs |>
     rf_echo = rf_echo_post_au - rf_echo_pre_au
   )
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
-paired_outcome <- map(set_names(outcomes), function(name) {
+paired_outcome <- map(set_names(outcomes), \(name) {
   value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
   value[leg_pairs$BFR] - value[leg_pairs$HLRT]
 })
@@ -88,31 +87,25 @@ back to its approximation and warn on every call, so the 24,336 warnings are sup
 
 ```{r correlate}
 spearman_by_row <- function(values, outcome) {
-  usable <- !is.na(outcome)
-  values <- values[, usable, drop = FALSE]
-  outcome <- outcome[usable]
   fits <- suppressWarnings(apply(values, 1, \(row) {
     test <- cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
   }))
   tibble(
-    protein = rownames(values), n = length(outcome),
+    protein = rownames(values), n = sum(!is.na(outcome)),
     r = unname(fits["r", ]), p = unname(fits["p", ])
   )
 }
 results <- map(set_names(outcomes), \(name) {
   bind_rows(
-    mutate(spearman_by_row(delta, leg_phenotype[[name]]), analysis = "pooled"),
-    mutate(spearman_by_row(paired, paired_outcome[[name]]), analysis = "differential")
-  ) |>
-    mutate(outcome = name)
+    pooled = spearman_by_row(delta, leg_phenotype[[name]]),
+    differential = spearman_by_row(paired, paired_outcome[[name]]),
+    .id = "analysis"
+  )
 }) |>
-  list_rbind() |>
+  list_rbind(names_to = "outcome") |>
   mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome)) |>
-  left_join(
-    rownames_to_column(proteins$genes, "protein") |> select(protein, gene = Genes),
-    by = "protein"
-  ) |>
+  mutate(gene = proteins$genes$Genes[match(protein, rownames(proteins$genes))]) |>
   relocate(analysis, outcome, protein, gene)
 ```
 
@@ -134,7 +127,6 @@ Read `ratio` first: near 1, the nominal count is what `r format(nrow(proteins), 
 tests return when nothing is there, whatever the smallest p.
 
 ```{r figure}
-#| fig-width: 7
 #| fig-height: 4
 ggplot(summary_table, aes(ratio, outcome, fill = analysis)) +
   geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
@@ -186,9 +178,7 @@ sheets <- list(
   correlations = arrange(results, fdr)
 )
 overview <- data.frame(
-  sheet = names(sheets),
-  rows = sapply(sheets, nrow),
-  columns = sapply(sheets, ncol),
+  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
     "Hits against chance per outcome",
     "Training hits at nominal p against chance",
