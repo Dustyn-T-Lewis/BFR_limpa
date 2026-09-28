@@ -217,8 +217,7 @@ roc_figure <- function(task_name, number) {
     coordinates <- pROC::coords(fit_roc(values[set_id, ], spec), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
-      # An AUC below 0.5 separates the other way: a direction, not a failure, so it is
-      # coloured, not hidden.
+      # An AUC below 0.5 separates the groups the other way, so it is coloured by direction.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = paste0(
         set_label(database, pathway),
@@ -320,7 +319,7 @@ figures <- c(
   )
 )
 
-# Whether a collection clears chance is the headline, so it gets its own figure beside the sheet.
+# Whether each collection clears chance gets its own figure beside the sheet.
 chance_figure <- chance_expectation |>
   filter(analysis == "classification") |>
   mutate(comparison = factor(comparison, levels = map_chr(tasks, "label")))

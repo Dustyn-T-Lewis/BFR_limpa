@@ -256,9 +256,7 @@ Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 
 After that it loads as the primary run does.
 
-Refitting the five contrasts under each slope is not done here. Done separately, it gave 60 and
-107 proteins on the two training contrasts under the preset against 82 and 114 under the fitted
-slope, with the negative control and the interaction empty under both.
+`02_Differential` refits the five contrasts under both slopes and counts the hits.
 
 ## Outputs
 
