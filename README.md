@@ -17,7 +17,9 @@ proteome differently than heavy load.
 | `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | proteins that move together | planned |
-| `05_Figures/` | manuscript panels | planned |
+| `06_Mitochondria/` | mitochondrial content and complexes | planned |
+| `07_Composition/` | fibre type, and DE adjusted for composition | planned |
+| `0X_Figures/` | manuscript panels, built last | planned |
 
 Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report for the Quarto
 notebooks, figure PDFs for the R scripts) and `c_data/` (one workbook of tables, plus an `.rds`
