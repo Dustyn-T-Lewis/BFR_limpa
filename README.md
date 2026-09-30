@@ -17,7 +17,7 @@ proteome differently than heavy load.
 | `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | proteins that move together | planned |
-| `06_Mitochondria/` | mitochondrial content and complexes | planned |
+| `06_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
 | `07_Composition/` | fibre type, and DE adjusted for composition | planned |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
@@ -48,6 +48,9 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
          03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association; do
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
+
+Rscript 06_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.R
+Rscript 06_Mitochondria/02_test_mito/a_script/02_test_mito.R
 ```
 
 The block takes about four minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
@@ -68,4 +71,4 @@ Stages 01 and 02 use `pacman`, `here`, `limpa`, `limma`, `nanoparquet` (read by 
 `readr`, `writexl`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`. Stage 03 adds
 `readxl`, `fgsea`, `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`,
 `patchwork` and `enrichVolcano` 2.0.0 or later (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on
-CRAN).
+CRAN). Stage 06 needs nothing new.
