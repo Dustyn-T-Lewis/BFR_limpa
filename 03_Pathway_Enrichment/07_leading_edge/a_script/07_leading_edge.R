@@ -3,7 +3,7 @@
 # PR #26 (sc-norton), on the fgsea run 01_run_fgsea_and_fry already made. Leading edges shift with
 # small changes in ranking, so the overlap describes and does not test.
 
-pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
+pacman::p_load(here, dplyr, tidyr, stringr, ggplot2, readxl, writexl)
 
 stage <- here("03_Pathway_Enrichment", "07_leading_edge")
 set_tests <- read_excel(

@@ -83,22 +83,20 @@ mito_proteins <- map(set_names(contrast_names), \(cn) {
   list_rbind(names_to = "contrast") |>
   left_join(select(protein_map, protein, gene, label, selected), by = "protein")
 
-# fry and camera read limpa's precision weights and index each symbol's representative protein,
-# as in 01_run_fgsea_and_fry. `test` is fry or camera; each returns its own BH FDR per contrast.
+# fry reads limpa's precision weights and indexes each symbol's representative protein, as in
+# 01_run_fgsea_and_fry. It returns its own BH FDR per contrast.
 representative <- with(protein_map, set_names(if_else(selected, gene, NA), protein))
-test_sets <- function(y, weights, sets, test, ...) {
+fry_sets <- function(y, weights, sets) {
   y$weights <- weights
   index <- ids2indices(sets, representative[rownames(y)])
   map(set_names(contrast_names), \(cn) {
-    test(y, index, d$design, d$contrasts[, cn], ...) |> rownames_to_column("set")
+    fry(y, index, d$design, d$contrasts[, cn], sort = "none") |> rownames_to_column("set")
   }) |>
     list_rbind(names_to = "contrast")
 }
 complex_tests <- bind_rows(
-  standard = test_sets(proteins, fit$EList$weights, sets[complexes], fry, sort = "none"),
-  mitochondria_normalised = test_sets(
-    mito, mito_fit$EList$weights, sets[complexes], fry, sort = "none"
-  ),
+  standard = fry_sets(proteins, fit$EList$weights, sets[complexes]),
+  mitochondria_normalised = fry_sets(mito, mito_fit$EList$weights, sets[complexes]),
   .id = "fit"
 ) |>
   select(fit, contrast, set, NGenes, Direction, PValue, FDR)
@@ -115,7 +113,7 @@ set.seed(1)
 fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(pathways, stats)) |>
   list_rbind(names_to = "contrast")
 pathway_tests <- bind_rows(
-  fry = test_sets(mito, mito_fit$EList$weights, pathways, fry, sort = "none"),
+  fry = fry_sets(mito, mito_fit$EList$weights, pathways),
   fgsea = transmute(
     fgsea_raw, contrast, set = pathway, NGenes = size,
     Direction = if_else(NES > 0, "Up", "Down"), NES, PValue = pval, FDR = padj,
@@ -173,7 +171,6 @@ complex_page <- complex_tests |>
   ) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), legend.position = "top")
 
-# Ring: the twelve lowest-FDR MitoPathways after enrichmentmap deduplication.
 da <- enrichVolcano::as_da(
   select(mito_proteins, protein, gene = label, contrast, logFC, t, P.Value, adj.P.Val),
   species = NULL
