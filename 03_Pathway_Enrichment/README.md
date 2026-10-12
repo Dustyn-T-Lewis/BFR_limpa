@@ -1,7 +1,7 @@
 # 03 · Pathway Enrichment
 
 This stage tests whether proteins that work together moved together, then scores every sample on
-every set. The seven steps take about 100 seconds.
+every set. The eight steps take about 100 seconds.
 
 [`00_build_gene_sets`](00_build_gene_sets/README.md) builds the one set list every later step uses,
 from a frozen MSigDB snapshot and GO Slim sets built locally, with the protein-to-gene map and the
@@ -13,10 +13,12 @@ set's BFR NES against its HLRT NES. [`04_run_singscore`](04_run_singscore/README
 sample on every set and saves the matrix as `set_scores.rds`.
 [`05_set_classification`](05_set_classification/README.md) asks how well those scores separate the
 study groups, and [`06_set_association`](06_set_association/README.md) whether they track the
-phenotype.
+phenotype. [`07_leading_edge`](07_leading_edge/README.md) asks whether the pathways both legs move
+are driven by the same proteins.
 
-Figures run S1 to S19 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
-from `04_`, S12–S16 from `05_` and S17–S19 from `06_`. Steps `01_` to `04_` write one PDF each;
+Figures run S1 to S20 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
+from `04_`, S12–S16 from `05_`, S17–S19 from `06_` and S20 from `07_`. Steps `01_` to `04_` and
+`07_` write one PDF each;
 `05_` and `06_` write one per collection plus a chance summary. Each A4 page has a supplement-style
 caption with the title, one entry per lettered panel, the encodings and the source sheet. Findings
 live in these READMEs, not on the figures.
@@ -29,6 +31,7 @@ live in these READMEs, not on the figures.
 | `03_enrich_scatter_fgsea` | Do both arms move the same sets? | Yes. Across Hallmark and GO Slim rho is 0.81, and all 25 significant sets move the same way in both. |
 | `05_set_classification` | Does a set's score separate the groups? | 9 sets on BFR training and 49 on HLRT after BH; BFR against HLRT sits at chance. |
 | `06_set_association` | Does a set's score change track the phenotype? | No set survives BH. |
+| `07_leading_edge` | Do both legs move a shared pathway through the same proteins? | Mostly. Across the 71 pathways both legs move, a median 58% of leading-edge proteins are shared (41% to 100%). |
 
 ## Methods
 

@@ -45,7 +45,8 @@ Rscript 02_Differential_Expression/03_Protein_Association/a_script/03_protein_as
 Rscript 02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.R
 
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
-         03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association; do
+         03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association \
+         07_leading_edge; do
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
 
