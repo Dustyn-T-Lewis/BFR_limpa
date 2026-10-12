@@ -51,6 +51,7 @@ done
 
 Rscript 05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.R
 Rscript 05_Mitochondria/02_test_mito/a_script/02_test_mito.R
+Rscript 05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.R
 ```
 
 The block takes about four minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from

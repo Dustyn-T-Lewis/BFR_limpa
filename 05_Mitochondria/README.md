@@ -20,6 +20,7 @@ IMPI, and our own normaliser (cyclic loess) rather than VSN.
 |---|---|
 | `01_build_mito_sets` | Which MitoCarta proteins and MitoPathways do we measure? |
 | `02_test_mito` | Did MPE rise differently between legs, and did any complex or pathway change beyond it? |
+| `03_complex_subunits` | Which subunits and assembly factors carry each complex's change in each leg? |
 
 MPE rose from 29.6% to 32.8% in the BFR leg and from 29.0% to 32.2% in the HLRT leg. The
 difference between legs is −0.003 log2 (95% CI −0.123 to 0.117), so a gap larger than about 8%
