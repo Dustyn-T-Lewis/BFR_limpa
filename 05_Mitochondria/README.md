@@ -1,4 +1,4 @@
-# 06 · Mitochondria
+# 05 · Mitochondria
 
 Both legs gain mitochondrial protein with training. This stage asks two narrower questions. Did
 one leg gain more mitochondria than the other? And once that overall gain is set aside, did any
@@ -27,4 +27,4 @@ either way is unlikely. After mitochondrial normalisation no protein, complex or
 between legs by fry or protein-level FDR.
 
 MPE from whole muscle mixes mitochondrial content with fibre type, since type I fibres hold more
-mitochondria. `07_Composition` reads MPE from `02_test_mito` for that reason.
+mitochondria. `06_Composition` reads MPE from `02_test_mito` for that reason.

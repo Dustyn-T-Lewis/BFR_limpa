@@ -7,7 +7,7 @@ of `proteins.rds`), the design, the stage 02 fit and `01_build_mito_sets`. It wr
 `c_data/02_test_mito.xlsx` and `b_reports/02_test_mito.pdf`.
 
 ```sh
-Rscript 06_Mitochondria/02_test_mito/a_script/02_test_mito.R
+Rscript 05_Mitochondria/02_test_mito/a_script/02_test_mito.R
 ```
 
 MPE comes from raw intensities, as in both papers. Cyclic loess assumes the typical protein holds

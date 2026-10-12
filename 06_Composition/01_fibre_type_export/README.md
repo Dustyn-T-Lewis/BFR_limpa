@@ -7,7 +7,7 @@ and writes `c_data/fibertyper_input.csv`: one row per gene, first column `identi
 per `sample_id`. It is the only CSV in the repo, because the app accepts nothing else.
 
 ```sh
-Rscript 07_Composition/01_fibre_type_export/a_script/01_fibre_type_export.R
+Rscript 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.R
 ```
 
 The app wants raw LFQ intensities and normalises them itself. `Genes.MaxLFQ.Unique` is DIA-NN's
@@ -24,4 +24,4 @@ present.
 3. If the app asks for sex, the proteomics reference is sex-specific; `sex` is a column of
    `00_Input/metadata.csv`.
 4. Run it and download the table as .xlsx to
-   `07_Composition/02_fibre_type_import/c_data/fibertyper_output.xlsx`.
+   `06_Composition/02_fibre_type_import/c_data/fibertyper_output.xlsx`.

@@ -4,9 +4,9 @@
 
 pacman::p_load(here, dplyr, tibble, tidyr, readxl, writexl)
 
-out <- here("06_Mitochondria", "01_build_mito_sets", "c_data")
+out <- here("05_Mitochondria", "01_build_mito_sets", "c_data")
 # Downloaded 2026-09-28 from personal.broadinstitute.org/scalvo/MitoCarta3.0/.
-mitocarta <- here("06_Mitochondria", "00_Input", "Human.MitoCarta3.0.xls")
+mitocarta <- here("05_Mitochondria", "00_Input", "Human.MitoCarta3.0.xls")
 protein_map <- read_excel(
   here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "00_build_gene_sets.xlsx"),
   "protein_gene_map"

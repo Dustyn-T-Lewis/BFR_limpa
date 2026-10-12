@@ -5,7 +5,7 @@
 pacman::p_load(here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,
                readxl, writexl)
 
-stage <- here("06_Mitochondria", "02_test_mito")
+stage <- here("05_Mitochondria", "02_test_mito")
 quant <- here("01_Preprocess", "02_Quantification", "c_data")
 proteins <- readRDS(file.path(quant, "proteins.rds"))
 raw <- readRDS(file.path(quant, "quant_runs", "proteins_slope_0.7.rds"))[rownames(proteins), ]
@@ -16,7 +16,7 @@ protein_map <- read_excel(
   "protein_gene_map"
 )
 membership <- read_excel(
-  here("06_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx"),
+  here("05_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx"),
   "membership"
 )
 
@@ -217,7 +217,7 @@ sheets <- list(
 overview <- data.frame(
   sheet = names(sheets), rows = sapply(sheets, nrow),
   description = c(
-    "MPE per biopsy, from raw intensities. 07_Composition reads this sheet.",
+    "MPE per biopsy, from raw intensities. 06_Composition reads this sheet.",
     "log2 MPE through the saved design and contrasts; plain least-squares t, 95% CI.",
     "Citrate synthase protein from the stage 02 fit, for comparison with CS activity studies.",
     "fry on complexes I to V, standard and mitochondria-normalised fits; FDR within contrast.",

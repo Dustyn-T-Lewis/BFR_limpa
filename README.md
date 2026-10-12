@@ -17,8 +17,8 @@ proteome differently than heavy load.
 | `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | proteins that move together | planned |
-| `06_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
-| `07_Composition/` | fibre type, and DE adjusted for composition | planned |
+| `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
+| `06_Composition/` | fibre type, and DE adjusted for composition | planned |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
 Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report for the Quarto
@@ -49,8 +49,8 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
 
-Rscript 06_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.R
-Rscript 06_Mitochondria/02_test_mito/a_script/02_test_mito.R
+Rscript 05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.R
+Rscript 05_Mitochondria/02_test_mito/a_script/02_test_mito.R
 ```
 
 The block takes about four minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from

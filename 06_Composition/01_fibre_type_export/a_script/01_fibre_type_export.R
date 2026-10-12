@@ -4,7 +4,7 @@
 
 pacman::p_load(here, dplyr, tidyr, readr)
 
-out <- here("07_Composition", "01_fibre_type_export", "c_data")
+out <- here("06_Composition", "01_fibre_type_export", "c_data")
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
 report <- nanoparquet::read_parquet(
   here("00_Input", "report.parquet"),
