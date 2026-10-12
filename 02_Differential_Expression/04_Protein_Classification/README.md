@@ -5,7 +5,7 @@ tasks as `03_Pathway_Enrichment/05_set_classification`. It reads
 `01_Preprocess/02_Quantification/c_data/proteins.rds`, the DE results in
 `02_Differential/c_data/02_differential.xlsx` and the correlations in
 `03_Protein_Association/c_data/03_protein_association.xlsx`. It writes
-`c_data/04_protein_classification.xlsx` one ROC PDF per task
+`c_data/04_protein_classification.xlsx`, one ROC PDF per task
 (`04_classification_pre_vs_post_BFR.pdf` and so on) and `04_chance.pdf`.
 
 ```sh

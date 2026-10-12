@@ -7,7 +7,8 @@ redundant with a stronger one. It reads `00_build_gene_sets/c_data/gene_sets.rds
 `01_Preprocess/02_Quantification/c_data/proteins.rds`.
 
 `c_data/01_run_fgsea_and_fry.xlsx` holds `set_tests`, one row per set, contrast and method, and
-`protein_results`, every protein and contrast from the fit; `02_` and `03_` read both. Figures S1–S7
+`protein_results`, every protein and contrast from the fit; `02_` and `03_` read both, and `07_`
+reads `set_tests`. Figures S1–S7
 are in `b_reports/01_run_fgsea_and_fry_figures.pdf`.
 
 ```sh

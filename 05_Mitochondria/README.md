@@ -22,10 +22,10 @@ IMPI, and our own normaliser (cyclic loess) rather than VSN.
 | `02_test_mito` | Did MPE rise differently between legs, and did any complex or pathway change beyond it? |
 | `03_complex_subunits` | Which subunits and assembly factors carry each complex's change in each leg? |
 
-MPE rose from 29.6% to 32.8% in the BFR leg and from 29.0% to 32.2% in the HLRT leg. The
+Mean MPE rose from 29.6% to 32.8% in the BFR leg and from 29.0% to 32.2% in the HLRT leg. The
 difference between legs is −0.003 log2 (95% CI −0.123 to 0.117), so a gap larger than about 8%
 either way is unlikely. After mitochondrial normalisation no protein, complex or pathway differs
 between legs by fry or protein-level FDR.
 
 MPE from whole muscle mixes mitochondrial content with fibre type, since type I fibres hold more
-mitochondria. `06_Composition` reads MPE from `02_test_mito` for that reason.
+mitochondria. `06_Composition` estimates each biopsy's fibre mix for that reason.

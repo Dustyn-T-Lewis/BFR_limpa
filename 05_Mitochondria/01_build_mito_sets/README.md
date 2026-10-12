@@ -1,7 +1,7 @@
 # 01_build_mito_sets
 
-This step turns MitoCarta 3.0 into gene lists. It reads `05_Mitochondria/00_Input/Human.MitoCarta3.0.xls`
-and the protein-to-gene map in
+This step turns MitoCarta 3.0 into gene lists. It reads
+`05_Mitochondria/00_Input/Human.MitoCarta3.0.xls` and the protein-to-gene map in
 `03_Pathway_Enrichment/00_build_gene_sets/c_data/00_build_gene_sets.xlsx`, and writes
 `c_data/01_build_mito_sets.xlsx` with one sheet, `membership`: one row per set and gene, flagged
 when a representative protein carries that symbol.

@@ -25,7 +25,8 @@ chance count, 5% of its sets, and BH runs within collection and task.
 | baseline *(control)* | 0.95 | 0.43 | 0.47 | 0.48 | 0.00 |
 
 The table gives nominal hits as a multiple of chance. After BH, 9 sets survive on BFR training, 49 on
-HLRT and none elsewhere. Protein-level classification is `02_Differential_Expression/02_Differential`.
+HLRT and none elsewhere. Protein-level classification is
+`02_Differential_Expression/04_Protein_Classification`.
 
 S12–S15 draw an ROC panel for every set reaching nominal p on each task except the control, twelve
 to an A4 page, smallest p first, with BH q in each header. S16 plots nominal hits against chance by

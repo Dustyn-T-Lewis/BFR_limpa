@@ -144,8 +144,8 @@ mpe_page <- ggplot(mpe, aes(timepoint, 100 * mpe, colour = treatment)) +
     x = NULL, y = "MPE, % of raw protein intensity",
     caption = caption("Mitochondrial protein enrichment by arm and time", paste(
       "MPE is the summed raw intensity of the", sum(is_mito), "measured MitoCarta 3.0 proteins",
-      "over all", nrow(raw), "proteins, per biopsy. Lines join each leg before and after",
-      "training. Tests: mpe_test sheet of 02_test_mito.xlsx."
+      "over all", format(nrow(raw), big.mark = ","), "proteins, per biopsy. Lines join each leg",
+      "before and after training. Tests: mpe_test sheet of 02_test_mito.xlsx."
     ))
   )
 
@@ -153,7 +153,10 @@ complex_page <- complex_tests |>
   mutate(
     score = if_else(Direction == "Up", 1, -1) * -log10(FDR),
     contrast = factor(contrast, contrast_names), set = factor(set, rev(complexes)),
-    fit = factor(fit, c("standard", "mitochondria_normalised"))
+    fit = factor(
+      fit, c("standard", "mitochondria_normalised"),
+      c("standard fit", "mitochondria-normalised fit")
+    )
   ) |>
   ggplot(aes(contrast, set, fill = score)) +
   geom_tile(colour = "white") +
@@ -217,7 +220,7 @@ sheets <- list(
 overview <- data.frame(
   sheet = names(sheets), rows = sapply(sheets, nrow),
   description = c(
-    "MPE per biopsy, from raw intensities. 06_Composition reads this sheet.",
+    "MPE per biopsy, from raw intensities.",
     "log2 MPE through the saved design and contrasts; plain least-squares t, 95% CI.",
     "Citrate synthase protein from the stage 02 fit, for comparison with CS activity studies.",
     "fry on complexes I to V, standard and mitochondria-normalised fits; FDR within contrast.",

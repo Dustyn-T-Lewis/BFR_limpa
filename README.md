@@ -18,7 +18,7 @@ proteome differently than heavy load.
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | proteins that move together | planned |
 | `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
-| `06_Composition/` | fibre type, and DE adjusted for composition | planned |
+| `06_Composition/` | fibre type, and DE adjusted for composition | export only |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
 Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (an HTML report for the Quarto
@@ -26,7 +26,7 @@ notebooks, figure PDFs for the R scripts) and `c_data/` (one workbook of tables,
 where a later step needs the R object). The limpa steps (stage 01, `01_Design` and
 `02_Differential`) are Quarto notebooks; every step after the fit is a plain R script. Data passes
 through disk, so any sub-stage reruns from a fresh session, and no notebook caches. "Planned" means
-only a README exists.
+only a README exists; "export only" means only the step before the FibeRtypeR web app exists.
 
 ## Running the pipeline
 
@@ -73,4 +73,4 @@ Stages 01 and 02 use `pacman`, `here`, `limpa`, `limma`, `nanoparquet` (read by 
 `readr`, `writexl`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`. Stage 03 adds
 `readxl`, `fgsea`, `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`,
 `patchwork` and `enrichVolcano` 2.0.0 or later (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on
-CRAN). Stage 06 needs nothing new.
+CRAN). Stages 05 and 06 need nothing new.
