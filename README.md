@@ -46,7 +46,7 @@ Rscript 02_Differential_Expression/04_Protein_Classification/a_script/04_protein
 
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
          03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association \
-         07_leading_edge; do
+         07_leading_edge 08_pathway_maps; do
   Rscript 03_Pathway_Enrichment/$s/a_script/$s.R
 done
 
@@ -55,7 +55,7 @@ Rscript 05_Mitochondria/02_test_mito/a_script/02_test_mito.R
 Rscript 05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.R
 ```
 
-The block takes about four minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
+The block takes about five minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
 only when the precursor matrix changes.
 
@@ -72,5 +72,5 @@ Every script loads its packages with `pacman::p_load()`, which installs any that
 Stages 01 and 02 use `pacman`, `here`, `limpa`, `limma`, `nanoparquet` (read by `readDIANN()`),
 `readr`, `writexl`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`. Stage 03 adds
 `readxl`, `fgsea`, `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`,
-`patchwork` and `enrichVolcano` 2.0.0 or later (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on
-CRAN). Stages 05 and 06 need nothing new.
+`patchwork`, `clusterProfiler`, `enrichplot`, `eulerr` and `enrichVolcano` 2.0.0 or later (GitHub,
+`Dustyn-T-Lewis/enrichVolcano`, not on CRAN). Stages 05 and 06 need nothing new.

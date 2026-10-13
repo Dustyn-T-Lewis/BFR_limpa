@@ -79,9 +79,40 @@ role_page <- function(which_role, title_text) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6))
 }
 
+# Sam's summary layout: mean subunit change per complex and leg, with every subunit as a point.
+summary_page <- subunits |>
+  filter(role == "subunits") |>
+  pivot_longer(c(BFR_logFC, HLRT_logFC), names_to = "arm", values_to = "logFC") |>
+  mutate(arm = str_remove(arm, "_logFC")) |>
+  ggplot(aes(complex, logFC, fill = arm)) +
+  geom_hline(yintercept = 0, linewidth = 0.3, colour = "grey50") +
+  stat_summary(fun = mean, geom = "col", position = position_dodge(0.8), width = 0.7) +
+  stat_summary(
+    fun.data = mean_se, geom = "errorbar", position = position_dodge(0.8), width = 0.25
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8, seed = 1),
+    size = 0.9, alpha = 0.6, show.legend = FALSE
+  ) +
+  geom_text(
+    data = interaction_fry, inherit.aes = FALSE, size = 2.8,
+    aes(complex, Inf, label = paste("fry FDR", signif(fry_fdr, 2))), vjust = 1.5
+  ) +
+  scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
+  labs(
+    x = NULL, y = "log2 change, post - pre",
+    caption = str_wrap(paste(
+      "Complex subunits, summary by leg. Bars are the mean training change of each complex's",
+      "measured subunits, with standard error; points are the subunits. The label is fry's",
+      "interaction FDR on the complex, the set-level test of BFR against HLRT. Data: subunits",
+      "sheet of 03_complex_subunits.xlsx."
+    ), 115)
+  )
+
 pdf(file.path(stage, "b_reports", "03_complex_subunits.pdf"), width = 8.27, height = 11.69)
 walk(
   list(
+    summary_page,
     role_page("subunits", "Complex subunits by leg."),
     role_page("assembly factors", "Complex assembly factors by leg.")
   ),
