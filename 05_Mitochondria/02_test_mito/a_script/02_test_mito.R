@@ -195,7 +195,7 @@ volcano <- function(cn) {
       legend.key.width = unit(16, "mm")
     )
 }
-drawn <- setdiff(contrast_names, d$negative_control)
+drawn <- setdiff(contrast_names, d$baseline)
 volcano_page <- wrap_plots(map(drawn, volcano), ncol = 2) +
   plot_annotation(caption = caption("Mitochondria-normalised proteins", paste(
     "Points are the", nrow(mito), "MitoCarta proteins after normalising them alone, coloured at",

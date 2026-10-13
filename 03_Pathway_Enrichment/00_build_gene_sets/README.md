@@ -33,8 +33,8 @@ together, or move both aside to rebuild.
 
 A set is tested with 15 to 500 source genes and at least 15 measured. No set is excluded by name.
 Six other collections were measured and dropped, chiefly GO:CC: its sets are physical complexes,
-co-regulated by stoichiometry, and three of the control's original six false positives came from it.
-Dropping GO:CC and GO:MF took the control from 14 hits to 1.
+co-regulated by stoichiometry, and three of the baseline contrast's original six fgsea hits came from it.
+Dropping GO:CC and GO:MF took the baseline contrast from 14 hits to 1.
 
 GO Slim sets come from the GO Consortium's generic slim (`goslim_generic.obo`, frozen with an md5).
 Each holds every measured gene annotated to the slim term or any GO:BP term below it, drawn from the

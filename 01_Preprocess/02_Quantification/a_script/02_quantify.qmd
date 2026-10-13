@@ -1,44 +1,57 @@
 ---
 title: "02 · Quantification"
-subtitle: "Detection probability curve, protein roll-up, detection filter, normalisation"
 format:
   html:
     toc: true
-    toc-depth: 3
     embed-resources: true
-    df-print: kable
     fig-width: 7
     fig-height: 5
-    fig-dpi: 150
-    fig-align: center
 execute:
   message: false
 ---
 
-Half of a DIA matrix is empty, and fainter precursors go missing more often. Following limpa's
-vignette, `dpc()` fits that as a curve and `dpcQuant()` uses it to give every protein a value in
-every sample without imputation.
+## Load packages
 
 ```{r setup}
 pacman::p_load(here, limpa, limma, tibble, purrr, writexl)
+here::i_am("01_Preprocess/02_Quantification/a_script/02_quantify.qmd")
+```
 
+## Read measurements and protein estimates
+
+`y` holds the filtered precursors from `01_Filtering`. `proteins` holds the protein estimates and
+their standard errors that `02_quantify_run.R` saved, because `dpcQuant()` takes about 100 minutes
+and this notebook should render in minutes. The checkpoint must come from the current filtered
+input; nothing in the file ties it to that input, so rerun the script whenever filtering changes.
+
+```{r read}
 y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
 
 checkpoints <- here("01_Preprocess", "02_Quantification", "c_data", "quant_runs")
 sensitivity_file <- file.path(checkpoints, "proteins_slope_fitted.rds")
 proteins <- readRDS(file.path(checkpoints, "proteins_slope_0.7.rds"))
+
+dim(y)
+dim(proteins)
+head(proteins$genes, 6)
 ```
 
 ## Missingness
+
+In DIA data, low-intensity precursors go missing more often. The plot takes the precursor matrix
+and shows the proportion of missing values against mean observed intensity; a downward trend is
+that association. It does not show why a given value is missing.
 
 ```{r ave-vs-mis}
 plotAveVsMis(y)
 ```
 
-A downward trend means detection depends on intensity, which the DPC fits. A flat cloud would
-mean near-random missingness, where limpa gains less over simpler methods.
+## Fit the detection curve
 
-## The curve
+The detection probability curve (DPC) gives the probability that a precursor is observed as a
+function of its true intensity, through an intercept and a slope. `dpc()` takes the log2 matrix and
+returns the fitted pair. Its default, `model = "cn"`, is `dpcCN()`, the complete-normal estimator
+the limpa FAQ recommends for noisy data, fitted on a stratified subset of 2,000 precursors.
 
 ```{r dpc}
 dpcest <- dpc(y$E)
@@ -48,47 +61,27 @@ dpc_parameters <- tibble(intercept = dpcest$dpc[1], slope = dpcest$dpc[2])
 round(dpc_parameters, 3)
 ```
 
-`dpc()` defaults to `model = "cn"`, which returns `dpcCN()`, the complete-normal estimator the
-limpa FAQ recommends for noisy data. `subset = 2000` fits a systematic sample stratified by
-missingness and mean intensity rather than all `r format(nrow(y), big.mark = ",")` rows. `robust`
-is *"Only used if `model='on'"*, so here the subsample supplies the robustness.
-
-The slope of `r round(dpcest$dpc[2], 3)` sits below the 0.7-to-0.9 band the FAQ calls typical for
-DIA-NN with match-between-runs, inside the 0.1-to-1.0 range it calls usable.
-
-Quantification therefore uses the FAQ's preset: "If `dpcCN()` doesn't give a value in that
-range, it would be reasonable to run `dpcQuant()` with a preset value `dpc.slope=0.7`."
-
-The FAQ says a slope set too low makes the analysis more conservative. Here the reverse held, with
-the lower fitted slope giving smaller standard errors and more hits. The preset is the documented
-setting and, on this data, the cautious one, chosen before any downstream count was consulted.
-
-::: {.callout-note} The visual fit is not diagnostic. `plotDPC()` draws a curve in *unobserved*
-intensity against proportions computed on *observed* intensity, so curve and points disagree by
-construction. Judge the slope. :::
+The fitted slope, `r round(dpcest$dpc[2], 3)`, sits below the 0.7 to 0.9 band the limpa FAQ calls
+typical for DIA-NN with match-between-runs. The FAQ's advice for that case is the project's choice
+for the primary run: "If `dpcCN()` doesn't give a value in that range, it would be reasonable to
+run `dpcQuant()` with a preset value `dpc.slope=0.7`." Standard errors or hit counts alone do not
+show which slope is right, so the fitted slope is kept as a sensitivity run (below and in
+`02_Differential`).
 
 ## Roll-up
 
-`dpcQuant()` fits an additive precursor-plus-sample model per protein, maximising a posterior
-that scores observed values by squared residual and missing values by their DPC probability. It
-returns `$other$standard.error`, which `dpcDE()` reads as a precision weight, so a protein built
-largely from missing precursors gets a wide standard error and counts for less.
-
-The roll-up takes about 100 minutes, so `a_script/02_quantify_run.R` runs it and this notebook
-loads the result. Rerun the script by hand when the precursor matrix changes.
-
-`r format(nrow(proteins), big.mark = ",")` protein groups come from
-`r format(nrow(y), big.mark = ",")` precursors, with no missing values; each value carries its own
-standard error.
+`02_quantify_run.R` combines precursors into proteins with `dpcQuant()`, grouping by
+`Protein.Group`. It returns a complete matrix, an abundance for every protein in every sample,
+plus a standard error per value that `dpcDE()` later uses as a precision weight. The loaded
+checkpoint holds `r format(nrow(proteins), big.mark = ",")` protein groups from
+`r format(nrow(y), big.mark = ",")` precursors.
 
 ## Detection filter
 
-`filterByDetection()` runs between `dpcQuant()` and DE. For a small experiment its help sets
-`n.samples` to the smallest group size, here `BFR_T2` with 32 samples, one short because S06_L_T2 is
-missing.
-
-It counts detections across all samples, so the bar is cohort-wide and does not guarantee
-detection within any one group.
+`filterByDetection()` takes the protein object and a minimum number of samples, and returns one
+`TRUE` or `FALSE` per protein. For a small experiment its help page sets `n.samples` to the
+smallest group size. The count runs across all samples, so it does not guarantee detection within
+any one group.
 
 ```{r detection}
 group_sizes <- table(proteins$targets$group)
@@ -99,26 +92,23 @@ group_sizes
 c(before = length(detected), kept = sum(detected), dropped = sum(!detected))
 ```
 
-On an earlier run, dropped proteins had a mean SE of 1.56 against 0.66 for those kept, and 0.15
-detected precursors per sample against 7.48; the typical sample measured nothing for them.
-limpa's default threshold of 3 recovered 371, one of which reached BH < 0.05 in any contrast,
-while the larger test set tightened BH enough to push 14 and 29 significant proteins above 0.05 on
-the two training contrasts.
-
 ## Normalisation
 
-DIA-NN normalised the precursors (`Precursor.Normalised`), but that leaves the protein roll-up
-unnormalised, and limpa normalises nothing itself.
+Cyclic loess (`normalizeBetweenArrays(method = "cyclicloess")`) removes abundance-dependent
+differences between samples. DIA-NN normalised the precursors already; this second pass works on
+the protein estimates. Smyth recommends quantile or cyclic loess normalisation of limpa protein
+quantifications when sample differences are technical
+([Bioconductor support](https://support.bioconductor.org/p/9163187/#9163221)).
 
-A per-sample shift fixes the spread of per-sample medians but not the MA curve width, which cyclic
-loess targets. The MA curve fits a sample's difference from the all-sample average against
-abundance. A flat curve means a constant offset; a travelling one means the offset depends on
-abundance.
+Two helpers describe the effect. An MA curve plots a sample's difference from the across-sample
+mean against average abundance. `ma_width()` takes a log2 matrix and returns, per sample, the range
+of its fitted MA curve; a large range means the difference changes with abundance. `spread()`
+returns the range of sample medians. Both describe; neither decides whether normalisation is right.
 
 ```{r normalise}
 ma_width <- function(m) {
   a <- rowMeans(m)
-  apply(m, 2, \(x) diff(range(lowess(a, x - a, f = 0.5)$y)))
+  apply(m, 2, function(x) diff(range(lowess(a, x - a, f = 0.5)$y)))
 }
 spread <- function(m) diff(range(apply(m, 2, median)))
 
@@ -131,8 +121,8 @@ after <- c(ma_width = median(ma_width(proteins$E)), median_spread = spread(prote
 round(rbind(before, after), 3)
 ```
 
-The top row shows every sample's intensity density; the bottom row shows the sample whose curve
-travelled furthest before normalisation, against the all-sample average.
+Intensity distributions before and after, then the sample with the widest MA curve before and
+after.
 
 ```{r normalise-plots}
 #| fig-height: 8
@@ -144,20 +134,14 @@ plotMD(unnormalised, column = worst, main = paste(colnames(unnormalised)[worst],
 plotMD(proteins$E, column = worst, main = paste(colnames(proteins$E)[worst], "after"))
 ```
 
-The curvature is unrelated to treatment or timepoint, so cyclic loess is not absorbing the tested
-effect. `proteins.rds`, written after this step, is the matrix the model is fitted to.
+Only `proteins$E` changes. The standard errors stay on the unnormalised scale, and `dpcDE()` reads
+them as if they matched; the mapping is close to linear, but this approximation carries into every
+later stage.
 
-::: {.callout-warning}
-## The standard errors stay on the old scale
+## Check protein estimates
 
-Cyclic loess remaps `$E` non-linearly and leaves `$other$standard.error` on the unnormalised
-scale, which `dpcDE()` reads as though it were the new one. Smyth recommends quantile or cyclic-loess normalisation of limpa
-protein quantifications when sample differences are technical
-([Bioconductor support, 2026](https://support.bioconductor.org/p/9163187/#9163221)). The mapping
-is close to linear, but it is an approximation carried into every later stage.
-:::
-
-## What survives
+Per protein: precursor count (`NPrec`, which `dpcQuant()` writes although its help page says
+`NPeptides`), proportion observed, mean log2 abundance and mean standard error.
 
 ```{r quality}
 protein_quality <- tibble(
@@ -172,12 +156,10 @@ protein_quality <- tibble(
 summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
 ```
 
-The installed version writes `NPrec`; the help page calls it `NPeptides`. A high mean standard
-error with few observations marks an estimate drawn from the DPC.
-
-Points are coloured by participant. 32 of 33 participants contribute all four cells, so
-between-participant variation dominates; the design's participant term removes it. Check any
-sample far from its own participant.
+`plotMDSUsingSEs()` places samples by their protein profiles, weighting by the standard errors;
+colour is participant. A sample far from its own participant's other samples is worth a look.
+`r2()` takes a factor and returns the share of the first coordinate it explains, for participant
+and group separately.
 
 ```{r mds}
 mds <- plotMDSUsingSEs(proteins, pch = 16, col = as.integer(factor(proteins$targets$participant)))
@@ -187,12 +169,11 @@ round(map_dbl(proteins$targets[c("participant", "group")], r2), 3)
 
 ## Slope sensitivity
 
-The sensitivity run quantifies against the whole fitted curve, intercept included, where the
-primary run passes `dpc.slope = 0.7` and lets limpa fit the rest. Both get the same detection
-filter and normalisation. The run with the larger mean standard error is the more conservative.
-
-The median absolute abundance difference follows the table. It measures how far values move,
-not whether contrasts change, since within-participant comparisons cancel a shared shift.
+The sensitivity run quantifies against the whole fitted curve, where the primary run passes
+`dpc.slope = 0.7` and lets limpa fit the intercept. Both get the same detection filter and
+normalisation. The table compares protein counts and mean standard errors on shared proteins; the
+median absolute abundance difference follows. It measures how far values move, not whether the
+contrasts change; `02_Differential` compares those.
 
 ```{r slope-sensitivity}
 #| eval: !expr file.exists(sensitivity_file)
@@ -215,28 +196,39 @@ tibble(
 round(median(abs(proteins$E[shared, ] - sensitivity$E[shared, ])), 4)
 ```
 
-This section renders only when `c_data/quant_runs/proteins_slope_fitted.rds` exists, which costs
-another 100 minutes to produce:
+The section runs only when `c_data/quant_runs/proteins_slope_fitted.rds` exists. It takes a
+separate quantification run:
 
 ```sh
 Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 ```
 
-`02_Differential` refits the five contrasts under both slopes and counts the hits.
+## Save results
 
-## Outputs
-
-`proteins.rds` holds abundance, standard error and detected-precursor count per protein and sample.
-Every sub-stage of `02_Differential_Expression` reads it, as do `00_build_gene_sets`,
-`01_run_fgsea_and_fry`, `04_run_singscore`, `05_set_classification` and `06_set_association`. Keep
-the `.rds`: abundances alone lose the standard errors.
+`proteins.rds` keeps abundance, standard errors, annotations and sample metadata together for every
+later stage. `02_quantify.xlsx` holds the samples, the fitted curve, detection counts, the
+normalisation summary and per-protein quality.
 
 ```{r write}
-sheets <- list(dpc_parameters = dpc_parameters, protein_quality = protein_quality)
+sheets <- list(
+  samples = as.data.frame(proteins$targets),
+  dpc_parameters = dpc_parameters,
+  detection_summary = data.frame(
+    before = length(detected), kept = sum(detected), dropped = sum(!detected),
+    minimum_samples = min(group_sizes)
+  ),
+  normalisation_summary = data.frame(
+    stage = c("before", "after"), rbind(before, after), row.names = NULL
+  ),
+  protein_quality = protein_quality
+)
 overview <- data.frame(
   sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
   description = c(
-    "Fitted DPC intercept and slope",
+    "Sample identifiers and study metadata",
+    "Fitted diagnostic DPC; primary quantification uses preset slope 0.7",
+    "Protein counts and minimum sample threshold for detection filtering",
+    "Median MA-curve range and sample-median spread before and after normalisation",
     "Per-protein coverage, abundance and standard error"
   )
 )
@@ -245,6 +237,8 @@ out <- here("01_Preprocess", "02_Quantification", "c_data")
 saveRDS(proteins, file.path(out, "proteins.rds"))
 write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_quantify.xlsx"))
 ```
+
+## Session information
 
 ```{r session}
 sessionInfo()

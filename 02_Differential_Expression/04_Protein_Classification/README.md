@@ -13,13 +13,13 @@ Rscript 02_Differential_Expression/04_Protein_Classification/a_script/04_protein
 ```
 
 AUC comes from `pROC` with `direction = "<"` fixed, and p from the paired Wilcoxon test, with BH
-within task. The baseline control is reported but not drawn.
+within task. The baseline comparison is reported but not drawn.
 
 | Task | Nominal | Expected | Ratio | BH < 0.05 |
 |---|---:|---:|---:|---:|
 | Pre to post, BFR | 477 | 152 | 3.14 | 53 |
 | Pre to post, HLRT | 664 | 152 | 4.37 | 220 |
-| Baseline BFR vs HLRT *(control)* | 140 | 152 | 0.92 | 0 |
+| Baseline BFR vs HLRT | 140 | 152 | 0.92 | 0 |
 | Post BFR vs HLRT | 172 | 152 | 1.13 | 0 |
 | Change, BFR vs HLRT | 120 | 152 | 0.79 | 0 |
 

@@ -1,12 +1,18 @@
-# 01_Preprocess / 01_Filtering
+# 01 · Filtering
 
-This step reads `00_Input/report.parquet` and `00_Input/metadata.csv` and removes precursor rows,
-dropping no sample and filtering nothing on missing values.
+Turns the DIA-NN report into a filtered precursor matrix: repairs the search annotation, removes
+shared and compound assignments, and removes blood and skin contaminants before quantification.
+Nothing is filtered on missing values.
 
-`02_Quantification` reads the result, `c_data/precursors_filtered.rds`. `c_data/01_filter.xlsx`
-records the rows, groups and signal left after each filter and every contaminant removed;
-`b_reports/01_filter.html` gives the reason for each filter beside its code.
+Inputs: `00_Input/report.parquet`, `00_Input/metadata.csv`.
 
 ```sh
 quarto render 01_Preprocess/01_Filtering/a_script/01_filter.qmd --output-dir ../b_reports
 ```
+
+Outputs:
+
+- `b_reports/01_filter.html`: the walkthrough, with previews at each step.
+- `c_data/precursors_filtered.rds`: filtered precursors, read by `02_Quantification`.
+- `c_data/01_filter.xlsx`: samples, rows and signal after each filter, annotation exclusions,
+  removed contaminants and the fraction removed per sample.

@@ -35,10 +35,10 @@ Significant sets per contrast at an adjusted p below 0.05:
 | HLRT_Post-Pre | 281 | 68 | 589 |
 | BFR_Post-HLRT_Post | 159 | 52 | 0 |
 | Modality_x_Time_Interaction | 26 | 10 | 0 |
-| BFR_Pre-HLRT_Pre *(control)* | 1 | 1 | 0 |
+| BFR_Pre-HLRT_Pre *(baseline)* | 1 | 1 | 0 |
 
 fry finds nothing on the between-leg contrasts, so the interaction's 10 fgsea pathways are leads
-rather than findings. The control's one fgsea hit, `REACTOME_STRIATED_MUSCLE_CONTRACTION`, is the
+rather than findings. The baseline contrast's one fgsea hit, `REACTOME_STRIATED_MUSCLE_CONTRACTION`, is the
 floor for every count.
 
 S1 shows the ten strongest collapse survivors per contrast across all collections, S2–S6 the same
