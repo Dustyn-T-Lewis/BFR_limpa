@@ -1,21 +1,22 @@
-# 01_fibre_type_export
+# 01 · Fibre type export
 
-This step writes the file that FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) reads to
-estimate the slow and fast fibre fractions of each biopsy. It reads `Run`, `Genes` and
-`Genes.MaxLFQ.Unique` from `00_Input/report.parquet` and the run names in `00_Input/metadata.csv`,
-and writes `c_data/fibertyper_input.csv`: one row per gene, first column `identifier`, one column
-per `sample_id`. It is the only CSV in the repo, because the app accepts nothing else.
+Writes the file FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) reads to estimate the
+slow and fast fibre fractions of each biopsy: DIA-NN's gene-level LFQ from unique peptides, raw,
+since the app normalises it itself.
+
+Inputs: `Run`, `Genes` and `Genes.MaxLFQ.Unique` from `00_Input/report.parquet`,
+`00_Input/metadata.csv`.
 
 ```sh
-Rscript 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.R
+quarto render 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd --output-dir ../b_reports
 ```
 
-The app wants raw LFQ intensities and normalises them itself. `Genes.MaxLFQ.Unique` is DIA-NN's
-gene-level LFQ built from unique peptides, the quantification the authors found most accurate.
-DIA-NN writes 0 on precursor rows that do not count toward it, so a 0 is read as not quantified
-and left blank. The file holds 4,317 genes; 34.5% of cells are blank and 1,176 genes are complete
-in all 131 biopsies. Of the 145 proteins in the published signature (77 slow, 68 fast), 118 are
-present.
+Outputs:
+
+- `b_reports/01_fibre_type_export.html`: the walkthrough.
+- `c_data/fibertyper_input.csv`: one row per gene, first column `identifier`, one column per
+  `sample_id`; unquantified cells blank. 4,317 genes, 34.5% of cells blank, 1,176 genes complete in
+  all 131 biopsies. The only CSV in the repo, because the app accepts nothing else.
 
 ## Upload
 

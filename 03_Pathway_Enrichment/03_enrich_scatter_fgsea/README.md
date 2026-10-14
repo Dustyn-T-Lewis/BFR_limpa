@@ -1,13 +1,20 @@
-# 03_enrich_scatter_fgsea
+# 03 · NES scatter, fgsea
 
-This step compares each set's BFR_Post-Pre NES with its HLRT_Post-Pre NES, from `set_tests` in
-`01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`. `c_data/03_enrich_scatter_fgsea.xlsx` holds
-the concordance table below, the discordant sets and both NES with adjusted p for every set; S10
-is in `b_reports/03_enrich_scatter_fgsea_figures.pdf`.
+Compares each set's BFR_Post-Pre NES with its HLRT_Post-Pre NES, to ask whether both modalities
+move the same biology. No new test.
+
+Inputs: `set_tests` from `01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`.
 
 ```sh
-Rscript 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.R
+quarto render 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.qmd --output-dir ../b_reports
 ```
+
+Outputs:
+
+- `b_reports/03_enrich_scatter_fgsea.html`: the walkthrough.
+- `b_reports/03_enrich_scatter_fgsea_figures.pdf`: S10, the NES scatter for Hallmark and GO Slim.
+- `c_data/03_enrich_scatter_fgsea.xlsx`: the concordance table below, the discordant sets, and
+  both NES with adjusted p for every set.
 
 | Population | Sets | rho | Significant | Discordant |
 |---|---:|---:|---:|---:|
@@ -15,10 +22,5 @@ Rscript 03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter
 | Collapse survivors | 126 | 0.86 | 126 | 3 |
 | Hallmark and GO Slim | 100 | 0.82 | 25 | 0 |
 
-No set significant in both arms changes sign: both modalities moved the same pathways by similar
-amounts, which is why the interaction is empty. A set is discordant when its two NES have opposite
-signs; all eight are significant in one arm only, with the other at p 0.43 to 0.99.
-
-S10 draws Hallmark and GO Slim with `enrichVolcano::plot_scatter()`. These collections do not
-nest; GO:BP's overlapping branches would weight rho toward the largest branch. The concordance
-table covers all three populations, and the discordant sets are listed in the workbook.
+A set is discordant when its two NES have opposite signs. None significant in both arms changes
+sign: both modalities moved the same pathways by similar amounts.

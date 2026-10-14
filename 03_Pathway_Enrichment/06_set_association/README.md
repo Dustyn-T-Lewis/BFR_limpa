@@ -1,24 +1,26 @@
-# 06_set_association
+# 06 · Set association
 
-This step correlates each set's singscore change with the same leg's change in muscle size and
-quality. It reads `04_run_singscore/c_data/set_scores.rds`, the catalogue in
-`00_build_gene_sets/c_data/00_build_gene_sets.xlsx`, the sample targets in
-`01_Preprocess/02_Quantification/c_data/proteins.rds` and `00_Input/phenotype.csv`. It writes
-`c_data/06_set_association.xlsx`, one scatter PDF per collection (`06_association_Hallmark.pdf` and
-so on) and `06_chance_by_collection.pdf`.
+Correlates each set's singscore change with the same leg's change in muscle size and echo
+intensity, pooled over 65 legs and within participant (BFR minus HLRT) over 32 participants.
+
+Inputs: `04_run_singscore/c_data/set_scores.rds`, the `set_catalog` sheet of
+`00_build_gene_sets/c_data/00_build_gene_sets.xlsx`, the targets in
+`01_Preprocess/02_Quantification/c_data/proteins.rds`, and `00_Input/phenotype.csv`.
 
 ```sh
-Rscript 03_Pathway_Enrichment/06_set_association/a_script/06_set_association.R
+quarto render 03_Pathway_Enrichment/06_set_association/a_script/06_set_association.qmd --output-dir ../b_reports
 ```
 
-Correlations are Spearman `cor.test`, pooled over 65 legs and differential over 32 participants,
-where the differential analysis correlates the BFR minus HLRT change in score with the same
-difference in outcome. The `set_by_arm` sheet repeats each correlation inside BFR and inside HLRT,
-for description only. BH runs within collection and outcome.
+Outputs:
+
+- `b_reports/06_set_association.html`: the walkthrough.
+- `b_reports/06_association_<collection>.pdf`, one per collection: S17 (pooled) and S18
+  (differential), every set-outcome pair reaching nominal p, smallest p first, with the
+  within-arm correlations inset.
+- `b_reports/06_chance_by_collection.pdf`: S19, nominal hits against chance by collection.
+- `c_data/06_set_association.xlsx`: `chance_expectation`, `set_association` (Spearman r, p and
+  BH q), `set_by_arm` (the same correlation inside each arm, descriptive) and `set_catalog`. Read
+  by no later step.
 
 No set tracks the phenotype after correction, and no protein does either
 (`02_Differential_Expression/03_Protein_Association`).
-
-S17 draws every set-outcome pair reaching nominal p in the pooled analysis and S18 in the
-differential one, twelve to an A4 page, smallest p first, with the within-arm correlations inset.
-S19 plots nominal hits against chance by collection.

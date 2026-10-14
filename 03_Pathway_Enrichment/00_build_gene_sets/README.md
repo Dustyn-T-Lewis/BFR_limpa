@@ -1,48 +1,32 @@
-# 00_build_gene_sets
+# 00 · Build gene sets
 
-This step freezes the gene sets, maps proteins to genes and applies the size filter, so every later
-step reads one list. It reads `01_Preprocess/02_Quantification/c_data/proteins.rds` and the frozen
-MSigDB snapshot and GO Slim OBO in `c_data/cache/`, each beside its `.md5`.
+Freezes one MSigDB release, maps each gene symbol to one protein and keeps the sets large enough
+to test, so every later step reads one set list.
 
-`01_run_fgsea_and_fry`, `04_run_singscore`, `07_leading_edge` and `08_pathway_maps` read the tested
-sets, `c_data/gene_sets.rds`.
-`c_data/00_build_gene_sets.xlsx` holds the set catalogue (`set_catalog`) and protein-to-gene map
-(`protein_gene_map`) that `01_`, `04_` to `07_` read, plus counts per collection and mapping
-outcome. The step draws nothing, so it has no `b_reports/`.
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`, and the frozen MSigDB snapshot
+(release 2026.1.Hs) and GO Slim OBO in `c_data/cache/`, each beside its `.md5`. With the cache in
+place no network or `msigdbr` is needed; restore a file and its `.md5` together.
 
 ```sh
-Rscript 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.R
+quarto render 03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.qmd --output-dir ../b_reports
 ```
 
-## Snapshot
+Outputs:
 
-The first run fetches four MSigDB collections (release 2026.1.Hs) through `msigdbr` and saves an RDS
-with an md5; later runs check it and need neither network nor `msigdbr`. Restore the RDS and `.md5`
-together, or move both aside to rebuild.
+- `b_reports/00_build_gene_sets.html`: the walkthrough. No figures.
+- `c_data/gene_sets.rds`: the 1,990 tested sets, read by `01_run_fgsea_and_fry`,
+  `04_run_singscore`, `07_leading_edge` and `08_pathway_maps`.
+- `c_data/00_build_gene_sets.xlsx`: the set catalogue (`set_catalog`) and protein-to-gene map
+  (`protein_gene_map`), read by `01_`, `04_` to `07_`, plus counts per collection and mapping
+  outcome.
 
-## Collections
+A set is tested with 15 to 500 source genes and at least 15 measured; no set is excluded by name.
+The measured universe is 3,039 symbols.
 
 | Collection | In source | Tested | Median measured |
 |---|---:|---:|---:|
 | Hallmark | 50 | 41 | 44 |
-| KEGG_Legacy | 186 | 94 | 26 |
 | Reactome | 1,839 | 430 | 33 |
+| KEGG_Legacy | 186 | 94 | 26 |
 | GO:BP | 7,538 | 1,366 | 29 |
 | GO Slim | 71 | 59 | 138 |
-| Total | 9,684 | 1,990 | |
-
-A set is tested with 15 to 500 source genes and at least 15 measured. No set is excluded by name.
-Six other collections were measured and dropped, chiefly GO:CC: its sets are physical complexes,
-co-regulated by stoichiometry, and three of the baseline contrast's original six fgsea hits came from it.
-Dropping GO:CC and GO:MF took the baseline contrast from 14 hits to 1.
-
-GO Slim sets come from the GO Consortium's generic slim (`goslim_generic.obo`, frozen with an md5).
-Each holds every measured gene annotated to the slim term or any GO:BP term below it, drawn from the
-full membership rather than the tested subset, and the size rule reads measured size. Built the
-other way, *protein folding* kept 19 of its 129 genes.
-
-## One protein per gene
-
-Proteins with no symbol or several symbols are left out of set tests rather than split. Where
-proteins share a symbol, the one with the most observed precursors represents it. `protein_gene_map`
-records each decision; the measured universe is 3,039 symbols.

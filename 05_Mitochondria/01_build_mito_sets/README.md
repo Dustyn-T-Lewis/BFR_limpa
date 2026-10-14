@@ -1,16 +1,20 @@
-# 01_build_mito_sets
+# 01 · Build mito sets
 
-This step turns MitoCarta 3.0 into gene lists. It reads
-`05_Mitochondria/00_Input/Human.MitoCarta3.0.xls` and the protein-to-gene map in
-`03_Pathway_Enrichment/00_build_gene_sets/c_data/00_build_gene_sets.xlsx`, and writes
-`c_data/01_build_mito_sets.xlsx` with one sheet, `membership`: one row per set and gene, flagged
-when a representative protein carries that symbol.
+Turns MitoCarta 3.0 into gene sets, the full list and the 149 MitoPathways, and flags which genes
+we measure.
+
+Inputs: `05_Mitochondria/00_Input/Human.MitoCarta3.0.xls`, the `protein_gene_map` sheet of
+`03_Pathway_Enrichment/00_build_gene_sets/c_data/00_build_gene_sets.xlsx`.
 
 ```sh
-Rscript 05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.R
+quarto render 05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.qmd --output-dir ../b_reports
 ```
 
-The sets are the full MitoCarta list (1,136 genes, 660 measured) and the 149 MitoPathways. The
-complex readouts in `02_test_mito` are the pathways "CI subunits" to "CV subunits": structural
-subunits, mtDNA-encoded ones included. The parent pathways "Complex I" and so on also hold assembly
-factors, which build a complex without tracking how much of it exists.
+Outputs:
+
+- `b_reports/01_build_mito_sets.html`: the walkthrough.
+- `c_data/01_build_mito_sets.xlsx`: the `membership` sheet, one row per set and gene, flagged when
+  a representative protein carries the symbol. MitoCarta lists 1,136 genes, 660 of them measured.
+
+The complex readouts downstream are the pathways "CI subunits" to "CV subunits", structural
+subunits only. The parent pathways "Complex I" and so on also hold assembly factors.

@@ -1,13 +1,49 @@
-# BFR against HLRT NES per set: do both modalities move the same biology? No new test.
+---
+title: "03 · NES scatter, fgsea"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  message: false
+---
 
+## Load packages
+
+`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
+this notebook in the repository, so paths resolve from the repository root. `enrichVolcano`, the
+user's own plotting package (not on CRAN), is called with `::`.
+
+```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
+here::i_am("03_Pathway_Enrichment/03_enrich_scatter_fgsea/a_script/03_enrich_scatter_fgsea.qmd")
+```
 
+## Read set tests
+
+Do both modalities move the same biology? This step sets each gene set's fgsea NES in BFR
+training against its NES in HLRT training. NES, the normalised enrichment score, is positive when
+a set's members sit towards the top of the protein ranking and negative towards the bottom. No
+new test is run; everything comes from `set_tests` in `01_run_fgsea_and_fry.xlsx`.
+
+```{r read}
 stage <- here("03_Pathway_Enrichment", "03_enrich_scatter_fgsea")
 set_tests <- read_excel(
   here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"),
   "set_tests"
 )
+count(set_tests, method)
+```
 
+## Pair the two contrasts
+
+Keep fgsea rows for the two training contrasts and widen to one row per set, with `_x` columns
+for BFR_Post-Pre and `_y` for HLRT_Post-Pre. `significance` records which arm reaches BH 0.05.
+A set is discordant when its two NES sit on opposite sides of zero; each discordant set here is
+significant in one arm only, so the opposite sign rests on the other arm's null. `survivor` marks
+sets that survived `collapsePathways` in either arm.
+
+```{r pair}
 x_contrast <- "BFR_Post-Pre"
 y_contrast <- "HLRT_Post-Pre"
 paired <- set_tests |>
@@ -24,13 +60,22 @@ paired <- set_tests |>
       padj_y < 0.05 ~ y_contrast,
       .default = "NS"
     ) |> factor(c("Both", x_contrast, y_contrast, "NS")),
-    # Discordant: opposite sides of zero. Each discordant set here is significant in one arm
-    # only, so the opposite sign rests on the other arm's null.
     discordant = sign(NES_x) != sign(NES_y),
     survivor = main_x | main_y,
     label = enrichVolcano::clean_label(pathway)
   )
+head(select(paired, set_id, NES_x, NES_y, significance, discordant), 4)
+count(paired, significance)
+```
 
+## Concordance
+
+`concordance()` takes a paired table and returns one row: sets, significant sets, discordant
+significant sets, Spearman's rho between the two NES with its p, and the share of significant
+sets with the same sign in both arms. The warning about ties in `cor.test()` is suppressed; the
+p-value is then approximate.
+
+```{r concordance-helper}
 concordance <- function(data) {
   test <- suppressWarnings(cor.test(data$NES_x, data$NES_y, method = "spearman"))
   hits <- filter(data, significance != "NS")
@@ -40,9 +85,22 @@ concordance <- function(data) {
     same_sign = round(mean(!hits$discordant), 3)
   )
 }
+```
 
+Three populations: every set, the collapse survivors, and Hallmark with GO Slim. Hallmark and GO
+Slim do not nest, so no branch of the GO:BP hierarchy weights rho towards its largest branch.
+
+```{r populations}
 survivors <- filter(paired, survivor)
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
+```
+
+## Figure
+
+`as_enrichment()` turns the fgsea rows into `enrichVolcano`'s enrichment object, and
+`plot_scatter()` draws the two contrasts' NES against each other for Hallmark and GO Slim.
+
+```{r figure}
 enrichment <- set_tests |>
   filter(method == "fgsea", contrast %in% c(x_contrast, y_contrast)) |>
   transmute(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
@@ -71,20 +129,38 @@ figure <- enrichVolcano::plot_scatter(
     plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
     plot.caption.position = "plot"
   )
+```
 
+S10 goes to `b_reports/03_enrich_scatter_fgsea_figures.pdf`.
+
+```{r write-figure}
 pdf(
   file.path(stage, "b_reports", "03_enrich_scatter_fgsea_figures.pdf"),
   width = 8.27, height = 11.69
 )
 print(figure)
 invisible(dev.off())
+```
 
+## Concordance summary
+
+One row per population.
+
+```{r summary}
 summary_table <- list(
   "all collections" = paired, "collapse survivors" = survivors, "Hallmark and GO Slim" = curated
 ) |>
   map(concordance) |>
   list_rbind(names_to = "population")
+summary_table
+```
 
+## Save results
+
+`03_enrich_scatter_fgsea.xlsx` holds the concordance table, the discordant significant sets, and
+both NES with adjusted p for every set, rounded for reading.
+
+```{r write}
 export <- paired |>
   transmute(
     set_id, database, pathway, label,
@@ -111,4 +187,10 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "03_enrich_scatter_fgsea.xlsx")
 )
+```
+
+## Session information
+
+```{r session}
 sessionInfo()
+```

@@ -1,9 +1,32 @@
-# Per protein and task: AUC and paired Wilcoxon p, mirroring 05_set_classification on the protein
-# matrix. Nominal p is read against chance_expectation, BH beside it. baseline_BFR_vs_HLRT is the
-# empirical floor.
+---
+title: "04 · Protein classification"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+execute:
+  message: false
+---
 
+## Load packages
+
+```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
+here::i_am(
+  "02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.qmd"
+)
+```
 
+## Read proteins and earlier results
+
+`proteins` holds the normalised log2 abundances (`E`), the sample table and the gene annotation.
+`genes` maps each protein to its gene symbol, falling back to the protein identifier. The
+`DEP_matrix` sheet of `02_Differential` and the `correlations` sheet of `03_Protein_Association`
+are only used for the candidate list at the end.
+
+```{r read}
 stage <- here("02_Differential_Expression", "04_Protein_Classification")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
@@ -21,13 +44,29 @@ correlations <- read_excel(
   "correlations"
 )
 
+dim(values)
+```
+
+## Pair the samples
+
+Each leg has a sample before training (T1) and after (T2). Widening on timepoint gives one row per
+leg with both sample identifiers; `legs` keeps those with both.
+
+```{r legs}
 by_timepoint <- targets |>
   mutate(leg_id = paste(participant, leg, sep = "_")) |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = timepoint, values_from = sample_id)
 legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
 
-# One row per participant holding both of their legs, for whichever column identifies them.
+head(legs)
+```
+
+`pair_by_treatment()` takes a leg table and the name of one identifying column, and returns one
+row per participant with their BFR and HLRT legs side by side. Participants without both drop out.
+It gives three pairings: baseline samples, post samples, and legs for the change scores.
+
+```{r pairs}
 pair_by_treatment <- function(data, column) {
   data |>
     select(participant, treatment, value = all_of(column)) |>
@@ -38,11 +77,26 @@ baseline <- pair_by_treatment(by_timepoint, "T1")
 post <- pair_by_treatment(by_timepoint, "T2")
 delta_pairs <- pair_by_treatment(legs, "leg_id")
 
+c(baseline = nrow(baseline), post = nrow(post), delta = nrow(delta_pairs))
+head(baseline)
+```
+
+The protein change per leg is T2 minus T1 on the log2 scale, one column per leg.
+
+```{r delta}
 delta <- values[, legs$T2] - values[, legs$T1]
 colnames(delta) <- legs$leg_id
+```
 
-# Each task holds its matrix and two paired column sets. `favours` is the group an AUC above 0.5
-# points to, so the figures can state direction.
+## Define the tasks
+
+Five paired tasks, the same as `03_Pathway_Enrichment/05_set_classification`. Each holds its
+matrix and two paired column sets, `positive` and `negative`. `favours` names the group an AUC
+above 0.5 points to, so the figures can state direction. The two within-arm tasks pair legs; the
+three between-arm tasks pair participants. The baseline task compares the two legs before
+training, when nothing should separate them, so it shows what the method returns on no effect.
+
+```{r tasks}
 arm <- split(legs, legs$treatment)
 tasks <- list(
   pre_vs_post_BFR = list(
@@ -55,7 +109,7 @@ tasks <- list(
   ),
   baseline_BFR_vs_HLRT = list(
     values = values, positive = baseline$BFR, negative = baseline$HLRT,
-    label = "Baseline BFR vs HLRT (control)", favours = "BFR", unit = "participants"
+    label = "Baseline BFR vs HLRT", favours = "BFR", unit = "participants"
   ),
   post_BFR_vs_HLRT = list(
     values = values, positive = post$BFR, negative = post$HLRT,
@@ -66,25 +120,51 @@ tasks <- list(
     label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
   )
 )
-# The baseline control is reported in chance_expectation but not drawn: it shows what the method
-# returns when nothing is there.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 
-# pROC::roc() auto-orients: a true AUC of 0.194 comes back 0.806. direction = "<" pins it.
+map_int(tasks, function(spec) length(spec$positive))
+```
+
+The baseline task is reported in the chance table but not drawn.
+
+## Score each protein
+
+A ROC curve plots, for every cut-off on a protein's abundance, the share of positive samples above
+it (sensitivity) against the share of negative samples above it (1 - specificity). The area under
+it, AUC, is the probability that a random positive sample sits higher than a random negative one:
+0.5 is no separation, 1 perfect, 0 perfect the other way. `fit_roc()` takes one protein's values
+and a task and returns the pROC object. `pROC::roc()` auto-orients, so a true AUC of 0.194 would
+come back as 0.806; `direction = "<"` pins it.
+
+```{r fit-roc}
 fit_roc <- function(values, spec) {
   pROC::roc(
     controls = values[spec$negative], cases = values[spec$positive],
     direction = "<", quiet = TRUE
   )
 }
+```
+
+AUC ignores the pairing, so p comes from the paired Wilcoxon signed-rank test, which ranks the
+within-pair differences by size and asks whether positive and negative differences balance.
+`paired_test()` takes a task and returns one row per protein with AUC and that p. Ties make
+`wilcox.test()` warn and use the normal approximation; the warnings are suppressed.
+
+```{r paired-test}
 paired_test <- function(spec) {
   tibble(
-    auc = apply(spec$values, 1, \(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
-    p_paired = apply(spec$values, 1, \(row) {
+    auc = apply(spec$values, 1, function(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
+    p_paired = apply(spec$values, 1, function(row) {
       suppressWarnings(wilcox.test(row[spec$positive], row[spec$negative], paired = TRUE)$p.value)
     })
   )
 }
+```
+
+Score every protein in every task. Benjamini–Hochberg (BH) adjustment turns p into `fdr`, the
+false discovery rate at which the protein would be called, within each task.
+
+```{r protein-auc}
 # The argument is `spec`, not `task`: tibble() builds a `task` column first, and a later
 # `task$label` in the same call would read that column instead of the argument.
 protein_auc <- imap(tasks, function(spec, name) {
@@ -96,15 +176,19 @@ protein_auc <- imap(tasks, function(spec, name) {
   list_rbind() |>
   mutate(fdr = p.adjust(p_paired, "BH"), .by = task)
 
-chance_expectation <- protein_auc |>
-  summarise(
-    features = n(), nominal = sum(p_paired < 0.05), expected = round(n() * 0.05, 1),
-    ratio = round(nominal / expected, 2), fdr_sig = sum(fdr < 0.05),
-    .by = c(task_label, n_pairs)
-  )
+protein_auc |>
+  slice_min(p_paired, n = 3, by = task) |>
+  select(task, protein, gene, auc, p_paired, fdr)
+```
 
-# DE at FDR 0.05 in any contrast, association and classification at nominal p. Each protein gets
-# eight association tests, so about a third of any list clears the association bar by chance.
+## Cross-reference earlier steps
+
+A candidate passes three bars: DE at FDR 0.05 in any contrast, association at nominal p (unadjusted
+p below 0.05) with any outcome, and classification at nominal p in any task but baseline. Each
+protein gets eight association tests, so about a third of any list clears the association bar by
+chance.
+
+```{r de-hits}
 de_hits <- de |>
   select(protein, ends_with("adj.P.Val")) |>
   pivot_longer(-protein, names_to = "contrast", values_to = "de_fdr") |>
@@ -126,12 +210,28 @@ classified <- protein_auc |>
     separates_arms = any(task %in% c("post_BFR_vs_HLRT", "delta_BFR_vs_HLRT")),
     .by = protein
   )
+c(de = nrow(de_hits), associated = nrow(associated), classified = nrow(classified))
+```
+
+Proteins that separate the arms (post or change) come first.
+
+```{r candidates}
 candidates <- de_hits |>
   inner_join(associated, by = "protein") |>
   inner_join(classified, by = "protein") |>
   mutate(gene = genes[protein], .after = protein) |>
   arrange(desc(separates_arms), best_association_p)
 
+nrow(candidates)
+head(select(candidates, protein, gene, separates_arms, best_de_fdr, best_association_p))
+```
+
+## Figures
+
+The figures share a theme, a caption builder and an A4 writer. `caption_text()` takes a title and
+body text and returns the wrapped caption, with "page i of n" when a figure spans pages.
+
+```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
@@ -145,45 +245,45 @@ caption_text <- function(title, text, page = 1, n_pages = 1) {
   pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
   str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
 }
-# Twelve panels to a page. `draw` builds the plot from one page's rows: a paginating facet would
-# build every panel for every page.
+write_pdf <- function(pages, name) {
+  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
+  walk(pages, print)
+  invisible(dev.off())
+}
+```
+
+`paginate()` takes panel data with an ordered `panel` factor and a `draw` function, and returns one
+plot per page of twelve panels. `draw` builds each plot from that page's rows only: a paginating
+facet would build every panel for every page.
+
+```{r paginate}
 paginate <- function(data, draw, title, text, scales = "fixed") {
   pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
-  imap(unname(pages), \(page, i) {
+  imap(unname(pages), function(page, i) {
     draw(droplevels(page)) +
       facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
       labs(caption = caption_text(title, text, i, length(pages))) +
       figure_theme
   })
 }
-chance_page <- function(data, y, facet, title, text) {
-  ggplot(data, aes(ratio, .data[[y]], fill = ratio > 1)) +
-    geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
-    geom_col(width = 0.65) +
-    geom_text(
-      aes(label = sprintf("%d of %d", nominal, features)),
-      hjust = -0.12, size = 2.5, colour = "grey25"
-    ) +
-    facet_wrap(vars(.data[[facet]]), ncol = 1) +
-    scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
-    labs(
-      x = "observed nominal hits / chance expectation", y = NULL,
-      caption = caption_text(title, text)
-    ) +
-    figure_theme +
-    theme(panel.grid.major.y = element_blank())
-}
-write_pdf <- function(pages, name) {
-  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
-  walk(pages, print)
-  invisible(dev.off())
-}
+```
+
+The chance expectation is the number of nominal hits expected if no protein separated the groups:
+5% of those tested.
+
+```{r chance-text}
 chance_text <- sprintf(
   "chance alone returns %.0f of %s proteins.", nrow(values) * 0.05,
   format(nrow(values), big.mark = ",")
 )
+chance_text
+```
 
+`roc_figure()` takes a task name and returns the pages of ROC curves for its nominal hits,
+smallest p first. An AUC below 0.5 separates the groups the other way, so curves are coloured by
+direction.
+
+```{r roc-figure}
 roc_figure <- function(task_name) {
   spec <- tasks[[task_name]]
   hits <- protein_auc |>
@@ -193,7 +293,6 @@ roc_figure <- function(task_name) {
     coordinates <- pROC::coords(fit_roc(spec$values[protein, ], spec), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
-      # An AUC below 0.5 separates the groups the other way, so it is coloured by direction.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = sprintf(
         "%s\nAUC %.2f   p %s   q %s",
@@ -204,7 +303,7 @@ roc_figure <- function(task_name) {
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
-  paginate(curves, \(page) {
+  paginate(curves, function(page) {
     ggplot(page, aes(fpr, tpr, colour = direction, fill = direction)) +
       geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
       geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
@@ -229,20 +328,76 @@ roc_figure <- function(task_name) {
     "04_protein_classification.xlsx."
   ))
 }
+```
 
-# One file per task, so each can be read on its own.
-walk(drawn_tasks, \(task_name) {
+One PDF per drawn task, so each can be read on its own.
+
+```{r roc-pdfs}
+walk(drawn_tasks, function(task_name) {
   write_pdf(roc_figure(task_name), paste0("04_classification_", task_name, ".pdf"))
 })
-write_pdf(list(chance_page(
+```
+
+## Hits against chance
+
+Per task: proteins tested, nominal hits, the chance expectation, their ratio, and BH hits at 0.05.
+A ratio near 1 is what no separation at all would produce; the baseline row shows where this data
+lands when the groups should not differ.
+
+```{r chance-expectation}
+chance_expectation <- protein_auc |>
+  summarise(
+    features = n(), nominal = sum(p_paired < 0.05), expected = round(n() * 0.05, 1),
+    ratio = round(nominal / expected, 2), fdr_sig = sum(fdr < 0.05),
+    .by = c(task_label, n_pairs)
+  )
+chance_expectation
+```
+
+`chance_page()` takes the summary, the column for the bars, the column to facet by, a title and
+caption text, and returns one plot: bar length is nominal hits divided by the chance expectation.
+
+```{r chance-page}
+chance_page <- function(data, y, facet, title, text) {
+  ggplot(data, aes(ratio, .data[[y]], fill = ratio > 1)) +
+    geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+    geom_col(width = 0.65) +
+    geom_text(
+      aes(label = sprintf("%d of %d", nominal, features)),
+      hjust = -0.12, size = 2.5, colour = "grey25"
+    ) +
+    facet_wrap(vars(.data[[facet]]), ncol = 1) +
+    scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
+    labs(
+      x = "observed nominal hits / chance expectation", y = NULL,
+      caption = caption_text(title, text)
+    ) +
+    figure_theme +
+    theme(panel.grid.major.y = element_blank())
+}
+```
+
+```{r chance-pdf}
+#| fig-height: 6
+chance_plot <- chance_page(
   mutate(chance_expectation, group = "all proteins"), "task_label", "group",
   "Nominal hits relative to chance", paste(
     "Paired Wilcoxon per protein, uncorrected p;", chance_text, "Bar length is observed nominal",
     "hits divided by that count; red clears 1, grey does not. Labels give observed of tested.",
     "Data: chance_expectation sheet of 04_protein_classification.xlsx."
   )
-)), "04_chance.pdf")
+)
+write_pdf(list(chance_plot), "04_chance.pdf")
+chance_plot
+```
 
+## Save results
+
+`04_protein_classification.xlsx` holds the chance table, every protein's AUC and p per task sorted
+by p, and the candidate list.
+
+```{r write}
 sheets <- list(
   chance_expectation = chance_expectation,
   protein_auc = arrange(protein_auc, p_paired),
@@ -260,4 +415,10 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "04_protein_classification.xlsx")
 )
+```
+
+## Session information
+
+```{r session}
 sessionInfo()
+```

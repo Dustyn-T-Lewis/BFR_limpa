@@ -1,20 +1,24 @@
-# 02_test_mito
+# 02 · Test mito
 
-This step measures mitochondrial content per biopsy and tests the mitochondrial proteome after
-setting that content aside. It reads the unnormalised quantification
-(`01_Preprocess/02_Quantification/c_data/quant_runs/proteins_slope_0.7.rds`, cut to the 3,042 rows
-of `proteins.rds`), the design, the stage 02 fit and `01_build_mito_sets`. It writes
-`c_data/02_test_mito.xlsx` and `b_reports/02_test_mito.pdf`.
+Measures mitochondrial protein enrichment (MPE) per biopsy and tests whether it rose differently
+between legs, then refits the mitochondrial proteins on their own (mitochondrial normalisation) to
+ask whether any protein, complex or MitoPathway changed beyond overall content.
+
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` and
+`quant_runs/proteins_slope_0.7.rds`, `design.rds` from `01_Design`, `fit.rds` from
+`02_Differential`, the protein map from `00_build_gene_sets`, and `01_build_mito_sets`.
 
 ```sh
-Rscript 05_Mitochondria/02_test_mito/a_script/02_test_mito.R
+quarto render 05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd --output-dir ../b_reports
 ```
 
-MPE comes from raw intensities, as in both papers. Cyclic loess assumes the typical protein holds
-still, and a mitochondrial expansion breaks that. The script checks that the raw matrix becomes
-`proteins.rds` after loess and nothing else. log2 MPE goes through the saved design and contrasts
-as one outcome row, so there is nothing for eBayes to borrow from and the test is the plain
-least-squares t on 95 residual degrees of freedom.
+Outputs:
+
+- `b_reports/02_test_mito.html`: the walkthrough.
+- `b_reports/02_test_mito.pdf`: MPE by arm and time; complexes I to V by contrast for both fits,
+  coloured by fry; volcanoes of the normalised proteins with fgsea rings (no baseline volcano).
+- `c_data/02_test_mito.xlsx`: MPE per biopsy, the MPE test, citrate synthase protein, complex and
+  MitoPathway tests, and the mitochondria-normalised protein table.
 
 | Contrast | log2 MPE change | 95% CI | p |
 |---|---:|---|---:|
@@ -24,27 +28,7 @@ least-squares t on 95 residual degrees of freedom.
 | BFR − HLRT, post | 0.028 | −0.058 to 0.113 | 0.52 |
 | interaction | −0.003 | −0.123 to 0.117 | 0.96 |
 
-Citrate synthase protein, read from the stage 02 fit for comparison with activity studies, rose
-0.22 log2 in BFR (BH 0.076) and 0.18 in HLRT (BH 0.17).
-
-Mitochondrial normalisation subsets the 660 MitoCarta proteins, normalises them alone with cyclic
-loess and refits with `dpcDE`, `eBayes(robust = TRUE)` and the same contrasts. Protein hits at BH
-0.05: 17 in BFR, 28 in HLRT, none between legs and none at baseline.
-
-fry tests complexes I to V on both fits. On the standard fit, complexes III, IV and V rose in both
-legs (FDR 0.0017 to 0.023) and complex I in HLRT (0.004); complex I in BFR and complex II in both
-legs sat between 0.07 and 0.1. On the normalised fit none reaches FDR 0.05; the nearest is complex
-I lower in BFR than HLRT after training (0.065).
-
-MitoPathways are tested when at least 20% of their listed genes are measured, 141 of 149. There is
-no size floor, since MitoCarta lists some functions that are one or two proteins. The 20% floor is
-ours, not a published rule. fry is the confirmatory test: after normalisation it already reads
-change relative to the rest of the mitochondrion, so a competitive test would repeat the question.
-fry calls 18 pathways in BFR, 36 in HLRT and none between legs. fgsea draws the rings and calls 8
-pathways after training and 4 in the interaction, led by complex I down and fatty-acid oxidation up
-in BFR. fgsea treats proteins as independent, and complex I subunits correlate, so those are leads
-that fry does not confirm.
-
-The PDF has three pages: MPE by arm and time with each leg's pair joined, a complex × contrast grid
-for both fits coloured by fry, and volcanoes of the normalised proteins with fgsea rings. The
-baseline contrast is not drawn as a volcano.
+After mitochondrial normalisation, 17 proteins reach BH 0.05 in BFR and 28 in HLRT, none between
+legs or at baseline. No complex reaches fry FDR 0.05 on the normalised fit. fry calls 18
+MitoPathways in BFR, 36 in HLRT and none between legs; fgsea's between-leg calls (8 after training,
+4 in the interaction) are leads, since it treats correlated proteins as independent.

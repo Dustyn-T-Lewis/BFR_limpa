@@ -1,0 +1,105 @@
+---
+title: "01 · Fibre type export"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  message: false
+---
+
+## Load packages
+
+`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
+this notebook in the repository, so paths resolve from the repository root.
+
+```{r setup}
+pacman::p_load(here, dplyr, tidyr, readr)
+here::i_am("06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd")
+```
+
+## Read the report
+
+FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) estimates the slow and fast fibre
+fractions of a biopsy by deconvolution: it treats each sample's profile as a mix of reference
+profiles for pure slow and pure fast fibres and solves for the proportions. It wants raw label-free
+quantities (LFQ, intensities not scaled against a label or standard) and normalises them itself.
+Its authors found quantification from unique peptides the most accurate.
+
+DIA-NN's `Genes.MaxLFQ.Unique` is exactly that: a gene-level value from unique peptides, built with
+MaxLFQ, which combines peptide ratios between runs into one abundance per gene and run. Only the
+three columns needed are read from the parquet.
+
+```{r read}
+out <- here("06_Composition", "01_fibre_type_export", "c_data")
+metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
+report <- nanoparquet::read_parquet(
+  here("00_Input", "report.parquet"),
+  col_select = c("Run", "Genes", "Genes.MaxLFQ.Unique")
+)
+head(report, 3)
+```
+
+## Prepare gene values
+
+The report has one row per precursor, and the gene value repeats on every precursor row of that
+gene, so `distinct()` keeps one copy. DIA-NN writes 0 on rows whose precursor is not unique to the
+gene, so 0 means not quantified and is dropped.
+
+Runs match `metadata$run` ignoring case, as in `01_filter.qmd`. That absorbs `Cl_MDR_7E-T2`,
+written `CL_MDR_7E-T2` in the sheet, and drops the discarded S08 injection, which has no
+`sample_id`. `stopifnot()` stops if any sample still holds two values for one gene.
+
+```{r lfq}
+lfq <- report |>
+  filter(nzchar(Genes), Genes.MaxLFQ.Unique > 0) |>
+  distinct() |>
+  mutate(sample_id = metadata$sample_id[match(tolower(Run), tolower(metadata$run))]) |>
+  filter(!is.na(sample_id))
+stopifnot(!anyDuplicated(select(lfq, sample_id, Genes)))
+head(lfq, 3)
+```
+
+## Reshape for upload
+
+`pivot_wider()` turns the long table into one row per gene and one column per biopsy, with the
+first column named `identifier` as the app expects. Columns follow the metadata order. Genes not
+quantified in a sample become `NA`.
+
+```{r upload}
+upload <- lfq |>
+  select(identifier = Genes, sample_id, Genes.MaxLFQ.Unique) |>
+  pivot_wider(names_from = sample_id, values_from = Genes.MaxLFQ.Unique) |>
+  select(identifier, all_of(metadata$sample_id))
+stopifnot(!anyDuplicated(upload$identifier), ncol(upload) == nrow(metadata) + 1)
+upload[1:3, 1:4]
+```
+
+## Summary
+
+Genes and samples in the file, the share of blank cells, and genes quantified in every biopsy.
+
+```{r summary}
+values <- as.matrix(upload[-1])
+c(
+  genes = nrow(upload), samples = ncol(values),
+  pct_blank = round(100 * mean(is.na(values)), 1),
+  complete_genes = sum(rowSums(is.na(values)) == 0)
+)
+```
+
+## Save results
+
+`fibertyper_input.csv` is the one CSV in the repository, because the app reads nothing else.
+Missing values stay blank.
+
+```{r write}
+write_csv(upload, file.path(out, "fibertyper_input.csv"), na = "")
+message(nrow(upload), " genes x ", ncol(upload) - 1, " samples")
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

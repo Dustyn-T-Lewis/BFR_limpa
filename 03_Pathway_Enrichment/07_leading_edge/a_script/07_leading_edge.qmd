@@ -1,10 +1,39 @@
-# For pathways that both legs move the same way with training, do the same proteins drive them?
-# Compares fgsea leading edges, the proteins ranked before the running-sum peak. Adapted from Sam's
-# PR #26 (sc-norton), on the fgsea run 01_run_fgsea_and_fry already made. Leading edges shift with
-# small changes in ranking, so the overlap describes and does not test.
+---
+title: "07 · Leading edge"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  message: false
+---
 
+## Load packages
+
+`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
+this notebook in the repository, so paths resolve from the repository root. `GO.db`,
+`AnnotationDbi`, `eulerr` and `enrichVolcano` (the user's own package, not on CRAN) are called
+with `::` for one job each.
+
+```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)
+here::i_am("03_Pathway_Enrichment/07_leading_edge/a_script/07_leading_edge.qmd")
+```
 
+## Read inputs
+
+The question: for pathways both legs move the same way with training, do the same proteins drive
+them? The comparison uses fgsea leading edges. In gene set enrichment, proteins are ranked by
+their training statistic and a running sum walks down the ranking, rising at each set member; the
+leading edge is the set members ranked before the running sum peaks, the ones carrying the
+enrichment. This step reads the fgsea run `01_run_fgsea_and_fry` already made, so nothing is
+re-ranked. Adapted from Sam's PR #26 (sc-norton).
+
+Three inputs: the `set_tests` sheet from `01_run_fgsea_and_fry` (one row per set, method and
+contrast, leading edges as `;`-joined symbols), the set catalogue and the gene sets themselves
+from `00_build_gene_sets`.
+
+```{r read}
 stage <- here("03_Pathway_Enrichment", "07_leading_edge")
 set_tests <- read_excel(
   here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"),
@@ -17,9 +46,17 @@ set_catalog <- read_excel(
 sets <- readRDS(here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "gene_sets.rds"))
 arms <- c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre")
 arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
+dim(set_tests)
+```
 
-# Significant in both, same direction, and a main set after collapsePathways in at least one leg,
-# so one representative stands for each cluster of overlapping sets.
+## Select the shared pathways
+
+Keep the fgsea rows for the two training contrasts, one per leg. A pathway is kept when fgsea
+calls it at FDR < 0.05 in both legs, with the same sign of NES (normalised enrichment score, the
+direction and strength of the enrichment), and when it is a main set after `collapsePathways` in
+at least one leg, so one representative stands for each cluster of overlapping sets.
+
+```{r shared-sets}
 fgsea <- set_tests |>
   filter(method == "fgsea", contrast %in% arms) |>
   mutate(arm = names(arms)[match(contrast, arms)]) |>
@@ -30,7 +67,15 @@ shared_sets <- fgsea |>
   ) |>
   filter(keep) |>
   pull(set_id)
+length(shared_sets)
+```
 
+## Compare the leading edges
+
+Split each kept pathway's leading edges into one row per protein, then record which legs list
+that protein: BFR only, HLRT only or both.
+
+```{r proteins}
 proteins <- fgsea |>
   filter(set_id %in% shared_sets) |>
   separate_longer_delim(leadingEdge, ";") |>
@@ -39,6 +84,14 @@ proteins <- fgsea |>
     in_arm = paste(sort(arm), collapse = " and "), .by = c(set_id, database, pathway, gene)
   ) |>
   mutate(in_arm = recode(in_arm, "BFR and HLRT" = "both"))
+head(proteins, 4)
+```
+
+Count the three groups per pathway and add the Jaccard index: proteins in both leading edges over
+proteins in either. It reads 1 when the legs share every driver and 0 when they share none. Each
+leg's NES rides along, and rows sort from the lowest overlap.
+
+```{r leading-edge}
 leading_edge <- proteins |>
   count(set_id, database, pathway, in_arm) |>
   pivot_wider(names_from = in_arm, values_from = n, values_fill = 0) |>
@@ -51,19 +104,37 @@ leading_edge <- proteins |>
   ) |>
   arrange(jaccard) |>
   mutate(label = enrichVolcano::clean_label(pathway, width = 1000))
+head(select(leading_edge, label, both, BFR, HLRT, jaccard), 6)
+```
 
-# For a GO:BP pathway both legs move, which of its tested child terms hold each leg's leading-edge
-# proteins. Counts only; child terms overlap, so no test across them.
+Leading edges shift with small changes in the ranking, so this overlap describes and does not
+test.
+
+## Break GO:BP parents into children
+
+For each GO:BP pathway both legs move, look up its direct child terms in the GO hierarchy
+(`GO.db::GOBPCHILDREN`) and keep those that were tested as sets. `go_ids` maps set IDs to GO
+identifiers; `mget()` returns each parent's children, `NA` where there are none.
+
+```{r go-lookup}
 go_ids <- set_catalog |>
   filter(database == "GOBP", qualifies) |>
   select(set_id, source_id)
 parents <- inner_join(filter(leading_edge, database == "GOBP"), go_ids, by = "set_id")
 go_children_of <- AnnotationDbi::mget(parents$source_id, GO.db::GOBPCHILDREN, ifnotfound = NA)
+nrow(parents)
+```
+
+`by_arm` repeats each leading-edge protein once per leg that lists it. For every parent, child
+and leg, `proteins` counts how many of the parent's leading-edge proteins in that leg belong to
+the child term. Child terms overlap, so these are counts only, with no test across them.
+
+```{r go-children}
 by_arm <- proteins |>
   mutate(arm = if_else(in_arm == "both", "BFR;HLRT", in_arm)) |>
   separate_longer_delim(arm, ";")
 go_children <- parents |>
-  transmute(parent_id = set_id, parent = label, child_go = map(source_id, \(id) {
+  transmute(parent_id = set_id, parent = label, child_go = map(source_id, function(id) {
     unname(go_children_of[[id]])
   })) |>
   unnest(child_go) |>
@@ -72,16 +143,28 @@ go_children <- parents |>
     set_catalog$pathway[match(child_id, set_catalog$set_id)], width = 1000
   )) |>
   cross_join(tibble(arm = names(arms))) |>
-  mutate(proteins = pmap_int(list(parent_id, child_id, arm), \(parent_id, child_id, arm) {
+  mutate(proteins = pmap_int(list(parent_id, child_id, arm), function(parent_id, child_id, arm) {
     sum(by_arm$gene[by_arm$set_id == parent_id & by_arm$arm == arm] %in% sets[[child_id]])
   }))
+head(select(go_children, parent, child, arm, proteins), 6)
+```
 
-page_caption <- \(text) str_wrap(text, 115)
+## Draw figures
+
+All pages share a caption style. `page_caption()` wraps a caption at 115 characters.
+
+```{r page-style}
+page_caption <- function(text) str_wrap(text, 115)
 page_theme <- theme(
   plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
   plot.caption.position = "plot"
 )
+```
 
+S20 puts every shared pathway on one page: a bar per pathway split into proteins in both leading
+edges and in one leg only, lowest overlap at the bottom of each collection.
+
+```{r overlap-page}
 overlap_page <- leading_edge |>
   mutate(label = factor(str_trunc(label, 60), unique(str_trunc(label, 60)))) |>
   pivot_longer(c(both, BFR, HLRT), names_to = "in_arm", values_to = "proteins") |>
@@ -109,8 +192,13 @@ overlap_page <- leading_edge |>
     legend.position = "top", panel.grid.major.y = element_blank()
   ) +
   page_theme
+```
 
-# Sam's Venns: one per pathway, with the shared proteins named beneath, six to a page.
+S21 is Sam's Venn view: one Venn diagram per pathway, circle areas proportional to the counts
+(`eulerr` fits them), with the shared proteins named beneath, six to a page. `venn()` takes a set
+ID and returns that pathway's panel.
+
+```{r venn-pages}
 venn <- function(id) {
   counts <- filter(leading_edge, set_id == id)
   fit <- eulerr::euler(c(BFR = counts$BFR, HLRT = counts$HLRT, "BFR&HLRT" = counts$both))
@@ -129,7 +217,7 @@ venn <- function(id) {
     )
 }
 venn_pages <- split(leading_edge$set_id, ceiling(seq_along(leading_edge$set_id) / 6)) |>
-  imap(\(ids, page) {
+  imap(function(ids, page) {
     wrap_plots(map(ids, venn), ncol = 2) +
       plot_annotation(caption = page_caption(sprintf(paste(
         "S21 Figure (page %s of %d). Leading edges by leg, one Venn per pathway in the order of",
@@ -138,14 +226,19 @@ venn_pages <- split(leading_edge$set_id, ceiling(seq_along(leading_edge$set_id) 
         "07_leading_edge.xlsx."
       ), page, ceiling(nrow(leading_edge) / 6))), theme = page_theme)
   })
+```
 
+S22 draws the GO:BP parents with their child terms, eight parents to a page: BFR counts to the
+left of zero, HLRT to the right.
+
+```{r child-pages}
 child_pages <- go_children |>
   mutate(
     proteins = if_else(arm == "BFR", -proteins, proteins),
     parent = str_wrap(parent, 45), child = str_trunc(child, 50)
   ) |>
-  (\(rows) split(rows, ceiling(match(rows$parent, unique(rows$parent)) / 8)))() |>
-  imap(\(rows, page) {
+  (function(rows) split(rows, ceiling(match(rows$parent, unique(rows$parent)) / 8)))() |>
+  imap(function(rows, page) {
     ggplot(rows, aes(proteins, child, fill = arm)) +
       geom_col(width = 0.7) +
       geom_vline(xintercept = 0, linewidth = 0.3) +
@@ -165,11 +258,44 @@ child_pages <- go_children |>
       theme(legend.position = "top", strip.text = element_text(size = 6.5)) +
       page_theme
   })
+```
 
+All pages go to one A4 PDF, S20 first.
+
+```{r write-figures}
 pdf(file.path(stage, "b_reports", "07_leading_edge.pdf"), width = 8.27, height = 11.69)
 walk(c(list(overlap_page), venn_pages, child_pages), print)
 invisible(dev.off())
+```
 
+## Summary
+
+Shared pathways per collection, the spread of the Jaccard index, and the GO:BP breakdown: parents
+with tested children, distinct child terms, parent and child pairs, and the pairs where one leg
+holds at least five proteins and more than twice the other's count.
+
+```{r summary}
+count(leading_edge, database)
+summary(leading_edge$jaccard)
+slice_head(select(leading_edge, label, jaccard), n = 3)
+c(
+  parents = n_distinct(go_children$parent_id),
+  children = n_distinct(go_children$child_id),
+  pairs = nrow(distinct(go_children, parent_id, child_id))
+)
+go_children |>
+  select(parent, child, arm, proteins) |>
+  pivot_wider(names_from = arm, values_from = proteins) |>
+  filter(pmax(BFR, HLRT) >= 5, pmax(BFR, HLRT) > 2 * pmin(BFR, HLRT))
+```
+
+## Save results
+
+`07_leading_edge.xlsx` opens with an `overview` sheet, then `leading_edge` (one row per pathway),
+`proteins` (one row per pathway and leading-edge protein) and `go_children` (one row per parent,
+child and leg).
+
+```{r write}
 sheets <- list(leading_edge = leading_edge, proteins = proteins, go_children = go_children)
 overview <- data.frame(
   sheet = names(sheets), rows = sapply(sheets, nrow),
@@ -180,4 +306,10 @@ overview <- data.frame(
   )
 )
 write_xlsx(c(list(overview = overview), sheets), file.path(stage, "c_data", "07_leading_edge.xlsx"))
+```
+
+## Session information
+
+```{r session}
 sessionInfo()
+```

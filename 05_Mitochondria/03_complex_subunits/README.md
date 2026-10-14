@@ -1,25 +1,22 @@
-# 03_complex_subunits
+# 03 · Complex subunits
 
-This step shows every measured subunit and assembly factor of complexes I to V with its training
-change in each leg, so a reader can see which proteins carry a complex. It reads `DEP_matrix` from
-`02_Differential_Expression/02_Differential/c_data/02_differential.xlsx`, the membership sheet of
-`01_build_mito_sets` and the complex tests of `02_test_mito`. It writes
-`c_data/03_complex_subunits.xlsx` and `b_reports/03_complex_subunits.pdf`.
+Shows every measured subunit and assembly factor of complexes I to V with its training change in
+each leg, so a reader can see which proteins carry a complex. Descriptive only; the set-level test
+is fry in `02_test_mito`.
+
+Inputs: `DEP_matrix` from `02_Differential_Expression/02_Differential/c_data/02_differential.xlsx`,
+the `membership` sheet of `01_build_mito_sets` and the `complex_tests` sheet of `02_test_mito`.
 
 ```sh
-Rscript 05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.R
+quarto render 05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.qmd --output-dir ../b_reports
 ```
 
-The PDF has three pages. The first is Sam's summary from PR #26: each complex's mean subunit change
-in each leg, with standard error and every subunit as a point. The second and third draw every
-subunit and every assembly factor by leg, ordered within complex by BFR minus HLRT.
+Outputs:
 
-Sam's version tested BFR against HLRT with a paired t-test across the subunits of each complex,
-which treats correlated proteins as independent replicates and makes p too small (complex I came
-out below 0.001). Here the bars are descriptive and each complex is labelled with fry's interaction
-FDR from `02_test_mito`, the set-level test that allows for that correlation. Assembly factors have
-no set test, so their panels carry counts only.
+- `b_reports/03_complex_subunits.html`: the walkthrough.
+- `b_reports/03_complex_subunits.pdf`: Sam's summary from PR #26 (mean subunit change per complex
+  and leg), then every subunit and every assembly factor by leg.
+- `c_data/03_complex_subunits.xlsx`: 88 subunits and 43 assembly factors with logFC and BH FDR per
+  leg and for the interaction.
 
-The table holds 88 subunits and 43 assembly factors with their logFC and BH FDR in each leg and
-for the interaction. No subunit's interaction reaches FDR 0.05, and fry's interaction FDR is 0.99
-for every complex.
+No protein's interaction reaches FDR 0.05, and fry's interaction FDR is 0.99 for every complex.

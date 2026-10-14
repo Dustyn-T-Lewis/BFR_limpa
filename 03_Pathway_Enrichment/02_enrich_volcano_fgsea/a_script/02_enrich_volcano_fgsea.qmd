@@ -1,8 +1,35 @@
-# Protein volcanoes with fgsea rings. Colour reads protein BH FDR, rings read set FDR. The
-# control is not drawn.
+---
+title: "02 · Enrichment volcanoes, fgsea"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  message: false
+---
 
+## Load packages
+
+`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
+this notebook in the repository, so paths resolve from the repository root. `enrichVolcano`, the
+user's own plotting package (not on CRAN), is called with `::`.
+
+```{r setup}
 pacman::p_load(here, dplyr, purrr, stringr, ggplot2, patchwork, readxl)
+here::i_am("03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.qmd")
+```
 
+## Read results
+
+This step computes nothing. It draws protein volcanoes with a ring of fgsea sets around each:
+point colour reads protein-level BH FDR, the ring reads set-level fgsea FDR. The baseline
+contrast is not drawn.
+
+Both tables come from `01_run_fgsea_and_fry.xlsx`. Only fgsea sets that survived
+`collapsePathways` (`main`) are kept for the rings. The leading edge, the set members that drive
+fgsea's score, was saved as one `;`-joined string and is split back into a vector per set.
+
+```{r read}
 tests <- here(
   "03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"
 )
@@ -10,16 +37,34 @@ protein_results <- read_excel(tests, "protein_results")
 fgsea_results <- read_excel(tests, "set_tests") |>
   filter(method == "fgsea", main) |>
   mutate(leadingEdge = str_split(leadingEdge, ";"))
+count(fgsea_results, contrast)
+```
 
-# plot_volcano_ring() matches leading-edge genes against point labels, which carry an accession when
-# a symbol sits on more than one protein. The representative protein is the one fgsea ranked.
+## Match leading edges to labels
+
+`plot_volcano_ring()` matches leading-edge genes against point labels, and a label carries an
+accession when a symbol sits on more than one protein. `gene_to_label` maps each symbol to the
+label of its representative protein, the one fgsea ranked. The map is the same in every contrast,
+so the first contrast's rows build it.
+
+```{r leading-edge-labels}
 gene_to_label <- with(
   filter(protein_results, contrast == contrast[1], selected),
   set_names(label, gene)
 )
-fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, \(genes) unname(gene_to_label[genes]))
+fgsea_results$leadingEdge <- map(fgsea_results$leadingEdge, function(genes) {
+  unname(gene_to_label[genes])
+})
+```
 
-# Once the prefix goes, GOBP_MUSCLE_CONTRACTION and REACTOME_MUSCLE_CONTRACTION share a label.
+## Build plot inputs
+
+`enrichVolcano` shortens set names by dropping the collection prefix. Once the prefix goes,
+`GOBP_MUSCLE_CONTRACTION` and `REACTOME_MUSCLE_CONTRACTION` share a label, so a name whose stem
+repeats within a contrast gets its collection appended. `as_enrichment()` takes the set table in
+the package's column names and returns its enrichment object.
+
+```{r enrichment}
 enrichment <- fgsea_results |>
   mutate(
     stem = sub("^[A-Z0-9]+_", "", pathway),
@@ -30,7 +75,13 @@ enrichment <- fgsea_results |>
   ) |>
   select(contrast, database, pathway, NES, pval = p, padj, size = n, leadingEdge) |>
   enrichVolcano::as_enrichment(enrichment_test = "fgsea")
+```
 
+`as_da()` takes the protein table, with labels as the gene column, and returns the
+differential-abundance object the volcano reads. `ring_theme` sets base text size and greys out
+non-significant points.
+
+```{r da}
 da <- enrichVolcano::as_da(
   select(protein_results, protein, gene = label, contrast, logFC, t, P.Value, adj.P.Val),
   species = NULL
@@ -38,12 +89,29 @@ da <- enrichVolcano::as_da(
 ring_theme <- enrichVolcano::plot_theme(
   base_size = 10, base_family = "sans", ns = "#9a9a9a"
 )
-# Contrast names carry their own algebra and are the panel titles. Only the interaction needs
-# expanding: a difference of differences has no one-line name.
+```
+
+Contrast names carry their own algebra and serve as panel titles. Only the interaction needs
+expanding: a difference of differences has no one-line name.
+
+```{r subtitles}
 contrast_subtitle <- c(
   Modality_x_Time_Interaction = "(BFR_Post - BFR_Pre) - (HLRT_Post - HLRT_Pre)"
 )
+```
 
+## Draw volcanoes
+
+`make_volcano()` takes a contrast name and a label rule and returns one ringed volcano. With
+`rank_by = "fdr"` it names the five proteins with the lowest BH FDR below 0.05; with
+`rank_by = "pi"` it names the five with the smallest pi-score, P.Value^|logFC|, which ranks and
+selects nothing. The ring draws the twelve collapse survivors with the lowest adjusted p, in
+either direction.
+
+The ring draws with `clip = "off"` on a square panel and puts the NES key on the right, so a
+label on that edge lands on the colour bar. The key goes below the plot, where nothing collides.
+
+```{r volcano-helper}
 make_volcano <- function(cn, rank_by = "fdr") {
   points <- filter(protein_results, contrast == cn)
   if (rank_by == "pi") {
@@ -54,7 +122,6 @@ make_volcano <- function(cn, rank_by = "fdr") {
     note <- "Protein significance: BH FDR < 0.05"
   }
   labels <- head(labels$label, 5)
-  # The ring draws the twelve survivors with the lowest adjusted p, in either direction.
   enrichVolcano::plot_volcano_ring(
     da, enrichment,
     contrast = cn, collapse = FALSE, title = cn,
@@ -64,8 +131,6 @@ make_volcano <- function(cn, rank_by = "fdr") {
     label_size = 2.6, axis_size = 2.6, count_size = 2.8,
     point_size = 0.9, theme = ring_theme
   ) +
-    # The ring draws with clip = "off" on a square panel and puts the NES key on the right, so a
-    # label on that edge lands on the colourbar. Below the plot nothing collides.
     guides(fill = guide_colorbar(direction = "horizontal", title.position = "top")) +
     theme(
       plot.title = element_text(size = 10, face = "bold"),
@@ -78,7 +143,13 @@ make_volcano <- function(cn, rank_by = "fdr") {
       legend.key.width = unit(16, "mm")
     )
 }
+```
 
+`supplement()` takes a figure number, title and caption text and returns the patchwork
+annotation with a supplement-style caption; `panel_list()` turns contrast names into the
+"(A) name." list the captions open with. `ring_text` is the caption text both figures share.
+
+```{r caption-helpers}
 supplement <- function(number, title, text) {
   plot_annotation(
     caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 115),
@@ -95,13 +166,16 @@ ring_text <- paste(
   "colour and counts read protein-level BH FDR, the ring set-level fgsea FDR: two separate",
   "claims. Data: protein_results and set_tests sheets of 01_run_fgsea_and_fry.xlsx."
 )
+```
 
-# Primary question first, then the two training responses and the between-treatment comparison.
+S8 puts the primary question first, then the two training responses and the between-treatment
+comparison. S9 repeats the training responses with the same points, colours and rings; only the
+labels move, to the pi-score ranking, so no protein named there is a discovery.
+
+```{r figures}
 fdr_order <- c(
   "Modality_x_Time_Interaction", "BFR_Post-Pre", "HLRT_Post-Pre", "BFR_Post-HLRT_Post"
 )
-# Same points, colours and rings on the second page; only the labels move. Pi ranks and selects
-# nothing, so no protein named there is a discovery.
 pi_order <- c("BFR_Post-Pre", "HLRT_Post-Pre")
 figures <- list(
   wrap_plots(map(fdr_order, make_volcano), ncol = 2) +
@@ -116,7 +190,13 @@ figures <- list(
       "protein named here is a discovery.", ring_text
     ))
 )
+```
 
+## Save results
+
+Both pages go to `b_reports/02_enrich_volcano_fgsea_figures.pdf`. The step writes no table.
+
+```{r write-figures}
 figure_file <- "02_enrich_volcano_fgsea_figures.pdf"
 pdf(
   here("03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports", figure_file),
@@ -124,4 +204,11 @@ pdf(
 )
 walk(figures, print)
 invisible(dev.off())
+length(figures)
+```
+
+## Session information
+
+```{r session}
 sessionInfo()
+```

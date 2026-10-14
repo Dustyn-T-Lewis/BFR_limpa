@@ -1,9 +1,33 @@
-# Per set and task: AUC and paired Wilcoxon p from the singscore matrix. Every comparison is paired.
-# Nominal p is read against chance_expectation per collection, BH beside it. baseline_BFR_vs_HLRT
-# is the empirical floor.
+---
+title: "05 · Set classification"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  message: false
+---
 
+## Load packages
+
+`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
+this notebook in the repository, so paths resolve from the repository root. `pROC` and
+`enrichVolcano` (the user's own package, not on CRAN) are called with `::` for one function each.
+
+```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
+here::i_am("03_Pathway_Enrichment/05_set_classification/a_script/05_set_classification.qmd")
+```
 
+## Read inputs
+
+Three inputs: the set catalogue from `00_build_gene_sets`, the singscore matrix from
+`04_run_singscore` (one row per set, one column per sample) and the sample targets stored with
+the protein estimates. The singscore matrix travels as rds, not through a workbook, because a
+round trip through xlsx breaks the exact rank ties the tests below depend on. Reading
+`proteins.rds` loads limma, which defines its stored class, and R says so in the output.
+
+```{r read}
 stage <- here("03_Pathway_Enrichment", "05_set_classification")
 set_catalog <- read_excel(
   here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "00_build_gene_sets.xlsx"),
@@ -11,21 +35,46 @@ set_catalog <- read_excel(
 )
 set_score <- readRDS(here("03_Pathway_Enrichment", "04_run_singscore", "c_data", "set_scores.rds"))
 targets <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))$targets
+dim(set_score)
+head(targets[c("sample_id", "participant", "leg", "treatment", "timepoint")], 6)
+```
 
+## Select sets
+
+Only sets the catalogue marks as `qualifies` are tested. `values` holds their scores in catalogue
+order, and `collection_sizes` counts sets per collection; that count is the denominator for the
+chance comparison further down.
+
+```{r select-sets}
 catalog <- set_catalog |>
   filter(qualifies) |>
   select(set_id, database, pathway, measured_size)
 values <- set_score[catalog$set_id, ]
 collection_sizes <- count(catalog, database)
-message(nrow(catalog), " sets across ", nrow(collection_sizes), " collections")
+collection_sizes
+```
 
+## Pair the samples
+
+Every comparison here is paired, so each sample needs its partner. `by_timepoint` spreads the
+targets to one row per leg, with the T1 and T2 sample IDs side by side. `legs` keeps legs sampled
+at both time points. Treatment comes from the targets, never the leg letter: leg assignment was
+counterbalanced.
+
+```{r pair-legs}
 by_timepoint <- targets |>
   mutate(leg_id = paste(participant, leg, sep = "_")) |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = timepoint, values_from = sample_id)
 legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
+head(legs, 4)
+```
 
-# One row per participant holding both of their legs, for whichever column identifies them.
+`pair_by_treatment()` takes a leg table and the name of the column that identifies each leg, and
+returns one row per participant holding both legs, BFR and HLRT, in that column. Participants
+missing either leg are dropped.
+
+```{r pair-participants}
 pair_by_treatment <- function(data, column) {
   data |>
     select(participant, treatment, value = all_of(column)) |>
@@ -35,12 +84,28 @@ pair_by_treatment <- function(data, column) {
 baseline <- pair_by_treatment(by_timepoint, "T1")
 post <- pair_by_treatment(by_timepoint, "T2")
 delta_pairs <- pair_by_treatment(legs, "leg_id")
+c(legs = nrow(legs), baseline = nrow(baseline), post = nrow(post), change = nrow(delta_pairs))
+```
 
+The change in each set's score per leg is T2 minus T1. Its columns are named by leg, so the BFR
+and HLRT legs of a participant can be picked out with `delta_pairs`.
+
+```{r change-scores}
 delta <- values[, legs$T2] - values[, legs$T1]
 colnames(delta) <- legs$leg_id
+```
 
-# Each task holds its matrix and two paired column sets. `favours` is the group an AUC above 0.5
-# points to, so the figures can state direction.
+## Define the tasks
+
+Each task holds a score matrix and two paired column sets: `positive` and `negative`, matched
+position by position. Pre against post compares the two time points within each arm. The three
+BFR against HLRT tasks compare the two legs of each participant at baseline, after training and
+in change. `favours` is the group an AUC above 0.5 points to, so the figures can state direction.
+
+The baseline comparison is legs before any training, so it shows what the method returns when
+nothing is there. It is reported in the chance table but not drawn.
+
+```{r tasks}
 arm <- split(legs, legs$treatment)
 tasks <- list(
   pre_vs_post_BFR = list(
@@ -53,7 +118,7 @@ tasks <- list(
   ),
   baseline_BFR_vs_HLRT = list(
     values = values, positive = baseline$BFR, negative = baseline$HLRT,
-    label = "Baseline BFR vs HLRT (control)", favours = "BFR", unit = "participants"
+    label = "Baseline BFR vs HLRT", favours = "BFR", unit = "participants"
   ),
   post_BFR_vs_HLRT = list(
     values = values, positive = post$BFR, negative = post$HLRT,
@@ -64,10 +129,27 @@ tasks <- list(
     label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
   )
 )
-# The baseline control is reported in chance_expectation but not drawn: it shows what the method
-# returns when nothing is there.
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
+tibble(
+  task = names(tasks), label = map_chr(tasks, "label"),
+  pairs = map_int(tasks, function(spec) length(spec$positive)), favours = map_chr(tasks, "favours")
+)
+```
 
+## Score each set
+
+Two numbers per set and task. The AUC (area under the ROC curve) is the probability that a
+randomly chosen positive sample scores higher than a randomly chosen negative one: 0.5 is no
+separation, 1 perfect separation upward, 0 perfect separation downward. It is computed from ranks
+and ignores the pairing. The p-value comes from the paired Wilcoxon signed-rank test, which ranks
+the within-pair differences and asks whether they centre on zero, so it uses the pairing.
+
+`fit_roc()` takes one set's scores and a task, and returns the ROC fit. `paired_test()` takes a
+task and returns one row per set with its AUC and paired p. Ties among the differences make
+`wilcox.test()` warn that it cannot give an exact p; it falls back to the normal approximation,
+and the warning is suppressed.
+
+```{r paired-tests}
 # pROC::roc() auto-orients: a true AUC of 0.194 comes back 0.806. direction = "<" pins it.
 fit_roc <- function(values, spec) {
   pROC::roc(
@@ -77,12 +159,18 @@ fit_roc <- function(values, spec) {
 }
 paired_test <- function(spec) {
   tibble(
-    auc = apply(spec$values, 1, \(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
-    p_paired = apply(spec$values, 1, \(row) {
+    auc = apply(spec$values, 1, function(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
+    p_paired = apply(spec$values, 1, function(row) {
       suppressWarnings(wilcox.test(row[spec$positive], row[spec$negative], paired = TRUE)$p.value)
     })
   )
 }
+```
+
+Run every task, stack the results and attach each set's collection and name. BH adjustment runs
+within each task and collection, never pooled across them.
+
+```{r set-auc}
 # The argument is `spec`, not `task`: tibble() builds a `task` column first, and a later
 # `task$label` in the same call would read that column instead of the argument.
 set_auc <- imap(tasks, function(spec, name) {
@@ -94,9 +182,30 @@ set_auc <- imap(tasks, function(spec, name) {
   list_rbind() |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p_paired, "BH"), .by = c(task, database))
+head(arrange(set_auc, p_paired), 6)
+```
 
-# Each collection gets its own denominator, so a 41-set collection is not read against a
-# 1,366-set one. BH is applied inside the same two-way split for the same reason.
+## Check results
+
+One row per task: every set tested once, the AUC range and any missing p-value.
+
+```{r check}
+set_auc |>
+  summarise(
+    sets = n(), auc_min = min(auc), auc_max = max(auc), missing_p = sum(is.na(p_paired)),
+    .by = task
+  )
+```
+
+## Compare with chance
+
+With thousands of sets, some reach p < 0.05 by luck alone. The chance expectation is 5% of the sets
+tested: the number of nominal hits a collection returns when no set truly separates the groups.
+The ratio of observed nominal hits to that count reads 1 at chance. Each collection gets its own
+denominator, so a 41-set collection is not read against a 1,366-set one, and BH runs inside the
+same split for the same reason.
+
+```{r chance}
 chance_expectation <- set_auc |>
   transmute(
     analysis = "classification", comparison = task_label, database, n_pairs, p = p_paired, fdr
@@ -106,7 +215,20 @@ chance_expectation <- set_auc |>
     ratio = round(nominal / expected, 2), fdr_sig = sum(fdr < 0.05),
     .by = c(analysis, comparison, database, n_pairs)
   )
+head(chance_expectation, 6)
+```
 
+## Draw figures
+
+The figure helpers below are shared line for line with `06_set_association`. `figure_theme` is
+the common look. `caption_text()` takes a figure title, the caption text and the page position,
+and returns the wrapped caption. `paginate()` takes rows with a `panel` factor and a function that
+draws one page, and returns a list of plots, twelve panels to a page. It builds each page from
+that page's rows, because a paginating facet would build every panel for every page.
+`chance_page()` draws the chance ratios as bars. `write_pdf()` writes a list of plots to one A4
+PDF in `b_reports/`.
+
+```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
@@ -120,11 +242,9 @@ caption_text <- function(title, text, page = 1, n_pages = 1) {
   pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
   str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
 }
-# Twelve panels to a page. `draw` builds the plot from one page's rows: a paginating facet would
-# build every panel for every page.
 paginate <- function(data, draw, title, text, scales = "fixed") {
   pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
-  imap(unname(pages), \(page, i) {
+  imap(unname(pages), function(page, i) {
     draw(droplevels(page)) +
       facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
       labs(caption = caption_text(title, text, i, length(pages))) +
@@ -154,6 +274,12 @@ write_pdf <- function(pages, name) {
   walk(pages, print)
   invisible(dev.off())
 }
+```
+
+`chance_line()` takes a collection and returns the caption sentence giving its chance count.
+`set_label()` turns a collection and pathway name into a wrapped panel title.
+
+```{r label-helpers}
 chance_line <- function(db) {
   n <- collection_sizes$n[collection_sizes$database == db]
   sprintf("Nominal p, uncorrected: chance alone returns %.1f of the %d %s sets.", n * 0.05, n, db)
@@ -161,7 +287,14 @@ chance_line <- function(db) {
 set_label <- function(database, pathway) {
   str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
 }
+```
 
+`roc_figure()` takes a task, its S-number and a collection, and returns the ROC pages for every
+set in that collection reaching nominal p on that task, smallest p first, or an empty list when
+there are none. An ROC curve plots the true positive rate against the false positive rate as the
+score threshold moves; the area under it is the AUC.
+
+```{r roc-figure}
 roc_figure <- function(task_name, number, db) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
@@ -185,7 +318,7 @@ roc_figure <- function(task_name, number, db) {
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
-  paginate(curves, \(page) {
+  paginate(curves, function(page) {
     ggplot(page, aes(fpr, tpr, colour = direction, fill = direction)) +
       geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
       geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
@@ -211,11 +344,15 @@ roc_figure <- function(task_name, number, db) {
     "Data: set_auc sheet of 05_set_classification.xlsx."
   ))
 }
+```
 
-# One file per collection, so each can be read on its own.
-walk(unique(catalog$database), \(db) {
+One PDF per collection, so each can be read on its own. The four drawn tasks are S12 to S15 in
+the order of `drawn_tasks`; S16 is the chance page across all five tasks.
+
+```{r write-figures}
+walk(unique(catalog$database), function(db) {
   write_pdf(
-    list_flatten(imap(drawn_tasks, \(task_name, i) roc_figure(task_name, 11 + i, db))),
+    list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 11 + i, db))),
     paste0("05_classification_", db, ".pdf")
   )
 })
@@ -228,7 +365,28 @@ write_pdf(list(chance_page(
     "Labels give observed of tested. Data: chance_expectation sheet of 05_set_classification.xlsx."
   )
 )), "05_chance_by_collection.pdf")
+```
 
+## Summary
+
+Nominal hits as a multiple of chance, by task and collection, then the sets surviving BH in each
+task. Training moves the pre against post ratios well above 1; the BFR against HLRT tasks,
+baseline included, sit near or below it.
+
+```{r summary}
+chance_expectation |>
+  select(comparison, database, ratio) |>
+  pivot_wider(names_from = database, values_from = ratio)
+summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = comparison)
+```
+
+## Save results
+
+`05_set_classification.xlsx` opens with an `overview` sheet, then `chance_expectation` (nominal
+hits against chance per task and collection), `set_auc` (AUC, paired p and BH q per set and task,
+smallest p first) and `set_catalog` (every tested set).
+
+```{r write}
 sheets <- list(
   chance_expectation = chance_expectation,
   set_auc = arrange(set_auc, p_paired),
@@ -246,4 +404,10 @@ write_xlsx(
   c(list(overview = overview), sheets),
   file.path(stage, "c_data", "05_set_classification.xlsx")
 )
+```
+
+## Session information
+
+```{r session}
 sessionInfo()
+```

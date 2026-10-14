@@ -1,10 +1,40 @@
-# How much mitochondria each leg gained (MPE), and whether any part of the mitochondrion changed
-# beyond that (mitochondrial normalisation). Both follow Granata et al. 2021 (Nat Commun 12:7056)
-# and Reisman et al. 2024 (Nat Commun 15:7677), applied here to whole muscle, not isolates.
+---
+title: "02 · Test mito"
+format:
+  html:
+    toc: true
+    embed-resources: true
+execute:
+  message: false
+---
 
-pacman::p_load(here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,
-               readxl, writexl)
+## Load packages
 
+`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
+this notebook in the repository, so paths resolve from the repository root.
+
+```{r setup}
+pacman::p_load(
+  here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,
+  readxl, writexl
+)
+here::i_am("05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd")
+```
+
+## Read inputs
+
+Two questions, both following Granata et al. 2021 (Nat Commun 12:7056) and Reisman et al. 2024
+(Nat Commun 15:7677), applied here to whole muscle rather than isolated mitochondria. How much
+mitochondrial protein did each leg gain? And did any part of the mitochondrion change beyond that
+overall gain?
+
+`proteins` is the normalised protein matrix from stage 01. `raw` is the same quantification before
+cyclic loess, cut to the same rows, because mitochondrial content has to be read from unnormalised
+intensities. `d` holds the design, the contrasts and the baseline contrast's name; `fit` is the
+stage 02 protein fit. `protein_map` links proteins to gene symbols and `membership` lists the
+MitoCarta sets from `01_build_mito_sets`.
+
+```{r read}
 stage <- here("05_Mitochondria", "02_test_mito")
 quant <- here("01_Preprocess", "02_Quantification", "c_data")
 proteins <- readRDS(file.path(quant, "proteins.rds"))
@@ -19,8 +49,16 @@ membership <- read_excel(
   here("05_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx"),
   "membership"
 )
+dim(raw)
+```
 
-# proteins.rds is this raw run after cyclic loess and nothing else.
+## Check the inputs agree
+
+The protein map must list the matrix rows in order, and the raw matrix must become `proteins.rds`
+after cyclic loess and nothing else. If either fails, the raw and normalised readouts below would
+not describe the same data.
+
+```{r check}
 stopifnot(
   identical(protein_map$protein, rownames(proteins)),
   identical(colnames(raw), colnames(proteins)),
@@ -28,18 +66,36 @@ stopifnot(
 )
 contrast_names <- colnames(d$contrasts)
 targets <- proteins$targets
-# MitoCarta keeps small pathways because some functions are one or two proteins, so there is no
-# size floor. The 20% coverage floor is ours, not a published rule: below it the measured part
-# says little about the pathway.
+```
+
+## Prepare the sets
+
+`coverage` counts, for each set, the genes MitoCarta lists and how many of them we measure.
+`sets` turns the measured genes into a named list, one character vector per set.
+
+MitoCarta keeps small pathways because some functions are one or two proteins, so there is no size
+floor. The 20% coverage floor is ours, not a published rule: below it the measured part says little
+about the pathway. The complexes are the structural-subunit pathways, "CI subunits" to "CV
+subunits".
+
+```{r sets}
 coverage <- membership |>
   summarise(listed = n(), measured = sum(measured), .by = c(collection, set)) |>
   mutate(coverage = measured / listed)
 sets <- with(filter(membership, measured), split(gene, set))
 complexes <- paste(c("CI", "CII", "CIII", "CIV", "CV"), "subunits")
 pathways <- sets[filter(coverage, collection == "MitoPathways", coverage >= 0.2)$set]
+c(mitopathways = sum(coverage$collection == "MitoPathways"), tested = length(pathways))
+```
 
-# MPE is a share of the raw signal: loess assumes the typical protein holds still, which is what a
-# mitochondrial expansion breaks. Every protein group counts toward the total.
+## Mitochondrial protein enrichment
+
+Mitochondrial protein enrichment (MPE) is the share of raw protein intensity that comes from
+mitochondrial proteins, one number per biopsy. It is computed on raw intensities because cyclic
+loess assumes the typical protein holds still, and a mitochondrial expansion breaks exactly that.
+Every protein group counts toward the denominator. `2^raw$E` undoes the log2.
+
+```{r mpe}
 intensity <- 2^raw$E
 is_mito <- protein_map$gene %in% sets$MitoCarta
 mpe <- tibble(
@@ -47,9 +103,15 @@ mpe <- tibble(
   treatment = targets$treatment, timepoint = targets$timepoint,
   mpe = colSums(intensity[is_mito, ]) / colSums(intensity)
 )
+mpe |>
+  summarise(mean_mpe_pct = round(100 * mean(mpe), 1), .by = c(treatment, timepoint))
+```
 
-# One outcome row, so there is nothing for eBayes to borrow from: the plain least-squares t on
-# the same design and contrasts as the protein fit.
+log2 MPE goes through the same design and contrasts as the protein fit, as a single outcome row.
+With one row there is nothing for `eBayes()` to borrow from, so the test is the plain least-squares
+t: estimate over standard error, with `df.residual` degrees of freedom and a 95% interval.
+
+```{r mpe-test}
 mpe_fit <- contrasts.fit(lmFit(rbind(log2_mpe = log2(mpe$mpe)), d$design), d$contrasts)
 mpe_test <- tibble(
   contrast = contrast_names, log2FC = mpe_fit$coefficients[1, ],
@@ -59,59 +121,117 @@ mpe_test <- tibble(
     t = log2FC / se, p = 2 * pt(-abs(t), df),
     conf.low = log2FC - qt(0.975, df) * se, conf.high = log2FC + qt(0.975, df) * se
   )
+mutate(mpe_test, across(where(is.double), function(x) signif(x, 3)))
+```
 
-# Citrate synthase activity is the literature's content marker; this is its protein, from the
-# stage 02 fit, for comparison only.
+## Citrate synthase
+
+Citrate synthase activity is the literature's usual marker of mitochondrial content. This is its
+protein, read from the stage 02 fit for comparison only. `topTable()` with `sort.by = "none"` keeps
+protein order so the row can be picked by name.
+
+```{r citrate-synthase}
 cs <- protein_map$protein[protein_map$gene %in% "CS" & protein_map$selected]
-citrate_synthase <- map(set_names(contrast_names), \(cn) {
+citrate_synthase <- map(set_names(contrast_names), function(cn) {
   topTable(fit, coef = cn, number = Inf, sort.by = "none")[cs, c("logFC", "P.Value", "adj.P.Val")]
 }) |>
   list_rbind(names_to = "contrast")
+as_tibble(citrate_synthase)
+```
 
-# Mitochondrial normalisation as both papers did it: subset the mitochondrial proteins from the
-# unnormalised data, normalise the subset alone, refit.
+## Mitochondrial normalisation
+
+Mitochondrial normalisation, as both papers did it: take the mitochondrial proteins out of the
+unnormalised data, normalise that subset alone, and refit. Each protein is then read against total
+mitochondrial content, so a protein that only rose with the rest of the mitochondrion no longer
+shows a change. The papers used VSN; we use cyclic loess, as for the main matrix.
+
+The refit follows stage 02: `dpcDE()` reads the standard errors from `dpcQuant()` as precision
+weights, `sample.weights = TRUE` adds one quality weight per sample, and `eBayes(robust = TRUE)`
+moderates the variances. `plot = FALSE` skips `dpcDE()`'s diagnostic plot.
+
+```{r mito-fit}
 mito <- raw[is_mito, ]
 mito$E <- normalizeBetweenArrays(mito$E, method = "cyclicloess")
 mito_fit <- dpcDE(mito, d$design, plot = FALSE, sample.weights = TRUE) |>
   contrasts.fit(d$contrasts) |>
   eBayes(robust = TRUE)
-mito_proteins <- map(set_names(contrast_names), \(cn) {
+```
+
+One row per protein and contrast, with the gene symbol and label from the protein map. BH
+adjustment is within each contrast.
+
+```{r mito-proteins}
+mito_proteins <- map(set_names(contrast_names), function(cn) {
   topTable(mito_fit, coef = cn, number = Inf, sort.by = "none") |>
     rownames_to_column("protein") |>
     select(protein, logFC, AveExpr, t, P.Value, adj.P.Val)
 }) |>
   list_rbind(names_to = "contrast") |>
   left_join(select(protein_map, protein, gene, label, selected), by = "protein")
+head(mito_proteins, 3)
+```
 
-# fry reads limpa's precision weights and indexes each symbol's representative protein, as in
-# 01_run_fgsea_and_fry. It returns its own BH FDR per contrast.
+## Complexes I to V
+
+fry is limma's fast self-contained gene-set test: it asks whether the proteins of a set, taken
+together, moved in one direction, and it allows for correlation between them. It reads limpa's
+precision weights from `y$weights`. `ids2indices()` turns each set's gene symbols into row
+positions, matching only each symbol's representative protein, as in `01_run_fgsea_and_fry`. fry
+returns its own BH FDR per contrast.
+
+`fry_sets()` takes a protein matrix, its weights and a list of sets, and returns one row per set
+and contrast. It runs on both fits for the complexes and on the normalised fit for MitoPathways.
+
+```{r fry-helper}
 representative <- with(protein_map, set_names(if_else(selected, gene, NA), protein))
 fry_sets <- function(y, weights, sets) {
   y$weights <- weights
   index <- ids2indices(sets, representative[rownames(y)])
-  map(set_names(contrast_names), \(cn) {
+  map(set_names(contrast_names), function(cn) {
     fry(y, index, d$design, d$contrasts[, cn], sort = "none") |> rownames_to_column("set")
   }) |>
     list_rbind(names_to = "contrast")
 }
+```
+
+On the standard fit fry asks whether a complex changed; on the normalised fit, whether it changed
+beyond overall mitochondrial content.
+
+```{r complex-tests}
 complex_tests <- bind_rows(
   standard = fry_sets(proteins, fit$EList$weights, sets[complexes]),
   mitochondria_normalised = fry_sets(mito, mito_fit$EList$weights, sets[complexes]),
   .id = "fit"
 ) |>
   select(fit, contrast, set, NGenes, Direction, PValue, FDR)
+head(complex_tests, 5)
+```
 
-# fry is the confirmatory test, as in 01_run_fgsea_and_fry. After normalisation the shared
-# expansion is gone, so it already reads change relative to the rest of the mitochondrion and a
-# competitive test (camera) would ask the same question again. fgsea draws the rings. It shuffles
-# proteins as if independent, so on correlated sets such as complex I its p runs small: between
-# legs it calls pathways fry does not, and those are leads.
-ranked <- map(set_names(contrast_names), \(cn) {
+## MitoPathways
+
+fry is the confirmatory test here, as in `01_run_fgsea_and_fry`. After normalisation the shared
+expansion is gone, so fry already reads change relative to the rest of the mitochondrion, and a
+competitive test (camera) would ask the same question again.
+
+fgsea ranks proteins by moderated t and asks whether a pathway's members sit unusually high or low
+in that ranking. Its leading edge is the subset of members that drives the score, the proteins
+ranked before the running score peaks. fgsea draws the rings on the volcanoes. It shuffles
+proteins as if independent, so on correlated sets such as complex I its p runs small: between legs
+it calls pathways that fry does not, and those are leads. The seed sits before the permutations.
+
+```{r fgsea}
+ranked <- map(set_names(contrast_names), function(cn) {
   with(filter(mito_proteins, contrast == cn, selected), set_names(t, gene))
 })
 set.seed(1)
-fgsea_raw <- map(ranked, \(stats) fgsea::fgsea(pathways, stats)) |>
+fgsea_raw <- map(ranked, function(stats) fgsea::fgsea(pathways, stats)) |>
   list_rbind(names_to = "contrast")
+```
+
+Both methods in one table, with each pathway's listed size and coverage.
+
+```{r pathway-tests}
 pathway_tests <- bind_rows(
   fry = fry_sets(mito, mito_fit$EList$weights, pathways),
   fgsea = transmute(
@@ -123,15 +243,26 @@ pathway_tests <- bind_rows(
 ) |>
   select(method, contrast, set, NGenes, Direction, NES, PValue, FDR, leading_edge) |>
   left_join(select(coverage, set, listed, coverage), by = "set")
+```
 
+## Figures
+
+Three A4 pages go to `b_reports/02_test_mito.pdf`. They share a theme and a caption helper;
+`caption()` joins a title and text and wraps it to the page.
+
+```{r theme}
 theme_set(theme_minimal(base_size = 9))
 theme_update(
   plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
   plot.caption.position = "plot"
 )
-caption <- \(title, text) str_wrap(paste0(title, ". ", text), 115)
+caption <- function(title, text) str_wrap(paste0(title, ". ", text), 115)
 arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
+```
 
+Page 1: MPE by arm and time, with each leg's pair joined.
+
+```{r mpe-page}
 mpe_page <- ggplot(mpe, aes(timepoint, 100 * mpe, colour = treatment)) +
   geom_line(aes(group = paste(participant, leg)), alpha = 0.35) +
   geom_boxplot(aes(group = timepoint), width = 0.3, outlier.shape = NA, fill = NA) +
@@ -146,7 +277,11 @@ mpe_page <- ggplot(mpe, aes(timepoint, 100 * mpe, colour = treatment)) +
       "before and after training. Tests: mpe_test sheet of 02_test_mito.xlsx."
     ))
   )
+```
 
+Page 2: a complex by contrast grid for both fits, coloured by signed −log10 fry FDR.
+
+```{r complex-page}
 complex_page <- complex_tests |>
   mutate(
     score = if_else(Direction == "Up", 1, -1) * -log10(FDR),
@@ -170,25 +305,36 @@ complex_page <- complex_tests |>
     ))
   ) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), legend.position = "top")
+```
 
+Page 3: volcanoes of the normalised proteins with fgsea rings, drawn by `enrichVolcano`. `as_da()`
+and `as_enrichment()` put the protein and pathway tables into its format; the leading-edge genes
+become protein labels so the ring's ticks find their points. `dedup_terms()` keeps one pathway per
+overlapping cluster, and the ring draws the twelve with the lowest adjusted p.
+
+```{r enrichment}
 da <- enrichVolcano::as_da(
   select(mito_proteins, protein, gene = label, contrast, logFC, t, P.Value, adj.P.Val),
   species = NULL
 )
-# The ring draws the twelve lowest-padj fgsea pathways, one per overlapping cluster.
 enrichment <- fgsea_raw |>
-  mutate(leadingEdge = map(leadingEdge, \(genes) {
+  mutate(leadingEdge = map(leadingEdge, function(genes) {
     unname(set_names(protein_map$label, protein_map$gene)[genes])
   })) |>
   enrichVolcano::as_enrichment(enrichment_test = "fgsea", database = "MitoPathways") |>
   enrichVolcano::dedup_terms(pathways)
+```
+
+`volcano()` draws one contrast. As in `02_enrich_volcano_fgsea`, the NES key goes horizontal below
+the ring, where it collides with nothing. The baseline contrast is not drawn.
+
+```{r volcano-page}
 volcano <- function(cn) {
   enrichVolcano::plot_volcano_ring(
     da, enrichment,
     contrast = cn, title = cn,
     label_mode = "top_per_direction", label_size = 2.6, axis_size = 2.6, point_size = 0.9
   ) +
-    # As in 02_enrich_volcano_fgsea: a horizontal NES key below the ring collides with nothing.
     guides(fill = guide_colorbar(direction = "horizontal", title.position = "top")) +
     theme(
       legend.position = "bottom", legend.key.height = unit(2, "mm"),
@@ -204,11 +350,39 @@ volcano_page <- wrap_plots(map(drawn, volcano), ncol = 2) +
     "fgsea treats proteins as independent, so ringed pathways that fry does not call are leads.",
     "Data: mito_proteins and pathway_tests sheets."
   )))
+```
 
+```{r pdf}
 pdf(file.path(stage, "b_reports", "02_test_mito.pdf"), width = 8.27, height = 11.69)
 walk(list(mpe_page, complex_page, volcano_page), print)
 invisible(dev.off())
+```
 
+## Summary
+
+Proteins at BH FDR < 0.05 after mitochondrial normalisation, per contrast.
+
+```{r summary-proteins}
+mito_proteins |>
+  summarise(tested = n(), fdr_05 = sum(adj.P.Val < 0.05), .by = contrast)
+```
+
+Complexes at fry FDR < 0.05 in each fit, and MitoPathways at FDR < 0.05 by method, per contrast.
+
+```{r summary-sets}
+complex_tests |>
+  summarise(fdr_05 = sum(FDR < 0.05), min_fdr = signif(min(FDR), 2), .by = c(fit, contrast))
+pathway_tests |>
+  summarise(fdr_05 = sum(FDR < 0.05), .by = c(method, contrast)) |>
+  pivot_wider(names_from = method, values_from = fdr_05)
+```
+
+## Save results
+
+`02_test_mito.xlsx` holds an overview sheet and one sheet per table. `03_complex_subunits` reads
+`complex_tests`.
+
+```{r write}
 sheets <- list(
   mpe = mpe, mpe_test = mpe_test, citrate_synthase = citrate_synthase,
   complex_tests = complex_tests,
@@ -226,4 +400,10 @@ overview <- data.frame(
   )
 )
 write_xlsx(c(list(overview = overview), sheets), file.path(stage, "c_data", "02_test_mito.xlsx"))
+```
+
+## Session information
+
+```{r session}
 sessionInfo()
+```

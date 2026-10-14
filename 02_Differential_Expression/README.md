@@ -10,8 +10,7 @@ within-leg correlation. It writes `design.rds` and `01_design.xlsx`.
 [`03_Protein_Association`](03_Protein_Association/README.md) correlates every protein with the
 ultrasound outcomes and writes `03_protein_association.xlsx` and a PDF of every nominal pair.
 [`04_Protein_Classification`](04_Protein_Classification/README.md) measures how well each protein
-separates the study groups and writes one ROC PDF per task. The first two are Quarto notebooks,
-since they hold the limpa steps; the last two are plain R scripts.
+separates the study groups and writes one ROC PDF per task.
 
 ## What each step answers
 
