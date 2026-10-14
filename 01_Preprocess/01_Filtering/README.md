@@ -16,3 +16,6 @@ Outputs:
 - `c_data/precursors_filtered.rds`: filtered precursors, read by `02_Quantification`.
 - `c_data/01_filter.xlsx`: samples, rows and signal after each filter, annotation exclusions,
   removed contaminants and the fraction removed per sample.
+
+The contaminant list was picked by judgement, not by a rule; the notebook says why a scripted HPA
+rule failed to replace it.

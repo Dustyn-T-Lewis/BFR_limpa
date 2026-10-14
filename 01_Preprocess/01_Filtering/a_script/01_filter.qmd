@@ -4,8 +4,9 @@ format:
   html:
     toc: true
     embed-resources: true
-execute:
-  message: false
+knitr:
+  opts_chunk:
+    message: false
 ---
 
 ## Load packages
@@ -206,10 +207,20 @@ takes its prior from all the data, so contaminants left in would shape the model
 every muscle protein is quantified.
 
 The 4 family patterns match immunoglobulin, keratin, SPRR and haemoglobin names; `^` and `$`
-require a whole-name match, so `KRTCAP2` is not caught. The 147 individual symbols came from an AI
-review of the dataset's gene symbols on 2026-09-04, judged against Human Protein Atlas (HPA)
-single-cell expression. No script or data download stands behind that review, so the list is not
-yet evidence. A reproducible rule derived from HPA data is being piloted to replace it.
+require a whole-name match, so `KRTCAP2` is not caught. The 147 individual symbols are plasma,
+red-cell, platelet, neutrophil and skin proteins, picked by judgement from the dataset's gene
+symbols on 2026-09-04 with Human Protein Atlas (HPA) single-cell expression in view. No script
+produced the list.
+
+A scripted rule was tried in its place on 2026-10-13: remove a gene when HPA finds it specific to
+blood, immune, skin or liver cells and does not detect it in myonuclei. It kept 86 proteins this
+list removes, many of them complement and other plasma proteins that the muscle's own fibroblasts
+and vessels also make (C3, C1R, C1S and SERPING1 all have muscle RNA in HPA). With those proteins
+in, the baseline BFR against HLRT comparison, where counterbalanced legs should differ by nothing,
+flagged 21 gene sets in the stage 03 fgsea, all complement, coagulation, immunoglobulin or red-cell,
+against 1 with this list. No annotation rule tried could tell plasma-borne complement from locally
+made complement, so the list stays. It predates that comparison, which therefore checks the list
+rather than tuning it.
 
 ```{r contaminant-rules}
 contaminant_families <- str_c("^(", str_flatten(c(
