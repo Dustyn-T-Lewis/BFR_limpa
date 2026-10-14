@@ -2244,9 +2244,6 @@ vertical-align: -.125em;
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, readr)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>here() starts at /Users/dtl0018/Desktop/A_Proteomics_Analysis/2026/BFR/BFR_limpa</code></pre>
-</div>
 </div>
 </section>
 <section id="read-the-report" class="level2">
@@ -2254,13 +2251,13 @@ vertical-align: -.125em;
 <p>FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) estimates the slow and fast fibre fractions of a biopsy by deconvolution: it treats each sample’s profile as a mix of reference profiles for pure slow and pure fast fibres and solves for the proportions. It wants raw label-free quantities (LFQ, intensities not scaled against a label or standard) and normalises them itself. Its authors found quantification from unique peptides the most accurate.</p>
 <p>DIA-NN’s <code>Genes.MaxLFQ.Unique</code> is exactly that: a gene-level value from unique peptides, built with MaxLFQ, which combines peptide ratios between runs into one abundance per gene and run. Only the three columns needed are read from the parquet.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;06_Composition&quot;</span>, <span class="st">&quot;01_fibre_type_export&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>report <span class="ot">&lt;-</span> nanoparquet<span class="sc">::</span><span class="fu">read_parquet</span>(</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;report.parquet&quot;</span>),</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_select =</span> <span class="fu">c</span>(<span class="st">&quot;Run&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;Genes.MaxLFQ.Unique&quot;</span>)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(report, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;06_Composition&quot;</span>, <span class="st">&quot;01_fibre_type_export&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>report <span class="ot">&lt;-</span> nanoparquet<span class="sc">::</span><span class="fu">read_parquet</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;report.parquet&quot;</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">col_select =</span> <span class="fu">c</span>(<span class="st">&quot;Run&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;Genes.MaxLFQ.Unique&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(report, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A data frame: 3 × 3
   Run          Genes Genes.MaxLFQ.Unique
@@ -2276,13 +2273,13 @@ vertical-align: -.125em;
 <p>The report has one row per precursor, and the gene value repeats on every precursor row of that gene, so <code>distinct()</code> keeps one copy. DIA-NN writes 0 on rows whose precursor is not unique to the gene, so 0 means not quantified and is dropped.</p>
 <p>Runs match <code>metadata$run</code> ignoring case, as in <code>01_filter.qmd</code>. That absorbs <code>Cl_MDR_7E-T2</code>, written <code>CL_MDR_7E-T2</code> in the sheet, and drops the discarded S08 injection, which has no <code>sample_id</code>. <code>stopifnot()</code> stops if any sample still holds two values for one gene.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>lfq <span class="ot">&lt;-</span> report <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">nzchar</span>(Genes), Genes.MaxLFQ.Unique <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>() <span class="sc">|&gt;</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample_id =</span> metadata<span class="sc">$</span>sample_id[<span class="fu">match</span>(<span class="fu">tolower</span>(Run), <span class="fu">tolower</span>(metadata<span class="sc">$</span>run))]) <span class="sc">|&gt;</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sample_id))</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(<span class="fu">select</span>(lfq, sample_id, Genes)))</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(lfq, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>lfq <span class="ot">&lt;-</span> report <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">nzchar</span>(Genes), Genes.MaxLFQ.Unique <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>() <span class="sc">|&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample_id =</span> metadata<span class="sc">$</span>sample_id[<span class="fu">match</span>(<span class="fu">tolower</span>(Run), <span class="fu">tolower</span>(metadata<span class="sc">$</span>run))]) <span class="sc">|&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(sample_id))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(<span class="fu">select</span>(lfq, sample_id, Genes)))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(lfq, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A data frame: 3 × 4
   Run          Genes Genes.MaxLFQ.Unique sample_id
@@ -2297,12 +2294,12 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="reshape-for-upload">Reshape for upload</h2>
 <p><code>pivot_wider()</code> turns the long table into one row per gene and one column per biopsy, with the first column named <code>identifier</code> as the app expects. Columns follow the metadata order. Genes not quantified in a sample become <code>NA</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>upload <span class="ot">&lt;-</span> lfq <span class="sc">|&gt;</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">identifier =</span> Genes, sample_id, Genes.MaxLFQ.Unique) <span class="sc">|&gt;</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> sample_id, <span class="at">values_from =</span> Genes.MaxLFQ.Unique) <span class="sc">|&gt;</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(identifier, <span class="fu">all_of</span>(metadata<span class="sc">$</span>sample_id))</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(upload<span class="sc">$</span>identifier), <span class="fu">ncol</span>(upload) <span class="sc">==</span> <span class="fu">nrow</span>(metadata) <span class="sc">+</span> <span class="dv">1</span>)</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>upload[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>upload <span class="ot">&lt;-</span> lfq <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">identifier =</span> Genes, sample_id, Genes.MaxLFQ.Unique) <span class="sc">|&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> sample_id, <span class="at">values_from =</span> Genes.MaxLFQ.Unique) <span class="sc">|&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(identifier, <span class="fu">all_of</span>(metadata<span class="sc">$</span>sample_id))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(upload<span class="sc">$</span>identifier), <span class="fu">ncol</span>(upload) <span class="sc">==</span> <span class="fu">nrow</span>(metadata) <span class="sc">+</span> <span class="dv">1</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>upload[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 4
   identifier  S02_L_T1  S02_L_T2  S02_R_T1
@@ -2317,12 +2314,12 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
 <p>Genes and samples in the file, the share of blank cells, and genes quantified in every biopsy.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(upload[<span class="sc">-</span><span class="dv">1</span>])</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">genes =</span> <span class="fu">nrow</span>(upload), <span class="at">samples =</span> <span class="fu">ncol</span>(values),</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_blank =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">is.na</span>(values)), <span class="dv">1</span>),</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">complete_genes =</span> <span class="fu">sum</span>(<span class="fu">rowSums</span>(<span class="fu">is.na</span>(values)) <span class="sc">==</span> <span class="dv">0</span>)</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(upload[<span class="sc">-</span><span class="dv">1</span>])</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">genes =</span> <span class="fu">nrow</span>(upload), <span class="at">samples =</span> <span class="fu">ncol</span>(values),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_blank =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">is.na</span>(values)), <span class="dv">1</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">complete_genes =</span> <span class="fu">sum</span>(<span class="fu">rowSums</span>(<span class="fu">is.na</span>(values)) <span class="sc">==</span> <span class="dv">0</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>         genes        samples      pct_blank complete_genes 
         4317.0          131.0           34.5         1176.0 </code></pre>
@@ -2333,17 +2330,14 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <p><code>fibertyper_input.csv</code> is the one CSV in the repository, because the app reads nothing else. Missing values stay blank.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(upload, <span class="fu">file.path</span>(out, <span class="st">&quot;fibertyper_input.csv&quot;</span>), <span class="at">na =</span> <span class="st">&quot;&quot;</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">message</span>(<span class="fu">nrow</span>(upload), <span class="st">&quot; genes x &quot;</span>, <span class="fu">ncol</span>(upload) <span class="sc">-</span> <span class="dv">1</span>, <span class="st">&quot; samples&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>4317 genes x 131 samples</code></pre>
-</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(upload, <span class="fu">file.path</span>(out, <span class="st">&quot;fibertyper_input.csv&quot;</span>), <span class="at">na =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">message</span>(<span class="fu">nrow</span>(upload), <span class="st">&quot; genes x &quot;</span>, <span class="fu">ncol</span>(upload) <span class="sc">-</span> <span class="dv">1</span>, <span class="st">&quot; samples&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23

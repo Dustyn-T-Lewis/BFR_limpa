@@ -4,8 +4,9 @@ format:
   html:
     toc: true
     embed-resources: true
-execute:
-  message: false
+knitr:
+  opts_chunk:
+    message: false
 ---
 
 ## Load packages
@@ -196,9 +197,11 @@ overlap_page <- leading_edge |>
 
 S21 is Sam's Venn view: one Venn diagram per pathway, circle areas proportional to the counts
 (`eulerr` fits them), with the shared proteins named beneath, six to a page. `venn()` takes a set
-ID and returns that pathway's panel.
+ID and returns that pathway's panel. `euler()` starts its layout search from random positions, so
+the seed keeps the drawing the same between renders.
 
 ```{r venn-pages}
+set.seed(1)
 venn <- function(id) {
   counts <- filter(leading_edge, set_id == id)
   fit <- eulerr::euler(c(BFR = counts$BFR, HLRT = counts$HLRT, "BFR&HLRT" = counts$both))

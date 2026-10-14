@@ -6,8 +6,9 @@ format:
     embed-resources: true
     fig-width: 7
     fig-height: 5
-execute:
-  message: false
+knitr:
+  opts_chunk:
+    message: false
 ---
 
 ## Load packages

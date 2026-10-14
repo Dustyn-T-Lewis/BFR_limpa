@@ -2246,9 +2246,6 @@ vertical-align: -.125em;
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tibble, purrr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>here() starts at /Users/dtl0018/Desktop/A_Proteomics_Analysis/2026/BFR/BFR_limpa</code></pre>
-</div>
 </div>
 </section>
 <section id="read-proteins" class="level2">
@@ -2256,17 +2253,14 @@ vertical-align: -.125em;
 <p>A gene set is a named list of genes that share a pathway, process or location. Every later enrichment step (<code>01_run_fgsea_and_fry</code>, <code>04_run_singscore</code> and on) reads the list built here, so set membership is decided once.</p>
 <p><code>proteins.rds</code> is limpa’s protein-level <code>EList</code> from quantification. Only its annotation (<code>genes</code>) and observation counts (<code>other$n.observations</code>) are used here.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>cache_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(out, <span class="st">&quot;cache&quot;</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Loading required namespace: limma</code></pre>
-</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>cache_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(out, <span class="st">&quot;cache&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 3042  131</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(proteins<span class="sc">$</span>genes, <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(proteins<span class="sc">$</span>genes, <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>           Protein.Names   Genes NPrec   PropObs
 A0A0B4J2F0   PIOS1_HUMAN PIGBOS1     1 0.5343511
@@ -2280,78 +2274,78 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <h2 class="anchored" data-anchor-id="freeze-the-msigdb-release">Freeze the MSigDB release</h2>
 <p>Gene sets come from MSigDB, the Broad Institute’s curated collection, through the <code>msigdbr</code> package. Membership shifts between releases, so one release (2026.1.Hs) is frozen in <code>c_data/cache/</code> with an md5 checksum. Four collections are used: Hallmark, Reactome, the legacy KEGG pathways and GO biological process (GO:BP). Each entry of <code>collection_specs</code> gives the MSigDB collection and subcollection.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>msigdb_release <span class="ot">&lt;-</span> <span class="st">&quot;2026.1.Hs&quot;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>collection_specs <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Hallmark =</span> <span class="fu">list</span>(<span class="st">&quot;H&quot;</span>, <span class="cn">NULL</span>),</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Reactome =</span> <span class="fu">list</span>(<span class="st">&quot;C2&quot;</span>, <span class="st">&quot;CP:REACTOME&quot;</span>),</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">KEGG_Legacy =</span> <span class="fu">list</span>(<span class="st">&quot;C2&quot;</span>, <span class="st">&quot;CP:KEGG_LEGACY&quot;</span>),</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">GOBP =</span> <span class="fu">list</span>(<span class="st">&quot;C5&quot;</span>, <span class="st">&quot;GO:BP&quot;</span>)</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>collections <span class="ot">&lt;-</span> <span class="fu">names</span>(collection_specs)</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>cache_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(cache_dir, <span class="fu">paste0</span>(</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;msigdb_&quot;</span>, msigdb_release, <span class="st">&quot;_&quot;</span>, <span class="fu">paste</span>(collections, <span class="at">collapse =</span> <span class="st">&quot;-&quot;</span>), <span class="st">&quot;.rds&quot;</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="fu">basename</span>(cache_file)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>msigdb_release <span class="ot">&lt;-</span> <span class="st">&quot;2026.1.Hs&quot;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>collection_specs <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">Hallmark =</span> <span class="fu">list</span>(<span class="st">&quot;H&quot;</span>, <span class="cn">NULL</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">Reactome =</span> <span class="fu">list</span>(<span class="st">&quot;C2&quot;</span>, <span class="st">&quot;CP:REACTOME&quot;</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">KEGG_Legacy =</span> <span class="fu">list</span>(<span class="st">&quot;C2&quot;</span>, <span class="st">&quot;CP:KEGG_LEGACY&quot;</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">GOBP =</span> <span class="fu">list</span>(<span class="st">&quot;C5&quot;</span>, <span class="st">&quot;GO:BP&quot;</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>collections <span class="ot">&lt;-</span> <span class="fu">names</span>(collection_specs)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>cache_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(cache_dir, <span class="fu">paste0</span>(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;msigdb_&quot;</span>, msigdb_release, <span class="st">&quot;_&quot;</span>, <span class="fu">paste</span>(collections, <span class="at">collapse =</span> <span class="st">&quot;-&quot;</span>), <span class="st">&quot;.rds&quot;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="fu">basename</span>(cache_file)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds&quot;</code></pre>
 </div>
 </div>
 <p><code>md5_ok()</code> takes a file path and returns <code>TRUE</code> when a <code>.md5</code> file sits beside it and holds the file’s current checksum. It guards both frozen files.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>md5_ok <span class="ot">&lt;-</span> <span class="cf">function</span>(f) {</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.exists</span>(<span class="fu">paste0</span>(f, <span class="st">&quot;.md5&quot;</span>)) <span class="sc">&amp;&amp;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">identical</span>(<span class="fu">unname</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(f)), <span class="fu">readLines</span>(<span class="fu">paste0</span>(f, <span class="st">&quot;.md5&quot;</span>), <span class="at">warn =</span> <span class="cn">FALSE</span>))</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>md5_ok <span class="ot">&lt;-</span> <span class="cf">function</span>(f) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.exists</span>(<span class="fu">paste0</span>(f, <span class="st">&quot;.md5&quot;</span>)) <span class="sc">&amp;&amp;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">identical</span>(<span class="fu">unname</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(f)), <span class="fu">readLines</span>(<span class="fu">paste0</span>(f, <span class="st">&quot;.md5&quot;</span>), <span class="at">warn =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>The download runs only when the cache file is absent. It fetches each collection, stops if <code>msigdbr</code> serves a different release, and keeps one row per set and gene symbol. With the cache in place, as it is in the repository, this chunk does nothing and needs neither network nor <code>msigdbr</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(cache_file)) {</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&quot;fetching &quot;</span>, <span class="fu">length</span>(collections), <span class="st">&quot; collections from msigdbr&quot;</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  fetched <span class="ot">&lt;-</span> <span class="fu">imap</span>(collection_specs, <span class="cf">function</span>(spec, database) {</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    df <span class="ot">&lt;-</span> msigdbr<span class="sc">::</span><span class="fu">msigdbr</span>(</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">db_species =</span> <span class="st">&quot;HS&quot;</span>, <span class="at">species =</span> <span class="st">&quot;Homo sapiens&quot;</span>,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">collection =</span> spec[[<span class="dv">1</span>]], <span class="at">subcollection =</span> spec[[<span class="dv">2</span>]]</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">identical</span>(<span class="fu">unique</span>(df<span class="sc">$</span>db_version), msigdb_release)) {</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">stop</span>(</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;Requested MSigDB &quot;</span>, msigdb_release, <span class="st">&quot; but msigdbr returned &quot;</span>,</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">unique</span>(df<span class="sc">$</span>db_version), <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>), <span class="st">&quot;.&quot;</span></span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    df <span class="sc">|&gt;</span></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">transmute</span>(</span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        database,</span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">pathway =</span> gs_name, <span class="at">set_id =</span> <span class="fu">paste</span>(database, gs_name, <span class="at">sep =</span> <span class="st">&quot;|&quot;</span>),</span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene =</span> gene_symbol, <span class="at">source_id =</span> gs_exact_source, <span class="at">description =</span> gs_description</span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(gene), <span class="fu">nzchar</span>(gene)) <span class="sc">|&gt;</span></span>
-<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>()</span>
-<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>  frozen <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">db_version =</span> msigdb_release, <span class="at">collections =</span> collections,</span>
-<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">msigdbr_version =</span> <span class="fu">as.character</span>(<span class="fu">packageVersion</span>(<span class="st">&quot;msigdbr&quot;</span>)),</span>
-<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">membership =</span> <span class="fu">list_rbind</span>(fetched)</span>
-<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(frozen, cache_file, <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
-<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">writeLines</span>(<span class="fu">unname</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(cache_file)), <span class="fu">paste0</span>(cache_file, <span class="st">&quot;.md5&quot;</span>))</span>
-<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(cache_file)) {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&quot;fetching &quot;</span>, <span class="fu">length</span>(collections), <span class="st">&quot; collections from msigdbr&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  fetched <span class="ot">&lt;-</span> <span class="fu">imap</span>(collection_specs, <span class="cf">function</span>(spec, database) {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    df <span class="ot">&lt;-</span> msigdbr<span class="sc">::</span><span class="fu">msigdbr</span>(</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">db_species =</span> <span class="st">&quot;HS&quot;</span>, <span class="at">species =</span> <span class="st">&quot;Homo sapiens&quot;</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">collection =</span> spec[[<span class="dv">1</span>]], <span class="at">subcollection =</span> spec[[<span class="dv">2</span>]]</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">identical</span>(<span class="fu">unique</span>(df<span class="sc">$</span>db_version), msigdb_release)) {</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">stop</span>(</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;Requested MSigDB &quot;</span>, msigdb_release, <span class="st">&quot; but msigdbr returned &quot;</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">unique</span>(df<span class="sc">$</span>db_version), <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>), <span class="st">&quot;.&quot;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    df <span class="sc">|&gt;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">transmute</span>(</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        database,</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">pathway =</span> gs_name, <span class="at">set_id =</span> <span class="fu">paste</span>(database, gs_name, <span class="at">sep =</span> <span class="st">&quot;|&quot;</span>),</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">gene =</span> gene_symbol, <span class="at">source_id =</span> gs_exact_source, <span class="at">description =</span> gs_description</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(gene), <span class="fu">nzchar</span>(gene)) <span class="sc">|&gt;</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>()</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>  frozen <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">db_version =</span> msigdb_release, <span class="at">collections =</span> collections,</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">msigdbr_version =</span> <span class="fu">as.character</span>(<span class="fu">packageVersion</span>(<span class="st">&quot;msigdbr&quot;</span>)),</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">membership =</span> <span class="fu">list_rbind</span>(fetched)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(frozen, cache_file, <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">writeLines</span>(<span class="fu">unname</span>(tools<span class="sc">::</span><span class="fu">md5sum</span>(cache_file)), <span class="fu">paste0</span>(cache_file, <span class="st">&quot;.md5&quot;</span>))</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Check the checksum, then read the snapshot. <code>membership</code> has one row per set and gene; <code>set_id</code> joins the collection and set name, so names stay unique across collections.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">md5_ok</span>(cache_file)) {</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">&quot;MSigDB cache checksum missing or mismatched. Restore the RDS and its .md5 together.&quot;</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>frozen <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(cache_file)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>membership <span class="ot">&lt;-</span> frozen<span class="sc">$</span>membership</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>frozen<span class="sc">$</span>db_version</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">md5_ok</span>(cache_file)) {</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">&quot;MSigDB cache checksum missing or mismatched. Restore the RDS and its .md5 together.&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>frozen <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(cache_file)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>membership <span class="ot">&lt;-</span> frozen<span class="sc">$</span>membership</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>frozen<span class="sc">$</span>db_version</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;2026.1.Hs&quot;</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">n_distinct</span>(membership<span class="sc">$</span>set_id)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">n_distinct</span>(membership<span class="sc">$</span>set_id)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 9613</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(membership[<span class="fu">c</span>(<span class="st">&quot;database&quot;</span>, <span class="st">&quot;set_id&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;source_id&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(membership[<span class="fu">c</span>(<span class="st">&quot;database&quot;</span>, <span class="st">&quot;set_id&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;source_id&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 4
   database set_id                         gene  source_id
@@ -2367,59 +2361,59 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <h2 class="anchored" data-anchor-id="map-proteins-to-genes">Map proteins to genes</h2>
 <p>Sets list gene symbols; the data has protein groups. Each symbol needs exactly one protein. Groups with no symbol, or with several (<code>;</code>, <code>,</code> or <code>|</code> in <code>Genes</code>), are dropped rather than split. Where proteins share a symbol, the one with the most observed precursors on average represents it, chosen without reading any fold change, with precursor count and accession as tie-breaks.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> proteins<span class="sc">$</span>genes <span class="sc">|&gt;</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames_to_column</span>(<span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_obs =</span> <span class="fu">rowMeans</span>(proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations),</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene =</span> <span class="fu">trimws</span>(Genes),</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping_status =</span> <span class="fu">case_when</span>(</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">is.na</span>(gene) <span class="sc">|</span> <span class="sc">!</span><span class="fu">nzchar</span>(gene) <span class="sc">~</span> <span class="st">&quot;missing_symbol&quot;</span>,</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;[;,|]&quot;</span>, gene) <span class="sc">~</span> <span class="st">&quot;multiple_symbols&quot;</span>,</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">&quot;candidate&quot;</span></span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene =</span> <span class="fu">if_else</span>(mapping_status <span class="sc">==</span> <span class="st">&quot;candidate&quot;</span>, gene, <span class="cn">NA_character_</span>)</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>representatives <span class="ot">&lt;-</span> protein_map <span class="sc">|&gt;</span></span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mapping_status <span class="sc">==</span> <span class="st">&quot;candidate&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(gene, <span class="fu">desc</span>(mean_obs), <span class="fu">desc</span>(NPrec), protein) <span class="sc">|&gt;</span></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(gene, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(protein)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> proteins<span class="sc">$</span>genes <span class="sc">|&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rownames_to_column</span>(<span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_obs =</span> <span class="fu">rowMeans</span>(proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations),</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene =</span> <span class="fu">trimws</span>(Genes),</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping_status =</span> <span class="fu">case_when</span>(</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">is.na</span>(gene) <span class="sc">|</span> <span class="sc">!</span><span class="fu">nzchar</span>(gene) <span class="sc">~</span> <span class="st">&quot;missing_symbol&quot;</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;[;,|]&quot;</span>, gene) <span class="sc">~</span> <span class="st">&quot;multiple_symbols&quot;</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">&quot;candidate&quot;</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene =</span> <span class="fu">if_else</span>(mapping_status <span class="sc">==</span> <span class="st">&quot;candidate&quot;</span>, gene, <span class="cn">NA_character_</span>)</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>representatives <span class="ot">&lt;-</span> protein_map <span class="sc">|&gt;</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(mapping_status <span class="sc">==</span> <span class="st">&quot;candidate&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(gene, <span class="fu">desc</span>(mean_obs), <span class="fu">desc</span>(NPrec), protein) <span class="sc">|&gt;</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(gene, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(protein)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Mark the representatives and build plot labels. A symbol on more than one protein gets its accession appended, so the protein-level volcanoes can tell the proteins apart.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> protein_map <span class="sc">|&gt;</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">selected =</span> protein <span class="sc">%in%</span> representatives,</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping_status =</span> <span class="fu">case_when</span>(</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>      selected <span class="sc">~</span> <span class="st">&quot;representative&quot;</span>,</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>      mapping_status <span class="sc">==</span> <span class="st">&quot;candidate&quot;</span> <span class="sc">~</span> <span class="st">&quot;duplicate_gene&quot;</span>,</span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> mapping_status</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">if_else</span>(</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(gene) <span class="sc">&amp;</span> <span class="fu">n</span>() <span class="sc">&gt;</span> <span class="dv">1</span>, <span class="fu">paste0</span>(gene, <span class="st">&quot; (&quot;</span>, protein, <span class="st">&quot;)&quot;</span>), <span class="fu">coalesce</span>(gene, protein)</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> gene</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>gene_universe <span class="ot">&lt;-</span> protein_map<span class="sc">$</span>gene[protein_map<span class="sc">$</span>selected]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> protein_map <span class="sc">|&gt;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">selected =</span> protein <span class="sc">%in%</span> representatives,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping_status =</span> <span class="fu">case_when</span>(</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>      selected <span class="sc">~</span> <span class="st">&quot;representative&quot;</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>      mapping_status <span class="sc">==</span> <span class="st">&quot;candidate&quot;</span> <span class="sc">~</span> <span class="st">&quot;duplicate_gene&quot;</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> mapping_status</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">if_else</span>(</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>      <span class="sc">!</span><span class="fu">is.na</span>(gene) <span class="sc">&amp;</span> <span class="fu">n</span>() <span class="sc">&gt;</span> <span class="dv">1</span>, <span class="fu">paste0</span>(gene, <span class="st">&quot; (&quot;</span>, protein, <span class="st">&quot;)&quot;</span>), <span class="fu">coalesce</span>(gene, protein)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> gene</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>gene_universe <span class="ot">&lt;-</span> protein_map<span class="sc">$</span>gene[protein_map<span class="sc">$</span>selected]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>The measured gene universe is the set of representative symbols. Labels are what the volcanoes print, and a collision would put two proteins on one point, so the check stops on any duplicate.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(protein_map<span class="sc">$</span>label))</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>mapping_summary <span class="ot">&lt;-</span> <span class="fu">count</span>(protein_map, mapping_status, <span class="at">name =</span> <span class="st">&quot;proteins&quot;</span>)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>mapping_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(protein_map<span class="sc">$</span>label))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>mapping_summary <span class="ot">&lt;-</span> <span class="fu">count</span>(protein_map, mapping_status, <span class="at">name =</span> <span class="st">&quot;proteins&quot;</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>mapping_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    mapping_status proteins
 1   duplicate_gene        2
 2 multiple_symbols        1
 3   representative     3039</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(gene_universe)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(gene_universe)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 3039</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_map[<span class="fu">c</span>(<span class="st">&quot;protein&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;mapping_status&quot;</span>, <span class="st">&quot;label&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_map[<span class="fu">c</span>(<span class="st">&quot;protein&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;mapping_status&quot;</span>, <span class="st">&quot;label&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     protein   Genes    gene mapping_status   label
 1 A0A0B4J2F0 PIGBOS1 PIGBOS1 representative PIGBOS1
@@ -2434,60 +2428,57 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <p>Size is the only filter applied before testing. A set qualifies with 15 to 500 genes in the source and at least 15 among the measured genes, which counts detected proteins and so governs power. No set is dropped for overlapping another or for its name.</p>
 <p><code>sets_full</code> maps each <code>set_id</code> to its source genes; <code>sets_measured</code> keeps only the measured ones.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>set_members <span class="ot">&lt;-</span> <span class="fu">distinct</span>(membership, set_id, gene)</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>sets_full <span class="ot">&lt;-</span> <span class="fu">split</span>(set_members<span class="sc">$</span>gene, set_members<span class="sc">$</span>set_id)</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>sets_measured <span class="ot">&lt;-</span> <span class="fu">map</span>(sets_full, intersect, <span class="at">y =</span> gene_universe)</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(set_id, database, pathway, source_id, description) <span class="sc">|&gt;</span></span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">source_size =</span> <span class="fu">lengths</span>(sets_full)[set_id],</span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">measured_size =</span> <span class="fu">lengths</span>(sets_measured)[set_id],</span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">qualifies =</span> <span class="fu">between</span>(source_size, <span class="dv">15</span>, <span class="dv">500</span>) <span class="sc">&amp;</span> measured_size <span class="sc">&gt;=</span> <span class="dv">15</span></span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> sets_measured[set_catalog<span class="sc">$</span>set_id[set_catalog<span class="sc">$</span>qualifies]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>set_members <span class="ot">&lt;-</span> <span class="fu">distinct</span>(membership, set_id, gene)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>sets_full <span class="ot">&lt;-</span> <span class="fu">split</span>(set_members<span class="sc">$</span>gene, set_members<span class="sc">$</span>set_id)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>sets_measured <span class="ot">&lt;-</span> <span class="fu">map</span>(sets_full, intersect, <span class="at">y =</span> gene_universe)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(set_id, database, pathway, source_id, description) <span class="sc">|&gt;</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">source_size =</span> <span class="fu">lengths</span>(sets_full)[set_id],</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">measured_size =</span> <span class="fu">lengths</span>(sets_measured)[set_id],</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">qualifies =</span> <span class="fu">between</span>(source_size, <span class="dv">15</span>, <span class="dv">500</span>) <span class="sc">&amp;</span> measured_size <span class="sc">&gt;=</span> <span class="dv">15</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> sets_measured[set_catalog<span class="sc">$</span>set_id[set_catalog<span class="sc">$</span>qualifies]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="add-go-slim-sets" class="level2">
 <h2 class="anchored" data-anchor-id="add-go-slim-sets">Add GO Slim sets</h2>
 <p>GO Slim is the GO Consortium’s generic cut-down of the GO hierarchy (140 broad terms), frozen in <code>goslim_generic.obo</code> with an md5 like the MSigDB snapshot. For each slim term, <code>GO.db</code>’s <code>GOBPOFFSPRING</code> returns every GO:BP term below it. CC and MF slim terms have no GO:BP offspring entry and come back <code>NA</code>, so dropping <code>NA</code> keeps BP terms only.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>slim_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(cache_dir, <span class="st">&quot;goslim_generic.obo&quot;</span>)</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">md5_ok</span>(slim_file))</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>slim_offspring <span class="ot">&lt;-</span> AnnotationDbi<span class="sc">::</span><span class="fu">mget</span>(</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  GSEABase<span class="sc">::</span><span class="fu">ids</span>(GSEABase<span class="sc">::</span><span class="fu">getOBOCollection</span>(slim_file)), GO.db<span class="sc">::</span>GOBPOFFSPRING,</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">ifnotfound =</span> <span class="cn">NA</span></span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code></code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>slim_offspring <span class="ot">&lt;-</span> slim_offspring[<span class="sc">!</span><span class="fu">is.na</span>(slim_offspring)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>slim_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(cache_dir, <span class="st">&quot;goslim_generic.obo&quot;</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">md5_ok</span>(slim_file))</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>slim_offspring <span class="ot">&lt;-</span> AnnotationDbi<span class="sc">::</span><span class="fu">mget</span>(</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  GSEABase<span class="sc">::</span><span class="fu">ids</span>(GSEABase<span class="sc">::</span><span class="fu">getOBOCollection</span>(slim_file)), GO.db<span class="sc">::</span>GOBPOFFSPRING,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">ifnotfound =</span> <span class="cn">NA</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>slim_offspring <span class="ot">&lt;-</span> slim_offspring[<span class="sc">!</span><span class="fu">is.na</span>(slim_offspring)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>A slim set is every measured gene annotated to the term or any GO:BP term below it. Genes come from the full GO:BP membership, so a gene survives when its own GO:BP set fails the size filter. For slim sets the source size is the measured size, and the 15-to-500 rule reads it.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>go_genes <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(database <span class="sc">==</span> <span class="st">&quot;GOBP&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">with</span>(<span class="fu">split</span>(gene, source_id))</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>slim_sets <span class="ot">&lt;-</span> <span class="fu">imap</span>(slim_offspring, <span class="cf">function</span>(descendants, slim_id) {</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  covered <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">c</span>(slim_id, descendants), <span class="fu">names</span>(go_genes))</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sort</span>(<span class="fu">intersect</span>(<span class="fu">unlist</span>(go_genes[covered], <span class="at">use.names =</span> <span class="cn">FALSE</span>), gene_universe))</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>slim_terms <span class="ot">&lt;-</span> <span class="fu">unname</span>(AnnotationDbi<span class="sc">::</span><span class="fu">Term</span>(GO.db<span class="sc">::</span>GOTERM[<span class="fu">names</span>(slim_sets)]))</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>slim_catalog <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_id =</span> <span class="fu">paste</span>(<span class="st">&quot;GO_Slim&quot;</span>, <span class="fu">toupper</span>(<span class="fu">gsub</span>(<span class="st">&quot;[^A-Za-z0-9]+&quot;</span>, <span class="st">&quot;_&quot;</span>, slim_terms)), <span class="at">sep =</span> <span class="st">&quot;|&quot;</span>),</span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">database =</span> <span class="st">&quot;GO_Slim&quot;</span>, <span class="at">pathway =</span> slim_terms, <span class="at">source_id =</span> <span class="fu">names</span>(slim_sets),</span>
-<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;GO Slim term: every measured gene under it in the GO:BP hierarchy&quot;</span>,</span>
-<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">source_size =</span> <span class="fu">lengths</span>(slim_sets), <span class="at">measured_size =</span> source_size,</span>
-<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">qualifies =</span> <span class="fu">between</span>(measured_size, <span class="dv">15</span>, <span class="dv">500</span>)</span>
-<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(slim_sets) <span class="ot">&lt;-</span> slim_catalog<span class="sc">$</span>set_id</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>go_genes <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(database <span class="sc">==</span> <span class="st">&quot;GOBP&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">with</span>(<span class="fu">split</span>(gene, source_id))</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>slim_sets <span class="ot">&lt;-</span> <span class="fu">imap</span>(slim_offspring, <span class="cf">function</span>(descendants, slim_id) {</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  covered <span class="ot">&lt;-</span> <span class="fu">intersect</span>(<span class="fu">c</span>(slim_id, descendants), <span class="fu">names</span>(go_genes))</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sort</span>(<span class="fu">intersect</span>(<span class="fu">unlist</span>(go_genes[covered], <span class="at">use.names =</span> <span class="cn">FALSE</span>), gene_universe))</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>slim_terms <span class="ot">&lt;-</span> <span class="fu">unname</span>(AnnotationDbi<span class="sc">::</span><span class="fu">Term</span>(GO.db<span class="sc">::</span>GOTERM[<span class="fu">names</span>(slim_sets)]))</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>slim_catalog <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_id =</span> <span class="fu">paste</span>(<span class="st">&quot;GO_Slim&quot;</span>, <span class="fu">toupper</span>(<span class="fu">gsub</span>(<span class="st">&quot;[^A-Za-z0-9]+&quot;</span>, <span class="st">&quot;_&quot;</span>, slim_terms)), <span class="at">sep =</span> <span class="st">&quot;|&quot;</span>),</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">database =</span> <span class="st">&quot;GO_Slim&quot;</span>, <span class="at">pathway =</span> slim_terms, <span class="at">source_id =</span> <span class="fu">names</span>(slim_sets),</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;GO Slim term: every measured gene under it in the GO:BP hierarchy&quot;</span>,</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">source_size =</span> <span class="fu">lengths</span>(slim_sets), <span class="at">measured_size =</span> source_size,</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">qualifies =</span> <span class="fu">between</span>(measured_size, <span class="dv">15</span>, <span class="dv">500</span>)</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(slim_sets) <span class="ot">&lt;-</span> slim_catalog<span class="sc">$</span>set_id</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Append the slim sets to the catalogue and the tested list, and stop on any duplicated name. Of the 140 slim terms, the BP ones that remain are counted, with how many pass the size rule.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(set_catalog, slim_catalog)</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">c</span>(sets, slim_sets[slim_catalog<span class="sc">$</span>set_id[slim_catalog<span class="sc">$</span>qualifies]])</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(set_catalog<span class="sc">$</span>set_id), <span class="sc">!</span><span class="fu">anyDuplicated</span>(<span class="fu">names</span>(sets)))</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">testable =</span> <span class="fu">sum</span>(slim_catalog<span class="sc">$</span>qualifies), <span class="at">terms =</span> <span class="fu">nrow</span>(slim_catalog))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(set_catalog, slim_catalog)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">c</span>(sets, slim_sets[slim_catalog<span class="sc">$</span>set_id[slim_catalog<span class="sc">$</span>qualifies]])</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyDuplicated</span>(set_catalog<span class="sc">$</span>set_id), <span class="sc">!</span><span class="fu">anyDuplicated</span>(<span class="fu">names</span>(sets)))</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">testable =</span> <span class="fu">sum</span>(slim_catalog<span class="sc">$</span>qualifies), <span class="at">terms =</span> <span class="fu">nrow</span>(slim_catalog))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>testable    terms 
       59       71 </code></pre>
@@ -2498,13 +2489,13 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <h2 class="anchored" data-anchor-id="gene-set-summary">Gene set summary</h2>
 <p>Sets per collection in the source, the number that qualify for testing, and their median measured size.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>collection_summary <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">in_msigdb =</span> <span class="fu">n</span>(), <span class="at">qualifying =</span> <span class="fu">sum</span>(qualifies),</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_measured =</span> <span class="fu">median</span>(measured_size[qualifies]), <span class="at">.by =</span> database</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(database, <span class="fu">c</span>(collections, <span class="st">&quot;GO_Slim&quot;</span>)))</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>collection_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>collection_summary <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">in_msigdb =</span> <span class="fu">n</span>(), <span class="at">qualifying =</span> <span class="fu">sum</span>(qualifies),</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_measured =</span> <span class="fu">median</span>(measured_size[qualifies]), <span class="at">.by =</span> database</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(database, <span class="fu">c</span>(collections, <span class="st">&quot;GO_Slim&quot;</span>)))</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>collection_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 4
   database    in_msigdb qualifying median_measured
@@ -2515,7 +2506,7 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 4 GOBP             7538       1366              29
 5 GO_Slim            71         59             138</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(sets)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(sets)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 1990</code></pre>
 </div>
@@ -2525,29 +2516,29 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <p><code>gene_sets.rds</code> holds the tested sets, a named list of gene-symbol vectors read by <code>01_run_fgsea_and_fry</code>, <code>04_run_singscore</code>, <code>07_leading_edge</code> and <code>08_pathway_maps</code>. <code>00_build_gene_sets.xlsx</code> holds the set catalogue and protein-to-gene map that later steps read, plus the counts above.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection_summary =</span> collection_summary,</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_catalog =</span> set_catalog,</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein_gene_map =</span> protein_map,</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mapping_summary =</span> mapping_summary</span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets), <span class="at">rows =</span> <span class="fu">map_int</span>(sheets, nrow), <span class="at">columns =</span> <span class="fu">map_int</span>(sheets, ncol),</span>
-<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
-<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Sets per collection, tested, median size&quot;</span>,</span>
-<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Every set, with qualifies marking the tested ones&quot;</span>,</span>
-<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Protein to gene, and the representative&quot;</span>,</span>
-<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Proteins per mapping outcome&quot;</span></span>
-<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sets, <span class="fu">file.path</span>(out, <span class="st">&quot;gene_sets.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
-<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(out, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection_summary =</span> collection_summary,</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_catalog =</span> set_catalog,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein_gene_map =</span> protein_map,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mapping_summary =</span> mapping_summary</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets), <span class="at">rows =</span> <span class="fu">map_int</span>(sheets, nrow), <span class="at">columns =</span> <span class="fu">map_int</span>(sheets, ncol),</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Sets per collection, tested, median size&quot;</span>,</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Every set, with qualifies marking the tested ones&quot;</span>,</span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Protein to gene, and the representative&quot;</span>,</span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Proteins per mapping outcome&quot;</span></span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sets, <span class="fu">file.path</span>(out, <span class="st">&quot;gene_sets.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(out, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
