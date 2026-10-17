@@ -11,9 +11,6 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root.
-
 ```{r setup}
 pacman::p_load(
   here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,
@@ -31,7 +28,7 @@ overall gain?
 
 `proteins` is the normalised protein matrix from stage 01. `raw` is the same quantification before
 cyclic loess, cut to the same rows, because mitochondrial content has to be read from unnormalised
-intensities. `d` holds the design, the contrasts and the baseline contrast's name; `fit` is the
+values. `d` holds the design, the contrasts and the baseline contrast's name; `fit` is the
 stage 02 protein fit. `protein_map` links proteins to gene symbols and `membership` lists the
 MitoCarta sets from `01_build_mito_sets`.
 
@@ -57,12 +54,14 @@ dim(raw)
 
 The protein map must list the matrix rows in order, and the raw matrix must become `proteins.rds`
 after cyclic loess and nothing else. If either fails, the raw and normalised readouts below would
-not describe the same data.
+not describe the same data. The design must list the samples in the matrix's column order, because
+the mitochondrial protein enrichment (MPE) fit and fry match them by position.
 
 ```{r check}
 stopifnot(
   identical(protein_map$protein, rownames(proteins)),
   identical(colnames(raw), colnames(proteins)),
+  identical(rownames(d$design), colnames(raw)),
   identical(normalizeBetweenArrays(raw$E, method = "cyclicloess"), proteins$E)
 )
 contrast_names <- colnames(d$contrasts)
@@ -91,10 +90,12 @@ c(mitopathways = sum(coverage$collection == "MitoPathways"), tested = length(pat
 
 ## Mitochondrial protein enrichment
 
-Mitochondrial protein enrichment (MPE) is the share of raw protein intensity that comes from
-mitochondrial proteins, one number per biopsy. It is computed on raw intensities because cyclic
-loess assumes the typical protein holds still, and a mitochondrial expansion breaks exactly that.
-Every protein group counts toward the denominator. `2^raw$E` undoes the log2.
+Mitochondrial protein enrichment (MPE) is the share that MitoCarta proteins take of the summed
+protein values, one number per biopsy. The values are the dpcQuant protein estimates before
+normalisation, with `2^raw$E` undoing the log2. dpcQuant places each protein at its typical
+precursor intensity, so each protein counts once, however many precursors it has. Every protein
+group counts toward the denominator. MPE is computed before normalisation because cyclic loess
+assumes the typical protein holds still.
 
 ```{r mpe}
 intensity <- 2^raw$E
@@ -215,11 +216,13 @@ fry is the confirmatory test here, as in `01_run_fgsea_and_fry`. After normalisa
 expansion is gone, so fry already reads change relative to the rest of the mitochondrion, and a
 competitive test (camera) would ask the same question again.
 
-fgsea ranks proteins by moderated t and asks whether a pathway's members sit unusually high or low
-in that ranking. Its leading edge is the subset of members that drives the score, the proteins
-ranked before the running score peaks. fgsea draws the rings on the volcanoes. It shuffles
-proteins as if independent, so on correlated sets such as complex I its p runs small: between legs
-it calls pathways that fry does not, and those are leads. The seed sits before the permutations.
+fgsea ranks proteins by moderated t and scores how far a pathway's members sit toward the top or
+bottom of that ranking. The normalised enrichment score (NES) divides that score by the mean score
+of random sets of the same size, so pathways of different sizes compare; its sign gives the
+direction. The leading edge is the subset of members that drives the score, the proteins ranked
+before the running score peaks. fgsea draws the rings on the volcanoes. It shuffles proteins as if
+independent, so on correlated sets such as complex I its p runs small: between legs it calls
+pathways that fry does not, and those are leads.
 
 ```{r fgsea}
 ranked <- map(set_names(contrast_names), function(cn) {
@@ -271,11 +274,13 @@ mpe_page <- ggplot(mpe, aes(timepoint, 100 * mpe, colour = treatment)) +
   facet_wrap(~treatment) +
   scale_colour_manual(values = arm_colours, guide = "none") +
   labs(
-    x = NULL, y = "MPE, % of raw protein intensity",
+    x = NULL, y = "MPE, % of summed dpcQuant protein values",
     caption = caption("Mitochondrial protein enrichment by arm and time", paste(
-      "MPE is the summed raw intensity of the", sum(is_mito), "measured MitoCarta 3.0 proteins",
-      "over all", format(nrow(raw), big.mark = ","), "proteins, per biopsy. Lines join each leg",
-      "before and after training. Tests: mpe_test sheet of 02_test_mito.xlsx."
+      "MPE is the summed dpcQuant value of the", sum(is_mito), "measured MitoCarta 3.0 proteins",
+      "over that of all", format(nrow(raw), big.mark = ","), "proteins, per biopsy, before",
+      "normalisation. dpcQuant puts each protein at its typical precursor intensity, so each",
+      "protein counts once. Lines join each leg before and after training. Tests: mpe_test sheet",
+      "of 02_test_mito.xlsx."
     ))
   )
 ```
@@ -327,7 +332,7 @@ enrichment <- fgsea_raw |>
 ```
 
 `volcano()` draws one contrast. As in `02_enrich_volcano_fgsea`, the NES key goes horizontal below
-the ring, where it collides with nothing. The baseline contrast is not drawn.
+the ring. The baseline contrast is not drawn.
 
 ```{r volcano-page}
 volcano <- function(cn) {
@@ -380,8 +385,7 @@ pathway_tests |>
 
 ## Save results
 
-`02_test_mito.xlsx` holds an overview sheet and one sheet per table. `03_complex_subunits` reads
-`complex_tests`.
+`02_test_mito.xlsx` holds one sheet per table. `03_complex_subunits` reads `complex_tests`.
 
 ```{r write}
 sheets <- list(
@@ -389,18 +393,7 @@ sheets <- list(
   complex_tests = complex_tests,
   pathway_tests = pathway_tests, mito_proteins = mito_proteins
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = sapply(sheets, nrow),
-  description = c(
-    "MPE per biopsy, from raw intensities.",
-    "log2 MPE through the saved design and contrasts; plain least-squares t, 95% CI.",
-    "Citrate synthase protein from the stage 02 fit, for comparison with CS activity studies.",
-    "fry on complexes I to V, standard and mitochondria-normalised fits; FDR within contrast.",
-    "fry and fgsea on MitoPathways at 20% coverage, mitochondria-normalised; FDR within contrast.",
-    "Mitochondria-normalised dpcDE, every contrast; adj.P.Val is BH within contrast."
-  )
-)
-write_xlsx(c(list(overview = overview), sheets), file.path(stage, "c_data", "02_test_mito.xlsx"))
+write_xlsx(sheets, file.path(stage, "c_data", "02_test_mito.xlsx"))
 ```
 
 ## Session information

@@ -16,7 +16,9 @@ Outputs:
 - `b_reports/03_complex_subunits.html`: the walkthrough.
 - `b_reports/03_complex_subunits.pdf`: Sam's summary from PR #26 (mean subunit change per complex
   and leg), then every subunit and every assembly factor by leg.
-- `c_data/03_complex_subunits.xlsx`: 88 subunits and 43 assembly factors with logFC and BH FDR per
-  leg and for the interaction.
+- `c_data/03_complex_subunits.xlsx`, one sheet:
+  - `subunits`: one row per complex, role and measured protein, with training logFC and BH FDR per
+    leg and for the interaction (BFR minus HLRT) from the stage 02 fit. 88 subunits and 42 assembly
+    factors; TMEM70 is listed under both CI and CV, so the sheet has 131 rows.
 
 No protein's interaction reaches FDR 0.05, and fry's interaction FDR is 0.99 for every complex.

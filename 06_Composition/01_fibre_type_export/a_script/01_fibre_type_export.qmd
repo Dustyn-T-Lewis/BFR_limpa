@@ -11,9 +11,6 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root.
-
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, readr)
 here::i_am("06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd")
@@ -23,16 +20,16 @@ here::i_am("06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qm
 
 FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) estimates the slow and fast fibre
 fractions of a biopsy by deconvolution: it treats each sample's profile as a mix of reference
-profiles for pure slow and pure fast fibres and solves for the proportions. It wants raw label-free
-quantities (LFQ, intensities not scaled against a label or standard) and normalises them itself.
+profiles for pure slow and pure fast fibres and solves for the proportions. It asks for label-free
+quantification (LFQ) intensities, measured without a label or standard, and normalises them itself.
 Its authors found quantification from unique peptides the most accurate.
 
-DIA-NN's `Genes.MaxLFQ.Unique` is exactly that: a gene-level value from unique peptides, built with
-MaxLFQ, which combines peptide ratios between runs into one abundance per gene and run. Only the
-three columns needed are read from the parquet.
+The upload is DIA-NN's `Genes.MaxLFQ.Unique`: MaxLFQ intensities from gene-specific peptides, as
+the app asks. MaxLFQ combines peptide ratios between runs into one abundance per gene and run.
+DIA-NN normalised these values across runs, and the app normalises again. Only the three columns
+needed are read from the parquet.
 
 ```{r read}
-out <- here("06_Composition", "01_fibre_type_export", "c_data")
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
 report <- nanoparquet::read_parquet(
   here("00_Input", "report.parquet"),
@@ -46,6 +43,12 @@ head(report, 3)
 The report has one row per precursor, and the gene value repeats on every precursor row of that
 gene, so `distinct()` keeps one copy. DIA-NN writes 0 on rows whose precursor is not unique to the
 gene, so 0 means not quantified and is dropped.
+
+The search FASTA lists 43 human proteins twice, because the appended cRAP database repeats them;
+MB, CKM, FABP3 and CYCS are among them. Their `Genes` reads like `MB;cRAP-MB`, and DIA-NN writes 0
+in both of its MaxLFQ columns for them in every run, so this filter drops them and they are absent
+from the upload. `01_filter.qmd` repairs them at precursor level for the main analysis; this export
+reads DIA-NN's gene values, which that repair does not reach.
 
 Runs match `metadata$run` ignoring case, as in `01_filter.qmd`. That absorbs `Cl_MDR_7E-T2`,
 written `CL_MDR_7E-T2` in the sheet, and drops the discarded S08 injection, which has no
@@ -91,12 +94,14 @@ c(
 
 ## Save results
 
-`fibertyper_input.csv` is the one CSV in the repository, because the app reads nothing else.
-Missing values stay blank.
+`fibertyper_input.csv` is the only CSV output, because the app reads nothing else. Missing values
+stay blank.
 
 ```{r write}
-write_csv(upload, file.path(out, "fibertyper_input.csv"), na = "")
-message(nrow(upload), " genes x ", ncol(upload) - 1, " samples")
+write_csv(
+  upload, here("06_Composition", "01_fibre_type_export", "c_data", "fibertyper_input.csv"),
+  na = ""
+)
 ```
 
 ## Session information

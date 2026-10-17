@@ -2246,7 +2246,6 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<p><code>pacman</code> loads the required packages and installs any that are missing. <code>here::i_am()</code> places this notebook in the repository, so paths resolve from the repository root.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,</span>
@@ -2258,7 +2257,7 @@ vertical-align: -.125em;
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
 <p>Two questions, both following Granata et al. 2021 (Nat Commun 12:7056) and Reisman et al. 2024 (Nat Commun 15:7677), applied here to whole muscle rather than isolated mitochondria. How much mitochondrial protein did each leg gain? And did any part of the mitochondrion change beyond that overall gain?</p>
-<p><code>proteins</code> is the normalised protein matrix from stage 01. <code>raw</code> is the same quantification before cyclic loess, cut to the same rows, because mitochondrial content has to be read from unnormalised intensities. <code>d</code> holds the design, the contrasts and the baseline contrast’s name; <code>fit</code> is the stage 02 protein fit. <code>protein_map</code> links proteins to gene symbols and <code>membership</code> lists the MitoCarta sets from <code>01_build_mito_sets</code>.</p>
+<p><code>proteins</code> is the normalised protein matrix from stage 01. <code>raw</code> is the same quantification before cyclic loess, cut to the same rows, because mitochondrial content has to be read from unnormalised values. <code>d</code> holds the design, the contrasts and the baseline contrast’s name; <code>fit</code> is the stage 02 protein fit. <code>protein_map</code> links proteins to gene symbols and <code>membership</code> lists the MitoCarta sets from <code>01_build_mito_sets</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;02_test_mito&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>quant <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
@@ -2282,15 +2281,16 @@ vertical-align: -.125em;
 </section>
 <section id="check-the-inputs-agree" class="level2">
 <h2 class="anchored" data-anchor-id="check-the-inputs-agree">Check the inputs agree</h2>
-<p>The protein map must list the matrix rows in order, and the raw matrix must become <code>proteins.rds</code> after cyclic loess and nothing else. If either fails, the raw and normalised readouts below would not describe the same data.</p>
+<p>The protein map must list the matrix rows in order, and the raw matrix must become <code>proteins.rds</code> after cyclic loess and nothing else. If either fails, the raw and normalised readouts below would not describe the same data. The design must list the samples in the matrix’s column order, because the mitochondrial protein enrichment (MPE) fit and fry match them by position.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(protein_map<span class="sc">$</span>protein, <span class="fu">rownames</span>(proteins)),</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">colnames</span>(raw), <span class="fu">colnames</span>(proteins)),</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">normalizeBetweenArrays</span>(raw<span class="sc">$</span>E, <span class="at">method =</span> <span class="st">&quot;cyclicloess&quot;</span>), proteins<span class="sc">$</span>E)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>contrast_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(d<span class="sc">$</span>contrasts)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(raw)),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">normalizeBetweenArrays</span>(raw<span class="sc">$</span>E, <span class="at">method =</span> <span class="st">&quot;cyclicloess&quot;</span>), proteins<span class="sc">$</span>E)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>contrast_names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(d<span class="sc">$</span>contrasts)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="prepare-the-sets" class="level2">
@@ -2313,7 +2313,7 @@ vertical-align: -.125em;
 </section>
 <section id="mitochondrial-protein-enrichment" class="level2">
 <h2 class="anchored" data-anchor-id="mitochondrial-protein-enrichment">Mitochondrial protein enrichment</h2>
-<p>Mitochondrial protein enrichment (MPE) is the share of raw protein intensity that comes from mitochondrial proteins, one number per biopsy. It is computed on raw intensities because cyclic loess assumes the typical protein holds still, and a mitochondrial expansion breaks exactly that. Every protein group counts toward the denominator. <code>2^raw$E</code> undoes the log2.</p>
+<p>Mitochondrial protein enrichment (MPE) is the share that MitoCarta proteins take of the summed protein values, one number per biopsy. The values are the dpcQuant protein estimates before normalisation, with <code>2^raw$E</code> undoing the log2. dpcQuant places each protein at its typical precursor intensity, so each protein counts once, however many precursors it has. Every protein group counts toward the denominator. MPE is computed before normalisation because cyclic loess assumes the typical protein holds still.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>intensity <span class="ot">&lt;-</span> <span class="dv">2</span><span class="sc">^</span>raw<span class="sc">$</span>E</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>is_mito <span class="ot">&lt;-</span> protein_map<span class="sc">$</span>gene <span class="sc">%in%</span> sets<span class="sc">$</span>MitoCarta</span>
@@ -2450,7 +2450,7 @@ vertical-align: -.125em;
 <section id="mitopathways" class="level2">
 <h2 class="anchored" data-anchor-id="mitopathways">MitoPathways</h2>
 <p>fry is the confirmatory test here, as in <code>01_run_fgsea_and_fry</code>. After normalisation the shared expansion is gone, so fry already reads change relative to the rest of the mitochondrion, and a competitive test (camera) would ask the same question again.</p>
-<p>fgsea ranks proteins by moderated t and asks whether a pathway’s members sit unusually high or low in that ranking. Its leading edge is the subset of members that drives the score, the proteins ranked before the running score peaks. fgsea draws the rings on the volcanoes. It shuffles proteins as if independent, so on correlated sets such as complex I its p runs small: between legs it calls pathways that fry does not, and those are leads. The seed sits before the permutations.</p>
+<p>fgsea ranks proteins by moderated t and scores how far a pathway’s members sit toward the top or bottom of that ranking. The normalised enrichment score (NES) divides that score by the mean score of random sets of the same size, so pathways of different sizes compare; its sign gives the direction. The leading edge is the subset of members that drives the score, the proteins ranked before the running score peaks. fgsea draws the rings on the volcanoes. It shuffles proteins as if independent, so on correlated sets such as complex I its p runs small: between legs it calls pathways that fry does not, and those are leads.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>ranked <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(contrast_names), <span class="cf">function</span>(cn) {</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">with</span>(<span class="fu">filter</span>(mito_proteins, contrast <span class="sc">==</span> cn, selected), <span class="fu">set_names</span>(t, gene))</span>
@@ -2495,13 +2495,15 @@ vertical-align: -.125em;
 <span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>treatment) <span class="sc">+</span></span>
 <span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> arm_colours, <span class="at">guide =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span></span>
 <span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;MPE, % of raw protein intensity&quot;</span>,</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;MPE, % of summed dpcQuant protein values&quot;</span>,</span>
 <span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">caption</span>(<span class="st">&quot;Mitochondrial protein enrichment by arm and time&quot;</span>, <span class="fu">paste</span>(</span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;MPE is the summed raw intensity of the&quot;</span>, <span class="fu">sum</span>(is_mito), <span class="st">&quot;measured MitoCarta 3.0 proteins&quot;</span>,</span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;over all&quot;</span>, <span class="fu">format</span>(<span class="fu">nrow</span>(raw), <span class="at">big.mark =</span> <span class="st">&quot;,&quot;</span>), <span class="st">&quot;proteins, per biopsy. Lines join each leg&quot;</span>,</span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;before and after training. Tests: mpe_test sheet of 02_test_mito.xlsx.&quot;</span></span>
-<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    ))</span>
-<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;MPE is the summed dpcQuant value of the&quot;</span>, <span class="fu">sum</span>(is_mito), <span class="st">&quot;measured MitoCarta 3.0 proteins&quot;</span>,</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;over that of all&quot;</span>, <span class="fu">format</span>(<span class="fu">nrow</span>(raw), <span class="at">big.mark =</span> <span class="st">&quot;,&quot;</span>), <span class="st">&quot;proteins, per biopsy, before&quot;</span>,</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;normalisation. dpcQuant puts each protein at its typical precursor intensity, so each&quot;</span>,</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;protein counts once. Lines join each leg before and after training. Tests: mpe_test sheet&quot;</span>,</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;of 02_test_mito.xlsx.&quot;</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Page 2: a complex by contrast grid for both fits, coloured by signed −log10 fry FDR.</p>
 <div class="cell">
@@ -2542,7 +2544,7 @@ vertical-align: -.125em;
 <span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">as_enrichment</span>(<span class="at">enrichment_test =</span> <span class="st">&quot;fgsea&quot;</span>, <span class="at">database =</span> <span class="st">&quot;MitoPathways&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">dedup_terms</span>(pathways)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p><code>volcano()</code> draws one contrast. As in <code>02_enrich_volcano_fgsea</code>, the NES key goes horizontal below the ring, where it collides with nothing. The baseline contrast is not drawn.</p>
+<p><code>volcano()</code> draws one contrast. As in <code>02_enrich_volcano_fgsea</code>, the NES key goes horizontal below the ring. The baseline contrast is not drawn.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>volcano <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">plot_volcano_ring</span>(</span>
@@ -2621,25 +2623,14 @@ vertical-align: -.125em;
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>02_test_mito.xlsx</code> holds an overview sheet and one sheet per table. <code>03_complex_subunits</code> reads <code>complex_tests</code>.</p>
+<p><code>02_test_mito.xlsx</code> holds one sheet per table. <code>03_complex_subunits</code> reads <code>complex_tests</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">mpe =</span> mpe, <span class="at">mpe_test =</span> mpe_test, <span class="at">citrate_synthase =</span> citrate_synthase,</span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">complex_tests =</span> complex_tests,</span>
 <span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pathway_tests =</span> pathway_tests, <span class="at">mito_proteins =</span> mito_proteins</span>
 <span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets), <span class="at">rows =</span> <span class="fu">sapply</span>(sheets, nrow),</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;MPE per biopsy, from raw intensities.&quot;</span>,</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;log2 MPE through the saved design and contrasts; plain least-squares t, 95% CI.&quot;</span>,</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Citrate synthase protein from the stage 02 fit, for comparison with CS activity studies.&quot;</span>,</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;fry on complexes I to V, standard and mitochondria-normalised fits; FDR within contrast.&quot;</span>,</span>
-<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;fry and fgsea on MitoPathways at 20% coverage, mitochondria-normalised; FDR within contrast.&quot;</span>,</span>
-<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Mitochondria-normalised dpcDE, every contrast; adj.P.Val is BH within contrast.&quot;</span></span>
-<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_test_mito.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_test_mito.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
@@ -2685,9 +2676,9 @@ loaded via a namespace (and not attached):
 [37] MASS_7.3-65         pkgconfig_2.0.3     pillar_1.11.1      
 [40] gtable_0.3.6        data.table_1.18.4   glue_1.8.1         
 [43] Rcpp_1.1.2          ggforce_0.5.0       statmod_1.5.1      
-[46] xfun_0.57           tidyselect_1.2.1    knitr_1.51         
+[46] xfun_0.57           tidyselect_1.2.1    knitr_1.52         
 [49] farver_2.1.2        htmltools_0.5.9     labeling_0.4.3     
-[52] rmarkdown_2.31      compiler_4.6.0      S7_0.2.2           </code></pre>
+[52] rmarkdown_2.32      compiler_4.6.0      S7_0.2.2           </code></pre>
 </div>
 </div>
 </section>

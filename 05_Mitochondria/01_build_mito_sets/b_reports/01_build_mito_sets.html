@@ -2240,7 +2240,6 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<p><code>pacman</code> loads the required packages and installs any that are missing. <code>here::i_am()</code> places this notebook in the repository, so paths resolve from the repository root.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tibble, tidyr, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2251,13 +2250,12 @@ vertical-align: -.125em;
 <p>MitoCarta 3.0 is the Broad Institute’s inventory of human mitochondrial proteins, 1,136 genes. Its workbook also lists 149 MitoPathways: curated functional groups such as “CI subunits” or “Fatty acid oxidation”. The file was downloaded on 2026-09-28 from personal.broadinstitute.org/scalvo/MitoCarta3.0/.</p>
 <p><code>protein_map</code> comes from stage 03 and links each protein group to its gene symbol. <code>selected</code> marks the one representative protein per symbol, the rows that <code>01_run_fgsea_and_fry</code> tests.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;01_build_mito_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mitocarta <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;Human.MitoCarta3.0.xls&quot;</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>),</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;protein_gene_map&quot;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_map, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mitocarta <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;Human.MitoCarta3.0.xls&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;protein_gene_map&quot;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_map, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 10
   protein    Protein.Names Genes   NPrec PropObs mean_obs gene    mapping_status
@@ -2342,14 +2340,10 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <p><code>01_build_mito_sets.xlsx</code> holds the <code>membership</code> sheet that <code>02_test_mito</code> and <code>03_complex_subunits</code> read.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="st">&quot;membership&quot;</span>, <span class="at">rows =</span> <span class="fu">nrow</span>(membership),</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;One row per set and gene, flagged if measured. 02_test_mito reads this sheet.&quot;</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">overview =</span> overview, <span class="at">membership =</span> membership),</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_build_mito_sets.xlsx&quot;</span>)</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">membership =</span> membership),</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;01_build_mito_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_build_mito_sets.xlsx&quot;</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
@@ -2379,10 +2373,10 @@ other attached packages:
 [6] here_1.0.2   
 
 loaded via a namespace (and not attached):
- [1] vctrs_0.7.3       cli_3.6.6         knitr_1.51        rlang_1.2.0      
+ [1] vctrs_0.7.3       cli_3.6.6         knitr_1.52        rlang_1.2.0      
  [5] xfun_0.57         stringi_1.8.7     otel_0.2.0        purrr_1.2.2      
  [9] generics_0.1.4    jsonlite_2.0.0    glue_1.8.1        rprojroot_2.1.1  
-[13] htmltools_0.5.9   rmarkdown_2.31    cellranger_1.1.0  evaluate_1.0.5   
+[13] htmltools_0.5.9   rmarkdown_2.32    cellranger_1.1.0  evaluate_1.0.5   
 [17] fastmap_1.2.0     yaml_2.3.12       lifecycle_1.0.5   stringr_1.6.0    
 [21] compiler_4.6.0    pacman_0.5.1      htmlwidgets_1.6.4 pkgconfig_2.0.3  
 [25] digest_0.6.39     R6_2.6.1          utf8_1.2.6        tidyselect_1.2.1 

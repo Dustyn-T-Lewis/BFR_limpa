@@ -11,9 +11,6 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root.
-
 ```{r setup}
 pacman::p_load(here, dplyr, tibble, tidyr, readxl, writexl)
 here::i_am("05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.qmd")
@@ -30,7 +27,6 @@ personal.broadinstitute.org/scalvo/MitoCarta3.0/.
 marks the one representative protein per symbol, the rows that `01_run_fgsea_and_fry` tests.
 
 ```{r read}
-out <- here("05_Mitochondria", "01_build_mito_sets", "c_data")
 mitocarta <- here("05_Mitochondria", "00_Input", "Human.MitoCarta3.0.xls")
 protein_map <- read_excel(
   here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "00_build_gene_sets.xlsx"),
@@ -100,13 +96,9 @@ membership |>
 `03_complex_subunits` read.
 
 ```{r write}
-overview <- data.frame(
-  sheet = "membership", rows = nrow(membership),
-  description = "One row per set and gene, flagged if measured. 02_test_mito reads this sheet."
-)
 write_xlsx(
-  list(overview = overview, membership = membership),
-  file.path(out, "01_build_mito_sets.xlsx")
+  list(membership = membership),
+  here("05_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx")
 )
 ```
 

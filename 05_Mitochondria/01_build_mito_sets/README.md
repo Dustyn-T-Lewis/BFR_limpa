@@ -13,8 +13,11 @@ quarto render 05_Mitochondria/01_build_mito_sets/a_script/01_build_mito_sets.qmd
 Outputs:
 
 - `b_reports/01_build_mito_sets.html`: the walkthrough.
-- `c_data/01_build_mito_sets.xlsx`: the `membership` sheet, one row per set and gene, flagged when
-  a representative protein carries the symbol. MitoCarta lists 1,136 genes, 660 of them measured.
+- `c_data/01_build_mito_sets.xlsx`, one sheet:
+  - `membership`: one row per set and gene, flagged `measured` when a representative protein
+    carries the symbol; `02_test_mito` and `03_complex_subunits` read it.
+
+MitoCarta lists 1,136 genes, 660 of them measured.
 
 The complex readouts downstream are the pathways "CI subunits" to "CV subunits", structural
 subunits only. The parent pathways "Complex I" and so on also hold assembly factors.

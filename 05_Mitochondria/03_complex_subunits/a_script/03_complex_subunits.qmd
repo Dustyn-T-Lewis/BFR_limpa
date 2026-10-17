@@ -11,9 +11,6 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root.
-
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
 here::i_am("05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.qmd")
@@ -47,23 +44,21 @@ complex_tests <- read_excel(
 ## Collect the subunits
 
 Keep the measured genes of the MitoPathways "CI subunits" to "CV assembly factors", split the set
-name into complex and role, and join each gene to its stage 02 row by symbol. `.data[[...]]` picks
-the DEP_matrix columns by built-up name. Rows sort within complex and role by the interaction
-logFC, BFR minus HLRT.
+name into complex and role, and join each gene to its stage 02 row by symbol. Rows sort within
+complex and role by the interaction logFC, BFR minus HLRT.
 
 ```{r subunits}
 complexes <- c("CI", "CII", "CIII", "CIV", "CV")
-arms <- c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre")
 subunits <- membership |>
   filter(measured, str_detect(set, "^C(I|II|III|IV|V) (subunits|assembly factors)$")) |>
   separate_wider_delim(set, " ", names = c("complex", "role"), too_many = "merge") |>
   inner_join(de, by = c(gene = "Genes")) |>
   transmute(
     complex = factor(complex, complexes), role, gene, protein,
-    BFR_logFC = .data[[paste0(arms["BFR"], "_logFC")]],
-    BFR_fdr = .data[[paste0(arms["BFR"], "_adj.P.Val")]],
-    HLRT_logFC = .data[[paste0(arms["HLRT"], "_logFC")]],
-    HLRT_fdr = .data[[paste0(arms["HLRT"], "_adj.P.Val")]],
+    BFR_logFC = `BFR_Post-Pre_logFC`,
+    BFR_fdr = `BFR_Post-Pre_adj.P.Val`,
+    HLRT_logFC = `HLRT_Post-Pre_logFC`,
+    HLRT_fdr = `HLRT_Post-Pre_adj.P.Val`,
     difference = `Modality_x_Time_Interaction_logFC`,
     difference_fdr = `Modality_x_Time_Interaction_adj.P.Val`
   ) |>
@@ -74,9 +69,9 @@ head(subunits, 3)
 ## The set-level test
 
 Sam's version tested BFR against HLRT with a paired t-test across the subunits of each complex.
-That counts correlated proteins as independent replicates and makes p too small. The one valid
-set-level test here is fry on the subunits, standard fit, interaction contrast, and it goes in the
-panel titles. Assembly factors have no set test.
+That counts correlated proteins as independent replicates and makes p too small. The set-level
+test here is fry on the subunits, standard fit, interaction contrast, and it goes in the panel
+titles. Assembly factors have no set test.
 
 ```{r interaction-fry}
 interaction_fry <- complex_tests |>
@@ -97,9 +92,10 @@ theme_update(
 )
 ```
 
-Page 1 is Sam's summary layout: each complex's mean subunit change per leg with standard error,
-and every subunit as a point. The jitter has its own seed, so the points land in the same place on
-every run.
+Page 1 is Sam's summary layout: each complex's mean subunit change per leg as a bar, and every
+subunit as a point. His standard error across subunits is left out, because it treats correlated
+subunits as independent replicates, the flaw of the paired t above. The jitter has its own seed, so
+the points land in the same place on every run.
 
 ```{r summary-page}
 summary_page <- subunits |>
@@ -109,9 +105,6 @@ summary_page <- subunits |>
   ggplot(aes(complex, logFC, fill = arm)) +
   geom_hline(yintercept = 0, linewidth = 0.3, colour = "grey50") +
   stat_summary(fun = mean, geom = "col", position = position_dodge(0.8), width = 0.7) +
-  stat_summary(
-    fun.data = mean_se, geom = "errorbar", position = position_dodge(0.8), width = 0.25
-  ) +
   geom_point(
     position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8, seed = 1),
     size = 0.9, alpha = 0.6, show.legend = FALSE
@@ -125,23 +118,24 @@ summary_page <- subunits |>
     x = NULL, y = "log2 change, post - pre",
     caption = str_wrap(paste(
       "Complex subunits, summary by leg. Bars are the mean training change of each complex's",
-      "measured subunits, with standard error; points are the subunits. The label is fry's",
-      "interaction FDR on the complex, the set-level test of BFR against HLRT. Data: subunits",
-      "sheet of 03_complex_subunits.xlsx."
+      "measured subunits; points are the subunits. The label is fry's interaction FDR on the",
+      "complex, the set-level test of BFR against HLRT. Data: subunits sheet of",
+      "03_complex_subunits.xlsx."
     ), 115)
   )
 ```
 
 Pages 2 and 3 draw every protein of one role by leg, one panel per complex. `role_page()` takes
-the role and the caption's opening sentence. Panel titles carry the protein count and, where it
-exists, fry's interaction FDR.
+the role and the caption's opening sentence. Panel titles carry the protein count and, on the
+subunit page, fry's interaction FDR, since fry tested the subunits only.
 
 ```{r role-page}
 role_page <- function(which_role, title_text) {
   rows <- filter(subunits, role == which_role)
+  fry <- if (which_role == "subunits") interaction_fry else interaction_fry[0, ]
   headers <- rows |>
     count(complex) |>
-    left_join(interaction_fry, by = "complex") |>
+    left_join(fry, by = "complex") |>
     mutate(panel = if_else(
       is.na(fry_fdr), sprintf("%s (%d)", complex, n),
       sprintf("%s (%d), fry interaction FDR %s", complex, n, signif(fry_fdr, 2))
@@ -199,20 +193,10 @@ subunits |>
 
 ## Save results
 
-`03_complex_subunits.xlsx` holds the overview and the `subunits` table.
+`03_complex_subunits.xlsx` holds the `subunits` table.
 
 ```{r write}
-overview <- data.frame(
-  sheet = "subunits", rows = nrow(subunits),
-  description = paste(
-    "Measured subunits and assembly factors of complexes I to V: training logFC and BH FDR per",
-    "leg, and the interaction (BFR minus HLRT) from the stage 02 fit."
-  )
-)
-write_xlsx(
-  list(overview = overview, subunits = subunits),
-  file.path(stage, "c_data", "03_complex_subunits.xlsx")
-)
+write_xlsx(list(subunits = subunits), file.path(stage, "c_data", "03_complex_subunits.xlsx"))
 ```
 
 ## Session information
