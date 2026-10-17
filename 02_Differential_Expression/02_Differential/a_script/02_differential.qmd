@@ -39,37 +39,24 @@ stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` takes the
 place of `lmFit()` because only it reads the standard errors from `dpcQuant()`, as precision
 weights. `sample.weights = TRUE` adds one quality weight per sample, since removing contaminant
-rows does not undo what a bloody biopsy did to the rest of the sample; the weights are saved before
-`contrasts.fit()`, which drops them. `contrasts.fit()` forms the five comparisons and `eBayes()`
-moderates each protein's variance toward a prior fitted across all proteins; `robust = TRUE` keeps
-proteins with outlying variances from distorting that prior.
+rows does not undo what a bloody biopsy did to the rest of the sample. `contrasts.fit()` forms the
+five comparisons and `eBayes()` moderates each protein's variance toward a prior fitted across all
+proteins; `robust = TRUE` keeps proteins with outlying variances from distorting that prior.
 
 ```{r fit}
 fit <- dpcDE(proteins, d$design, sample.weights = TRUE)
-sample_weights <- fit$targets$sample.weight
 fit <- contrasts.fit(fit, d$contrasts)
 fit <- eBayes(fit, robust = TRUE)
 ```
 
-A lower weight reduces a sample's contribution without dropping it. Weights that differ between
-groups deserve a look but do not by themselves invalidate the model.
+A lower weight reduces a sample's contribution without dropping it. The weights by group:
 
 ```{r sample-weights}
-tibble(group = proteins$targets$group, weight = sample_weights) |>
+tibble(group = fit$targets$group, weight = fit$targets$sample.weight) |>
   summarise(
     n = n(), median_weight = round(median(weight), 2),
     lowest_weight = round(min(weight), 2), .by = group
   )
-```
-
-From the fitted standard errors, the interaction effect each protein would need for 80% power at
-an unadjusted two-sided 0.05 threshold, on the log2 scale: median and 90th percentile across
-proteins. It describes sensitivity; it is not an FDR-adjusted power analysis or evidence of
-equivalence.
-
-```{r detectable-effect}
-se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
-round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
 ## Results
@@ -101,8 +88,8 @@ contrast_summary |>
 ## Inspect p-value distributions
 
 Per contrast: the estimated share of true nulls (`propTrueNull()`), the median absolute t and the
-fraction of p below 0.2. They describe the distributions; they do not prove calibration or explain
-an absence of discoveries.
+fraction of p below 0.2. Under a flat null, 20% of p fall below 0.2 and the median |t| is about
+0.67.
 
 ```{r null-calibration}
 null_summary <- results |>
@@ -125,6 +112,15 @@ ggplot(results, aes(P.Value)) +
   theme_minimal()
 ```
 
+From the fitted standard errors, the interaction effect each protein would need for 80% power at
+an unadjusted two-sided 0.05 threshold, on the log2 scale: median and 90th percentile across
+proteins. It describes sensitivity, not FDR-adjusted power.
+
+```{r detectable-effect}
+se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
+round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
+```
+
 ## Significant and large enough
 
 `treat()` tests whether |logFC| exceeds a threshold, here `log2(1.15)`, a 15% change, rather than
@@ -139,9 +135,11 @@ treat_summary
 
 ## The pi score
 
-The pi score, `P.Value^abs(logFC)`, ranks the two within-leg contrasts so that large effects with
-small p come first. It controls no error rate and selects nothing. The mean number of observed
-precursors per sample sits beside it, because the top of a pi ranking is often thinly observed.
+`pi_score` is `P.Value^abs(logFC)`, which equals 10 to the minus Xiao et al.'s π (|logFC| times
+−log10 p; 2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest
+first: large effects with small p. It ranks the two within-leg contrasts, controls no error rate
+and selects nothing. The mean number of observed precursors per sample sits beside it, because the
+top of a pi ranking is often thinly observed.
 
 ```{r pi-ranking}
 obs_per_sample <- rowMeans(proteins$other$n.observations)
@@ -156,26 +154,22 @@ results |>
 
 ## Baseline comparison
 
-The two legs before training. A difference here can be biological or technical; it is not
-automatically an upstream error. The row check guards against a contrast name that matches nothing,
-since `sum(logical(0))` is zero and would look like an empty baseline.
+The two legs before training, where counterbalanced legs should differ by nothing; a difference
+can be biological or technical. The five smallest p:
 
 ```{r baseline}
 baseline <- filter(results, contrast == d$baseline)
 stopifnot(nrow(baseline) == nrow(proteins))
-sum(baseline$adj.P.Val < 0.05)
 
 slice_min(baseline, P.Value, n = 5) |>
   select(protein, Genes, logFC, P.Value, adj.P.Val)
 ```
 
-The count is printed, not asserted, so a difference lands in the report instead of halting it.
-
 ## Slope sensitivity
 
-When the fitted-slope checkpoint exists, it gets the same detection filter, normalisation and
-design, then the discovery counts are compared with the primary run. The checks confirm sample
-order and protein coverage; they cannot confirm the checkpoint came from the same precursors.
+`02_quantify_run.R --sensitivity` also quantifies with the detection-curve (DPC) slope fitted to
+these data (0.488) instead of the preset 0.7. When that run exists, it gets the same detection
+filter, normalisation and design, and its discovery counts are set beside the primary run's.
 
 ```{r slope-sensitivity}
 #| eval: !expr file.exists(fitted_slope_file)
@@ -219,22 +213,13 @@ sheets <- list(
   DEP_matrix = dep_matrix,
   contrast_summary = contrast_summary,
   sample_weights = data.frame(
-    sample_id = colnames(proteins$E), group = proteins$targets$group, weight = sample_weights
+    sample_id = colnames(proteins$E), group = proteins$targets$group,
+    weight = fit$targets$sample.weight
   ),
   null_summary = null_summary,
   treat_summary = treat_summary
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "logFC, p and BH p per contrast",
-    "Discoveries per contrast at FDR 0.05 and 0.10",
-    "Sample identifiers, groups and quality weights",
-    "Descriptive p-value and t-statistic summaries",
-    "Discoveries against the 15 percent fold-change threshold"
-  )
-)
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential.xlsx"))
+write_xlsx(sheets, file.path(out, "02_differential.xlsx"))
 ```
 
 ## Session information

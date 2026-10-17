@@ -57,27 +57,6 @@ c(
 )
 ```
 
-## Check within-leg correlation
-
-Samples from the same leg may stay correlated after the participant term. `leg_id` marks each
-participant and leg; `duplicateCorrelation()` takes the protein matrix, the design and that block,
-and returns the average residual correlation within legs.
-
-```{r correlation-strata}
-leg_id <- paste(targets$participant, targets$leg, sep = "_")
-
-strata <- data.frame(
-  level = "within leg, participant fixed (unweighted matrix correlation)",
-  correlation = duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
-)
-round(strata$correlation, 3)
-```
-
-The estimate ignores the standard errors and sample weights the later fit uses, and a small value
-does not prove there is no dependence. `02_Differential` fits without a leg block while this stays
-near zero. If it rose, the fix is `block = leg_id` there; `leg_id` is not saved, so read this value
-on every rerun.
-
 ## Contrasts
 
 A contrast is a difference between model coefficients; positive values follow the subtraction
@@ -107,11 +86,31 @@ contrast_matrix[rowSums(abs(contrast_matrix)) > 0, ]
 five are not independent questions. The interaction tests whether the change over time differs
 between treatments. Baseline differences can exist and are inspected, not assumed absent.
 
+## Check within-leg correlation
+
+Samples from the same leg may stay correlated after the participant term. `leg_id` marks each
+participant and leg; `duplicateCorrelation()` takes the protein matrix, the design and that block,
+and returns the average residual correlation within legs.
+
+```{r correlation-strata}
+leg_id <- paste(targets$participant, targets$leg, sep = "_")
+
+strata <- data.frame(
+  level = "within leg, participant fixed (unweighted matrix correlation)",
+  correlation = duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
+)
+round(strata$correlation, 3)
+```
+
+The estimate ignores the standard errors and sample weights the later fit uses. `02_Differential`
+fits without a leg block while this stays near zero. If it rose, the fix is `block = leg_id`
+there; `leg_id` is not saved, so read this value on every rerun.
+
 ## Save results
 
 `design.rds` holds the design, the contrasts and the name of the baseline contrast for the models
-downstream. `01_design.xlsx` holds an overview, the samples, the design, the contrasts and the
-correlation check; identifier columns keep the matrix row names in Excel.
+downstream. `01_design.xlsx` holds the samples, the design, the contrasts and the correlation
+check; identifier columns keep the matrix row names in Excel.
 
 ```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
@@ -127,16 +126,7 @@ sheets <- list(
   ),
   correlation_strata = strata
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = sapply(sheets, nrow), columns = sapply(sheets, ncol),
-  description = c(
-    "Sample identifiers and study metadata",
-    "Design matrix, one row per sample",
-    "Contrast weights, one column per comparison",
-    "Within-leg correlation, participant fixed"
-  )
-)
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "01_design.xlsx"))
+write_xlsx(sheets, file.path(out, "01_design.xlsx"))
 ```
 
 ## Session information

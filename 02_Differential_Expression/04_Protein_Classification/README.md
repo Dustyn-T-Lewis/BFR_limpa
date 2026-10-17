@@ -17,8 +17,12 @@ Outputs:
 - `b_reports/04_classification_<task>.pdf`: ROC curves for every protein at nominal p, one file per
   task except baseline, which is reported but not drawn.
 - `b_reports/04_chance.pdf`: nominal hits against chance per task.
-- `c_data/04_protein_classification.xlsx`: hits against chance, AUC and p per protein and task, and
-  the candidate list.
+- `c_data/04_protein_classification.xlsx`, one sheet per table:
+  - `chance_expectation`: one row per task, with nominal hits against chance and BH hits.
+  - `protein_auc`: one row per protein and task, with AUC, paired Wilcoxon p and BH q, smallest p
+    first.
+  - `candidates`: one row per protein that is DE at FDR 0.05 and reaches nominal p for association
+    and classification.
 
 | Task | Nominal | Expected | Ratio | BH < 0.05 |
 |---|---:|---:|---:|---:|
@@ -31,5 +35,6 @@ Outputs:
 No protein separates BFR from HLRT beyond chance. The `candidates` sheet lists 45 proteins that pass
 DE at FDR 0.05 in any contrast and reach nominal p for association and classification; nine also
 separate the arms after training or in change (NAMPT, GSTK1, ATP1A1, MSN, NPEPPS, SUCLG1, ACTR2,
-ART3, ALDH1B1). About 44 of the 130 DE hits would clear the association bar by chance, so treat the
-list as leads.
+ART3, ALDH1B1). Each protein gets eight association tests, so chance alone would put about 44 of
+the 130 DE hits past the association bar, close to the 45 listed. Treat the list, the nine
+included, as leads.

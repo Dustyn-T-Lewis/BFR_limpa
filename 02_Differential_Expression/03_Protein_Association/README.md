@@ -15,10 +15,16 @@ Outputs:
 
 - `b_reports/03_protein_association.html`: the walkthrough, with previews and the chance figure.
 - `b_reports/03_association_<outcome>.pdf`: one per outcome (`vl_csa`, `vl_echo`, `rf_csa`,
-  `rf_echo`), every protein at nominal p, twelve to a page, with the within-arm correlations inset.
+  `rf_echo`), every protein at nominal p, twelve to a page. Pooled pages plot each leg, with the
+  within-arm correlations inset; differential pages plot the BFR minus HLRT differences that were
+  tested, one point per participant.
 - `b_reports/03_chance.pdf`: nominal hits against chance.
-- `c_data/03_protein_association.xlsx`: hits against chance, training overlap, every correlation
-  (`correlations`, read by `04_Protein_Classification`) and the descriptive within-arm correlations.
+- `c_data/03_protein_association.xlsx`, one sheet per table:
+  - `summary`: one row per analysis and outcome; nominal and BH hits against chance.
+  - `training_overlap`: one row per analysis and outcome; training hits at nominal p against chance.
+  - `correlations`: one row per protein, analysis and outcome; Spearman r, p and FDR, sorted by
+    FDR. Read by `04_Protein_Classification`.
+  - `protein_by_arm`: one row per protein, arm and outcome; the same correlation inside each arm.
 
 | Analysis | Outcome | n | Nominal | Ratio to chance | BH < 0.05 |
 |---|---|---:|---:|---:|---:|

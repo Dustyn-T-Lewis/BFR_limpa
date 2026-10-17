@@ -53,18 +53,14 @@ nrow(legs)
 head(legs)
 ```
 
-`pair_by_treatment()` takes the leg table and the name of one identifying column, and returns one
-row per participant with their BFR and HLRT legs side by side. Participants without both legs drop
-out.
+Widening the legs on treatment gives one row per participant with the BFR and HLRT legs side by
+side. Participants without both legs drop out.
 
 ```{r pairs}
-pair_by_treatment <- function(data, column) {
-  data |>
-    select(participant, treatment, value = all_of(column)) |>
-    pivot_wider(names_from = treatment, values_from = value) |>
-    drop_na(BFR, HLRT)
-}
-delta_pairs <- pair_by_treatment(legs, "leg_id")
+delta_pairs <- legs |>
+  select(participant, treatment, leg_id) |>
+  pivot_wider(names_from = treatment, values_from = leg_id) |>
+  drop_na(BFR, HLRT)
 
 nrow(delta_pairs)
 head(delta_pairs)
@@ -118,18 +114,16 @@ dim(paired)
 ## Correlate each protein with each outcome
 
 Spearman correlation is the Pearson correlation of the ranks: it measures whether two quantities
-rise together, without assuming a straight line or normal errors. `spearman_by_row()` takes a
-protein-by-column matrix and one outcome value per column, and returns one row per protein with
-the sample size, r and p. `cor.test()` gives the exact Spearman p at these sample sizes, where the
-t approximation is off by up to 9e-4. Ties make it warn and fall back to the approximation, so the
-warnings are suppressed.
+rise together, without assuming a straight line or normal errors. `cor.test()` computes its p with
+algorithm AS 89, which is exact below 10 observations and an Edgeworth series approximation at the
+32 and 65 used here.
 
 ```{r spearman-helper}
 spearman_by_row <- function(values, outcome) {
-  fits <- suppressWarnings(apply(values, 1, function(row) {
+  fits <- apply(values, 1, function(row) {
     test <- cor.test(row, outcome, method = "spearman")
     c(r = unname(test$estimate), p = test$p.value)
-  }))
+  })
   tibble(
     protein = rownames(values), n = sum(!is.na(outcome)),
     r = unname(fits["r", ]), p = unname(fits["p", ])
@@ -160,8 +154,19 @@ results |>
   mutate(across(c(r, p, fdr), function(x) signif(x, 3)))
 ```
 
-The same pooled correlation inside each arm alone, for description beside the figures. No
-adjustment is applied to it.
+Pooling counts a participant's two legs as independent observations, which is reasonable because
+they do not correlate in protein change: the median Spearman r between a participant's BFR and
+HLRT legs, across proteins, is printed below.
+
+```{r leg-correlation}
+leg_r <- map_dbl(rownames(delta), function(id) {
+  cor(delta[id, delta_pairs$BFR], delta[id, delta_pairs$HLRT], method = "spearman")
+})
+round(median(leg_r), 3)
+```
+
+The same pooled correlation inside each arm alone, for the insets on the pooled figure pages and
+the `protein_by_arm` sheet. No adjustment is applied to it.
 
 ```{r by-arm}
 by_arm <- map(set_names(c("BFR", "HLRT")), function(treatment) {
@@ -177,138 +182,11 @@ by_arm <- map(set_names(c("BFR", "HLRT")), function(treatment) {
 count(by_arm, treatment, outcome, n)
 ```
 
-## Figures
-
-The figures share a theme, a caption builder and an A4 writer. `caption_text()` takes a title and
-body text and returns the wrapped caption, with "page i of n" when a figure spans pages.
-
-```{r figure-helpers}
-figure_theme <- theme_minimal(base_size = 9) +
-  theme(
-    strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
-    panel.grid.minor = element_blank(),
-    panel.spacing = unit(4, "mm"),
-    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-    plot.caption.position = "plot",
-    legend.position = "top"
-  )
-caption_text <- function(title, text, page = 1, n_pages = 1) {
-  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
-  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
-}
-write_pdf <- function(pages, name) {
-  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
-  walk(pages, print)
-  invisible(dev.off())
-}
-```
-
-`paginate()` takes panel data with an ordered `panel` factor and a `draw` function, and returns one
-plot per page of twelve panels. `draw` builds each plot from that page's rows only: a paginating
-facet would build every panel for every page.
-
-```{r paginate}
-paginate <- function(data, draw, title, text, scales = "fixed") {
-  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
-  imap(unname(pages), function(page, i) {
-    draw(droplevels(page)) +
-      facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
-      labs(caption = caption_text(title, text, i, length(pages))) +
-      figure_theme
-  })
-}
-```
-
-A nominal hit is a protein with unadjusted p below 0.05. The chance expectation is the number of
-nominal hits expected if no protein were related to the outcome: 5% of those tested.
-
-```{r chance-text}
-chance_text <- sprintf(
-  "chance alone returns %.0f of %s proteins.", nrow(values) * 0.05,
-  format(nrow(values), big.mark = ",")
-)
-chance_text
-```
-
-`association_figure()` takes an analysis, an outcome, a title and a description of the sample, and
-returns the pages for every nominal hit, smallest p first. Each panel plots protein change against
-outcome change per leg, with a line fitted inside each arm and the within-arm r inset.
-
-```{r association-figure}
-association_figure <- function(which_analysis, outcome_name, title, population) {
-  hits <- results |>
-    filter(analysis == which_analysis, outcome == outcome_name, p < 0.05) |>
-    arrange(p) |>
-    mutate(gene = coalesce(gene, protein))
-  points <- pmap(hits, function(protein, gene, outcome, r, p, fdr, ...) {
-    arms <- by_arm |>
-      filter(protein == !!protein, outcome == !!outcome) |>
-      mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
-    tibble(
-      panel = sprintf(
-        "%s\nvs %s   r = %+.2f   p %s   q %s",
-        paste(gene, protein, sep = "  "), outcome, r, signif(p, 2), signif(fdr, 2)
-      ),
-      change = delta[protein, ], d_outcome = leg_phenotype[[outcome]],
-      treatment = leg_phenotype$treatment, caption = paste(arms$text, collapse = "\n")
-    )
-  }) |>
-    list_rbind() |>
-    mutate(panel = factor(panel, levels = unique(panel)))
-  paginate(points, function(page) {
-    ggplot(page, aes(change, d_outcome, colour = treatment, fill = treatment)) +
-      geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
-      geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
-      geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.5) +
-      geom_point(size = 1.2, alpha = 0.9) +
-      geom_text(
-        data = distinct(page, panel, caption), inherit.aes = FALSE,
-        aes(x = -Inf, y = Inf, label = caption), family = "mono",
-        hjust = -0.05, vjust = 1.25, size = 1.9, lineheight = 1.2, colour = "grey25"
-      ) +
-      scale_y_continuous(expand = expansion(mult = c(0.06, 0.35))) +
-      scale_colour_manual(
-        values = c(BFR = "#B2182B", HLRT = "#2166AC"), aesthetics = c("colour", "fill"),
-        name = NULL
-      ) +
-      labs(x = "change in protein, log2, T2 - T1, one point per leg", y = "change in phenotype")
-  }, paste0(title, ", ", outcome_name), paste(
-    sprintf(
-      "All %d proteins whose Spearman correlation with %s reaches nominal p in the %s",
-      nrow(hits), outcome_name, which_analysis
-    ),
-    sprintf("analysis (%s), smallest p first;", population), chance_text,
-    "Lines are fitted within each arm; the header r is the", which_analysis, "correlation and",
-    "the inset gives it within each arm. q from BH within analysis and outcome. Data:",
-    "correlations and protein_by_arm sheets of 03_protein_association.xlsx."
-  ), scales = "free")
-}
-```
-
-One PDF per outcome, so each can be read on its own: the pooled pages first, then the
-differential ones.
-
-```{r association-pdfs}
-walk(outcomes, function(outcome_name) {
-  write_pdf(
-    c(
-      association_figure(
-        "pooled", outcome_name, "Training response against phenotype, all legs",
-        sprintf("%d legs, both arms pooled", nrow(legs))
-      ),
-      association_figure(
-        "differential", outcome_name, "BFR minus HLRT, within participant",
-        sprintf("%d paired participants", nrow(delta_pairs))
-      )
-    ),
-    paste0("03_association_", outcome_name, ".pdf")
-  )
-})
-```
-
 ## Hits against chance
 
-Per analysis and outcome: proteins tested, nominal hits, the chance expectation, BH hits at 0.05,
+A nominal hit is a protein with unadjusted p below 0.05. The chance expectation is the number of
+nominal hits expected if no protein were related to the outcome: 5% of those tested. Per analysis
+and outcome the table gives proteins tested, nominal hits, the chance expectation, BH hits at 0.05,
 the best adjusted p, and the ratio of nominal hits to chance. A ratio near 1 is what no
 association at all would produce.
 
@@ -317,9 +195,10 @@ summary_table <- results |>
   summarise(
     proteins = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
     fdr_sig = sum(fdr < 0.05), best_fdr = signif(min(fdr), 3),
+    # divide by the exact expectation, not the rounded column above
+    ratio = round(nominal / (n() * 0.05), 2),
     .by = c(analysis, outcome, n)
   ) |>
-  mutate(ratio = round(nominal / expected, 2)) |>
   arrange(analysis, outcome)
 summary_table
 ```
@@ -352,40 +231,172 @@ training_overlap <- results |>
 training_overlap
 ```
 
-`chance_page()` takes the summary, the column for the bars, the column to facet by, a title and
-caption text, and returns one plot: bar length is nominal hits divided by the chance expectation.
+## Figures
 
-```{r chance-page}
-chance_page <- function(data, y, facet, title, text) {
-  ggplot(data, aes(ratio, .data[[y]], fill = ratio > 1)) +
-    geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
-    geom_col(width = 0.65) +
-    geom_text(
-      aes(label = sprintf("%d of %d", nominal, features)),
-      hjust = -0.12, size = 2.5, colour = "grey25"
-    ) +
-    facet_wrap(vars(.data[[facet]]), ncol = 1) +
-    scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
-    labs(
-      x = "observed nominal hits / chance expectation", y = NULL,
-      caption = caption_text(title, text)
-    ) +
-    figure_theme +
-    theme(panel.grid.major.y = element_blank())
+The figures share a theme, the chance sentence, a caption builder that adds "page i of n" when a
+figure spans pages, and an A4 writer.
+
+```{r figure-helpers}
+figure_theme <- theme_minimal(base_size = 9) +
+  theme(
+    strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(4, "mm"),
+    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
+    plot.caption.position = "plot",
+    legend.position = "top"
+  )
+chance_text <- sprintf(
+  "chance alone returns %.0f of %s proteins.", nrow(values) * 0.05,
+  format(nrow(values), big.mark = ",")
+)
+caption_text <- function(title, text, page = 1, n_pages = 1) {
+  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
+  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
+}
+write_pdf <- function(pages, name) {
+  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
+  walk(pages, print)
+  invisible(dev.off())
 }
 ```
 
+`association_figure()` draws every nominal hit for one analysis and outcome, smallest p first,
+twelve panels to a page. Pooled pages plot each leg's protein change against its outcome change,
+with a line fitted inside each arm and the within-arm r inset. Differential pages plot what was
+tested: one point per participant, the BFR minus HLRT difference in protein change against the
+same difference in outcome change. Pages are built one at a time from their own rows, because a
+paginating facet would build every panel for every page.
+
+```{r association-figure}
+association_figure <- function(which_analysis, outcome_name, title, population) {
+  differential <- which_analysis == "differential"
+  if (differential) {
+    protein_change <- paired
+    phenotype_change <- paired_outcome
+    point_series <- "BFR - HLRT"
+    x_label <- "change in protein, log2, T2 - T1, BFR minus HLRT, one point per participant"
+    y_label <- "change in phenotype, BFR minus HLRT"
+    headroom <- 0.06
+    encoding <- paste(
+      "One point per participant: the change in their BFR leg minus the change in their HLRT",
+      "leg, on both axes. The line is a least-squares fit; the header r is the differential",
+      "correlation, the one tested. q from BH within analysis and outcome. Data: correlations",
+      "sheet of 03_protein_association.xlsx."
+    )
+  } else {
+    protein_change <- delta
+    phenotype_change <- leg_phenotype
+    point_series <- leg_phenotype$treatment
+    x_label <- "change in protein, log2, T2 - T1, one point per leg"
+    y_label <- "change in phenotype"
+    headroom <- 0.35
+    encoding <- paste(
+      "Lines are fitted within each arm; the header r is the pooled correlation and the inset",
+      "gives it within each arm. q from BH within analysis and outcome. Data: correlations and",
+      "protein_by_arm sheets of 03_protein_association.xlsx."
+    )
+  }
+  hits <- results |>
+    filter(analysis == which_analysis, outcome == outcome_name, p < 0.05) |>
+    arrange(p) |>
+    mutate(gene = coalesce(gene, protein))
+  points <- pmap(hits, function(protein, gene, outcome, r, p, fdr, ...) {
+    arms <- by_arm |>
+      filter(protein == !!protein, outcome == !!outcome) |>
+      mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
+    tibble(
+      panel = sprintf(
+        "%s\nvs %s   r = %+.2f   p %s   q %s",
+        paste(gene, protein, sep = "  "), outcome, r, signif(p, 2), signif(fdr, 2)
+      ),
+      change = protein_change[protein, ], d_outcome = phenotype_change[[outcome]],
+      series = point_series, inset = if (differential) "" else paste(arms$text, collapse = "\n")
+    )
+  }) |>
+    list_rbind() |>
+    mutate(panel = factor(panel, levels = unique(panel)))
+  text <- paste(
+    sprintf(
+      "All %d proteins whose Spearman correlation with %s reaches nominal p in the %s",
+      nrow(hits), outcome_name, which_analysis
+    ),
+    sprintf("analysis (%s), smallest p first;", population), chance_text, encoding
+  )
+  pages <- unname(split(points, (as.integer(points$panel) - 1) %/% 12))
+  imap(pages, function(page, i) {
+    page <- droplevels(page)
+    ggplot(page, aes(change, d_outcome, colour = series, fill = series)) +
+      geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
+      geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
+      geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.5) +
+      geom_point(size = 1.2, alpha = 0.9) +
+      geom_text(
+        data = distinct(page, panel, inset), inherit.aes = FALSE,
+        aes(x = -Inf, y = Inf, label = inset), family = "mono",
+        hjust = -0.05, vjust = 1.25, size = 1.9, lineheight = 1.2, colour = "grey25"
+      ) +
+      scale_y_continuous(expand = expansion(mult = c(0.06, headroom))) +
+      scale_colour_manual(
+        values = c(BFR = "#B2182B", HLRT = "#2166AC", `BFR - HLRT` = "grey25"),
+        aesthetics = c("colour", "fill"), name = NULL
+      ) +
+      facet_wrap(~panel, ncol = 3, nrow = 4, scales = "free") +
+      labs(
+        x = x_label, y = y_label,
+        caption = caption_text(paste0(title, ", ", outcome_name), text, i, length(pages))
+      ) +
+      figure_theme
+  })
+}
+```
+
+One PDF per outcome, so each can be read on its own: the pooled pages first, then the
+differential ones.
+
+```{r association-pdfs}
+walk(outcomes, function(outcome_name) {
+  write_pdf(
+    c(
+      association_figure(
+        "pooled", outcome_name, "Training response against phenotype, all legs",
+        sprintf("%d legs, both arms pooled", nrow(legs))
+      ),
+      association_figure(
+        "differential", outcome_name, "BFR minus HLRT, within participant",
+        sprintf("%d paired participants", nrow(delta_pairs))
+      )
+    ),
+    paste0("03_association_", outcome_name, ".pdf")
+  )
+})
+```
+
+The chance page draws each ratio from the summary as a bar: nominal hits divided by the chance
+expectation.
+
 ```{r chance-pdf}
 #| fig-height: 6
-chance_plot <- chance_page(
-  rename(summary_table, features = proteins), "outcome", "analysis",
-  "Nominal hits relative to chance", paste(
-    "Spearman per protein, uncorrected p;", chance_text, "Bar length is observed nominal hits",
-    "divided by that count; red clears 1, grey does not. Labels give observed of tested. Data:",
-    "summary sheet of 03_protein_association.xlsx."
-  )
-)
+chance_plot <- ggplot(summary_table, aes(ratio, outcome, fill = ratio > 1)) +
+  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+  geom_col(width = 0.65) +
+  geom_text(
+    aes(label = sprintf("%d of %d", nominal, proteins)),
+    hjust = -0.12, size = 2.5, colour = "grey25"
+  ) +
+  facet_wrap(~analysis, ncol = 1) +
+  scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
+  labs(
+    x = "observed nominal hits / chance expectation", y = NULL,
+    caption = caption_text("Nominal hits relative to chance", paste(
+      "Spearman per protein, uncorrected p;", chance_text, "Bar length is observed nominal hits",
+      "divided by that count; red clears 1, grey does not. Labels give observed of tested. Data:",
+      "summary sheet of 03_protein_association.xlsx."
+    ))
+  ) +
+  figure_theme +
+  theme(panel.grid.major.y = element_blank())
 write_pdf(list(chance_plot), "03_chance.pdf")
 chance_plot
 ```
@@ -402,19 +413,7 @@ sheets <- list(
   correlations = arrange(results, fdr),
   protein_by_arm = by_arm
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "Hits against chance per outcome",
-    "Training hits at nominal p against chance",
-    "Spearman r, p and FDR per protein",
-    "The same correlation computed inside BFR and inside HLRT, descriptive"
-  )
-)
-write_xlsx(
-  c(list(overview = overview), sheets),
-  file.path(stage, "c_data", "03_protein_association.xlsx")
-)
+write_xlsx(sheets, file.path(stage, "c_data", "03_protein_association.xlsx"))
 ```
 
 ## Session information

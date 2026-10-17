@@ -14,4 +14,8 @@ Outputs:
 - `b_reports/01_design.html`: the walkthrough.
 - `c_data/design.rds`: design, contrasts and the baseline contrast's name, read by
   `02_Differential` and later stages.
-- `c_data/01_design.xlsx`: overview, samples, design, contrasts and the correlation check.
+- `c_data/01_design.xlsx`:
+  - `samples`: sample identifiers and study metadata;
+  - `design`: the design matrix, one row per sample;
+  - `contrasts`: contrast weights, one column per comparison;
+  - `correlation_strata`: the within-leg residual correlation, participant fixed.
