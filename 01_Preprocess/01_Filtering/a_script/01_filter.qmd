@@ -11,9 +11,6 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root.
-
 ```{r setup}
 pacman::p_load(here, limpa, dplyr, stringr, purrr, readr, writexl)
 here::i_am("01_Preprocess/01_Filtering/a_script/01_filter.qmd")
@@ -21,10 +18,12 @@ here::i_am("01_Preprocess/01_Filtering/a_script/01_filter.qmd")
 
 ## Read measurements
 
-`readDIANN()` reads DIA-NN's normalised precursor intensities (`Precursor.Normalised`) and keeps
-precursors that pass its default 0.01 cutoffs on `Q.Value`, `Lib.Q.Value` and `Lib.PG.Q.Value`,
-the identification confidence limits the limpa vignette uses for a match-between-runs search.
-DIA-NN has already normalised these intensities, so this step does not normalise again.
+`readDIANN()` reads DIA-NN's normalised intensity (`Precursor.Normalised`) for each precursor, a
+peptide at one charge state, and keeps those passing its default 0.01 cutoffs on `Q.Value`,
+`Lib.Q.Value` and `Lib.PG.Q.Value`. The limpa vignette gives these cutoffs for a match-between-runs
+(MBR) search, where an identification in one run supports the same peptide in others; whether this
+search used MBR is unrecorded. Protein-level normalisation comes after quantification, in
+`02_Quantification`.
 
 `y$E` holds log2 intensities, precursors in rows and runs in columns; `y$genes` holds their
 annotations. `Protein.Ids` is added to the default annotation columns because the repair below
@@ -40,15 +39,15 @@ y <- readDIANN(
 )
 dim(y)
 head(y$genes, 6)
-y$E[seq_len(min(6, nrow(y$E))), seq_len(min(4, ncol(y$E))), drop = FALSE]
+y$E[1:6, 1:4]
 ```
 
 ## Match samples
 
-Match run names to the metadata, ignoring letter case (one run, `Cl_MDR_7E-T2`, is written
-`CL_MDR_7E-T2` in the sheet), then reorder the columns and assign sample IDs. This drops the
-discarded S08 injection, which is in the report but not the metadata. `stopifnot()` stops if a
-metadata run is missing from the report; `setdiff()` lists the runs left out.
+Run names are matched to the metadata ignoring letter case (one run, `Cl_MDR_7E-T2`, is written
+`CL_MDR_7E-T2` in the sheet), and the columns are reordered and renamed to sample IDs. Every
+metadata run must be in the report; the report's runs left out are printed. One is the discarded
+S08 injection, in the report but not the metadata.
 
 ```{r map-samples}
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
@@ -62,10 +61,9 @@ y$targets <- data.frame(metadata, row.names = metadata$sample_id)
 head(y$targets[c("run", "sample_id", "participant", "leg", "treatment", "timepoint")], 6)
 ```
 
-Record the starting signal after selecting samples. `total_signal()` takes a matrix of log2
-intensities, undoes the log with `2^`, and returns the sum, ignoring missing entries. Signal shows
-how much intensity a filter removes, which precursor counts alone cannot. The starting value stays
-fixed, so the percentages from different filters are comparable.
+Signal, the summed intensity on the natural scale, shows how much a filter removes, which
+precursor counts alone cannot. `total_signal()` computes it from log2 values; the starting signal
+stays fixed, so the percentages from different filters compare.
 
 ```{r starting-signal}
 total_signal <- function(log2_intensities) {
@@ -77,17 +75,15 @@ signal_start <- total_signal(y$E)
 
 ## Repair annotations
 
-The search FASTA appended the cRAP contaminant database, which repeats 43 human proteins the human
-FASTA already lists. DIA-NN therefore reports myoglobin as `P02144;cRAP-P02144` and marks it
-non-proteotypic, along with creatine kinase M and both haemoglobins. Left unrepaired, the
-shared-peptide filter below deleted 13 of the 28 expected muscle symbols when last measured
-(September 2026).
+The search FASTA appended the cRAP database of common laboratory contaminants, which lists some
+human proteins the human FASTA already holds. DIA-NN therefore reports myoglobin as
+`P02144;cRAP-P02144` and marks it non-proteotypic (not unique to one protein), along with creatine
+kinase M and both haemoglobins. Left unrepaired, the shared-peptide filter below deleted 13 of the
+28 `must_keep` symbols when last measured (September 2026).
 
-The repair keeps mixed entries and removes groups whose every identifier is cRAP, and reversed
-decoys (`rev_`), which the FASTA already contained, so DIA-NN scored them as targets. Split each
-row's identifiers at `;`; `map_lgl()` returns one `TRUE` or `FALSE` per row, and `all()` requires
-every identifier to start with `cRAP-`. So `cRAP-P02144` is cRAP-only, while `P02144;cRAP-P02144`
-is mixed and kept for repair.
+Two kinds of row are dropped: groups made only of cRAP entries, and reversed sequences (`rev_`),
+which the FASTA carried as ordinary entries, so DIA-NN treated them as real. A mixed group such as
+`P02144;cRAP-P02144` stays for repair.
 
 ```{r identify-annotation-artefacts}
 members <- str_split(y$genes$Protein.Ids, ";")
@@ -97,9 +93,8 @@ mentions_crap <- str_detect(y$genes$Protein.Ids, "cRAP-")
 removed_rows <- crap_only | is_decoy
 ```
 
-Record counts and signal before removing rows. Each flag in `reasons` marks the same precursor
-rows; summing it counts them and selecting those rows from `y$E` gives their signal. The
-categories overlap, and "mentions cRAP at all" describes, it does not remove.
+Counts and signal per category, before the rows go. The categories overlap, and "mentions cRAP
+at all" describes rather than removes.
 
 ```{r annotation-counts}
 reasons <- list(
@@ -158,28 +153,22 @@ y$genes <- y$genes |>
   )
 ```
 
-The same rows after repair, then the number of remaining cRAP prefixes in each field, which should
-be zero everywhere.
+The same rows after repair:
 
 ```{r repaired-annotation-preview}
 y$genes[repair_examples, c("Protein.Group", "Protein.Ids", "Genes", "Proteotypic")]
-y$genes |>
-  summarise(across(
-    c(Protein.Group, Protein.Ids, Protein.Names, Genes),
-    function(x) sum(str_detect(x, "cRAP-"), na.rm = TRUE)
-  ))
 ```
 
 ## Remove ambiguous assignments
 
 `filterNonProteotypicPeptides()` removes precursors shared between protein groups, and
-`filterCompoundProteins()` removes compound protein groups, in the limpa vignette's order. The
-vignette calls `filterSingletonPeptides()` optional and recommends keeping all proteins, so it is
-not applied. Precursors are not filtered on missing values: `dpc()` models why values go missing.
+`filterCompoundProteins()` removes compound groups, those naming more than one protein, in the
+limpa vignette's order. The vignette calls `filterSingletonPeptides()` optional and recommends
+keeping all proteins, so it is not applied. Nothing is filtered on missing values: `dpc()` models
+how the chance of detection rises with intensity, so a missing value carries information.
 
-`step_summary()` takes the data, a step label and the starting signal, and returns one row with
-the precursor count, distinct protein groups and percentage of starting signal. It runs after each
-filter; the full table is printed at the end.
+`step_summary()` returns one row per filter: precursors, distinct protein groups and percentage of
+starting signal. The full table is printed at the end.
 
 ```{r limpa-filters}
 step_summary <- function(elist, step, starting_signal) {
@@ -196,17 +185,17 @@ y <- filterNonProteotypicPeptides(y)
 filter_log <- bind_rows(filter_log, step_summary(y, "shared peptides removed", signal_start))
 y <- filterCompoundProteins(y)
 filter_log <- bind_rows(filter_log, step_summary(y, "compound groups removed", signal_start))
-filter_log[c("step", "precursors", "protein_groups")]
 ```
 
 ## Filter contaminants
 
 A needle biopsy carries blood and passes through skin. These proteins are removed here, before
 quantification, because `dpc()` fits one detection curve across every precursor and `dpcQuant()`
-takes its prior from all the data, so contaminants left in would shape the model through which
-every muscle protein is quantified.
+takes its prior from all the data. That order is a project choice: limpa's ccRCC case study removes
+immunoglobulins after `dpcQuant()` instead.
 
-The 4 family patterns match immunoglobulin, keratin, SPRR and haemoglobin names; `^` and `$`
+The 4 family patterns match immunoglobulin, keratin, SPRR (small proline-rich proteins of skin)
+and haemoglobin names; `^` and `$`
 require a whole-name match, so `KRTCAP2` is not caught. The 147 individual symbols are plasma,
 red-cell, platelet, neutrophil and skin proteins, picked by judgement from the dataset's gene
 symbols on 2026-09-04 with Human Protein Atlas (HPA) single-cell expression in view. No script
@@ -217,7 +206,7 @@ blood, immune, skin or liver cells and does not detect it in myonuclei. It kept 
 list removes, many of them complement and other plasma proteins that the muscle's own fibroblasts
 and vessels also make (C3, C1R, C1S and SERPING1 all have muscle RNA in HPA). With those proteins
 in, the baseline BFR against HLRT comparison, where counterbalanced legs should differ by nothing,
-flagged 21 gene sets in the stage 03 fgsea, all complement, coagulation, immunoglobulin or red-cell,
+flagged 21 gene sets in the stage 03 gene set enrichment (fgsea), all complement, coagulation, immunoglobulin or red-cell,
 against 1 with this list. No annotation rule tried could tell plasma-borne complement from locally
 made complement, so the list stays. It predates that comparison, which therefore checks the list
 rather than tuning it.
@@ -247,24 +236,22 @@ contaminant_symbols <- c(
 )
 ```
 
-A group is removed only when every one of its gene symbols matches a listed symbol or a family
-pattern, so `ALB;APOA1` is removed and `ALB;ACTA1` is not. `isTRUE()` keeps rows whose match is
-`NA`. `by_symbol` records whether the listed symbols alone cover the group; it only labels the
-summary.
+A group is removed only when every gene symbol on it matches a listed symbol or a family pattern,
+so a contaminant sharing a group with a muscle protein stays. `by_symbol` records whether the
+listed symbols alone cover the group; it only labels the summary.
 
 ```{r flag-contaminants}
 gene_symbols <- str_split(str_to_upper(y$genes$Genes), ";")
 
 by_symbol <- map_lgl(gene_symbols, function(symbols) all(symbols %in% contaminant_symbols))
 contaminant <- map_lgl(gene_symbols, function(symbols) {
-  isTRUE(all(symbols %in% contaminant_symbols | str_detect(symbols, contaminant_families)))
+  all(symbols %in% contaminant_symbols | str_detect(symbols, contaminant_families))
 })
 head(y$genes[which(contaminant), c("Protein.Group", "Genes")], 6)
 ```
 
-Sum each flagged precursor's signal across samples with `rowSums()`, then combine precursors by
-gene-symbol string and matching route. "family" means the listed symbols alone did not cover the
-group. Percentages use the fixed starting signal.
+Signal removed per gene-symbol string and matching route, as a percentage of starting signal;
+"family" means the listed symbols alone did not cover the group.
 
 ```{r measure-excluded-signal}
 contaminants_removed <- tibble(
@@ -277,16 +264,19 @@ contaminants_removed <- tibble(
     .by = c(symbol, matched_by)
   ) |>
   arrange(desc(pct_signal))
-
-head(contaminants_removed, 6)
 ```
 
 The fraction removed from each sample uses that sample's signal just before this filter as its
-denominator, so uneven contamination between groups is visible.
+denominator, so uneven contamination between samples and groups is visible.
 
 ```{r measure-sample-fractions}
 contaminant_fraction <- colSums(2^y$E[contaminant, , drop = FALSE], na.rm = TRUE) /
   colSums(2^y$E, na.rm = TRUE)
+sample_contamination <- tibble(
+  sample_id = colnames(y),
+  group = y$targets$group,
+  pct_signal_removed = 100 * contaminant_fraction
+)
 ```
 
 ```{r remove-contaminants}
@@ -296,10 +286,9 @@ filter_log <- bind_rows(filter_log, step_summary(y, "contaminants removed", sign
 
 ## Check retained genes
 
-Stop if any of 28 expected gene symbols is missing: muscle proteins the annotation repair exists
-to protect, and blood-abundant proteins that muscle also expresses. This guard checks for
-accidental loss; it does not exempt any gene from removal. The printed vector is empty when all
-are present.
+Stop if any of the 28 `must_keep` symbols is missing: muscle proteins the annotation repair
+protects, and blood-abundant proteins muscle also makes. The guard catches accidental loss and
+exempts nothing from removal; the printed vector lists any symbol missing.
 
 ```{r guard}
 must_keep <- c(
@@ -330,11 +319,12 @@ The 20 removed gene-symbol strings carrying the most signal.
 head(contaminants_removed, 20)
 ```
 
-The median removed fraction per treatment and timepoint group. It shows a gross imbalance in
-blood content between groups, if any; nothing tests or adjusts for it.
+The median removed fraction per treatment and timepoint group, then the five most contaminated
+samples, which a median hides. Nothing tests or adjusts for either.
 
 ```{r contaminant-fractions}
 round(tapply(contaminant_fraction, y$targets$group, median), 4)
+slice_max(sample_contamination, pct_signal_removed, n = 5)
 ```
 
 ## Save results
@@ -344,11 +334,6 @@ round(tapply(contaminant_fraction, y$targets$group, median), 4)
 matrix changes.
 
 ```{r write}
-sample_contamination <- tibble(
-  sample_id = colnames(y),
-  group = y$targets$group,
-  pct_signal_removed = 100 * contaminant_fraction
-)
 sheets <- list(
   samples = as.data.frame(y$targets),
   filtering_summary = filter_log,
@@ -356,20 +341,9 @@ sheets <- list(
   removed_contaminants = contaminants_removed,
   sample_contamination = sample_contamination
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "Sample identifiers and study metadata",
-    "Rows, groups and percentage of original starting signal retained",
-    "Overlapping annotation categories; percentages use original starting signal",
-    "Excluded gene-symbol entries and percentage of original starting signal",
-    "Per-sample percentage removed, relative to signal just before contaminant filtering"
-  )
-)
-
 out <- here("01_Preprocess", "01_Filtering", "c_data")
 saveRDS(y, file.path(out, "precursors_filtered.rds"))
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "01_filter.xlsx"))
+write_xlsx(sheets, file.path(out, "01_filter.xlsx"))
 ```
 
 ## Session information
