@@ -21,11 +21,11 @@ proteome differently than heavy load.
 | `06_Composition/` | fibre type, and DE adjusted for composition | export only |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
-Each sub-stage holds `README.md`, `a_script/` (code), `b_reports/` (the rendered HTML report, beside
-any figure PDFs) and `c_data/` (one workbook of tables, plus an `.rds` where a later step needs the
-R object). Every step is a Quarto notebook. Data passes
-through disk, so any sub-stage reruns from a fresh session, and no notebook caches. "Planned" means
-only a README exists; "export only" means only the step before the FibeRtypeR web app exists.
+Each sub-stage holds `README.md`, `a_script/` (a Quarto notebook), `b_reports/` (the rendered HTML
+report, beside any figure PDFs) and, where the step writes tables, `c_data/` (one workbook, plus an
+`.rds` where a later step needs the R object). Each step's README lists its workbook sheets. Data passes through disk,
+so any sub-stage reruns from a fresh session, and no notebook caches. "Planned" means only a README
+exists; "export only" means only the step before the FibeRtypeR web app exists.
 
 ## Running the pipeline
 
@@ -52,6 +52,8 @@ done
 for s in 01_build_mito_sets 02_test_mito 03_complex_subunits; do
   quarto render 05_Mitochondria/$s/a_script/$s.qmd --output-dir ../b_reports
 done
+
+quarto render 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd --output-dir ../b_reports
 ```
 
 The block takes about five minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
@@ -67,9 +69,14 @@ quantification, and the protein matrix never goes to a standard linear model.
 
 ## Dependencies
 
-Every script loads its packages with `pacman::p_load()`, which installs any that are missing.
-Stages 01 and 02 use `pacman`, `here`, `limpa`, `limma`, `nanoparquet` (read by `readDIANN()`),
-`readr`, `writexl`, `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`. Stage 03 adds
-`readxl`, `fgsea`, `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `pROC`, `ggrepel`,
-`patchwork`, `clusterProfiler`, `enrichplot`, `eulerr` and `enrichVolcano` 2.0.0 or later (GitHub,
-`Dustyn-T-Lewis/enrichVolcano`, not on CRAN). Stages 05 and 06 need nothing new.
+Install Quarto and the R packages `pacman`, `knitr` and `rmarkdown` first. Every notebook then
+attaches its packages with `pacman::p_load()`, which installs any that are missing. Packages a
+notebook only calls as `pkg::fun()` are not attached, so install them once beforehand.
+
+- Stages 01 and 02 attach `here`, `limpa`, `limma`, `readr`, `readxl`, `writexl`,
+  `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`, and call `nanoparquet` (read by
+  `readDIANN()`) and `pROC`.
+- Stage 03 adds `patchwork`, `clusterProfiler` and `enrichplot`, and calls `fgsea`, `singscore`,
+  `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `eulerr` and `enrichVolcano` 2.0.0 or later
+  (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on CRAN).
+- Stages 05 and 06 need nothing new.
