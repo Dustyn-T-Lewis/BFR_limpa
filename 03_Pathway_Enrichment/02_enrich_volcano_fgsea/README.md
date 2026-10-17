@@ -14,6 +14,8 @@ Outputs:
 - `b_reports/02_enrich_volcano_fgsea.html`: the walkthrough.
 - `b_reports/02_enrich_volcano_fgsea_figures.pdf`: S8 (the interaction, both training responses
   and post-training BFR against HLRT, five lowest-FDR proteins named) and S9 (the training
-  responses with labels ranked by Π, which selects nothing).
+  responses with labels ranked by Π, which selects nothing, each followed by the protein's mean
+  observed precursors).
 
-No table is written, so there is no `c_data/`.
+No table is written, so there is no `c_data/`. fry finds no set on S8's panels A and D, the
+interaction and BFR_Post-HLRT_Post, so their rings are fgsea leads only.

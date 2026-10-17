@@ -2242,7 +2242,7 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<p><code>pacman</code> loads the required packages and installs any that are missing. <code>here::i_am()</code> places this notebook in the repository, so paths resolve from the repository root. <code>msigdbr</code>, <code>AnnotationDbi</code>, <code>GSEABase</code> and <code>GO.db</code> are called with <code>::</code> where needed and are not attached.</p>
+<p><code>msigdbr</code>, <code>AnnotationDbi</code>, <code>GSEABase</code> and <code>GO.db</code> are called with <code>::</code> where needed and are not attached.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tibble, purrr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2444,7 +2444,7 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 </section>
 <section id="add-go-slim-sets" class="level2">
 <h2 class="anchored" data-anchor-id="add-go-slim-sets">Add GO Slim sets</h2>
-<p>GO Slim is the GO Consortium’s generic cut-down of the GO hierarchy (140 broad terms), frozen in <code>goslim_generic.obo</code> with an md5 like the MSigDB snapshot. For each slim term, <code>GO.db</code>’s <code>GOBPOFFSPRING</code> returns every GO:BP term below it. CC and MF slim terms have no GO:BP offspring entry and come back <code>NA</code>, so dropping <code>NA</code> keeps BP terms only.</p>
+<p>GO Slim is the GO Consortium’s generic cut-down of the GO hierarchy (140 broad terms), frozen in <code>goslim_generic.obo</code> with an md5 like the MSigDB snapshot. For each slim term, <code>GO.db</code>’s <code>GOBPOFFSPRING</code> returns every GO:BP term below it. A term with no GO:BP offspring comes back <code>NA</code>: every CC and MF term, and any BP leaf term. Dropping <code>NA</code> keeps the BP terms that have offspring. <code>GO.db</code> itself is not frozen, so the README records the version used.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>slim_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(cache_dir, <span class="st">&quot;goslim_generic.obo&quot;</span>)</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">md5_ok</span>(slim_file))</span>
@@ -2522,17 +2522,8 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein_gene_map =</span> protein_map,</span>
 <span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mapping_summary =</span> mapping_summary</span>
 <span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets), <span class="at">rows =</span> <span class="fu">map_int</span>(sheets, nrow), <span class="at">columns =</span> <span class="fu">map_int</span>(sheets, ncol),</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Sets per collection, tested, median size&quot;</span>,</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Every set, with qualifies marking the tested ones&quot;</span>,</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Protein to gene, and the representative&quot;</span>,</span>
-<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Proteins per mapping outcome&quot;</span></span>
-<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sets, <span class="fu">file.path</span>(out, <span class="st">&quot;gene_sets.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
-<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(out, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sets, <span class="fu">file.path</span>(out, <span class="st">&quot;gene_sets.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(out, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
@@ -2578,8 +2569,8 @@ loaded via a namespace (and not attached):
 [43] htmlwidgets_1.6.4    IRanges_2.46.0       bit_4.6.0           
 [46] pkgconfig_2.0.3      pillar_1.11.1        glue_1.8.1          
 [49] statmod_1.5.1        xfun_0.57            tidyselect_1.2.1    
-[52] knitr_1.51           xtable_1.8-8         htmltools_0.5.9     
-[55] rmarkdown_2.31       compiler_4.6.0      </code></pre>
+[52] knitr_1.52           xtable_1.8-8         htmltools_0.5.9     
+[55] rmarkdown_2.32       compiler_4.6.0      </code></pre>
 </div>
 </div>
 </section>

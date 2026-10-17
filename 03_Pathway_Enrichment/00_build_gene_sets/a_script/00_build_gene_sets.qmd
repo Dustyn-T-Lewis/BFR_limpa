@@ -11,9 +11,8 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root. `msigdbr`,
-`AnnotationDbi`, `GSEABase` and `GO.db` are called with `::` where needed and are not attached.
+`msigdbr`, `AnnotationDbi`, `GSEABase` and `GO.db` are called with `::` where needed and are not
+attached.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tibble, purrr, writexl)
@@ -209,8 +208,9 @@ sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
 
 GO Slim is the GO Consortium's generic cut-down of the GO hierarchy (140 broad terms), frozen in
 `goslim_generic.obo` with an md5 like the MSigDB snapshot. For each slim term, `GO.db`'s
-`GOBPOFFSPRING` returns every GO:BP term below it. CC and MF slim terms have no GO:BP offspring
-entry and come back `NA`, so dropping `NA` keeps BP terms only.
+`GOBPOFFSPRING` returns every GO:BP term below it. A term with no GO:BP offspring comes back
+`NA`: every CC and MF term, and any BP leaf term. Dropping `NA` keeps the BP terms that have
+offspring. `GO.db` itself is not frozen, so the README records the version used.
 
 ```{r slim-terms}
 slim_file <- file.path(cache_dir, "goslim_generic.obo")
@@ -285,17 +285,8 @@ sheets <- list(
   protein_gene_map = protein_map,
   mapping_summary = mapping_summary
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "Sets per collection, tested, median size",
-    "Every set, with qualifies marking the tested ones",
-    "Protein to gene, and the representative",
-    "Proteins per mapping outcome"
-  )
-)
 saveRDS(sets, file.path(out, "gene_sets.rds"), compress = "xz")
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "00_build_gene_sets.xlsx"))
+write_xlsx(sheets, file.path(out, "00_build_gene_sets.xlsx"))
 ```
 
 ## Session information

@@ -2242,7 +2242,7 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<p><code>pacman</code> loads the required packages and installs any that are missing. <code>here::i_am()</code> places this notebook in the repository, so paths resolve from the repository root. <code>GO.db</code>, <code>AnnotationDbi</code>, <code>eulerr</code> and <code>enrichVolcano</code> (the user’s own package, not on CRAN) are called with <code>::</code> for one job each.</p>
+<p><code>GO.db</code>, <code>AnnotationDbi</code>, <code>eulerr</code> and <code>enrichVolcano</code> (the user’s own package, not on CRAN) are called with <code>::</code> for one job each.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/07_leading_edge/a_script/07_leading_edge.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2391,13 +2391,12 @@ vertical-align: -.125em;
 </section>
 <section id="draw-figures" class="level2">
 <h2 class="anchored" data-anchor-id="draw-figures">Draw figures</h2>
-<p>All pages share a caption style. <code>page_caption()</code> wraps a caption at 115 characters.</p>
+<p>All pages share a caption style, with captions wrapped at 115 characters.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>page_caption <span class="ot">&lt;-</span> <span class="cf">function</span>(text) <span class="fu">str_wrap</span>(text, <span class="dv">115</span>)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>page_theme <span class="ot">&lt;-</span> <span class="fu">theme</span>(</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>),</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption.position =</span> <span class="st">&quot;plot&quot;</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>page_theme <span class="ot">&lt;-</span> <span class="fu">theme</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>),</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption.position =</span> <span class="st">&quot;plot&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>S20 puts every shared pathway on one page: a bar per pathway split into proteins in both leading edges and in one leg only, lowest overlap at the bottom of each collection.</p>
 <div class="cell">
@@ -2413,14 +2412,14 @@ vertical-align: -.125em;
 <span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
 <span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;leading-edge proteins&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">page_caption</span>(<span class="fu">paste</span>(</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">paste</span>(</span>
 <span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;S20 Figure. Leading-edge overlap between the legs. Every pathway that fgsea calls at FDR&quot;</span>,</span>
 <span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sprintf</span>(<span class="st">&quot;&lt; 0.05 in both training contrasts, in the same direction (%d,&quot;</span>, <span class="fu">nrow</span>(leading_edge)),</span>
 <span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;each a main set after collapse in at least one leg). Bars split each pathway&#39;s&quot;</span>,</span>
 <span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;leading-edge proteins into those shared by both legs and those in one leg only; lowest&quot;</span>,</span>
 <span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;overlap at the bottom of each collection. Leading edges move with small ranking changes,&quot;</span>,</span>
 <span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;so this describes and does not test. Data: leading_edge sheet of 07_leading_edge.xlsx.&quot;</span></span>
-<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    ), <span class="dv">115</span>)</span>
 <span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>) <span class="sc">+</span></span>
 <span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
@@ -2452,12 +2451,12 @@ vertical-align: -.125em;
 <span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>venn_pages <span class="ot">&lt;-</span> <span class="fu">split</span>(leading_edge<span class="sc">$</span>set_id, <span class="fu">ceiling</span>(<span class="fu">seq_along</span>(leading_edge<span class="sc">$</span>set_id) <span class="sc">/</span> <span class="dv">6</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(<span class="cf">function</span>(ids, page) {</span>
 <span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">wrap_plots</span>(<span class="fu">map</span>(ids, venn), <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">plot_annotation</span>(<span class="at">caption =</span> <span class="fu">page_caption</span>(<span class="fu">sprintf</span>(<span class="fu">paste</span>(</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">plot_annotation</span>(<span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">sprintf</span>(<span class="fu">paste</span>(</span>
 <span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;S21 Figure (page %s of %d). Leading edges by leg, one Venn per pathway in the order of&quot;</span>,</span>
 <span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;S20. Areas follow the counts of proteins in each leg&#39;s leading edge only and in both;&quot;</span>,</span>
 <span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;the proteins shared by both legs are listed under each title. Data: proteins sheet of&quot;</span>,</span>
 <span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;07_leading_edge.xlsx.&quot;</span></span>
-<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>      ), page, <span class="fu">ceiling</span>(<span class="fu">nrow</span>(leading_edge) <span class="sc">/</span> <span class="dv">6</span>))), <span class="at">theme =</span> page_theme)</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>      ), page, <span class="fu">ceiling</span>(<span class="fu">nrow</span>(leading_edge) <span class="sc">/</span> <span class="dv">6</span>)), <span class="dv">115</span>), <span class="at">theme =</span> page_theme)</span>
 <span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>  })</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>S22 draws the GO:BP parents with their child terms, eight parents to a page: BFR counts to the left of zero, HLRT to the right.</p>
@@ -2465,29 +2464,30 @@ vertical-align: -.125em;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>child_pages <span class="ot">&lt;-</span> go_children <span class="sc">|&gt;</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">proteins =</span> <span class="fu">if_else</span>(arm <span class="sc">==</span> <span class="st">&quot;BFR&quot;</span>, <span class="sc">-</span>proteins, proteins),</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">parent =</span> <span class="fu">str_wrap</span>(parent, <span class="dv">45</span>), <span class="at">child =</span> <span class="fu">str_trunc</span>(child, <span class="dv">50</span>)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  (<span class="cf">function</span>(rows) <span class="fu">split</span>(rows, <span class="fu">ceiling</span>(<span class="fu">match</span>(rows<span class="sc">$</span>parent, <span class="fu">unique</span>(rows<span class="sc">$</span>parent)) <span class="sc">/</span> <span class="dv">8</span>)))() <span class="sc">|&gt;</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(<span class="cf">function</span>(rows, page) {</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(rows, <span class="fu">aes</span>(proteins, child, <span class="at">fill =</span> arm)) <span class="sc">+</span></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_col</span>(<span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_wrap</span>(<span class="sc">~</span>parent, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> arm_colours, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> abs) <span class="sc">+</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
-<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> <span class="st">&quot;parent&#39;s leading-edge proteins in the child term (BFR left, HLRT right)&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
-<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="fu">page_caption</span>(<span class="fu">sprintf</span>(<span class="fu">paste</span>(</span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;S22 Figure (page %s of %d). GO:BP pathways both legs move, broken into their tested&quot;</span>,</span>
-<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;child terms. Bars count the parent&#39;s leading-edge proteins in each child, BFR to the&quot;</span>,</span>
-<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;left and HLRT to the right. Child terms overlap, so the counts are not tested. Data:&quot;</span>,</span>
-<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;go_children sheet of 07_leading_edge.xlsx.&quot;</span></span>
-<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>        ), page, <span class="fu">ceiling</span>(<span class="fu">n_distinct</span>(go_children<span class="sc">$</span>parent) <span class="sc">/</span> <span class="dv">8</span>)))</span>
-<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">8</span>) <span class="sc">+</span></span>
-<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>, <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="fl">6.5</span>)) <span class="sc">+</span></span>
-<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>      page_theme</span>
-<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>  })</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">parent =</span> <span class="fu">str_wrap</span>(parent, <span class="dv">45</span>), <span class="at">child =</span> <span class="fu">str_trunc</span>(child, <span class="dv">50</span>),</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">page =</span> <span class="fu">ceiling</span>(<span class="fu">match</span>(parent, <span class="fu">unique</span>(parent)) <span class="sc">/</span> <span class="dv">8</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">split</span>(<span class="sc">~</span>page) <span class="sc">|&gt;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(<span class="cf">function</span>(rows, page) {</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(rows, <span class="fu">aes</span>(proteins, child, <span class="at">fill =</span> arm)) <span class="sc">+</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_col</span>(<span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>) <span class="sc">+</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_wrap</span>(<span class="sc">~</span>parent, <span class="at">ncol =</span> <span class="dv">2</span>, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> arm_colours, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> abs) <span class="sc">+</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> <span class="st">&quot;parent&#39;s leading-edge proteins in the child term (BFR left, HLRT right)&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">sprintf</span>(<span class="fu">paste</span>(</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;S22 Figure (page %s of %d). GO:BP pathways both legs move, broken into their tested&quot;</span>,</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;child terms. Bars count the parent&#39;s leading-edge proteins in each child, BFR to the&quot;</span>,</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;left and HLRT to the right. Child terms overlap, so the counts are not tested. Data:&quot;</span>,</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;go_children sheet of 07_leading_edge.xlsx.&quot;</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>        ), page, <span class="fu">ceiling</span>(<span class="fu">n_distinct</span>(go_children<span class="sc">$</span>parent) <span class="sc">/</span> <span class="dv">8</span>)), <span class="dv">115</span>)</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">8</span>) <span class="sc">+</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>, <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="fl">6.5</span>)) <span class="sc">+</span></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>      page_theme</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>  })</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>All pages go to one A4 PDF, S20 first.</p>
 <div class="cell">
@@ -2549,18 +2549,10 @@ vertical-align: -.125em;
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>07_leading_edge.xlsx</code> opens with an <code>overview</code> sheet, then <code>leading_edge</code> (one row per pathway), <code>proteins</code> (one row per pathway and leading-edge protein) and <code>go_children</code> (one row per parent, child and leg).</p>
+<p><code>07_leading_edge.xlsx</code> holds <code>leading_edge</code> (one row per pathway), <code>proteins</code> (one row per pathway and leading-edge protein) and <code>go_children</code> (one row per parent, child and leg).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">leading_edge =</span> leading_edge, <span class="at">proteins =</span> proteins, <span class="at">go_children =</span> go_children)</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>overview <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">sheet =</span> <span class="fu">names</span>(sheets), <span class="at">rows =</span> <span class="fu">sapply</span>(sheets, nrow),</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="fu">c</span>(</span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;One row per pathway: leading-edge proteins in both legs or one, Jaccard index, NES per leg.&quot;</span>,</span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;One row per pathway and leading-edge protein, with the legs it appears in.&quot;</span>,</span>
-<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;GO:BP pathways both legs move, their tested child terms, and each leg&#39;s count there.&quot;</span></span>
-<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(<span class="fu">c</span>(<span class="fu">list</span>(<span class="at">overview =</span> overview), sheets), <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;07_leading_edge.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;07_leading_edge.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
@@ -2606,10 +2598,10 @@ loaded via a namespace (and not attached):
 [37] rprojroot_2.1.1      fastmap_1.2.0        grid_4.6.0          
 [40] cli_3.6.6            magrittr_2.0.5       eulerr_7.1.0        
 [43] utf8_1.2.6           withr_3.0.2          scales_1.4.0        
-[46] bit64_4.8.0          rmarkdown_2.31       XVector_0.52.0      
+[46] bit64_4.8.0          rmarkdown_2.32       XVector_0.52.0      
 [49] httr_1.4.8           bit_4.6.0            otel_0.2.0          
 [52] cellranger_1.1.0     png_0.1-9            memoise_2.0.1       
-[55] evaluate_1.0.5       knitr_1.51           IRanges_2.46.0      
+[55] evaluate_1.0.5       knitr_1.52           IRanges_2.46.0      
 [58] rlang_1.2.0          Rcpp_1.1.2           glue_1.8.1          
 [61] DBI_1.3.0            BiocGenerics_0.58.0  jsonlite_2.0.0      
 [64] R6_2.6.1            </code></pre>

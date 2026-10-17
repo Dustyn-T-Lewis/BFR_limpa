@@ -11,9 +11,7 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root. `enrichVolcano`, the
-user's own plotting package (not on CRAN), is called with `::`.
+`enrichVolcano`, the user's own plotting package (not on CRAN), is called with `::`.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
@@ -40,9 +38,8 @@ count(set_tests, method)
 
 Keep fgsea rows for the two training contrasts and widen to one row per set, with `_x` columns
 for BFR_Post-Pre and `_y` for HLRT_Post-Pre. `significance` records which arm reaches BH 0.05.
-A set is discordant when its two NES sit on opposite sides of zero; each discordant set here is
-significant in one arm only, so the opposite sign rests on the other arm's null. `survivor` marks
-sets that survived `collapsePathways` in either arm.
+A set is discordant when its two NES sit on opposite sides of zero. `survivor` marks sets that
+survived `collapsePathways` in either arm.
 
 ```{r pair}
 x_contrast <- "BFR_Post-Pre"
@@ -89,11 +86,24 @@ concordance <- function(data) {
 ```
 
 Three populations: every set, the collapse survivors, and Hallmark with GO Slim. Hallmark and GO
-Slim do not nest, so no branch of the GO:BP hierarchy weights rho towards its largest branch.
+Slim nest little, so no large branch of the GO:BP hierarchy dominates rho there.
 
 ```{r populations}
 survivors <- filter(paired, survivor)
 curated <- filter(paired, database %in% c("Hallmark", "GO_Slim"))
+```
+
+## Concordance summary
+
+One row per population.
+
+```{r summary}
+summary_table <- list(
+  "all collections" = paired, "collapse survivors" = survivors, "Hallmark and GO Slim" = curated
+) |>
+  map(concordance) |>
+  list_rbind(names_to = "population")
+summary_table
 ```
 
 ## Figure
@@ -119,7 +129,7 @@ figure <- enrichVolcano::plot_scatter(
         "fgsea NES for the %d Hallmark and GO Slim sets in %s (x) against %s (y).",
         nrow(curated), x_contrast, y_contrast
       ),
-      "These two collections do not nest, so no branch of the GO:BP hierarchy weights rho.",
+      "These two collections nest little, so no large branch of the GO:BP hierarchy dominates rho.",
       "Grey sets reach neither threshold; coloured ones are significant (BH < 0.05 within",
       "contrast) in one or both. Shaded quadrants move the same way in both contrasts, with",
       "their counts in the corners; dashed line is identity. The subtitle gives Spearman's rho.",
@@ -143,19 +153,6 @@ print(figure)
 invisible(dev.off())
 ```
 
-## Concordance summary
-
-One row per population.
-
-```{r summary}
-summary_table <- list(
-  "all collections" = paired, "collapse survivors" = survivors, "Hallmark and GO Slim" = curated
-) |>
-  map(concordance) |>
-  list_rbind(names_to = "population")
-summary_table
-```
-
 ## Save results
 
 `03_enrich_scatter_fgsea.xlsx` holds the concordance table, the discordant significant sets, and
@@ -176,18 +173,7 @@ sheets <- list(
   discordant = filter(export, discordant, significance != "NS"),
   nes_scatter = export
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "NES agreement between training contrasts",
-    "Sets with opposite NES signs",
-    "NES and adjusted p, both contrasts"
-  )
-)
-write_xlsx(
-  c(list(overview = overview), sheets),
-  file.path(stage, "c_data", "03_enrich_scatter_fgsea.xlsx")
-)
+write_xlsx(sheets, file.path(stage, "c_data", "03_enrich_scatter_fgsea.xlsx"))
 ```
 
 ## Session information

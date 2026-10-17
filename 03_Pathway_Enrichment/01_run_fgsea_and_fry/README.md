@@ -18,11 +18,14 @@ Outputs:
 - `b_reports/01_run_fgsea_and_fry_figures.pdf`: S1 (ten strongest collapse survivors per
   contrast, all collections), S2–S6 (the same within each collection) and S7 (significant sets
   before and after collapse).
-- `c_data/01_run_fgsea_and_fry.xlsx`: `set_tests`, one row per set, contrast and method, and
-  `protein_results`, every protein and contrast from the fit; `02_`, `03_` and `08_` read both,
-  `07_` reads `set_tests`.
+- `c_data/01_run_fgsea_and_fry.xlsx`, whose `set_tests` is read by `02_`, `03_`, `07_` and `08_`,
+  and `protein_results` by `02_` and `08_`:
+  - `set_summary`: one row per contrast: significant sets by fgsea, after collapse, and by fry.
+  - `protein_summary`: one row per contrast: proteins up and down at FDR 0.05, smallest FDR.
+  - `set_tests`: one row per set, contrast and method; `main` marks collapse survivors.
+  - `protein_results`: one row per protein and contrast from the fit, with the pi-score.
 
-Significant sets at an adjusted p below 0.05:
+Significant sets at an adjusted p below 0.05, BH over all 1,990 sets in the contrast:
 
 | Contrast | fgsea | after collapse | fry |
 |---|---:|---:|---:|
@@ -32,6 +35,7 @@ Significant sets at an adjusted p below 0.05:
 | Modality_x_Time_Interaction | 26 | 10 | 0 |
 | BFR_Pre-HLRT_Pre *(baseline)* | 1 | 1 | 0 |
 
-fry finds nothing on the between-leg contrasts, so the interaction's 10 fgsea pathways are leads
-rather than findings. The baseline contrast's one hit, `REACTOME_STRIATED_MUSCLE_CONTRACTION`, is
-the floor for every count.
+fry finds no set on either between-leg contrast, BFR_Post-HLRT_Post or the interaction, so their
+fgsea counts are leads only. The baseline contrast compares the legs before training, when no
+difference is expected, so its one fgsea hit, `REACTOME_STRIATED_MUSCLE_CONTRACTION`, shows what a
+contrast with nothing to find returns.

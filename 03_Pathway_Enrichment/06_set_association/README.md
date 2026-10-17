@@ -14,13 +14,17 @@ quarto render 03_Pathway_Enrichment/06_set_association/a_script/06_set_associati
 Outputs:
 
 - `b_reports/06_set_association.html`: the walkthrough.
-- `b_reports/06_association_<collection>.pdf`, one per collection: S17 (pooled) and S18
-  (differential), every set-outcome pair reaching nominal p, smallest p first, with the
-  within-arm correlations inset.
+- `b_reports/06_association_<collection>.pdf`, one per collection: every set-outcome pair
+  reaching nominal p, smallest p first. S17 (pooled) plots each leg, with the within-arm
+  correlations inset; S18 (differential) plots the BFR minus HLRT differences that were tested,
+  one point per participant.
 - `b_reports/06_chance_by_collection.pdf`: S19, nominal hits against chance by collection.
-- `c_data/06_set_association.xlsx`: `chance_expectation`, `set_association` (Spearman r, p and
-  BH q), `set_by_arm` (the same correlation inside each arm, descriptive) and `set_catalog`. Read
-  by no later step.
+- `c_data/06_set_association.xlsx`, read by no later step:
+  - `chance_expectation`: one row per analysis, outcome and collection; nominal hits against chance.
+  - `set_association`: one row per set, analysis and outcome; Spearman r, p and BH q, smallest p
+    first.
+  - `set_by_arm`: one row per set, arm and outcome; the same correlation inside each arm.
+  - `set_catalog`: one row per tested set, with its collection and measured size.
 
 No set tracks the phenotype after correction, and no protein does either
 (`02_Differential_Expression/03_Protein_Association`).

@@ -11,9 +11,7 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root. `pROC` and
-`enrichVolcano` (the user's own package, not on CRAN) are called with `::` for one function each.
+`pROC` and `enrichVolcano` (the user's own package, not on CRAN) are called with `::`.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
@@ -25,8 +23,7 @@ here::i_am("03_Pathway_Enrichment/05_set_classification/a_script/05_set_classifi
 Three inputs: the set catalogue from `00_build_gene_sets`, the singscore matrix from
 `04_run_singscore` (one row per set, one column per sample) and the sample targets stored with
 the protein estimates. The singscore matrix travels as rds, not through a workbook, because a
-round trip through xlsx breaks the exact rank ties the tests below depend on. Reading
-`proteins.rds` loads limma, which defines its stored class, and R says so in the output.
+round trip through xlsx breaks the exact rank ties the tests below depend on.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "05_set_classification")
@@ -71,9 +68,9 @@ legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
 head(legs, 4)
 ```
 
-`pair_by_treatment()` takes a leg table and the name of the column that identifies each leg, and
-returns one row per participant holding both legs, BFR and HLRT, in that column. Participants
-missing either leg are dropped.
+`pair_by_treatment()` puts each participant's BFR and HLRT legs side by side, one row per
+participant; participants without both legs drop out. It gives three pairings: baseline samples,
+post samples, and legs for the change scores.
 
 ```{r pair-participants}
 pair_by_treatment <- function(data, column) {
@@ -104,7 +101,7 @@ BFR against HLRT tasks compare the two legs of each participant at baseline, aft
 in change. `favours` is the group an AUC above 0.5 points to, so the figures can state direction.
 
 The baseline comparison is legs before any training, so it shows what the method returns when
-nothing is there. It is reported in the chance table but not drawn.
+nothing is there.
 
 ```{r tasks}
 arm <- split(legs, legs$treatment)
@@ -130,7 +127,6 @@ tasks <- list(
     label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
   )
 )
-drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 tibble(
   task = names(tasks), label = map_chr(tasks, "label"),
   pairs = map_int(tasks, function(spec) length(spec$positive)), favours = map_chr(tasks, "favours")
@@ -145,25 +141,12 @@ separation, 1 perfect separation upward, 0 perfect separation downward. It is co
 and ignores the pairing. The p-value comes from the paired Wilcoxon signed-rank test, which ranks
 the within-pair differences and asks whether they centre on zero, so it uses the pairing.
 
-`fit_roc()` takes one set's scores and a task, and returns the ROC fit. `paired_test()` takes a
-task and returns one row per set with its AUC and paired p. Ties among the differences make
-`wilcox.test()` warn that it cannot give an exact p; it falls back to the normal approximation,
-and the warning is suppressed.
-
-```{r paired-tests}
+```{r fit-roc}
 # pROC::roc() auto-orients: a true AUC of 0.194 comes back 0.806. direction = "<" pins it.
 fit_roc <- function(values, spec) {
   pROC::roc(
     controls = values[spec$negative], cases = values[spec$positive],
     direction = "<", quiet = TRUE
-  )
-}
-paired_test <- function(spec) {
-  tibble(
-    auc = apply(spec$values, 1, function(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
-    p_paired = apply(spec$values, 1, function(row) {
-      suppressWarnings(wilcox.test(row[spec$positive], row[spec$negative], paired = TRUE)$p.value)
-    })
   )
 }
 ```
@@ -177,7 +160,11 @@ within each task and collection, never pooled across them.
 set_auc <- imap(tasks, function(spec, name) {
   tibble(
     task = name, task_label = spec$label, set_id = rownames(spec$values),
-    n_pairs = length(spec$positive), paired_test(spec)
+    n_pairs = length(spec$positive),
+    auc = apply(spec$values, 1, function(row) as.numeric(pROC::auc(fit_roc(row, spec)))),
+    p_paired = apply(spec$values, 1, function(row) {
+      wilcox.test(row[spec$positive], row[spec$negative], paired = TRUE)$p.value
+    })
   )
 }) |>
   list_rbind() |>
@@ -207,27 +194,33 @@ denominator, so a 41-set collection is not read against a 1,366-set one, and BH 
 same split for the same reason.
 
 ```{r chance}
+# `expected` is rounded for display, so the ratio divides by the unrounded count.
 chance_expectation <- set_auc |>
   transmute(
     analysis = "classification", comparison = task_label, database, n_pairs, p = p_paired, fdr
   ) |>
   summarise(
     features = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
-    ratio = round(nominal / expected, 2), fdr_sig = sum(fdr < 0.05),
+    ratio = round(nominal / (n() * 0.05), 2), fdr_sig = sum(fdr < 0.05),
     .by = c(analysis, comparison, database, n_pairs)
   )
 head(chance_expectation, 6)
 ```
 
+Nominal hits as a multiple of chance, by task and collection, then the sets surviving BH in each
+task. Training moves the pre against post ratios well above 1; the BFR against HLRT tasks,
+baseline included, sit near or below it.
+
+```{r summary}
+chance_expectation |>
+  select(comparison, database, ratio) |>
+  pivot_wider(names_from = database, values_from = ratio)
+summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = comparison)
+```
+
 ## Draw figures
 
-The figure helpers below are shared line for line with `06_set_association`. `figure_theme` is
-the common look. `caption_text()` takes a figure title, the caption text and the page position,
-and returns the wrapped caption. `paginate()` takes rows with a `panel` factor and a function that
-draws one page, and returns a list of plots, twelve panels to a page. It builds each page from
-that page's rows, because a paginating facet would build every panel for every page.
-`chance_page()` draws the chance ratios as bars. `write_pdf()` writes a list of plots to one A4
-PDF in `b_reports/`.
+The figures share a theme, a caption builder and an A4 writer.
 
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -243,33 +236,6 @@ caption_text <- function(title, text, page = 1, n_pages = 1) {
   pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
   str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
 }
-paginate <- function(data, draw, title, text, scales = "fixed") {
-  pages <- split(data, (as.integer(data$panel) - 1) %/% 12)
-  imap(unname(pages), function(page, i) {
-    draw(droplevels(page)) +
-      facet_wrap(~panel, ncol = 3, nrow = 4, scales = scales) +
-      labs(caption = caption_text(title, text, i, length(pages))) +
-      figure_theme
-  })
-}
-chance_page <- function(data, y, facet, title, text) {
-  ggplot(data, aes(ratio, .data[[y]], fill = ratio > 1)) +
-    geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
-    geom_col(width = 0.65) +
-    geom_text(
-      aes(label = sprintf("%d of %d", nominal, features)),
-      hjust = -0.12, size = 2.5, colour = "grey25"
-    ) +
-    facet_wrap(vars(.data[[facet]]), ncol = 1) +
-    scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
-    labs(
-      x = "observed nominal hits / chance expectation", y = NULL,
-      caption = caption_text(title, text)
-    ) +
-    figure_theme +
-    theme(panel.grid.major.y = element_blank())
-}
 write_pdf <- function(pages, name) {
   pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
   walk(pages, print)
@@ -277,23 +243,11 @@ write_pdf <- function(pages, name) {
 }
 ```
 
-`chance_line()` takes a collection and returns the caption sentence giving its chance count.
-`set_label()` turns a collection and pathway name into a wrapped panel title.
-
-```{r label-helpers}
-chance_line <- function(db) {
-  n <- collection_sizes$n[collection_sizes$database == db]
-  sprintf("Nominal p, uncorrected: chance alone returns %.1f of the %d %s sets.", n * 0.05, n, db)
-}
-set_label <- function(database, pathway) {
-  str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40)
-}
-```
-
-`roc_figure()` takes a task, its S-number and a collection, and returns the ROC pages for every
-set in that collection reaching nominal p on that task, smallest p first, or an empty list when
-there are none. An ROC curve plots the true positive rate against the false positive rate as the
-score threshold moves; the area under it is the AUC.
+Each drawn task and collection gets pages of ROC curves for every set reaching nominal p, smallest
+p first, twelve to a page; a collection with no hits on a task adds no pages. Pages are built one
+at a time from their own rows, because a paginating facet would build every panel for every page.
+An ROC curve plots the true positive rate against the false positive rate as the score threshold
+moves; the area under it is the AUC.
 
 ```{r roc-figure}
 roc_figure <- function(task_name, number, db) {
@@ -312,27 +266,16 @@ roc_figure <- function(task_name, number, db) {
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = sprintf(
         "%s\nAUC %.2f   p %s   q %s",
-        set_label(database, pathway), auc, signif(p_paired, 2), signif(fdr, 2)
+        str_wrap(paste0(database, ": ", enrichVolcano::clean_label(pathway, width = 1000)), 40),
+        auc, signif(p_paired, 2), signif(fdr, 2)
       )
     )
   }) |>
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
-  paginate(curves, function(page) {
-    ggplot(page, aes(fpr, tpr, colour = direction, fill = direction)) +
-      geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
-      geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
-      geom_step(linewidth = 0.7, direction = "hv") +
-      scale_colour_manual(
-        values = c(higher = "#B2182B", lower = "#2166AC"), aesthetics = c("colour", "fill"),
-        guide = "none"
-      ) +
-      coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
-      scale_x_continuous(breaks = c(0, 0.5, 1)) +
-      scale_y_continuous(breaks = c(0, 0.5, 1)) +
-      labs(x = "1 - specificity", y = "sensitivity")
-  }, sprintf("S%d Figure", number), paste(
+  n_sets <- collection_sizes$n[collection_sizes$database == db]
+  caption_body <- paste(
     paste0(spec$label, ", ", db, "."),
     sprintf(
       "ROC curves for all %d %s sets whose singscore separates the groups at nominal p, across %d",
@@ -341,51 +284,86 @@ roc_figure <- function(task_name, number, db) {
     sprintf("paired %s, smallest p first. AUC has its direction fixed: red", spec$unit),
     sprintf("separates higher in %s, blue lower.", spec$favours),
     "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
-    "signed-rank test, q from BH within collection and task.", chance_line(db),
+    "signed-rank test, q from BH within collection and task.",
+    sprintf(
+      "Nominal p, uncorrected: chance alone returns %.1f of the %d %s sets.",
+      n_sets * 0.05, n_sets, db
+    ),
     "Data: set_auc sheet of 05_set_classification.xlsx."
-  ))
+  )
+  pages <- split(curves, (as.integer(curves$panel) - 1) %/% 12)
+  imap(unname(pages), function(page, i) {
+    ggplot(droplevels(page), aes(fpr, tpr, colour = direction, fill = direction)) +
+      geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
+      geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
+      geom_step(linewidth = 0.7, direction = "hv") +
+      facet_wrap(~panel, ncol = 3, nrow = 4) +
+      scale_colour_manual(
+        values = c(higher = "#B2182B", lower = "#2166AC"), aesthetics = c("colour", "fill"),
+        guide = "none"
+      ) +
+      coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+      scale_x_continuous(breaks = c(0, 0.5, 1)) +
+      scale_y_continuous(breaks = c(0, 0.5, 1)) +
+      labs(
+        x = "1 - specificity", y = "sensitivity",
+        caption = caption_text(sprintf("S%d Figure", number), caption_body, i, length(pages))
+      ) +
+      figure_theme
+  })
 }
 ```
 
 One PDF per collection, so each can be read on its own. The four drawn tasks are S12 to S15 in
-the order of `drawn_tasks`; S16 is the chance page across all five tasks.
+the order of `drawn_tasks`; S16 is the chance page across all five tasks. The baseline task is
+reported in the chance table but not drawn.
 
 ```{r write-figures}
+drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 walk(unique(catalog$database), function(db) {
   write_pdf(
     list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 11 + i, db))),
     paste0("05_classification_", db, ".pdf")
   )
 })
-write_pdf(list(chance_page(
-  mutate(chance_expectation, comparison = factor(comparison, map_chr(tasks, "label"))),
-  "database", "comparison", "S16 Figure", paste(
-    "Nominal hits relative to chance, by collection. Paired Wilcoxon per set across",
-    nrow(collection_sizes), "collections, uncorrected p. Bar length is observed nominal hits",
-    "divided by the count that collection returns under the null; red clears 1, grey does not.",
-    "Labels give observed of tested. Data: chance_expectation sheet of 05_set_classification.xlsx."
-  )
-)), "05_chance_by_collection.pdf")
 ```
 
-## Summary
+S16 draws each ratio as a bar, one panel per task.
 
-Nominal hits as a multiple of chance, by task and collection, then the sets surviving BH in each
-task. Training moves the pre against post ratios well above 1; the BFR against HLRT tasks,
-baseline included, sit near or below it.
-
-```{r summary}
-chance_expectation |>
-  select(comparison, database, ratio) |>
-  pivot_wider(names_from = database, values_from = ratio)
-summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = comparison)
+```{r chance-figure}
+chance_plot <- chance_expectation |>
+  mutate(comparison = factor(comparison, map_chr(tasks, "label"))) |>
+  ggplot(aes(ratio, database, fill = ratio > 1)) +
+  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+  geom_col(width = 0.65) +
+  geom_text(
+    aes(label = sprintf("%d of %d", nominal, features)),
+    hjust = -0.12, size = 2.5, colour = "grey25"
+  ) +
+  facet_wrap(vars(comparison), ncol = 1) +
+  scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
+  labs(
+    x = "observed nominal hits / chance expectation", y = NULL,
+    caption = caption_text("S16 Figure", paste(
+      "Nominal hits relative to chance, by collection. Paired Wilcoxon per set across",
+      nrow(collection_sizes), "collections, uncorrected p. Bar length is observed nominal hits",
+      "divided by the count that collection returns under the null; red clears 1, grey does not.",
+      "Labels give observed of tested.",
+      "Data: chance_expectation sheet of 05_set_classification.xlsx."
+    ))
+  ) +
+  figure_theme +
+  theme(panel.grid.major.y = element_blank())
+write_pdf(list(chance_plot), "05_chance_by_collection.pdf")
+chance_plot
 ```
 
 ## Save results
 
-`05_set_classification.xlsx` opens with an `overview` sheet, then `chance_expectation` (nominal
-hits against chance per task and collection), `set_auc` (AUC, paired p and BH q per set and task,
-smallest p first) and `set_catalog` (every tested set).
+`05_set_classification.xlsx` holds `chance_expectation` (nominal hits against chance per task and
+collection), `set_auc` (AUC, paired p and BH q per set and task, smallest p first) and
+`set_catalog` (every tested set).
 
 ```{r write}
 sheets <- list(
@@ -393,18 +371,7 @@ sheets <- list(
   set_auc = arrange(set_auc, p_paired),
   set_catalog = catalog
 )
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "Nominal hits against chance, per collection. Read this first.",
-    "How well each set separates each task. AUC from ranks, p from paired test.",
-    "Every tested set with its collection and measured size."
-  )
-)
-write_xlsx(
-  c(list(overview = overview), sheets),
-  file.path(stage, "c_data", "05_set_classification.xlsx")
-)
+write_xlsx(sheets, file.path(stage, "c_data", "05_set_classification.xlsx"))
 ```
 
 ## Session information

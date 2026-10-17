@@ -13,14 +13,16 @@ Outputs:
 
 - `b_reports/03_enrich_scatter_fgsea.html`: the walkthrough.
 - `b_reports/03_enrich_scatter_fgsea_figures.pdf`: S10, the NES scatter for Hallmark and GO Slim.
-- `c_data/03_enrich_scatter_fgsea.xlsx`: the concordance table below, the discordant sets, and
-  both NES with adjusted p for every set.
+- `c_data/03_enrich_scatter_fgsea.xlsx`, read by no later step:
+  - `concordance`: one row per population: NES agreement between the training contrasts.
+  - `discordant`: one row per significant set whose two NES have opposite signs.
+  - `nes_scatter`: one row per set: both NES and adjusted p, rounded for reading.
 
 | Population | Sets | rho | Significant | Discordant |
 |---|---:|---:|---:|---:|
-| All collections | 1,990 | 0.83 | 418 | 8 |
-| Collapse survivors | 126 | 0.86 | 126 | 3 |
-| Hallmark and GO Slim | 100 | 0.82 | 25 | 0 |
+| All collections | 1,990 | 0.827 | 418 | 8 |
+| Collapse survivors | 126 | 0.861 | 126 | 3 |
+| Hallmark and GO Slim | 100 | 0.815 | 25 | 0 |
 
 A set is discordant when its two NES have opposite signs. None significant in both arms changes
-sign: both modalities moved the same pathways by similar amounts.
+sign: both modalities moved the same pathways in the same direction.

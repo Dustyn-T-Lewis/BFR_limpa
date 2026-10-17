@@ -13,13 +13,14 @@ quarto render 03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.q
 Outputs:
 
 - `b_reports/04_run_singscore.html`: the walkthrough.
-- `b_reports/04_run_singscore_figures.pdf`: S11, mean score against mean dispersion per set, and
-  the score distribution per study group.
+- `b_reports/04_run_singscore_figures.pdf`: S11, mean score against mean dispersion per set.
 - `c_data/set_scores.rds`: the set-by-sample score matrix, read by `05_set_classification` and
   `06_set_association`. It travels as rds because an Excel round trip breaks singscore's exact
   rank ties.
-- `c_data/04_run_singscore.xlsx`: the same matrix for reading, per-collection medians and the
-  principal-component check.
+- `c_data/04_run_singscore.xlsx`, read by no later step:
+  - `collection_spread`: one row per collection: median score and median dispersion.
+  - `structure_check`: one row per principal component: variance explained, participant share.
+  - `set_scores`: the set-by-sample score matrix for reading, one row per set.
 
 Participant dominates the raw scores (PC1 explains 33.6% of variance, participant 0.64 of PC1),
 so later steps use within-leg change.

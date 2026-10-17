@@ -28,11 +28,11 @@ live in these READMEs, not on the figures.
 
 | Step | Question | Answer |
 |---|---|---|
-| `01_run_fgsea_and_fry` | Which sets move with training? | fgsea 376 BFR and 281 HLRT sets (88 and 68 after collapse); fry 656 and 589. Between the arms fry finds none. |
-| `03_enrich_scatter_fgsea` | Do both arms move the same sets? | Yes. Across Hallmark and GO Slim rho is 0.81, and all 25 significant sets move the same way in both. |
+| `01_run_fgsea_and_fry` | Which sets move with training? | fgsea 376 BFR and 281 HLRT sets (88 and 68 after collapse); fry 656 and 589. Between the arms fry finds none, so fgsea's between-arm sets are leads only. |
+| `03_enrich_scatter_fgsea` | Do both arms move the same sets? | Yes. Across Hallmark and GO Slim rho is 0.815, and all 25 significant sets move the same way in both. |
 | `05_set_classification` | Does a set's score separate the groups? | 9 sets on BFR training and 49 on HLRT after BH; BFR against HLRT sits at chance. |
 | `06_set_association` | Does a set's score change track the phenotype? | No set survives BH. |
-| `07_leading_edge` | Do both legs move a shared pathway through the same proteins? | Mostly. Across the 71 pathways both legs move, a median 58% of leading-edge proteins are shared (41% to 100%). |
+| `07_leading_edge` | Do both legs move a shared pathway through the same proteins? | Overlap only, untested: across the 71 pathways both legs move, a median 58% of leading-edge proteins are shared (41% to 100%). |
 | `08_pathway_maps` | How do the pathways each leg moves cluster, and which proteins link them? | Figures only; the main sets of `01_` drawn as maps per collection. |
 
 ## Methods
@@ -41,3 +41,7 @@ fgsea is a competitive test. It asks whether a set sits toward one end of the pr
 assumes exchangeable proteins, which co-regulated sets violate. fry is self-contained. It asks
 whether the set moved at all under the fitted design and makes no such assumption. Both run on the
 same 1,990 sets and both ship.
+
+`01_` adjusts BH over all 1,990 sets in a contrast, for fgsea and fry alike. `05_` adjusts within
+each collection and task, and `06_` within each collection, analysis and outcome, so a count from
+`01_` and one from `05_` or `06_` answer different families of tests.

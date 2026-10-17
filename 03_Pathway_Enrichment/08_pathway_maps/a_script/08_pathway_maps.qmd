@@ -11,10 +11,8 @@ knitr:
 
 ## Load packages
 
-`pacman` loads the required packages and installs any that are missing. `here::i_am()` places
-this notebook in the repository, so paths resolve from the repository root. `clusterProfiler`
-runs the enrichment and `enrichplot` draws it; `enrichVolcano` (the user's own package, not on
-CRAN) is called with `::` for its label cleaner.
+`clusterProfiler` runs the enrichment and `enrichplot` draws it; `enrichVolcano` (the user's own
+package, not on CRAN) is called with `::` for its label cleaner.
 
 ```{r setup}
 pacman::p_load(here, dplyr, purrr, stringr, ggplot2, readxl, clusterProfiler, enrichplot)
@@ -79,9 +77,11 @@ count(drawn, database)
 ## Run the enrichment
 
 enrichplot's maps need a clusterProfiler result object, so `compareCluster()` runs GSEA on both
-rankings at once. It uses fgsea underneath, with the same sets, size limits and rankings as `01`.
-`run_gsea()` takes a collection and returns that result for its sets. The seed is set right before
-the call, so fgsea's permutations are the same on every run.
+rankings at once, with the same sets, size limits and rankings as `01`. clusterProfiler 4.20 runs
+GSEA through enrichit, whose multilevel algorithm is derived from fgsea's but is separate code, so
+the check below compares its normalised enrichment scores (NES) with `01`'s. `run_gsea()` runs
+once per collection, and the check and the maps both read the results in `compared`. The seed is set right before each call, so the permutations are the same on
+every run.
 
 ```{r run-gsea}
 run_gsea <- function(db) {
@@ -89,14 +89,39 @@ run_gsea <- function(db) {
   term_gene <- stack(members)[, c("ind", "values")]
   term_name <- select(filter(labels, database == db), set_id, label)
   set.seed(1)
-  # compareCluster does not pass eps on to fgsea, so p below 1e-10 is floored with a warning.
-  # The floor only shades the dots; significance comes from 01.
+  # GSEA() drops `...`, so eps never reaches enrichit and p below 1e-10 is floored with a warning.
+  # The floored p reach no figure: the pathways come from 01, and colour is NES.
   suppressWarnings(compareCluster(
     ranked,
     fun = "GSEA", TERM2GENE = term_gene, TERM2NAME = term_name,
     minGSSize = 15, maxGSSize = 500, pvalueCutoff = 1, verbose = FALSE
   ))
 }
+compared <- map(set_names(unique(labels$database)), run_gsea)
+```
+
+## Check against 01
+
+Join each set and leg's NES from this run to the fgsea NES in `set_tests`, and report the
+correlation and the largest absolute difference per collection.
+
+```{r check}
+nes_check <- compared |>
+  map(function(result) {
+    transmute(
+      as.data.frame(result),
+      set_id = as.character(ID), contrast = arms[as.character(Cluster)], NES_08 = NES
+    )
+  }) |>
+  list_rbind() |>
+  inner_join(
+    filter(set_tests, method == "fgsea") |> select(set_id, database, contrast, NES),
+    by = c("set_id", "contrast")
+  )
+nes_check |>
+  summarise(
+    pairs = n(), r = cor(NES_08, NES), max_abs_diff = max(abs(NES_08 - NES)), .by = database
+  )
 ```
 
 ## Draw figures
@@ -114,15 +139,15 @@ caption_theme <- theme(
   plot.caption.position = "plot"
 )
 source_note <- paste(
-  "Pathways are the collapse-surviving fgsea sets that 01_run_fgsea_and_fry calls at FDR < 0.05",
-  "in either training contrast. Data: set_tests sheet of 01_run_fgsea_and_fry.xlsx."
+  "Pathways chosen from set_tests (01_run_fgsea_and_fry.xlsx): the collapse-surviving fgsea sets",
+  "at FDR < 0.05 in either training contrast. NES and leading edges from the compareCluster run."
 )
 ```
 
-`maps()` takes a collection and returns its four pages. Pathway similarity is computed only among
-the drawn pathways, since GO:BP holds 1,366 sets.
+`maps()` draws a collection's four pages from `compared`. Pathway similarity is computed only among the drawn pathways, since GO:BP holds 1,366
+sets.
 
-- S23, dotplot: BFR and HLRT side by side, colour NES (normalised enrichment score, signed), dot
+- S23, dotplot: BFR and HLRT side by side, colour NES (signed), dot
   size the share of the pathway in its leading edge, the proteins ranked before the running-sum
   peak.
 - S24, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
@@ -133,8 +158,7 @@ the drawn pathways, since GO:BP holds 1,366 sets.
 ```{r maps}
 maps <- function(db) {
   show <- filter(drawn, database == db)$label
-  compared <- run_gsea(db)
-  shown <- filter(compared, Description %in% show)
+  shown <- filter(compared[[db]], Description %in% show)
   similar <- pairwise_termsim(shown, showCategory = length(show))
   list(
     # dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.
@@ -170,10 +194,7 @@ maps <- function(db) {
 }
 ```
 
-One A4 PDF per collection, four pages each. ggplot2 reports, once per collection, that a fill
-scale and a coordinate system are being replaced. The fill scale is this notebook's colours
-replacing enrichplot's default; the coordinate message comes from inside enrichplot. Neither is a
-fault.
+One A4 PDF per collection, four pages each.
 
 ```{r write-figures}
 walk(unique(drawn$database), function(db) {
@@ -181,29 +202,6 @@ walk(unique(drawn$database), function(db) {
   walk(maps(db), print)
   invisible(dev.off())
 })
-```
-
-## Check against 01
-
-The maps are only as good as their agreement with `01`. Rerun the enrichment for every
-collection, join each set and leg's NES to the fgsea NES in `set_tests`, and report the
-correlation and the largest absolute difference. This runs after the figures and resets its own
-seed, so it cannot change them.
-
-```{r check}
-nes_check <- map(unique(labels$database), function(db) {
-  as.data.frame(run_gsea(db)) |>
-    transmute(set_id = as.character(ID), contrast = arms[as.character(Cluster)], NES_08 = NES) |>
-    inner_join(
-      filter(set_tests, method == "fgsea") |> select(set_id, database, contrast, NES),
-      by = c("set_id", "contrast")
-    )
-}) |>
-  list_rbind()
-nes_check |>
-  summarise(
-    pairs = n(), r = cor(NES_08, NES), max_abs_diff = max(abs(NES_08 - NES)), .by = database
-  )
 ```
 
 ## Summary
