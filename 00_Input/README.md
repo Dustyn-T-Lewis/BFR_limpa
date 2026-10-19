@@ -20,7 +20,8 @@ DIA-NN wrote the report already filtered at a precursor `Q.Value` and `Lib.Q.Val
 the protein-group cutoff in `readDIANN()` removes further rows.
 
 `phenotype.csv` stores both timepoints on the same row, with total training volume recorded per
-leg.
+leg. It covers 35 participants: S22 and S34 have no MS runs, and the association steps join
+phenotype onto the proteomics legs, so they drop out.
 
 `report.parquet` is stored in the `data-v1` release because it is too large for Git. See the
 [project README](../README.md) for the download command.
