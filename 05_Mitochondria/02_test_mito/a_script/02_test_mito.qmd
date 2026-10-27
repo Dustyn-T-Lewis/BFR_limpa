@@ -71,7 +71,6 @@ targets <- proteins$targets
 ## Prepare the sets
 
 `coverage` counts, for each set, the genes MitoCarta lists and how many of them we measure.
-`sets` turns the measured genes into a named list, one character vector per set.
 
 MitoCarta keeps small pathways because some functions are one or two proteins, so there is no size
 floor. The 20% coverage floor is ours, not a published rule: below it the measured part says little
@@ -149,13 +148,13 @@ mitochondrial content, so a protein that only rose with the rest of the mitochon
 shows a change. The papers used VSN; we use cyclic loess, as for the main matrix.
 
 The refit follows stage 02: `dpcDE()` reads the standard errors from `dpcQuant()` as precision
-weights, `sample.weights = TRUE` adds one quality weight per sample, and `eBayes(robust = TRUE)`
-moderates the variances. `plot = FALSE` skips `dpcDE()`'s diagnostic plot.
+weights, with no per-sample quality weights, and `eBayes(robust = TRUE)` moderates the variances.
+`plot = FALSE` skips `dpcDE()`'s diagnostic plot.
 
 ```{r mito-fit}
 mito <- raw[is_mito, ]
 mito$E <- normalizeBetweenArrays(mito$E, method = "cyclicloess")
-mito_fit <- dpcDE(mito, d$design, plot = FALSE, sample.weights = TRUE) |>
+mito_fit <- dpcDE(mito, d$design, plot = FALSE) |>
   contrasts.fit(d$contrasts) |>
   eBayes(robust = TRUE)
 ```
@@ -182,8 +181,8 @@ precision weights from `y$weights`. `ids2indices()` turns each set's gene symbol
 positions, matching only each symbol's representative protein, as in `01_run_fgsea_and_fry`. fry
 returns its own BH FDR per contrast.
 
-`fry_sets()` takes a protein matrix, its weights and a list of sets, and returns one row per set
-and contrast. It runs on both fits for the complexes and on the normalised fit for MitoPathways.
+`fry_sets()` returns one row per set and contrast. It runs on both fits for the complexes and on
+the normalised fit for MitoPathways.
 
 ```{r fry-helper}
 representative <- with(protein_map, set_names(if_else(selected, gene, NA), protein))
@@ -298,10 +297,9 @@ complex_page <- complex_tests |>
   theme(axis.text.x = element_text(angle = 30, hjust = 1), legend.position = "top")
 ```
 
-Page 3: volcanoes of the normalised proteins with fgsea rings, drawn by `enrichVolcano`. `as_da()`
-and `as_enrichment()` put the protein and pathway tables into its format; the leading-edge genes
-become protein labels so the ring's ticks find their points. `dedup_terms()` keeps one pathway per
-overlapping cluster, and the ring draws the twelve with the lowest adjusted p.
+Page 3: volcanoes of the normalised proteins with fgsea rings, drawn by `enrichVolcano`. The
+leading-edge genes become protein labels so the ring's ticks find their points. `dedup_terms()`
+keeps one pathway per overlapping cluster, and the ring draws the twelve with the lowest adjusted p.
 
 ```{r enrichment}
 da <- enrichVolcano::as_da(
@@ -316,8 +314,8 @@ enrichment <- fgsea_raw |>
   enrichVolcano::dedup_terms(pathways)
 ```
 
-`volcano()` draws one contrast. As in `02_enrich_volcano_fgsea`, the NES key goes horizontal below
-the ring. The baseline contrast is not drawn.
+As in `02_enrich_volcano_fgsea`, the NES key goes horizontal below the ring. The baseline contrast
+is not drawn.
 
 ```{r volcano-page}
 volcano <- function(cn) {
@@ -332,8 +330,7 @@ volcano <- function(cn) {
       legend.key.width = unit(16, "mm")
     )
 }
-drawn <- setdiff(contrast_names, d$baseline)
-volcano_page <- wrap_plots(map(drawn, volcano), ncol = 2) +
+volcano_page <- wrap_plots(map(setdiff(contrast_names, d$baseline), volcano), ncol = 2) +
   plot_annotation(title = "Mitochondria-normalised proteins")
 ```
 
@@ -367,12 +364,14 @@ pathway_tests |>
 `02_test_mito.xlsx` holds one sheet per table. `03_complex_subunits` reads `complex_tests`.
 
 ```{r write}
-sheets <- list(
-  mpe = mpe, mpe_test = mpe_test, citrate_synthase = citrate_synthase,
-  complex_tests = complex_tests,
-  pathway_tests = pathway_tests, mito_proteins = mito_proteins
+write_xlsx(
+  list(
+    mpe = mpe, mpe_test = mpe_test, citrate_synthase = citrate_synthase,
+    complex_tests = complex_tests,
+    pathway_tests = pathway_tests, mito_proteins = mito_proteins
+  ),
+  file.path(stage, "c_data", "02_test_mito.xlsx")
 )
-write_xlsx(sheets, file.path(stage, "c_data", "02_test_mito.xlsx"))
 ```
 
 ## Session information
