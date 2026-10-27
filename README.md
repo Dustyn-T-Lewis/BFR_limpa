@@ -16,7 +16,7 @@ proteome differently than heavy load.
 | `01_Preprocess/` | search output to a normalised protein table | ready |
 | `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
-| `04_Network/` | proteins that move together | planned |
+| `04_Network/` | protein co-expression modules (WGCNA) | ready |
 | `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
 | `06_Composition/` | fibre type, and DE adjusted for composition | export only |
 | `0X_Figures/` | manuscript panels, built last | planned |
@@ -48,6 +48,8 @@ for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea 03_run_
   quarto render 03_Pathway_Enrichment/$s/a_script/$s.qmd --output-dir ../b_reports
 done
 
+quarto render 04_Network/01_modules/a_script/01_modules.qmd --output-dir ../b_reports
+
 for s in 01_build_mito_sets 02_test_mito 03_complex_subunits; do
   quarto render 05_Mitochondria/$s/a_script/$s.qmd --output-dir ../b_reports
 done
@@ -55,7 +57,7 @@ done
 quarto render 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd --output-dir ../b_reports
 ```
 
-The block takes about five minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
+The block takes about ten minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
 `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
 only when the precursor matrix changes.
 
@@ -78,4 +80,5 @@ notebook only calls as `pkg::fun()` are not attached, so install them once befor
 - Stage 03 adds `patchwork`, `clusterProfiler`, `enrichplot` and `ggvenn`, and calls `fgsea`,
   `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi` and `enrichVolcano` 2.0.0 or later
   (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on CRAN).
+- Stage 04 adds `WGCNA`.
 - Stages 05 and 06 need nothing new.

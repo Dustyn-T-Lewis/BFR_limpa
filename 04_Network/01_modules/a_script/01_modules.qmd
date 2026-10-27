@@ -1,0 +1,278 @@
+---
+title: "01 · Modules"
+format:
+  html:
+    toc: true
+    embed-resources: true
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+WGCNA is attached because it looks up its correlation function (`bicor`) by name; it masks
+`stats::cor()` with a compatible version.
+
+```{r setup}
+pacman::p_load(here, WGCNA, limma, dplyr, tibble, tidyr, purrr, ggplot2, readxl, writexl)
+here::i_am("04_Network/01_modules/a_script/01_modules.qmd")
+disableWGCNAThreads()
+```
+
+## Read inputs
+
+The question: which proteins move together across samples, whether or not a curated set groups
+them, and do those groups respond to training, differ between the arms, or track muscle growth?
+WGCNA (weighted gene co-expression network analysis; Langfelder and Horvath 2008,
+doi:10.1186/1471-2105-9-559) groups proteins into modules by correlation and summarises each
+module by its eigengene, the first principal component of its members.
+
+Inputs: the protein estimates, the stage 02 design and contrasts, the association designs from
+`03_Protein_Association`, and the gene sets and protein-to-gene map from `00_build_gene_sets`.
+
+```{r read}
+stage <- here("04_Network", "01_modules")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+association_designs <- readRDS(here(
+  "02_Differential_Expression", "03_Protein_Association", "c_data", "association_designs.rds"
+))
+sets_dir <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
+sets <- readRDS(file.path(sets_dir, "gene_sets.rds"))
+gene_of <- read_excel(file.path(sets_dir, "00_build_gene_sets.xlsx"), "protein_gene_map") |>
+  filter(selected)
+targets <- proteins$targets
+stopifnot(identical(colnames(proteins$E), rownames(d$design)))
+dim(proteins$E)
+```
+
+## Remove participant
+
+Participant explains most of the leading variation, so a network on raw abundance would mostly
+group proteins by who the biopsy came from. The WGCNA FAQ asks for such effects to be removed
+first, and the Bioconductor forum answer for paired designs (support.bioconductor.org/p/86486,
+/p/126464) is `removeBatchEffect()` with participant as the batch and the treatment-by-time group
+as the design to protect. Every protein enters: the FAQ advises against filtering by differential
+expression.
+
+```{r adjust}
+adjusted <- removeBatchEffect(
+  proteins$E, batch = targets$participant, design = model.matrix(~ 0 + group, targets)
+)
+expression <- t(adjusted)
+```
+
+## Pick the soft threshold
+
+A signed network keeps the sign of correlation, so proteins that move in opposite directions do
+not join. Biweight midcorrelation (bicor) down-weights outlying samples; `maxPOutliers = 0.1` caps
+how many count as outliers, as the FAQ suggests. The soft power raises correlations to make the
+network approximately scale-free; `pickSoftThreshold()` returns the lowest power whose fit reaches
+R² 0.85, and the FAQ's table value for a signed network on more than 40 samples, 12, stands in if
+none does.
+
+```{r soft-threshold}
+#| results: hide
+soft <- pickSoftThreshold(
+  expression,
+  powerVector = c(1:10, seq(12, 20, 2)), networkType = "signed", corFnc = "bicor",
+  corOptions = list(maxPOutliers = 0.1), verbose = 0
+)
+power <- coalesce(soft$powerEstimate, 12)
+soft_threshold <- transmute(
+  soft$fitIndices,
+  power = Power, signed_r2 = -sign(slope) * SFT.R.sq, mean_connectivity = mean.k.
+)
+```
+
+```{r power}
+power
+```
+
+## Find modules
+
+`blockwiseModules()` builds the network in one block and cuts the topological-overlap tree into
+modules with the tutorial settings: at least 30 proteins, modules merged when their eigengenes
+correlate above 0.75 (`mergeCutHeight = 0.25`). Module 0 (grey) holds the proteins no module
+takes, and it is never tested.
+
+```{r modules}
+network <- blockwiseModules(
+  expression,
+  power = power, networkType = "signed", TOMType = "signed", corType = "bicor",
+  maxPOutliers = 0.1, minModuleSize = 30, mergeCutHeight = 0.25, deepSplit = 2,
+  pamRespectsDendro = FALSE, maxBlockSize = 5000, numericLabels = TRUE, verbose = 0
+)
+modules <- paste0("M", network$colors)
+eigengenes <- network$MEs |>
+  select(-ME0) |>
+  rename_with(function(x) sub("ME", "M", x)) |>
+  t()
+```
+
+Module membership (kME) is each protein's bicor with each eigengene; a protein's kME with its own
+module says how central it is.
+
+```{r membership}
+kme <- signedKME(
+  expression, network$MEs, corFnc = "bicor", corOptions = "maxPOutliers = 0.1"
+)
+membership <- tibble(
+  protein = colnames(expression), gene = proteins$genes$Genes, module = modules,
+  kme = kme[cbind(seq_len(nrow(kme)), match(paste0("kME", network$colors), colnames(kme)))]
+) |>
+  arrange(module, desc(kme))
+count(membership, module)
+```
+
+## Test the eigengenes
+
+Eigengenes carry no standard errors, so they go through plain limma, with the stage 02 design
+(participant fixed) and its five contrasts. With about ten rows there is little for `eBayes()` to
+borrow, so, as for log2 MPE in `05_Mitochondria/02_test_mito`, the test is the least-squares t with
+`df.residual` degrees of freedom and a 95% interval. BH runs within each contrast across modules.
+`plain_t()` turns one coefficient of a fit into that table.
+
+```{r plain-t}
+plain_t <- function(fit, coef) {
+  tibble(
+    module = rownames(fit$coefficients), estimate = fit$coefficients[, coef],
+    se = fit$stdev.unscaled[, coef] * fit$sigma, df = fit$df.residual
+  ) |>
+    mutate(
+      t = estimate / se, p = 2 * pt(-abs(t), df),
+      conf.low = estimate - qt(0.975, df) * se, conf.high = estimate + qt(0.975, df) * se,
+      fdr = p.adjust(p, "BH")
+    )
+}
+```
+
+```{r contrast-tests}
+contrast_fit <- contrasts.fit(lmFit(eigengenes, d$design), d$contrasts)
+eigengene_tests <- map(set_names(colnames(d$contrasts)), function(cn) plain_t(contrast_fit, cn)) |>
+  list_rbind(names_to = "contrast")
+filter(eigengene_tests, fdr < 0.05)
+```
+
+The association slope uses the eight designs of `03_Protein_Association`: each module's eigengene
+change against each leg's outcome change, pooled over legs and within participant, coefficient
+`post:x`. BH runs within each analysis and outcome across modules.
+
+```{r association-tests}
+eigengene_association <- imap(association_designs, function(design, ranking) {
+  plain_t(lmFit(eigengenes, design), "post:x")
+}) |>
+  list_rbind(names_to = "ranking") |>
+  separate_wider_delim(ranking, "_", names = c("analysis", "outcome"), too_many = "merge")
+filter(eigengene_association, fdr < 0.05)
+```
+
+## Enrich the modules
+
+`fgsea::fora()` runs a hypergeometric test of each module's genes against the project's one set
+list, with every measured gene as the universe and the size limits of `01_run_fgsea_and_fry`; its
+`padj` is BH within the module.
+
+```{r enrichment}
+module_genes <- membership |>
+  filter(module != "M0", protein %in% gene_of$protein) |>
+  mutate(gene = gene_of$gene[match(protein, gene_of$protein)])
+enrichment <- map(split(module_genes$gene, module_genes$module), function(genes) {
+  fgsea::fora(sets, genes, universe = gene_of$gene, minSize = 15, maxSize = 500)
+}) |>
+  list_rbind(names_to = "module") |>
+  mutate(overlapGenes = map_chr(overlapGenes, paste, collapse = ";"))
+enrichment |>
+  filter(padj < 0.05) |>
+  slice_min(padj, n = 3, by = module) |>
+  select(module, pathway, overlap, padj)
+```
+
+## Check preservation
+
+Module preservation (Langfelder et al. 2011, doi:10.1371/journal.pcbi.1001057) asks whether the
+modules found in the pre-training samples hold in the post-training ones. Zsummary above 10 is
+strong evidence of preservation, 2 to 10 weak to moderate, below 2 none. The module labels come
+from all samples, so this check is mildly optimistic. 200 permutations, seeded.
+
+```{r preservation}
+pre <- targets$timepoint == "T1"
+preserved <- modulePreservation(
+  list(T1 = list(data = expression[pre, ]), T2 = list(data = expression[!pre, ])),
+  list(T1 = labels2colors(network$colors)),
+  referenceNetworks = 1, nPermutations = 200, networkType = "signed", corFnc = "bicor",
+  corOptions = "maxPOutliers = 0.1", randomSeed = 1, savePermutedStatistics = FALSE, verbose = 0
+)
+z <- preserved$preservation$Z$ref.T1$inColumnsAlsoPresentIn.T2
+ranks <- preserved$preservation$observed$ref.T1$inColumnsAlsoPresentIn.T2
+colour_of <- set_names(paste0("M", network$colors), labels2colors(network$colors))
+preservation <- tibble(
+  module = colour_of[rownames(z)], colour = rownames(z), size = z$moduleSize,
+  z_summary = z$Zsummary.pres, median_rank = ranks[rownames(z), "medianRank.pres"]
+) |>
+  filter(!colour %in% c("grey", "gold")) |>
+  arrange(desc(z_summary))
+preservation
+```
+
+## Draw figures
+
+One A4 PDF: the soft-threshold fit, the protein dendrogram with module colours (WGCNA's own
+`plotDendroAndColors()`), and a heatmap of module t statistics across the contrasts and the
+association slopes, labelled where BH-adjusted p < 0.05.
+
+```{r figures}
+threshold_page <- ggplot(soft_threshold, aes(power, signed_r2, label = power)) +
+  geom_hline(yintercept = 0.85, linetype = "dashed", colour = "grey60") +
+  geom_text(size = 3) +
+  annotate("point", x = power, y = soft_threshold$signed_r2[soft_threshold$power == power],
+    shape = 21, size = 6, colour = "#B2182B"
+  ) +
+  labs(x = "soft power", y = "scale-free fit, signed R²", title = "Soft-threshold choice") +
+  theme_minimal(base_size = 10)
+heatmap_rows <- bind_rows(
+  transmute(eigengene_tests, module, column = contrast, t, fdr),
+  transmute(eigengene_association, module, column = paste(analysis, outcome), t, fdr)
+) |>
+  mutate(
+    column = factor(column, unique(column)),
+    module = factor(module, rev(paste0("M", sort(unique(network$colors[network$colors > 0])))))
+  )
+heatmap_page <- ggplot(heatmap_rows, aes(column, module, fill = t)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = if_else(fdr < 0.05, sprintf("%.2g", fdr), "")), size = 2.5) +
+  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", name = "t") +
+  labs(x = NULL, y = NULL, title = "Module eigengenes: contrasts and association slopes") +
+  theme_minimal(base_size = 9) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid = element_blank())
+pdf(file.path(stage, "b_reports", "01_modules.pdf"), width = 8.27, height = 11.69)
+print(threshold_page)
+plotDendroAndColors(
+  network$dendrograms[[1]], labels2colors(network$colors[network$blockGenes[[1]]]),
+  "module", dendroLabels = FALSE, hang = 0.03, main = "Protein dendrogram and modules"
+)
+print(heatmap_page)
+invisible(dev.off())
+```
+
+## Save results
+
+`01_modules.xlsx` holds one sheet per table.
+
+```{r write}
+write_xlsx(
+  list(
+    soft_threshold = soft_threshold, membership = membership,
+    eigengene_tests = eigengene_tests, eigengene_association = eigengene_association,
+    enrichment = arrange(enrichment, module, padj), preservation = preservation
+  ),
+  file.path(stage, "c_data", "01_modules.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

@@ -1,6 +1,10 @@
 # 04 · Network
 
-Planned, with no code yet. The aim is to find proteins that move together, whether or not a curated
-database groups them, and ask whether those groups respond differently to the two modalities. Any
-network will be built on abundance with each participant's mean removed, since on raw abundance
-participant explains 0.61 to 0.69 of the leading components. The method is still being chosen.
+Finds proteins that move together, whether or not a curated set groups them, and asks whether
+those groups respond to training, differ between the arms or track muscle growth.
+
+[`01_modules`](01_modules/README.md) builds a signed WGCNA network on abundance with participant
+removed, tests the module eigengenes with the stage 02 designs, enriches each module against the
+project set list and checks preservation from pre- to post-training samples. Participant explains
+0.61 to 0.69 of the leading components of the raw data. Participant adjustment and module settings
+are from Matheus's PR #24.
