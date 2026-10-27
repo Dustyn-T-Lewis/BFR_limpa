@@ -7,9 +7,9 @@ step, so a design problem surfaces before anything is fitted.
 within-leg correlation. It writes `design.rds` and `01_design.xlsx`.
 [`02_Differential`](02_Differential/README.md) fits `dpcDE()`, applies the contrasts with
 `eBayes(robust = TRUE)` and `treat()`, and writes `fit.rds` and `02_differential.xlsx`.
-[`03_Protein_Association`](03_Protein_Association/README.md) correlates every protein with the
-ultrasound outcomes and writes `03_protein_association.xlsx`, one PDF per outcome and a chance
-summary.
+[`03_Protein_Association`](03_Protein_Association/README.md) fits each protein's change against the
+ultrasound outcomes and writes `association_t.rds`, `03_protein_association.xlsx`, one PDF per
+outcome and a chance summary.
 [`04_Protein_Classification`](04_Protein_Classification/README.md) measures how well each protein
 separates the study groups and writes ROC PDFs for two of its three tasks and a chance summary.
 
@@ -19,4 +19,4 @@ separates the study groups and writes ROC PDFs for two of its three tasks and a 
 |---|---|---|
 | `02_Differential` | Which proteins change? | 60 with BFR training and 107 with HLRT at FDR 0.05; none between the arms or in the interaction. |
 | `03_Protein_Association` | Does a protein's change track the phenotype? | No protein survives BH. |
-| `04_Protein_Classification` | Does a protein separate the groups? | 53 on BFR training and 220 on HLRT after BH, a nonparametric re-test of the training contrasts; BFR against HLRT sits at chance. |
+| `04_Protein_Classification` | Does a protein separate BFR from HLRT legs? | At chance at baseline, after training and in change. |

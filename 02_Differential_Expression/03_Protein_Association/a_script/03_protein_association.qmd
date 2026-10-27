@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
+pacman::p_load(here, limpa, limma, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, writexl)
 here::i_am(
   "02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd"
 )
@@ -111,52 +111,64 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 dim(paired)
 ```
 
-## Correlate each protein with each outcome
+## Fit the association
 
-Spearman correlation is the Pearson correlation of the ranks: it measures whether two quantities
-rise together, without assuming a straight line or normal errors. `cor.test()` computes its p with
-algorithm AS 89, which is exact below 10 observations and an Edgeworth series approximation at the
-32 and 65 used here.
+The association is a slope in the same limpa model as `02_Differential`, so it carries the
+`dpcQuant()` standard errors. For protein *g* in leg *l* at time *s* (0 before, 1 after):
 
-```{r spearman-helper}
-spearman_by_row <- function(values, outcome) {
-  fits <- apply(values, 1, function(row) {
-    test <- cor.test(row, outcome, method = "spearman")
-    c(r = unname(test$estimate), p = test$p.value)
-  })
-  tibble(
-    protein = rownames(values), n = sum(!is.na(outcome)),
-    r = unname(fits["r", ]), p = unname(fits["p", ])
-  )
-}
+y(g, l, s) = a(g, l) + s × [b(g, arm) + c(g) × x(l)]
+
+`a` is each leg's own baseline, so only change within a leg counts; `b` is the mean training change
+in each arm, so an arm difference cannot pose as association; `x` is the leg's outcome change,
+centred on the mean leg. `c(g)` is the extra protein change per unit of extra outcome change, and
+its moderated t ranks proteins for gene set tests. Two versions per outcome:
+
+- pooled: the model above, over every leg of both arms;
+- differential: one time effect per participant replaces the two arm terms (plus one for BFR), so
+  `c(g)` comes only from comparing a participant's two legs.
+
+The paired designs follow the limma User's Guide (sections 9.4.1 and 9.5.3).
+
+```{r samples}
+# The one leg without a T2 sample has no outcome change; its x is set to 0, which it never
+# multiplies, because its only sample has s = 0.
+samples <- targets |>
+  mutate(
+    leg_id = paste(participant, leg, sep = "_"), post = as.integer(timepoint == "T2"),
+    bfr_post = post * (treatment == "BFR")
+  ) |>
+  left_join(select(leg_phenotype, leg_id, all_of(outcomes)), by = "leg_id") |>
+  mutate(across(all_of(outcomes), function(x) coalesce(x - mean(x, na.rm = TRUE), 0)))
+designs <- list(
+  pooled = ~ 0 + leg_id + treatment:post + post:x,
+  differential = ~ 0 + leg_id + participant:post + bfr_post + post:x
+)
 ```
 
-Two analyses per outcome. Pooled correlates each leg's protein change with the same leg's outcome
-change, over all legs of both arms. Differential correlates the within-participant BFR minus HLRT
-differences. Benjamini–Hochberg (BH) adjustment turns the p-values into `fdr`, the false discovery
-rate at which a protein would be called; it runs within each analysis and outcome.
+Each fit returns the slope, its moderated t, p and the Benjamini–Hochberg (BH) false discovery
+rate, within each analysis and outcome.
 
-```{r correlations}
-results <- map(set_names(outcomes), function(name) {
-  bind_rows(
-    pooled = spearman_by_row(delta, leg_phenotype[[name]]),
-    differential = spearman_by_row(paired, paired_outcome[[name]]),
-    .id = "analysis"
-  )
-}) |>
-  list_rbind(names_to = "outcome") |>
-  mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome)) |>
-  mutate(gene = proteins$genes$Genes[match(protein, rownames(proteins$genes))]) |>
-  relocate(analysis, outcome, protein, gene)
+```{r association-fits}
+results <- expand_grid(analysis = names(designs), outcome = outcomes) |>
+  pmap(function(analysis, outcome) {
+    design <- model.matrix(designs[[analysis]], mutate(samples, x = .data[[outcome]]))
+    stopifnot(qr(design)$rank == ncol(design))
+    fit <- eBayes(dpcDE(proteins, design, plot = FALSE), robust = TRUE)
+    topTable(fit, coef = "post:x", number = Inf, sort.by = "none") |>
+      as_tibble(rownames = "protein") |>
+      transmute(
+        analysis, outcome, protein, gene = Genes, slope = logFC, t, p = P.Value, fdr = adj.P.Val
+      )
+  }) |>
+  list_rbind()
 
 results |>
   slice_min(p, n = 6) |>
-  mutate(across(c(r, p, fdr), function(x) signif(x, 3)))
+  mutate(across(c(slope, t, p, fdr), function(x) signif(x, 3)))
 ```
 
-Pooling counts a participant's two legs as independent observations, which is reasonable because
-they do not correlate in protein change: the median Spearman r between a participant's BFR and
-HLRT legs, across proteins, is printed below.
+The model has no participant block because a participant's two legs do not correlate in protein
+change: the median Spearman r between their BFR and HLRT legs, across proteins, is printed below.
 
 ```{r leg-correlation}
 leg_r <- map_dbl(rownames(delta), function(id) {
@@ -165,21 +177,17 @@ leg_r <- map_dbl(rownames(delta), function(id) {
 round(median(leg_r), 3)
 ```
 
-The same pooled correlation inside each arm alone, for the insets on the pooled figure pages and
-the `protein_by_arm` sheet. No adjustment is applied to it.
+`association_t` is the matrix the gene set tests read: one row per protein, one column per
+analysis and outcome, values the moderated t.
 
-```{r by-arm}
-by_arm <- map(set_names(c("BFR", "HLRT")), function(treatment) {
-  keep <- leg_phenotype$treatment == treatment
-  map(set_names(outcomes), function(name) {
-    spearman_by_row(delta[, keep], leg_phenotype[[name]][keep]) |>
-      mutate(outcome = name)
-  }) |>
-    list_rbind()
-}) |>
-  list_rbind(names_to = "treatment")
-
-count(by_arm, treatment, outcome, n)
+```{r association-t}
+association_t <- results |>
+  mutate(column = paste(analysis, outcome, sep = "_")) |>
+  select(protein, column, t) |>
+  pivot_wider(names_from = column, values_from = t) |>
+  column_to_rownames("protein") |>
+  as.matrix()
+dim(association_t)
 ```
 
 ## Hits against chance
@@ -197,38 +205,10 @@ summary_table <- results |>
     fdr_sig = sum(fdr < 0.05), best_fdr = signif(min(fdr), 3),
     # divide by the exact expectation, not the rounded column above
     ratio = round(nominal / (n() * 0.05), 2),
-    .by = c(analysis, outcome, n)
-  ) |>
-  arrange(analysis, outcome)
-summary_table
-```
-
-Training hits are proteins at BH < 0.05 in either Post-Pre contrast of `02_Differential`. For each
-analysis and outcome, the table counts how many reach nominal p, against the count expected at the
-overall nominal rate, with a one-sided Fisher exact test on the 2 x 2 table of hit by training.
-Training hits vary more across legs, which gives them more power in a pooled correlation, so an
-excess here is a lead, not a finding.
-
-```{r training-overlap}
-training_hits <- read_excel(
-  here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
-  "DEP_matrix"
-) |>
-  filter(`BFR_Post-Pre_adj.P.Val` < 0.05 | `HLRT_Post-Pre_adj.P.Val` < 0.05) |>
-  pull(protein)
-training_overlap <- results |>
-  mutate(training = protein %in% training_hits) |>
-  summarise(
-    training_hits = sum(training),
-    nominal = sum(training & p < 0.05),
-    expected = round(sum(training) * mean(p < 0.05), 1),
-    fisher_p = signif(
-      fisher.test(table(p < 0.05, training), alternative = "greater")$p.value, 2
-    ),
     .by = c(analysis, outcome)
   ) |>
   arrange(analysis, outcome)
-training_overlap
+summary_table
 ```
 
 ## Figures
@@ -263,8 +243,8 @@ write_pdf <- function(pages, name) {
 
 `association_figure()` draws every nominal hit for one analysis and outcome, smallest p first,
 twelve panels to a page. Pooled pages plot each leg's protein change against its outcome change,
-with a line fitted inside each arm and the within-arm r inset. Differential pages plot what was
-tested: one point per participant, the BFR minus HLRT difference in protein change against the
+with a line fitted inside each arm and the within-arm Spearman r inset. Differential pages plot what
+was tested: one point per participant, the BFR minus HLRT difference in protein change against the
 same difference in outcome change. Pages are built one at a time from their own rows, because a
 paginating facet would build every panel for every page.
 
@@ -280,9 +260,9 @@ association_figure <- function(which_analysis, outcome_name, title, population) 
     headroom <- 0.06
     encoding <- paste(
       "One point per participant: the change in their BFR leg minus the change in their HLRT",
-      "leg, on both axes. The line is a least-squares fit; the header r is the differential",
-      "correlation, the one tested. q from BH within analysis and outcome. Data: correlations",
-      "sheet of 03_protein_association.xlsx."
+      "leg, on both axes. The line is a least-squares fit; the header t is the tested slope.",
+      "q from BH within analysis and outcome. Data: associations sheet of",
+      "03_protein_association.xlsx."
     )
   } else {
     protein_change <- delta
@@ -292,33 +272,35 @@ association_figure <- function(which_analysis, outcome_name, title, population) 
     y_label <- "change in phenotype"
     headroom <- 0.35
     encoding <- paste(
-      "Lines are fitted within each arm; the header r is the pooled correlation and the inset",
-      "gives it within each arm. q from BH within analysis and outcome. Data: correlations and",
-      "protein_by_arm sheets of 03_protein_association.xlsx."
+      "Lines are fitted within each arm; the header t is the tested slope and the inset gives",
+      "the Spearman r within each arm. q from BH within analysis and outcome. Data: associations",
+      "sheet of 03_protein_association.xlsx."
     )
   }
   hits <- results |>
     filter(analysis == which_analysis, outcome == outcome_name, p < 0.05) |>
     arrange(p) |>
     mutate(gene = coalesce(gene, protein))
-  points <- pmap(hits, function(protein, gene, outcome, r, p, fdr, ...) {
-    arms <- by_arm |>
-      filter(protein == !!protein, outcome == !!outcome) |>
-      mutate(text = sprintf("%-5s n=%d  r=%+.2f  p=%.3f", treatment, n, r, p))
+  points <- pmap(hits, function(protein, gene, outcome, t, p, fdr, ...) {
+    arms <- map_chr(c("BFR", "HLRT"), function(arm) {
+      keep <- leg_phenotype$treatment == arm
+      r <- cor(delta[protein, keep], leg_phenotype[[outcome]][keep], method = "spearman")
+      sprintf("%-5s n=%d  r=%+.2f", arm, sum(keep), r)
+    })
     tibble(
       panel = sprintf(
-        "%s\nvs %s   r = %+.2f   p %s   q %s",
-        paste(gene, protein, sep = "  "), outcome, r, signif(p, 2), signif(fdr, 2)
+        "%s\nvs %s   t = %+.2f   p %s   q %s",
+        paste(gene, protein, sep = "  "), outcome, t, signif(p, 2), signif(fdr, 2)
       ),
       change = protein_change[protein, ], d_outcome = phenotype_change[[outcome]],
-      series = point_series, inset = if (differential) "" else paste(arms$text, collapse = "\n")
+      series = point_series, inset = if (differential) "" else paste(arms, collapse = "\n")
     )
   }) |>
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
   text <- paste(
     sprintf(
-      "All %d proteins whose Spearman correlation with %s reaches nominal p in the %s",
+      "All %d proteins whose association with %s reaches nominal p in the %s",
       nrow(hits), outcome_name, which_analysis
     ),
     sprintf("analysis (%s), smallest p first;", population), chance_text, encoding
@@ -390,7 +372,7 @@ chance_plot <- ggplot(summary_table, aes(ratio, outcome, fill = ratio > 1)) +
   labs(
     x = "observed nominal hits / chance expectation", y = NULL,
     caption = caption_text("Nominal hits relative to chance", paste(
-      "Spearman per protein, uncorrected p;", chance_text, "Bar length is observed nominal hits",
+      "limma slope per protein, uncorrected p;", chance_text, "Bar length is observed nominal hits",
       "divided by that count; red clears 1, grey does not. Labels give observed of tested. Data:",
       "summary sheet of 03_protein_association.xlsx."
     ))
@@ -403,16 +385,13 @@ chance_plot
 
 ## Save results
 
-`03_protein_association.xlsx` holds the summary, the training overlap, every correlation sorted by
-FDR, and the within-arm correlations. `04_Protein_Classification` reads the `correlations` sheet.
+`03_protein_association.xlsx` holds the summary and every association sorted by FDR;
+`04_Protein_Classification` reads the `associations` sheet. `association_t.rds` holds the t matrix
+for gene set tests, as rds because a workbook round trip can change the last bit of a double.
 
 ```{r write}
-sheets <- list(
-  summary = summary_table,
-  training_overlap = training_overlap,
-  correlations = arrange(results, fdr),
-  protein_by_arm = by_arm
-)
+sheets <- list(summary = summary_table, associations = arrange(results, fdr))
+saveRDS(association_t, file.path(stage, "c_data", "association_t.rds"))
 write_xlsx(sheets, file.path(stage, "c_data", "03_protein_association.xlsx"))
 ```
 

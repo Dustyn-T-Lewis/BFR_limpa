@@ -24,7 +24,7 @@ here::i_am(
 
 `proteins` holds the normalised log2 abundances (`E`), the sample table and the gene annotation.
 `genes` maps each protein to its gene symbol, falling back to the protein identifier. The
-`DEP_matrix` sheet of `02_Differential` and the `correlations` sheet of `03_Protein_Association`
+`DEP_matrix` sheet of `02_Differential` and the `associations` sheet of `03_Protein_Association`
 are only used for the candidate list at the end.
 
 ```{r read}
@@ -37,12 +37,12 @@ de <- read_excel(
   here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
   "DEP_matrix"
 )
-correlations <- read_excel(
+associations <- read_excel(
   here(
     "02_Differential_Expression", "03_Protein_Association", "c_data",
     "03_protein_association.xlsx"
   ),
-  "correlations"
+  "associations"
 )
 
 dim(values)
@@ -311,7 +311,7 @@ chance_plot
 ## Cross-reference earlier steps
 
 A candidate passes three bars: DE at FDR 0.05 in any contrast, association at nominal p with any
-outcome, and classification at nominal p in any task but baseline. Each protein gets eight
+outcome, and classification at nominal p after training or in change. Each protein gets eight
 association tests, so about a third of any list clears the association bar by chance.
 
 ```{r de-hits}
@@ -323,33 +323,32 @@ de_hits <- de |>
     de_contrasts = paste(sub("_adj.P.Val", "", contrast), collapse = "; "),
     best_de_fdr = min(de_fdr), .by = protein
   )
-associated <- correlations |>
+associated <- associations |>
   filter(p < 0.05) |>
   summarise(
-    association = paste0(analysis, " ", outcome, " r ", sprintf("%+.2f", r), collapse = "; "),
+    association = paste0(analysis, " ", outcome, " t ", sprintf("%+.2f", t), collapse = "; "),
     best_association_p = min(p), .by = protein
   )
 classified <- protein_auc |>
   filter(p_paired < 0.05, task != "baseline_BFR_vs_HLRT") |>
   summarise(
     classification = paste0(task_label, " AUC ", sprintf("%.2f", auc), collapse = "; "),
-    separates_arms = any(task %in% c("post_BFR_vs_HLRT", "delta_BFR_vs_HLRT")),
     .by = protein
   )
 c(de = nrow(de_hits), associated = nrow(associated), classified = nrow(classified))
 ```
 
-Proteins that separate the arms (post or change) come first.
+Strongest association first.
 
 ```{r candidates}
 candidates <- de_hits |>
   inner_join(associated, by = "protein") |>
   inner_join(classified, by = "protein") |>
   mutate(gene = genes[protein], .after = protein) |>
-  arrange(desc(separates_arms), best_association_p)
+  arrange(best_association_p)
 
 nrow(candidates)
-head(select(candidates, protein, gene, separates_arms, best_de_fdr, best_association_p))
+head(select(candidates, protein, gene, best_de_fdr, best_association_p))
 ```
 
 ## Save results
