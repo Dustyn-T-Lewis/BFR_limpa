@@ -3,7 +3,8 @@
 Draws protein volcanoes with the collapse-surviving fgsea sets ringed; computes nothing. The
 baseline contrast is not drawn.
 
-Inputs: `protein_results` and `set_tests` from `01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`.
+Inputs: `protein_results` and `set_tests` from
+`01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`.
 
 ```sh
 quarto render 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.qmd --output-dir ../b_reports
@@ -14,10 +15,10 @@ Outputs:
 - `b_reports/02_enrich_volcano_fgsea.html`: the walkthrough.
 - `b_reports/02_enrich_volcano_fgsea_figures.pdf`: S3 (the interaction, both training responses
   and post-training BFR against HLRT, five lowest-FDR proteins named) and S4 (the training
-  responses with labels ranked by Π, which selects nothing, each followed by the protein's mean
-  observed precursors). Points are coloured when protein BH FDR < 0.05; the ring shows up to
+  responses with labels ranked by pi-score, which selects nothing, each followed by the protein's
+  mean observed precursors). Points are coloured when protein BH FDR < 0.05; the ring shows up to
   twelve collapse survivors, lowest adjusted p first, coloured by NES, with ticks on their
   leading-edge proteins.
 
 No table is written, so there is no `c_data/`. fry finds no set on S3's panels A and D, the
-interaction and BFR_Post-HLRT_Post, so their rings are fgsea leads only.
+interaction and BFR_Post-HLRT_Post (see `01_run_fgsea_and_fry`).

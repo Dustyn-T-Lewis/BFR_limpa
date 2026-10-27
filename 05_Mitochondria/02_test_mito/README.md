@@ -2,13 +2,13 @@
 
 Measures mitochondrial protein enrichment (MPE) per biopsy and tests whether it rose differently
 between legs, then refits the mitochondrial proteins on their own (mitochondrial normalisation) to
-ask whether any protein, complex or MitoPathway changed beyond overall content. MPE here is the
-share that MitoCarta proteins take of the summed dpcQuant protein values before normalisation, each
-protein counted once at its typical precursor intensity.
+ask whether any protein, complex or MitoPathway changed beyond overall content. The stage README
+defines MPE.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` and
 `quant_runs/proteins_slope_0.7.rds`, `design.rds` from `01_Design`, `fit.rds` from
-`02_Differential`, the protein map from `00_build_gene_sets`, and `01_build_mito_sets`.
+`02_Differential`, the protein map from `00_build_gene_sets`, and the `membership` sheet of
+`01_build_mito_sets`.
 
 ```sh
 quarto render 05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd --output-dir ../b_reports

@@ -18,9 +18,11 @@ Outputs:
 - `b_reports/01_run_fgsea_and_fry_figures.pdf`: S1 (ten strongest collapse survivors per
   contrast, all collections) and S2 (significant sets before and after collapse). In S1 point
   size is the number of measured genes in the set and colour the collection; a contrast with no
-  survivor has no panel. Each collection's own view is the dotplot in `07_pathway_maps`. S2 counts sets at FDR 0.05 before and after `collapsePathways`, which makes a set
-  the child of a stronger one when it shows no enrichment of its own (p > 0.05).
-- `c_data/01_run_fgsea_and_fry.xlsx`, both sheets read by `02_`, `06_` and `07_`:
+  survivor has no panel. Each collection's own view is the dotplot in `07_pathway_maps`. S2
+  counts sets at FDR 0.05 before and after `collapsePathways`, which makes a set the child of a
+  stronger one when it shows no enrichment of its own (p > 0.05).
+- `c_data/01_run_fgsea_and_fry.xlsx`; `02_`, `06_` and `07_` read `set_tests` and
+  `protein_results`:
   - `set_summary`: one row per contrast: significant sets by fgsea, after collapse, and by fry.
   - `protein_summary`: one row per contrast: proteins up and down at FDR 0.05, smallest FDR.
   - `set_tests`: one row per set, contrast and method; `main` marks collapse survivors.

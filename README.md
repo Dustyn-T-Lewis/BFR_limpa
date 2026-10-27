@@ -23,9 +23,10 @@ proteome differently than heavy load.
 
 Each sub-stage holds `README.md`, `a_script/` (a Quarto notebook), `b_reports/` (the rendered HTML
 report, beside any figure PDFs) and, where the step writes tables, `c_data/` (one workbook, plus an
-`.rds` where a later step needs the R object). Each step's README lists its workbook sheets. Data passes through disk,
-so any sub-stage reruns from a fresh session, and no notebook caches. "Planned" means only a README
-exists; "export only" means only the step before the FibeRtypeR web app exists.
+`.rds` where a later step needs the R object). Each step's README lists its workbook sheets. Data
+passes through disk, so any sub-stage reruns from a fresh session, and no notebook caches.
+"Planned" means only a README exists; "export only" means only the step before the FibeRtypeR web
+app exists.
 
 ## Running the pipeline
 

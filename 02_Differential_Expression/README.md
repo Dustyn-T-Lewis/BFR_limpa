@@ -1,17 +1,18 @@
 # 02 · Differential Expression
 
-This stage takes `proteins.rds` and asks what happened to the proteins. The design sits in its own
-step, so a design problem surfaces before anything is fitted.
+This stage fits the protein model to `proteins.rds`. The design sits in its own step, so a design
+problem surfaces before anything is fitted.
 
 [`01_Design`](01_Design/README.md) builds the design matrix and the five contrasts and estimates the
 within-leg correlation. It writes `design.rds` and `01_design.xlsx`.
 [`02_Differential`](02_Differential/README.md) fits `dpcDE()`, applies the contrasts with
 `eBayes(robust = TRUE)`, and writes `fit.rds` and `02_differential.xlsx`.
 [`03_Protein_Association`](03_Protein_Association/README.md) fits each protein's change against the
-ultrasound outcomes and writes `association_t.rds`, `03_protein_association.xlsx`, one PDF per
-outcome and a chance summary.
+ultrasound outcomes and writes `association_t.rds`, `association_designs.rds`,
+`03_protein_association.xlsx`, one PDF per outcome and a chance summary.
 [`04_Protein_Classification`](04_Protein_Classification/README.md) measures how well each protein
-separates the study groups and writes ROC PDFs for two of its three tasks and a chance summary.
+separates a participant's BFR leg from their HLRT leg in three tasks and writes
+`04_protein_classification.xlsx`, ROC PDFs for two of the tasks and a chance summary.
 
 ## What each step answers
 

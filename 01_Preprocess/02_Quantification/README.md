@@ -18,7 +18,7 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 Outputs:
 
 - `b_reports/02_quantify.html`: the walkthrough, with diagnostic plots.
-- `c_data/proteins.rds`: abundance, standard errors and annotations, read by stages 02, 03 and 05.
+- `c_data/proteins.rds`: abundance, standard errors and annotations, read by stages 02 to 06.
 - `c_data/02_quantify.xlsx`:
   - `samples`: sample identifiers and study metadata;
   - `dpc_parameters`: the diagnostic detection-curve fit (the primary run uses slope 0.7);
