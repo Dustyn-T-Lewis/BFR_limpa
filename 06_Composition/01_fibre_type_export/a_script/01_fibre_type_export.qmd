@@ -12,7 +12,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, readr)
+pacman::p_load(here, dplyr, tidyr, stringr, readr)
 here::i_am("06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd")
 ```
 
@@ -21,13 +21,12 @@ here::i_am("06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qm
 FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) estimates the slow and fast fibre
 fractions of a biopsy by deconvolution: it treats each sample's profile as a mix of reference
 profiles for pure slow and pure fast fibres and solves for the proportions. It asks for label-free
-quantification (LFQ) intensities, measured without a label or standard, and normalises them itself.
+quantification (LFQ) intensities and normalises them itself.
 Its authors found quantification from unique peptides the most accurate.
 
 The upload is DIA-NN's `Genes.MaxLFQ.Unique`: MaxLFQ intensities from gene-specific peptides, as
 the app asks. MaxLFQ combines peptide ratios between runs into one abundance per gene and run.
-DIA-NN normalised these values across runs, and the app normalises again. Only the three columns
-needed are read from the parquet.
+DIA-NN normalised these values across runs, and the app normalises again.
 
 ```{r read}
 metadata <- read_csv(here("00_Input", "metadata.csv"), show_col_types = FALSE)
@@ -46,9 +45,9 @@ gene, so 0 means not quantified and is dropped.
 
 The search FASTA lists 43 human proteins twice, because the appended cRAP database repeats them;
 MB, CKM, FABP3 and CYCS are among them. Their `Genes` reads like `MB;cRAP-MB`, and DIA-NN writes 0
-in both of its MaxLFQ columns for them in every run, so this filter drops them and they are absent
-from the upload. `01_filter.qmd` repairs them at precursor level for the main analysis; this export
-reads DIA-NN's gene values, which that repair does not reach.
+in both of its MaxLFQ columns for them in every run, so this filter drops them. `01_filter.qmd`
+repairs them at precursor level for the main analysis, and the next section fills them from those
+repaired estimates.
 
 Runs match `metadata$run` ignoring case, as in `01_filter.qmd`. That absorbs `Cl_MDR_7E-T2`,
 written `CL_MDR_7E-T2` in the sheet, and drops the discarded S08 injection, which has no
@@ -77,6 +76,43 @@ upload <- lfq |>
   select(identifier, all_of(metadata$sample_id))
 stopifnot(!anyDuplicated(upload$identifier), ncol(upload) == nrow(metadata) + 1)
 upload[1:3, 1:4]
+```
+
+## Fill the cRAP-duplicated genes
+
+The genes DIA-NN zeroed come from limpa's protein estimates instead, which the stage 01 repair
+covers. The two sit on different scales, so for each sample limpa's log2 values are shifted by the
+median difference from DIA-NN's log2 MaxLFQ over the genes both quantify, then back-transformed.
+A gene with several protein groups uses the one with the most observed precursors. A cell stays
+blank where limpa observed no precursor of that protein in that sample, matching how DIA-NN leaves
+unquantified cells.
+
+```{r fill}
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+crap_genes <- report |>
+  filter(str_detect(Genes, "cRAP-")) |>
+  distinct(Genes) |>
+  pull(Genes) |>
+  str_split(";") |>
+  unlist() |>
+  str_subset("^cRAP-", negate = TRUE) |>
+  setdiff(upload$identifier)
+observed <- rowSums(proteins$other$n.observations)
+representative <- tibble(row = seq_along(observed), gene = proteins$genes$Genes, observed) |>
+  filter(!is.na(gene)) |>
+  slice_max(observed, n = 1, with_ties = FALSE, by = gene)
+limpa_log2 <- proteins$E[representative$row, metadata$sample_id]
+rownames(limpa_log2) <- representative$gene
+shared <- intersect(upload$identifier, representative$gene)
+dia_log2 <- log2(as.matrix(upload[match(shared, upload$identifier), metadata$sample_id]))
+offset <- apply(dia_log2 - limpa_log2[shared, ], 2, median, na.rm = TRUE)
+fill_genes <- intersect(crap_genes, representative$gene)
+filled <- 2^sweep(limpa_log2[fill_genes, , drop = FALSE], 2, offset, "+")
+filled[proteins$other$n.observations[representative$row[match(fill_genes, representative$gene)],
+  metadata$sample_id] == 0] <- NA
+upload <- bind_rows(upload, as_tibble(filled, rownames = "identifier"))
+c(filled_genes = length(fill_genes), not_in_limpa = length(setdiff(crap_genes, fill_genes)))
+fill_genes
 ```
 
 ## Summary
