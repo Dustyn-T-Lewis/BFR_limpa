@@ -6,7 +6,7 @@ Proteomics measurements, sample information and muscle measurements from the tra
 |---|---|---|---|
 | `report.parquet` | DIA-NN precursor measurements and protein annotations | one precursor in one MS run | `01_Filtering`, `06_Composition/01_fibre_type_export` |
 | `metadata.csv` | sample identifiers, participant, leg, treatment, timepoint, group and sex | one MS sample | `01_Filtering`, `06_Composition/01_fibre_type_export` |
-| `phenotype.csv` | before-and-after muscle size and echo intensity, session count and training volume | one participant’s leg | `03_Protein_Association`, `03_Pathway_Enrichment/06_set_association` |
+| `phenotype.csv` | before-and-after muscle size and echo intensity, session count and training volume | one participant’s leg | `03_Protein_Association`, `03_Pathway_Enrichment/05_set_association` |
 
 Treatment cannot be inferred from leg side: blood-flow restriction was counterbalanced between left
 and right legs. Use the `treatment` column in `metadata.csv`.

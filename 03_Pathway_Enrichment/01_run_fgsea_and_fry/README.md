@@ -18,8 +18,7 @@ Outputs:
 - `b_reports/01_run_fgsea_and_fry_figures.pdf`: S1 (ten strongest collapse survivors per
   contrast, all collections), S2–S6 (the same within each collection) and S7 (significant sets
   before and after collapse).
-- `c_data/01_run_fgsea_and_fry.xlsx`, whose `set_tests` is read by `02_`, `03_`, `07_` and `08_`,
-  and `protein_results` by `02_` and `08_`:
+- `c_data/01_run_fgsea_and_fry.xlsx`, both sheets read by `02_`, `06_` and `07_`:
   - `set_summary`: one row per contrast: significant sets by fgsea, after collapse, and by fry.
   - `protein_summary`: one row per contrast: proteins up and down at FDR 0.05, smallest FDR.
   - `set_tests`: one row per set, contrast and method; `main` marks collapse survivors.

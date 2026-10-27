@@ -43,9 +43,8 @@ quarto render 02_Differential_Expression/02_Differential/a_script/02_differentia
 quarto render 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd       --output-dir ../b_reports
 quarto render 02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.qmd --output-dir ../b_reports
 
-for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea \
-         03_enrich_scatter_fgsea 04_run_singscore 05_set_classification 06_set_association \
-         07_leading_edge 08_pathway_maps; do
+for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea 03_run_singscore \
+         04_set_classification 05_set_association 06_leading_edge 07_pathway_maps; do
   quarto render 03_Pathway_Enrichment/$s/a_script/$s.qmd --output-dir ../b_reports
 done
 

@@ -94,7 +94,7 @@ colnames(delta) <- legs$leg_id
 Three paired tasks, each comparing a participant's BFR leg with their HLRT leg. Each holds its
 matrix and two paired column sets, `positive` (BFR) and `negative` (HLRT). Pre to post within an arm
 is left to `02_Differential`, which tests it with more power;
-`03_Pathway_Enrichment/05_set_classification` keeps those two tasks for sets. The baseline task
+`03_Pathway_Enrichment/04_set_classification` keeps those two tasks for sets. The baseline task
 compares the legs before training, when nothing should separate them, so it shows what the method
 returns on no effect.
 

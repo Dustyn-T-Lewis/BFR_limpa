@@ -366,7 +366,7 @@ length(figures)
 
 `01_run_fgsea_and_fry.xlsx` holds `set_tests`, one row per set, contrast and method, with the
 leading edge joined by `;`, and `protein_results`, every protein and contrast from the fit.
-`02_` and `08_` read both; `03_` and `07_` read `set_tests` only.
+`02_`, `06_` and `07_` read both.
 
 ```{r write}
 sheets <- list(

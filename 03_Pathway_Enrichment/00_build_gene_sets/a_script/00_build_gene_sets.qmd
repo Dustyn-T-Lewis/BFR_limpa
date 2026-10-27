@@ -22,7 +22,7 @@ here::i_am("03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets
 ## Read proteins
 
 A gene set is a named list of genes that share a pathway, process or location. Every later
-enrichment step (`01_run_fgsea_and_fry`, `04_run_singscore` and on) reads the list built here, so
+enrichment step (`01_run_fgsea_and_fry`, `03_run_singscore` and on) reads the list built here, so
 set membership is decided once.
 
 `proteins.rds` is limpa's protein-level `EList` from quantification. Only its annotation
@@ -274,9 +274,9 @@ length(sets)
 ## Save results
 
 `gene_sets.rds` holds the tested sets, a named list of gene-symbol vectors read by
-`01_run_fgsea_and_fry`, `04_run_singscore`, `07_leading_edge` and `08_pathway_maps`.
+`01_run_fgsea_and_fry`, `03_run_singscore`, `06_leading_edge` and `07_pathway_maps`.
 `go_bp_measured.rds` holds the measured genes of every GO:BP set, tested or not, so
-`07_leading_edge` can break a parent into child terms too small to test. `00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
+`06_leading_edge` can break a parent into child terms too small to test. `00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
 plus the counts above.
 
 ```{r write}

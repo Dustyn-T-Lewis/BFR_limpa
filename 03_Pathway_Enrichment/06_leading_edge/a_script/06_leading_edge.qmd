@@ -1,0 +1,513 @@
+---
+title: "07 · Leading edge"
+format:
+  html:
+    toc: true
+    embed-resources: true
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+`GO.db`, `AnnotationDbi` and `enrichVolcano` (the user's own package, not on CRAN) are
+called with `::` for one job each.
+
+```{r setup}
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, ggvenn, readxl, writexl)
+here::i_am("03_Pathway_Enrichment/06_leading_edge/a_script/06_leading_edge.qmd")
+```
+
+## Read inputs
+
+The question: for pathways both legs move the same way with training, do the same proteins drive
+them? The comparison uses fgsea leading edges. In gene set enrichment, proteins are ranked by
+their training statistic and a running sum walks down the ranking, rising at each set member; the
+leading edge is the set members ranked before the running sum peaks, the ones carrying the
+enrichment. This step reads the fgsea run `01_run_fgsea_and_fry` already made, so nothing is
+re-ranked. Adapted from Sam's PR #26 (sc-norton): his overlap measures, GO hierarchy breakdown
+and unique-protein split, on the pipeline's fgsea results and gene sets.
+
+Inputs: the `set_tests` and `protein_results` sheets from `01_run_fgsea_and_fry` (one row per set,
+method and contrast, leading edges as `;`-joined symbols; one row per protein and contrast, with
+its t), and from `00_build_gene_sets` the set catalogue and the measured genes of every GO:BP set.
+
+```{r read}
+stage <- here("03_Pathway_Enrichment", "06_leading_edge")
+fgsea_book <- here(
+  "03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"
+)
+set_tests <- read_excel(fgsea_book, "set_tests")
+protein_results <- read_excel(fgsea_book, "protein_results")
+set_catalog <- read_excel(
+  here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "00_build_gene_sets.xlsx"),
+  "set_catalog"
+)
+go_sets <- readRDS(
+  here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "go_bp_measured.rds")
+)
+arms <- c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre")
+arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
+dim(set_tests)
+```
+
+## Select the shared pathways
+
+Keep the fgsea rows for the two training contrasts, one per leg. A pathway is kept when fgsea
+calls it at FDR < 0.05 in both legs, with the same sign of NES (normalised enrichment score, the
+direction and strength of the enrichment), and when it is a main set after `collapsePathways` in
+at least one leg, so one representative stands for each cluster of overlapping sets.
+
+```{r shared-sets}
+fgsea <- set_tests |>
+  filter(method == "fgsea", contrast %in% arms) |>
+  mutate(arm = names(arms)[match(contrast, arms)]) |>
+  select(set_id, database, pathway, n, arm, NES, padj, main, leadingEdge)
+shared_sets <- fgsea |>
+  summarise(
+    keep = all(padj < 0.05) && n_distinct(sign(NES)) == 1 && any(main), .by = set_id
+  ) |>
+  filter(keep) |>
+  pull(set_id)
+length(shared_sets)
+```
+
+## Compare the leading edges
+
+Split each kept pathway's leading edges into one row per protein, then record which legs list
+that protein: BFR only, HLRT only or both.
+
+```{r proteins}
+proteins <- fgsea |>
+  filter(set_id %in% shared_sets) |>
+  separate_longer_delim(leadingEdge, ";") |>
+  rename(gene = leadingEdge) |>
+  summarise(
+    in_arm = paste(sort(arm), collapse = " and "), .by = c(set_id, database, pathway, gene)
+  ) |>
+  mutate(in_arm = recode(in_arm, "BFR and HLRT" = "both"))
+head(proteins, 4)
+```
+
+Count the three groups per pathway and add Sam's three overlap measures:
+
+- Jaccard index, proteins in both leading edges over proteins in either: 1 when the legs share
+  every driver, 0 when they share none;
+- overlap coefficient, proteins in both over the smaller leading edge: 1 when one leg's edge sits
+  inside the other's;
+- `expected_shared`, the proteins two leading edges of these sizes would share if each were a
+  random draw from the pathway's `n` measured members.
+
+Each leg's NES and adjusted p ride along, and rows sort from the lowest Jaccard index.
+
+```{r leading-edge}
+leading_edge <- proteins |>
+  count(set_id, database, pathway, in_arm) |>
+  pivot_wider(names_from = in_arm, values_from = n, values_fill = 0) |>
+  left_join(
+    fgsea |>
+      select(set_id, n, arm, NES, padj) |>
+      pivot_wider(names_from = arm, values_from = c(NES, padj)),
+    by = "set_id"
+  ) |>
+  mutate(
+    jaccard = both / (both + BFR + HLRT),
+    overlap_coef = both / pmin(both + BFR, both + HLRT),
+    expected_shared = (both + BFR) * (both + HLRT) / n
+  ) |>
+  arrange(jaccard) |>
+  mutate(label = enrichVolcano::clean_label(pathway, width = 1000))
+head(select(leading_edge, label, both, expected_shared, BFR, HLRT, jaccard), 6)
+```
+
+Leading edges shift with small changes in the ranking, so these overlaps describe and do not
+test.
+
+## Break GO:BP parents into children
+
+Sam's GO hierarchy view, for each GO:BP pathway both legs move. `GO.db::GOBPCHILDREN` gives a
+parent's direct child terms, each with its relation (`isa`, `part_of`, `regulates`). A child's
+genes are its measured MSigDB members inside the parent's measured members, which form the
+universe, and a child needs at least three of them, as in Sam's code. `mget()` returns `NA` for a
+term without children.
+
+```{r go-children}
+go_ids <- filter(set_catalog, database == "GOBP") |> select(set_id, source_id)
+parents <- inner_join(filter(leading_edge, database == "GOBP"), go_ids, by = "set_id")
+children_of <- AnnotationDbi::mget(parents$source_id, GO.db::GOBPCHILDREN, ifnotfound = NA)
+go_children <- parents |>
+  transmute(parent_id = set_id, parent = label, kids = map(source_id, function(id) {
+    kids <- children_of[[id]][!is.na(children_of[[id]])]
+    tibble(child_go = as.character(kids), relation = names(kids) %||% character())
+  })) |>
+  unnest(kids) |>
+  summarise(relation = str_flatten(unique(relation), ","), .by = c(parent_id, parent, child_go)) |>
+  inner_join(rename(go_ids, child_id = set_id, child_go = source_id), by = "child_go") |>
+  mutate(
+    child = enrichVolcano::clean_label(
+      set_catalog$pathway[match(child_id, set_catalog$set_id)], width = 1000
+    ),
+    members = map2(go_sets[child_id], go_sets[parent_id], intersect)
+  ) |>
+  filter(lengths(members) >= 3)
+c(parents = nrow(parents), children = nrow(go_children))
+```
+
+`edge()` returns a parent's leading-edge proteins in one leg, inside the parent's measured
+members.
+
+```{r edge}
+edge <- function(id, which_arm) {
+  intersect(
+    filter(proteins, set_id == id, in_arm %in% c(which_arm, "both"))$gene, go_sets[[id]]
+  )
+}
+```
+
+For every parent, child and leg, Sam's decomposition counts the parent's leading-edge proteins in
+the child, as a share of the leading edge and as a fold over the child's share of the universe,
+with a one-sided hypergeometric p for concentration in that child, BH within parent and leg.
+Children overlap and the tests are nested on small sets, so the p values describe.
+
+```{r decomposition}
+decomposition <- go_children |>
+  cross_join(tibble(arm = names(arms))) |>
+  mutate(
+    core = map2(parent_id, arm, edge),
+    universe = lengths(go_sets[parent_id]), child_size = lengths(members),
+    core_size = lengths(core), in_child = map2_int(core, members, function(x, y) {
+      length(intersect(x, y))
+    }),
+    share_of_edge = in_child / core_size,
+    fold = share_of_edge / (child_size / universe),
+    p = phyper(in_child - 1, child_size, universe - child_size, core_size, lower.tail = FALSE),
+    genes = map2_chr(core, members, function(x, y) str_flatten(sort(intersect(x, y)), ";"))
+  ) |>
+  mutate(padj = p.adjust(p, "BH"), .by = c(parent_id, arm)) |>
+  select(-core, -members)
+head(select(decomposition, parent, child, arm, in_child, share_of_edge, padj), 6)
+```
+
+Sam's coverage check asks the reverse: what share of a parent's leading edge already sits in the
+leading edges of its significant descendants (any depth, `GOBPOFFSPRING`, tested sets at FDR < 0.05
+in the same leg). A low share means the parent carries signal no more specific term captures;
+`unexplained` lists those proteins.
+
+```{r coverage}
+offspring_of <- AnnotationDbi::mget(parents$source_id, GO.db::GOBPOFFSPRING, ifnotfound = NA)
+significant <- fgsea |>
+  filter(database == "GOBP", padj < 0.05) |>
+  inner_join(go_ids, by = "set_id")
+go_coverage <- parents |>
+  select(parent_id = set_id, parent = label, source_id) |>
+  cross_join(tibble(arm = names(arms))) |>
+  mutate(
+    core = map2(parent_id, arm, edge),
+    descendants = map2(source_id, arm, function(id, which_arm) {
+      filter(significant, arm == which_arm, source_id %in% offspring_of[[id]])
+    }),
+    significant_descendants = map_int(descendants, nrow),
+    covered = map(descendants, function(d) unique(unlist(str_split(d$leadingEdge, ";")))),
+    explained = map2_dbl(core, covered, function(x, y) mean(x %in% y)),
+    unexplained = map2_chr(core, covered, function(x, y) str_flatten(sort(setdiff(x, y)), ";"))
+  ) |>
+  select(parent_id, parent, arm, significant_descendants, explained, unexplained)
+summary(go_coverage$explained)
+```
+
+## Split the unique proteins
+
+Sam's last view takes the proteins in one leg's leading edge only (BFR-only and HLRT-only) and asks
+whether the two groups fall in different children. Per child, Fisher's exact test compares the
+share of BFR-only and HLRT-only proteins in it, BH within parent. Per parent, the divergence sums
+the absolute share differences over children plus a "(no child term)" bin, and its p comes from
+2,000 shuffles of the BFR and HLRT labels among the unique proteins, BH across parents. Both tests
+treat proteins as exchangeable, which co-regulated proteins are not, so they describe.
+`edge_pct` is the median position of each leg's unique proteins in the other leg's ranking,
+measured from the enriched end: near 0 means they only just missed the other leading edge. A parent
+needs at least three unique proteins in each leg, as in Sam's code.
+
+```{r unique-children}
+rank_position <- protein_results |>
+  filter(selected, contrast %in% arms) |>
+  mutate(arm = names(arms)[match(contrast, arms)], position = rank(-t) / n(), .by = contrast) |>
+  select(arm, gene, position)
+edge_pct <- function(genes, which_arm, nes) {
+  position <- filter(rank_position, arm == which_arm, gene %in% genes)$position
+  median(if (nes < 0) 1 - position else position)
+}
+set.seed(1)
+unique_children <- parents |>
+  pmap(function(set_id, label, NES_BFR, NES_HLRT, ...) {
+    only <- map(set_names(names(arms)), function(a) {
+      intersect(filter(proteins, set_id == !!set_id, in_arm == a)$gene, go_sets[[set_id]])
+    })
+    kids <- filter(go_children, parent_id == set_id)
+    if (min(lengths(only)) < 3 || nrow(kids) == 0) {
+      return(NULL)
+    }
+    genes <- c(only$BFR, only$HLRT)
+    is_bfr <- seq_along(genes) <= length(only$BFR)
+    in_child <- matrix(sapply(kids$members, function(m) genes %in% m), nrow = length(genes))
+    in_child <- cbind(in_child, rowSums(in_child) == 0)
+    divergence <- function(bfr) {
+      sum(abs(colMeans(in_child[bfr, , drop = FALSE]) - colMeans(in_child[!bfr, , drop = FALSE])))
+    }
+    observed <- divergence(is_bfr)
+    shuffled <- replicate(2000, divergence(sample(is_bfr)))
+    tibble(
+      parent_id = set_id, parent = label, child = c(kids$child, "(no child term)"),
+      only_BFR = length(only$BFR), only_HLRT = length(only$HLRT),
+      shared = sum(filter(proteins, set_id == !!set_id)$in_arm == "both"),
+      BFR_in_child = colSums(in_child[is_bfr, , drop = FALSE]),
+      HLRT_in_child = colSums(in_child[!is_bfr, , drop = FALSE]),
+      p = map2_dbl(BFR_in_child, HLRT_in_child, function(b, h) {
+        fisher.test(matrix(c(b, length(only$BFR) - b, h, length(only$HLRT) - h), 2))$p.value
+      }),
+      divergence = observed, p_divergence = (1 + sum(shuffled >= observed - 1e-12)) / 2001,
+      BFR_only_pct_in_HLRT = edge_pct(only$BFR, "HLRT", NES_HLRT),
+      HLRT_only_pct_in_BFR = edge_pct(only$HLRT, "BFR", NES_BFR)
+    ) |>
+      mutate(padj = p.adjust(p, "BH"))
+  }) |>
+  list_rbind() |>
+  mutate(padj_divergence = p.adjust(p_divergence[!duplicated(parent_id)], "BH")[
+    match(parent_id, unique(parent_id))
+  ])
+distinct(unique_children, parent, only_BFR, only_HLRT, shared, divergence, padj_divergence) |>
+  arrange(padj_divergence) |>
+  head()
+```
+
+## Draw figures
+
+Sam's figures, drawn from the tables above. Each page carries a short title; the README explains
+the encodings.
+
+S20 is Sam's overlap heatmap: one tile per pathway coloured by Jaccard index and labelled with the
+shared count, one panel per collection.
+
+```{r overlap-page}
+overlap_page <- leading_edge |>
+  mutate(label = reorder(str_trunc(label, 60), jaccard)) |>
+  ggplot(aes("BFR vs HLRT", label, fill = jaccard)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = both), size = 2.2) +
+  facet_grid(database ~ ., scales = "free_y", space = "free_y") +
+  scale_fill_gradient(low = "#f7fbff", high = "#08519c", limits = c(0, 1), name = "Jaccard") +
+  labs(x = NULL, y = NULL, title = "S20. Leading-edge overlap; label = shared proteins") +
+  theme_minimal(base_size = 8) +
+  theme(panel.grid = element_blank(), strip.text.y = element_text(angle = 0))
+```
+
+S21 is Sam's Venn view: one Venn per pathway with each leg's NES and adjusted p above and the
+shared proteins below, six to a page.
+
+```{r venn-pages}
+venn <- function(id) {
+  row <- filter(leading_edge, set_id == id)
+  genes <- filter(proteins, set_id == id)
+  ggvenn(
+    list(
+      BFR = genes$gene[genes$in_arm != "HLRT"], HLRT = genes$gene[genes$in_arm != "BFR"]
+    ),
+    fill_color = unname(arm_colours), show_percentage = FALSE, set_name_size = 3,
+    text_size = 3, stroke_size = 0.4
+  ) +
+    labs(
+      title = str_wrap(row$label, 40),
+      subtitle = sprintf(
+        "BFR: NES %.2f, padj %.2g\nHLRT: NES %.2f, padj %.2g\nshared %d, expected %.1f",
+        row$NES_BFR, row$padj_BFR, row$NES_HLRT, row$padj_HLRT, row$both, row$expected_shared
+      ),
+      caption = str_wrap(paste("Shared:", str_flatten(sort(genes$gene[genes$in_arm == "both"]),
+        ", "
+      )), 75)
+    ) +
+    theme(
+      plot.title = element_text(size = 7, face = "bold"),
+      plot.subtitle = element_text(size = 6), plot.caption = element_text(size = 4.5, hjust = 0)
+    )
+}
+venn_pages <- split(leading_edge$set_id, ceiling(seq_along(leading_edge$set_id) / 6)) |>
+  map(function(ids) {
+    wrap_plots(map(ids, venn), ncol = 2, nrow = 3) +
+      plot_annotation(title = "S21. Leading edges by leg")
+  })
+```
+
+S22 is Sam's NES scatter: every pathway tested in both legs, coloured by collection and shaped by
+where fgsea calls it at FDR < 0.05, with the count and share of pathways in each quadrant.
+
+```{r nes-scatter}
+nes <- fgsea |>
+  select(set_id, database, arm, NES, padj) |>
+  pivot_wider(names_from = arm, values_from = c(NES, padj)) |>
+  mutate(called = case_when(
+    padj_BFR < 0.05 & padj_HLRT < 0.05 ~ "both",
+    padj_BFR < 0.05 ~ "BFR only",
+    padj_HLRT < 0.05 ~ "HLRT only",
+    .default = "neither"
+  ))
+quadrants <- nes |>
+  count(bfr = sign(NES_BFR), hlrt = sign(NES_HLRT)) |>
+  mutate(label = sprintf("%d (%.1f%%)", n, 100 * n / sum(n)))
+nes_page <- ggplot(nes, aes(NES_BFR, NES_HLRT)) +
+  geom_hline(yintercept = 0, colour = "grey50") +
+  geom_vline(xintercept = 0, colour = "grey50") +
+  geom_abline(linetype = "dashed", colour = "grey70") +
+  geom_point(aes(colour = database, shape = called, alpha = called == "neither"), size = 1.4) +
+  geom_text(
+    data = quadrants, aes(x = bfr * Inf, y = hlrt * Inf, label = label),
+    hjust = "inward", vjust = "inward", size = 2.8
+  ) +
+  scale_shape_manual(values = c(both = 17, `BFR only` = 18, `HLRT only` = 15, neither = 4)) +
+  scale_alpha_manual(values = c(`FALSE` = 0.9, `TRUE` = 0.3), guide = "none") +
+  scale_colour_brewer(palette = "Dark2") +
+  coord_equal() +
+  labs(
+    x = "NES, BFR", y = "NES, HLRT", shape = "FDR < 0.05", colour = NULL,
+    title = "S22. Pathway NES, BFR against HLRT",
+    subtitle = sprintf(
+      "%d pathways, Spearman rho %.2f", nrow(nes),
+      cor(nes$NES_BFR, nes$NES_HLRT, method = "spearman")
+    )
+  ) +
+  theme_bw(base_size = 9)
+```
+
+S23 is Sam's decomposition, one parent per panel, two to a page (Sam's 8.5 by 6 inch shape), for the
+25 parents with the smallest larger adjusted p across legs: one row per child term (up to 15, those
+holding the largest share of either leg's leading edge) [relation], fill the share of the leading
+edge, size the count, black outline a child at BH-adjusted p < 0.05.
+
+```{r child-pages}
+top_parents <- leading_edge |>
+  filter(set_id %in% decomposition$parent_id) |>
+  slice_min(pmax(padj_BFR, padj_HLRT), n = 25, with_ties = FALSE) |>
+  pull(set_id)
+child_pages <- map(top_parents, function(id) {
+  rows <- filter(decomposition, parent_id == id) |>
+    filter(max(in_child) > 0, .by = child_id) |>
+    filter(child_id %in% unique(child_id[order(-share_of_edge)])[1:15])
+  coverage <- filter(go_coverage, parent_id == id)
+  ggplot(rows, aes(arm, reorder(str_trunc(sprintf("%s [%s]", child, relation), 70),
+    share_of_edge
+  ))) +
+    geom_point(
+      aes(size = in_child, fill = share_of_edge, colour = factor(padj < 0.05, c(TRUE, FALSE))),
+      shape = 21, stroke = 0.8
+    ) +
+    scale_fill_gradient(
+      low = "#f7fbff", high = "#08519c", limits = c(0, 1), name = "share of\nleading edge"
+    ) +
+    scale_colour_manual(
+      values = c(`TRUE` = "black", `FALSE` = "grey75"), labels = c("padj < 0.05", "n.s."),
+      drop = FALSE, name = "child test"
+    ) +
+    scale_size_area(max_size = 8, name = "proteins") +
+    labs(
+      x = NULL, y = NULL, title = paste("S23.", str_wrap(rows$parent[1], 60)),
+      subtitle = sprintf(
+        "leading edge: BFR %d, HLRT %d; in significant descendants: BFR %.0f%%, HLRT %.0f%%",
+        rows$core_size[rows$arm == "BFR"][1], rows$core_size[rows$arm == "HLRT"][1],
+        100 * coverage$explained[coverage$arm == "BFR"],
+        100 * coverage$explained[coverage$arm == "HLRT"]
+      )
+    ) +
+    theme_bw(base_size = 9) +
+    theme(plot.subtitle = element_text(size = 7), panel.grid.minor = element_blank())
+})
+```
+
+S24 is Sam's unique-protein view, one parent per panel, two to a page, in order of the divergence p,
+up to 25:
+per child, BFR-only proteins to the left and HLRT-only to the right (up to 15, the most
+populated), the shared count in brackets, an asterisk at Fisher BH-adjusted p < 0.05.
+
+```{r unique-pages}
+unique_ids <- unique_children |>
+  distinct(parent_id, p_divergence) |>
+  slice_min(p_divergence, n = 25, with_ties = FALSE) |>
+  pull(parent_id)
+unique_pages <- map(unique_ids, function(id) {
+  rows <- filter(unique_children, parent_id == id, BFR_in_child + HLRT_in_child > 0) |>
+    slice_max(BFR_in_child + HLRT_in_child, n = 15, with_ties = FALSE) |>
+    mutate(child = str_trunc(paste0(if_else(padj < 0.05, "* ", ""), child), 70))
+  rows |>
+    pivot_longer(c(BFR_in_child, HLRT_in_child), names_to = "arm", values_to = "proteins") |>
+    mutate(
+      arm = sub("_in_child", "", arm), proteins = if_else(arm == "BFR", -proteins, proteins)
+    ) |>
+    ggplot(aes(proteins, reorder(child, proteins), fill = arm)) +
+    geom_col(width = 0.7, alpha = 0.85) +
+    geom_vline(xintercept = 0, colour = "grey40") +
+    scale_x_continuous(labels = abs) +
+    scale_fill_manual(values = arm_colours, name = "unique to") +
+    labs(
+      x = "unique leading-edge proteins in the child term", y = NULL,
+      title = paste("S24.", str_wrap(rows$parent[1], 60)),
+      subtitle = sprintf(
+        "only BFR %d, only HLRT %d, shared %d; divergence %.2f, permutation p %.3g (BH %.3g)",
+        rows$only_BFR[1], rows$only_HLRT[1], rows$shared[1], rows$divergence[1],
+        rows$p_divergence[1], rows$padj_divergence[1]
+      )
+    ) +
+    theme_bw(base_size = 9) +
+    theme(plot.subtitle = element_text(size = 7), panel.grid.minor = element_blank())
+})
+```
+
+All pages go to one A4 PDF, S20 first; `pair_up()` stacks the S23 and S24 panels two to a page.
+
+```{r write-figures}
+pdf(file.path(stage, "b_reports", "06_leading_edge.pdf"), width = 8.27, height = 11.69)
+set.seed(1)
+pair_up <- function(panels) map(split(panels, ceiling(seq_along(panels) / 2)), wrap_plots, ncol = 1, nrow = 2)
+pages <- c(
+  list(overlap_page), venn_pages, list(nes_page), pair_up(child_pages), pair_up(unique_pages)
+)
+walk(pages, print)
+invisible(dev.off())
+```
+
+## Summary
+
+Shared pathways per collection, the spread of the Jaccard index and of the shared count over
+chance, the GO:BP breakdown, and the parents whose unique proteins split most clearly.
+
+```{r summary}
+count(leading_edge, database)
+summary(leading_edge$jaccard)
+summary(leading_edge$both / leading_edge$expected_shared)
+c(
+  parents = n_distinct(decomposition$parent_id),
+  children = n_distinct(decomposition$child_id),
+  parents_split = n_distinct(unique_children$parent_id)
+)
+group_by(go_coverage, arm) |>
+  summarise(median_explained = median(explained))
+distinct(unique_children, parent, padj_divergence) |>
+  filter(padj_divergence < 0.05)
+```
+
+## Save results
+
+`06_leading_edge.xlsx` holds `leading_edge` (one row per pathway), `proteins` (one row per
+pathway and leading-edge protein), `go_children` (one row per parent, child and leg),
+`go_coverage` (one row per parent and leg) and `unique_children` (one row per parent and child).
+
+```{r write}
+sheets <- list(
+  leading_edge = leading_edge, proteins = proteins, go_children = decomposition,
+  go_coverage = go_coverage, unique_children = unique_children
+)
+write_xlsx(sheets, file.path(stage, "c_data", "06_leading_edge.xlsx"))
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

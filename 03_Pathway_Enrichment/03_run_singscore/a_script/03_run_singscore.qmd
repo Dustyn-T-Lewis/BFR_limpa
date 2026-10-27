@@ -1,0 +1,165 @@
+---
+title: "04 · Run singscore"
+format:
+  html:
+    toc: true
+    embed-resources: true
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+`singscore` is called with `::`.
+
+```{r setup}
+pacman::p_load(here, dplyr, tibble, purrr, stringr, ggplot2, readxl, writexl)
+here::i_am("03_Pathway_Enrichment/03_run_singscore/a_script/03_run_singscore.qmd")
+```
+
+## Read inputs
+
+singscore gives each sample one score per gene set. Within a sample it ranks every gene by
+abundance, then scores a set by how high its members rank on average, centred so that 0 is what
+random members would give. The ranks are within the sample, so a score ignores the rest of the
+cohort; there is no p-value and no contrast. Later steps (`04_set_classification`,
+`05_set_association`) test the scores.
+
+The inputs are the tested sets, the catalogue and protein-to-gene map from `00_build_gene_sets`,
+and the protein abundance matrix from quantification.
+
+```{r read}
+stage <- here("03_Pathway_Enrichment", "03_run_singscore")
+gene_sets <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
+sets <- readRDS(file.path(gene_sets, "gene_sets.rds"))
+book <- file.path(gene_sets, "00_build_gene_sets.xlsx")
+set_catalog <- read_excel(book, "set_catalog")
+protein_map <- read_excel(book, "protein_gene_map")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+dim(proteins$E)
+```
+
+## Score samples
+
+Sets are keyed on gene symbols, so the matrix keeps the representative protein of each symbol
+and its rows are renamed from protein to gene. `rankGenes()` ranks genes within each sample;
+`multiScore()` scores every set in every sample and returns `Scores`, a set-by-sample matrix,
+beside `Dispersions`, the spread of each set's member ranks within each sample.
+
+```{r score}
+gene_map <- filter(protein_map, selected)
+gene_matrix <- proteins$E[gene_map$protein, ]
+rownames(gene_matrix) <- gene_map$gene
+scored <- singscore::multiScore(singscore::rankGenes(gene_matrix), upSetColc = sets)
+scores <- scored$Scores
+dim(scores)
+scores[1:4, 1:4]
+```
+
+## Score and dispersion per set
+
+Dispersion is low when a set's members sit together in the ranking and high when they scatter.
+Average each set's score and dispersion across samples, then summarise by collection.
+
+```{r spread}
+set_spread <- set_catalog |>
+  filter(qualifies) |>
+  select(set_id, database) |>
+  mutate(
+    score = rowMeans(scores[set_id, ]),
+    dispersion = rowMeans(scored$Dispersions[set_id, ])
+  )
+collection_spread <- set_spread |>
+  summarise(
+    sets = n(), median_score = round(median(score), 4),
+    median_dispersion = round(median(dispersion), 1), .by = database
+  )
+collection_spread
+```
+
+## Check participant structure
+
+A principal component analysis of the scores (samples as rows) shows what drives them. For the
+first two components, the R² of a linear model on participant gives the share of that
+component's variance explained by participant identity. `proteins$targets` rows follow the matrix
+columns, so they line up with the component scores.
+
+```{r structure}
+components <- prcomp(t(scores))
+structure_check <- tibble(
+  component = paste0("PC", 1:4),
+  variance_explained = round(summary(components)$importance[2, 1:4], 3),
+  participant_share = c(round(map_dbl(1:2, function(i) {
+    summary(lm(components$x[, i] ~ proteins$targets$participant))$r.squared
+  }), 3), NA, NA)
+)
+structure_check
+```
+
+Participant identity dominates the raw scores, so later steps use the within-leg change, never
+the raw value.
+
+## Figure
+
+singscore's own `plotDispersion()` and `plotRankDensity()` draw one signature at a time. S11 is a
+plain ggplot over the matrices `multiScore()` already returned: each set's mean score against its
+mean dispersion.
+
+```{r figure}
+figure <- ggplot(set_spread, aes(score, dispersion, colour = database)) +
+  geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey80") +
+  geom_point(alpha = 0.4, size = 0.8) +
+  scale_colour_brewer(palette = "Dark2", name = NULL) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  labs(
+    x = "mean score across samples", y = "mean dispersion across samples",
+    title = "Set score against dispersion",
+    caption = str_wrap(paste(
+      "S11 Figure. singscore across the cohort.",
+      sprintf("One point per set, %d sets, score and dispersion averaged", nrow(scores)),
+      sprintf("over %d samples.", ncol(scores)),
+      "Dispersion is the spread of a set's member ranks within a sample: low means members sit",
+      "together. Scores are in the set_scores sheet of 03_run_singscore.xlsx; dispersions are",
+      "computed in 03_run_singscore and not saved."
+    ), 115)
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    aspect.ratio = 1,
+    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
+    plot.caption.position = "plot"
+  )
+```
+
+S11 goes to `b_reports/03_run_singscore_figures.pdf`.
+
+```{r write-figure}
+pdf(file.path(stage, "b_reports", "03_run_singscore_figures.pdf"), width = 8.27, height = 11.69)
+print(figure)
+invisible(dev.off())
+```
+
+## Save results
+
+The score matrix is written twice. `set_scores.rds` is what `04_set_classification` and
+`05_set_association` read: singscore values carry exact rank ties, and a round trip through Excel
+changes the last bit of some, which breaks ties and moves 05's Wilcoxon and Spearman p.
+`03_run_singscore.xlsx` holds the same matrix for reading, beside the collection medians and the
+component check.
+
+```{r write}
+sheets <- list(
+  collection_spread = collection_spread,
+  structure_check = structure_check,
+  set_scores = rownames_to_column(as.data.frame(scores), "set_id")
+)
+saveRDS(scores, file.path(stage, "c_data", "set_scores.rds"))
+write_xlsx(sheets, file.path(stage, "c_data", "03_run_singscore.xlsx"))
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```
