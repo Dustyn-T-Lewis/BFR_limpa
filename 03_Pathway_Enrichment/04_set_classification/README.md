@@ -14,12 +14,12 @@ quarto render 03_Pathway_Enrichment/04_set_classification/a_script/04_set_classi
 Outputs:
 
 - `b_reports/04_set_classification.html`: the walkthrough.
-- `b_reports/04_classification_<collection>.pdf`, one per collection: S11 to S14, an ROC panel for
+- `b_reports/04_classification_<collection>.pdf`, one per collection: S6 to S9, an ROC panel for
   every set reaching nominal p on each task except the baseline, smallest p first, BH q in each
   header. Red curves separate higher in the second group (post, or BFR), blue lower; shading is
   the area under the curve and the dashed line chance. p is the paired Wilcoxon signed-rank test,
   q is BH within collection and task.
-- `b_reports/04_chance_by_collection.pdf`: S15, nominal hits against chance by collection and task.
+- `b_reports/04_chance_by_collection.pdf`: S10, nominal hits against chance by collection and task.
   Bar length is observed nominal hits over the null expectation, red above 1 and grey below; labels
   give observed of tested.
   Features co-vary, so under no effect the count swings widely around 5% (shuffled vl_csa gave

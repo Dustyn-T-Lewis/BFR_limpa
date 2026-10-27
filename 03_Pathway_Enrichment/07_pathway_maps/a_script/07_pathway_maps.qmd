@@ -11,8 +11,8 @@ knitr:
 
 ## Load packages
 
-`clusterProfiler` runs the enrichment and `enrichplot` draws it; `enrichVolcano` (the user's own
-package, not on CRAN) is called with `::` for its label cleaner.
+`clusterProfiler` runs the enrichment and `enrichplot` draws it; `enrichVolcano` (not on CRAN) is
+called with `::` for its label cleaner.
 
 ```{r setup}
 pacman::p_load(here, dplyr, purrr, ggplot2, readxl, clusterProfiler, enrichplot)
@@ -110,7 +110,7 @@ nes_check <- compared |>
   map(function(result) {
     transmute(
       as.data.frame(result),
-      set_id = as.character(ID), contrast = arms[as.character(Cluster)], NES_08 = NES
+      set_id = as.character(ID), contrast = arms[as.character(Cluster)], NES_07 = NES
     )
   }) |>
   list_rbind() |>
@@ -120,14 +120,13 @@ nes_check <- compared |>
   )
 nes_check |>
   summarise(
-    pairs = n(), r = cor(NES_08, NES), max_abs_diff = max(abs(NES_08 - NES)), .by = database
+    pairs = n(), r = cor(NES_07, NES), max_abs_diff = max(abs(NES_07 - NES)), .by = database
   )
 ```
 
 ## Draw figures
 
-Every page carries an S-numbered title. `figure_title()` takes the figure number, title and
-collection, and returns the title layer. `arm_fill` colours the two legs as in the other steps.
+Every page carries an S-numbered title. `arm_fill` colours the two legs as in the other steps.
 
 ```{r figure-style}
 figure_title <- function(number, title, db) {
@@ -139,13 +138,13 @@ arm_fill <- scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), nam
 `maps()` draws a collection's four pages from `compared`. Pathway similarity is computed only among
 the drawn pathways, since GO:BP holds 1,366 sets.
 
-- S24, dotplot: BFR and HLRT side by side, colour NES (signed), dot
+- S19, dotplot: BFR and HLRT side by side, colour NES (signed), dot
   size the share of the pathway in its leading edge, the proteins ranked before the running-sum
   peak.
-- S25, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
+- S20, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
   node a pie split by leg.
-- S26, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
-- S27, network: the five strongest pathways linked to their leading-edge proteins.
+- S21, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
+- S22, network: the five strongest pathways linked to their leading-edge proteins.
 
 ```{r maps}
 maps <- function(db) {
@@ -156,19 +155,19 @@ maps <- function(db) {
     # dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.
     dotplot(shown, showCategory = length(show), color = "NES", label_format = 45) +
       scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", name = "NES") +
-      figure_title(24, "Pathways by leg", db),
+      figure_title(19, "Pathways by leg", db),
     # On the two small collections (Hallmark, GO Slim) few pathways share proteins, and emapplot
     # warns from an internal max() over no edges; the map still draws.
     suppressWarnings(
       emapplot(similar, showCategory = length(show), label_format = 30, size_category = 1.6)
-    ) + arm_fill + figure_title(25, "Enrichment map", db),
+    ) + arm_fill + figure_title(20, "Enrichment map", db),
     treeplot(
       similar,
       showCategory = length(show), nCluster = min(5, length(show) - 1), label_format = 32,
       fontsize_tiplab = 2.6, fontsize_cladelab = 2.6, hexpand = 0.5, cladelab_offset = 9
-    ) + arm_fill + figure_title(26, "Pathway tree", db),
+    ) + arm_fill + figure_title(21, "Pathway tree", db),
     cnetplot(shown, showCategory = head(show, 5), node_label = "category") + arm_fill +
-      figure_title(27, "Pathways and their proteins", db)
+      figure_title(22, "Pathways and their proteins", db)
   )
 }
 ```

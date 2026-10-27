@@ -11,7 +11,7 @@ knitr:
 
 ## Load packages
 
-`enrichVolcano`, the user's own plotting package (not on CRAN), is called with `::`.
+`enrichVolcano`, a plotting package not on CRAN, is called with `::`.
 
 ```{r setup}
 pacman::p_load(here, dplyr, purrr, stringr, ggplot2, patchwork, readxl)
@@ -27,10 +27,8 @@ contrast is not drawn.
 Both tables come from `01_run_fgsea_and_fry.xlsx`. Only fgsea sets that survived
 `collapsePathways` (`main`) are kept for the rings. The leading edge, the set members that drive
 fgsea's score, was saved as one `;`-joined string and is split back into a vector per set. fry's
-significant sets per contrast are counted for reference: where fry finds none, the ring is an
-fgsea lead only. S9 labels each protein with its mean
-observed precursors per sample (`pi_label`), so a thinly observed protein near the top of the pi
-ranking reads as such.
+significant sets per contrast are counted for reference; fry finds no set on S3's panels A and D
+(see `01_run_fgsea_and_fry`).
 
 ```{r read}
 tests <- here(
@@ -52,7 +50,7 @@ fry_hits
 ## Match leading edges to labels
 
 `plot_volcano_ring()` matches leading-edge genes against point labels, and a label carries an
-accession when a symbol sits on more than one protein. S8 labels points with `label` and S9 with
+accession when a symbol sits on more than one protein. S3 labels points with `label` and S4 with
 `pi_label`, so each label column gets its own copy of the leading edges, with each symbol mapped
 to the label of its representative protein, the one fgsea ranked. The map is the same in every
 contrast, so the first contrast's rows build it.
@@ -114,11 +112,10 @@ contrast_subtitle <- c(
 
 ## Draw volcanoes
 
-`make_volcano()` takes a contrast name and a label rule and returns one ringed volcano. With
-`rank_by = "fdr"` it names the five proteins with the lowest BH FDR below 0.05; with
-`rank_by = "pi"` it names the five with the smallest pi-score, P.Value^|logFC|, which ranks and
-selects nothing, each with its mean observed precursors. The ring draws the twelve collapse
-survivors with the lowest adjusted p, in either direction.
+`make_volcano()` draws one ringed volcano. With `rank_by = "fdr"` it names the five proteins with
+the lowest BH FDR below 0.05; with `rank_by = "pi"` it names the five with the smallest pi-score,
+P.Value^|logFC|, which ranks and selects nothing, each with its mean observed precursors. The
+ring draws the twelve collapse survivors with the lowest adjusted p, in either direction.
 
 The ring draws with `clip = "off"` on a square panel and puts the NES key on the right, so a
 label on that edge lands on the colour bar. The key goes below the plot, where nothing collides.
@@ -159,9 +156,11 @@ make_volcano <- function(cn, rank_by = "fdr") {
 }
 ```
 
-S8 puts the primary question first, then the two training responses and the between-treatment
-comparison. S9 repeats the training responses with the same points, colours and rings; only the
-labels move, to the pi-score ranking, so no protein named there is a discovery.
+S3 puts the primary question first, then the two training responses and the between-treatment
+comparison. S4 repeats the training responses with the same points, colours and rings; only the
+labels move, to the pi-score ranking, so no protein named there is a discovery. S4 labels each
+protein with its mean observed precursors per sample (`pi_label`), so a thinly observed protein
+near the top of the pi ranking reads as such.
 
 ```{r figures}
 fdr_order <- c(
@@ -170,25 +169,26 @@ fdr_order <- c(
 pi_order <- c("BFR_Post-Pre", "HLRT_Post-Pre")
 figures <- list(
   wrap_plots(map(fdr_order, make_volcano), ncol = 2) +
-    plot_annotation(title = "S8. Protein volcanoes with fgsea sets ringed", tag_levels = "A"),
+    plot_annotation(title = "S3. Protein volcanoes with fgsea sets ringed", tag_levels = "A"),
   wrap_plots(map(pi_order, make_volcano, rank_by = "pi"), ncol = 1) +
-    plot_annotation(title = "S9. Protein volcanoes labelled by pi-score", tag_levels = "A")
+    plot_annotation(title = "S4. Protein volcanoes labelled by pi-score", tag_levels = "A")
 )
 ```
 
 ## Save results
 
-Both pages go to `b_reports/02_enrich_volcano_fgsea_figures.pdf`. The step writes no table.
+The step writes no table.
 
 ```{r write-figures}
-figure_file <- "02_enrich_volcano_fgsea_figures.pdf"
 pdf(
-  here("03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports", figure_file),
+  here(
+    "03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports",
+    "02_enrich_volcano_fgsea_figures.pdf"
+  ),
   width = 8.27, height = 11.69
 )
 walk(figures, print)
 invisible(dev.off())
-length(figures)
 ```
 
 ## Session information

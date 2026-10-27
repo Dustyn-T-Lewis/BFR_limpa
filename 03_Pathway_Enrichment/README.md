@@ -17,8 +17,8 @@ whether the pathways both legs move are driven by the same proteins, with his NE
 legs across every set.  [`07_pathway_maps`](07_pathway_maps/README.md) draws both
 training responses as dotplots, enrichment maps, trees and protein networks.
 
-Figures run S1 to S27 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`,
-S11–S15 from `04_`, S16–S18 from `05_`, S19–S23 from `06_` and S24–S27 from `07_`. Steps `01_` to
+Figures run S1 to S22 through the stage: S1–S2 from `01_`, S3–S4 from `02_`, S5 from `03_`,
+S6–S10 from `04_`, S11–S13 from `05_`, S14–S18 from `06_` and S19–S22 from `07_`. Steps `01_` to
 `03_` and `06_` write one PDF each; `07_` writes one per collection; `04_` and `05_` write one per
 collection plus a chance summary. Each A4 page carries its S-number and a short title; encodings
 and findings live in the step READMEs.

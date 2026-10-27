@@ -191,7 +191,8 @@ fry_sets <- function(y, weights, sets) {
   y$weights <- weights
   index <- ids2indices(sets, representative[rownames(y)])
   map(set_names(contrast_names), function(cn) {
-    fry(y, index, d$design, d$contrasts[, cn], sort = "none") |> rownames_to_column("set")
+    fry(y, index, d$design, d$contrasts[, cn], robust = TRUE, sort = "none") |>
+      rownames_to_column("set")
   }) |>
     list_rbind(names_to = "contrast")
 }

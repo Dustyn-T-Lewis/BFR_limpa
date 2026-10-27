@@ -102,9 +102,8 @@ the raw value.
 
 ## Figure
 
-singscore's own `plotDispersion()` and `plotRankDensity()` draw one signature at a time. S10 is a
-plain ggplot over the matrices `multiScore()` already returned: each set's mean score against its
-mean dispersion.
+singscore's own `plotDispersion()` and `plotRankDensity()` draw one signature at a time. S5 plots
+each set's mean score against its mean dispersion from the `multiScore()` matrices.
 
 ```{r figure}
 figure <- ggplot(set_spread, aes(score, dispersion, colour = database)) +
@@ -114,13 +113,11 @@ figure <- ggplot(set_spread, aes(score, dispersion, colour = database)) +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   labs(
     x = "mean score across samples", y = "mean dispersion across samples",
-    title = "S10. singscore: set score against dispersion"
+    title = "S5. singscore: set score against dispersion"
   ) +
   theme_minimal(base_size = 10) +
   theme(aspect.ratio = 1)
 ```
-
-S10 goes to `b_reports/03_run_singscore_figures.pdf`.
 
 ```{r write-figure}
 pdf(file.path(stage, "b_reports", "03_run_singscore_figures.pdf"), width = 8.27, height = 11.69)
@@ -130,20 +127,22 @@ invisible(dev.off())
 
 ## Save results
 
-The score matrix is written twice. `set_scores.rds` is what `04_set_classification` and
-`05_set_association` read: singscore values carry exact rank ties, and a round trip through Excel
-changes the last bit of some, which breaks ties and moves 05's Wilcoxon and Spearman p.
+The score matrix is written twice. `set_scores.rds` is the copy later steps read: singscore
+values carry exact rank ties, and a round trip through Excel changes the last bit of some, which
+breaks ties and moves 05's Wilcoxon and Spearman p.
 `03_run_singscore.xlsx` holds the same matrix for reading, beside the collection medians and the
 component check.
 
 ```{r write}
-sheets <- list(
-  collection_spread = collection_spread,
-  structure_check = structure_check,
-  set_scores = rownames_to_column(as.data.frame(scores), "set_id")
-)
 saveRDS(scores, file.path(stage, "c_data", "set_scores.rds"))
-write_xlsx(sheets, file.path(stage, "c_data", "03_run_singscore.xlsx"))
+write_xlsx(
+  list(
+    collection_spread = collection_spread,
+    structure_check = structure_check,
+    set_scores = rownames_to_column(as.data.frame(scores), "set_id")
+  ),
+  file.path(stage, "c_data", "03_run_singscore.xlsx")
+)
 ```
 
 ## Session information

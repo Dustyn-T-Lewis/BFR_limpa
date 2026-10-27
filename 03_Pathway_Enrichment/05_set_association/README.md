@@ -21,11 +21,11 @@ Outputs:
 
 - `b_reports/05_set_association.html`: the walkthrough.
 - `b_reports/05_association_<collection>.pdf`, one per collection: every set-outcome pair
-  reaching nominal p, smallest p first. S16 (pooled) plots each leg, with a line fitted in each
-  arm and the within-arm correlations inset; S17 (differential) plots the BFR minus HLRT
+  reaching nominal p, smallest p first. S11 (pooled) plots each leg, with a line fitted in each
+  arm and the within-arm correlations inset; S12 (differential) plots the BFR minus HLRT
   differences that were tested, one point per participant, with a least-squares line. Each panel
   header gives the tested Spearman r, its p and BH q within collection and outcome.
-- `b_reports/05_chance_by_collection.pdf`: S18, nominal hits against chance by collection. Bar
+- `b_reports/05_chance_by_collection.pdf`: S13, nominal hits against chance by collection. Bar
   length is observed nominal hits over the null expectation, red above 1 and grey below; labels
   give observed of tested.
   Features co-vary, so under no effect the count swings widely around 5% (shuffled vl_csa gave

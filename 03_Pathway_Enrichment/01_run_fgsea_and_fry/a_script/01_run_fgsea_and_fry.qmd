@@ -125,7 +125,7 @@ fgsea_raw <- map(ranked, function(stats) fgsea::fgsea(sets, stats, minSize = 15,
 
 fry reads rows of `proteins$E`, so each set's gene symbols are turned into row numbers through
 each symbol's representative protein. It reads limpa's precision weights through
-`proteins$weights`. No `block`: participant is a fixed term in the design, and the residual
+`proteins$weights`, with robust empirical Bayes as in the protein fit. No `block`: participant is a fixed term in the design, and the residual
 within-leg correlation is 0.027.
 
 ```{r fry-index}
@@ -151,7 +151,7 @@ set_tests <- bind_rows(
       )
   }),
   map(contrast_names, function(contrast) {
-    fry(proteins, set_rows, d$design, d$contrasts[, contrast], sort = "none") |>
+    fry(proteins, set_rows, d$design, d$contrasts[, contrast], robust = TRUE, sort = "none") |>
       rownames_to_column("set_id") |>
       transmute(
         set_id, contrast,
@@ -220,7 +220,7 @@ set_summary
 
 ## Figures
 
-The figures go to one A4 PDF, S1 to S7.
+The figures go to one A4 PDF, S1 and S2.
 
 The dot plots show four contrasts; the baseline contrast is left out. `survivors` holds the
 significant fgsea sets that survived the collapse.
@@ -234,76 +234,48 @@ survivors <- set_tests |>
 count(survivors, contrast, .drop = FALSE)
 ```
 
-`dotplot_figure()` stacks one dot plot per contrast that has a survivor, each showing its ten
-survivors with the lowest adjusted p: NES on the x axis, point size for set size, and colour for
-the collection when `by_database` is `TRUE`, otherwise -log10 FDR. The size and colour scales
-span every row on the page, so the panels compare. Labels drop the collection prefix, and
+S1 stacks one dot plot per contrast that has a survivor, each showing its ten survivors with the
+lowest adjusted p: NES on the x axis, point size for set size, colour for the collection. The size
+scale spans every row on the page, so the panels compare. Labels drop the collection prefix, and
 `GOBP_MUSCLE_CONTRACTION` and `REACTOME_MUSCLE_CONTRACTION` would then share a row, so a name whose
-stem repeats within a contrast gets its collection appended.
+stem repeats within a contrast gets its collection appended. Each collection's own view is the
+dotplot in `07_pathway_maps`.
 
-```{r dotplot-figure-helper}
-dotplot_figure <- function(rows, number, name, by_database = FALSE) {
-  rows <- mutate(
-    rows,
-    stem = sub("^[A-Z0-9]+_", "", pathway),
-    pathway = if_else(
-      duplicated(stem) | duplicated(stem, fromLast = TRUE), paste0(pathway, " ", database), pathway
-    ),
-    .by = contrast
-  )
-  colour <- if (by_database) {
-    list(
-      scale_colour_brewer(palette = "Dark2", limits = collections, name = NULL),
-      guides(colour = guide_legend(override.aes = list(size = 3)))
-    )
-  } else {
-    scale_colour_viridis_c(
-      option = "rocket", direction = -1, end = 0.9, limits = range(-log10(rows$padj)),
-      name = expression(-log[10] ~ FDR)
-    )
-  }
-  by_contrast <- split(rows, rows$contrast, drop = TRUE)
-  panels <- map(by_contrast, function(contrast_rows) {
-    top <- contrast_rows |>
-      slice_min(padj, n = 10, with_ties = FALSE) |>
-      mutate(label = enrichVolcano::clean_label(pathway, width = 45))
-    ggplot(top, aes(NES, reorder(label, NES), size = n)) +
-      geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
-      geom_point(
-        aes(colour = if (by_database) database else -log10(padj)),
-        alpha = 0.9, show.legend = TRUE
-      ) +
-      colour +
-      scale_size_continuous(range = c(1.5, 5), limits = range(rows$n), name = "genes") +
-      labs(
-        x = "normalised enrichment score", y = NULL,
-        title = sprintf(
-          "%s, %d of %d survivors", contrast_rows$contrast[1], nrow(top), nrow(contrast_rows)
-        )
-      ) +
-      theme_minimal(base_size = 9) +
-      theme(panel.grid.major.y = element_blank(), plot.title = element_text(size = 9))
-  })
+```{r survivor-figure}
+labelled <- mutate(
+  survivors,
+  stem = sub("^[A-Z0-9]+_", "", pathway),
+  pathway = if_else(
+    duplicated(stem) | duplicated(stem, fromLast = TRUE), paste0(pathway, " ", database), pathway
+  ),
+  .by = contrast
+)
+panels <- map(split(labelled, labelled$contrast, drop = TRUE), function(contrast_rows) {
+  top <- contrast_rows |>
+    slice_min(padj, n = 10, with_ties = FALSE) |>
+    mutate(label = enrichVolcano::clean_label(pathway, width = 45))
+  ggplot(top, aes(NES, reorder(label, NES), size = n, colour = database)) +
+    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey75") +
+    geom_point(alpha = 0.9, show.legend = TRUE) +
+    scale_colour_brewer(palette = "Dark2", limits = collections, name = NULL) +
+    guides(colour = guide_legend(override.aes = list(size = 3))) +
+    scale_size_continuous(range = c(1.5, 5), limits = range(labelled$n), name = "genes") +
+    labs(
+      x = "normalised enrichment score", y = NULL,
+      title = sprintf(
+        "%s, %d of %d survivors", contrast_rows$contrast[1], nrow(top), nrow(contrast_rows)
+      )
+    ) +
+    theme_minimal(base_size = 9) +
+    theme(panel.grid.major.y = element_blank(), plot.title = element_text(size = 9))
+})
+figures <- list(
   wrap_plots(panels, ncol = 1, guides = "collect") +
-    plot_annotation(
-      title = sprintf("S%d. Ten strongest collapse survivors, %s", number, name),
-      tag_levels = "A"
-    )
-}
-```
-
-S1 covers all collections, coloured by collection; S2 to S6 repeat it within each collection.
-
-```{r dotplot-figures}
-figures <- c(
-  list(dotplot_figure(survivors, 1, "all collections", by_database = TRUE)),
-  imap(collections, function(db, i) {
-    dotplot_figure(filter(survivors, database == db), i + 1, db)
-  })
+    plot_annotation(title = "S1. Ten strongest collapse survivors", tag_levels = "A")
 )
 ```
 
-S7 shows how much redundancy the collapse removed: significant sets per collection and contrast,
+S2 shows how much redundancy the collapse removed: significant sets per collection and contrast,
 before and after.
 
 ```{r collapse-effect}
@@ -320,11 +292,11 @@ figures <- c(figures, list(
     labs(x = NULL, y = "significant sets") +
     theme_minimal(base_size = 10) +
     theme(legend.position = "bottom") +
-    plot_annotation(title = "S7. Significant sets before and after collapse")
+    plot_annotation(title = "S2. Significant sets before and after collapse")
 ))
 ```
 
-Write all seven pages to `b_reports/01_run_fgsea_and_fry_figures.pdf`.
+Write both pages to `b_reports/01_run_fgsea_and_fry_figures.pdf`.
 
 ```{r write-figures}
 pdf(file.path(stage, "b_reports", "01_run_fgsea_and_fry_figures.pdf"), width = 8.27, height = 11.69)

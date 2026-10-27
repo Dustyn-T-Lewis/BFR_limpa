@@ -11,7 +11,7 @@ knitr:
 
 ## Load packages
 
-`pROC` and `enrichVolcano` (the user's own package, not on CRAN) are called with `::`.
+`pROC` and `enrichVolcano` (not on CRAN) are called with `::`.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
@@ -22,8 +22,7 @@ here::i_am("03_Pathway_Enrichment/04_set_classification/a_script/04_set_classifi
 
 Three inputs: the set catalogue from `00_build_gene_sets`, the singscore matrix from
 `03_run_singscore` (one row per set, one column per sample) and the sample targets stored with
-the protein estimates. The singscore matrix travels as rds, not through a workbook, because a
-round trip through xlsx breaks the exact rank ties the tests below depend on.
+the protein estimates.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "04_set_classification")
@@ -189,8 +188,8 @@ set_auc |>
 
 ## Compare with chance
 
-With thousands of sets, some reach p < 0.05 by luck alone. The chance expectation is 5% of the sets
-tested: the number of nominal hits a collection returns when no set truly separates the groups.
+With thousands of sets, some reach p < 0.05 by chance. The chance expectation is 5% of the sets
+tested: the number of nominal hits a collection returns when no set separates the groups.
 The ratio of observed nominal hits to that count reads 1 at chance. Each collection gets its own
 denominator, so a 41-set collection is not read against a 1,366-set one, and BH runs inside the
 same split for the same reason.
@@ -221,8 +220,6 @@ summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = comparison)
 ```
 
 ## Draw figures
-
-The figures share a theme and an A4 writer.
 
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -294,21 +291,21 @@ roc_figure <- function(task_name, number, db) {
 }
 ```
 
-One PDF per collection, so each can be read on its own. The four drawn tasks are S11 to S14 in
-the order of `drawn_tasks`; S15 is the chance page across all five tasks. The baseline task is
+One PDF per collection, so each can be read on its own. The four drawn tasks are S6 to S9 in
+the order of `drawn_tasks`; S10 is the chance page across all five tasks. The baseline task is
 reported in the chance table but not drawn.
 
 ```{r write-figures}
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 walk(unique(catalog$database), function(db) {
   write_pdf(
-    list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 10 + i, db))),
+    list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 5 + i, db))),
     paste0("04_classification_", db, ".pdf")
   )
 })
 ```
 
-S15 draws each ratio as a bar, one panel per task.
+S10 draws each ratio as a bar, one panel per task.
 
 ```{r chance-figure}
 chance_plot <- chance_expectation |>
@@ -325,7 +322,7 @@ chance_plot <- chance_expectation |>
   scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
   labs(
     x = "observed nominal hits / chance expectation", y = NULL,
-    title = "S15. Nominal hits against chance, by collection and task"
+    title = "S10. Nominal hits against chance, by collection and task"
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())
@@ -340,12 +337,14 @@ collection), `set_auc` (AUC, paired p and BH q per set and task, smallest p firs
 `set_catalog` (every tested set).
 
 ```{r write}
-sheets <- list(
-  chance_expectation = chance_expectation,
-  set_auc = arrange(set_auc, p_paired),
-  set_catalog = catalog
+write_xlsx(
+  list(
+    chance_expectation = chance_expectation,
+    set_auc = arrange(set_auc, p_paired),
+    set_catalog = catalog
+  ),
+  file.path(stage, "c_data", "04_set_classification.xlsx")
 )
-write_xlsx(sheets, file.path(stage, "c_data", "04_set_classification.xlsx"))
 ```
 
 ## Session information

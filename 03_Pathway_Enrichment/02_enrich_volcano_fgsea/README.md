@@ -12,12 +12,12 @@ quarto render 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_v
 Outputs:
 
 - `b_reports/02_enrich_volcano_fgsea.html`: the walkthrough.
-- `b_reports/02_enrich_volcano_fgsea_figures.pdf`: S8 (the interaction, both training responses
-  and post-training BFR against HLRT, five lowest-FDR proteins named) and S9 (the training
+- `b_reports/02_enrich_volcano_fgsea_figures.pdf`: S3 (the interaction, both training responses
+  and post-training BFR against HLRT, five lowest-FDR proteins named) and S4 (the training
   responses with labels ranked by Π, which selects nothing, each followed by the protein's mean
   observed precursors). Points are coloured when protein BH FDR < 0.05; the ring shows up to
   twelve collapse survivors, lowest adjusted p first, coloured by NES, with ticks on their
   leading-edge proteins.
 
-No table is written, so there is no `c_data/`. fry finds no set on S8's panels A and D, the
+No table is written, so there is no `c_data/`. fry finds no set on S3's panels A and D, the
 interaction and BFR_Post-HLRT_Post, so their rings are fgsea leads only.
