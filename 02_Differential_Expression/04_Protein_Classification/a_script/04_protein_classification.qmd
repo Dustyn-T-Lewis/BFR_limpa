@@ -91,34 +91,25 @@ colnames(delta) <- legs$leg_id
 
 ## Define the tasks
 
-Five paired tasks, the same as `03_Pathway_Enrichment/05_set_classification`. Each holds its
-matrix and two paired column sets, `positive` and `negative`. `favours` names the group an AUC
-above 0.5 points to, so the figures can state direction. The two within-arm tasks pair legs; the
-three between-arm tasks pair participants. The baseline task compares the two legs before
-training, when nothing should separate them, so it shows what the method returns on no effect.
+Three paired tasks, each comparing a participant's BFR leg with their HLRT leg. Each holds its
+matrix and two paired column sets, `positive` (BFR) and `negative` (HLRT). Pre to post within an arm
+is left to `02_Differential`, which tests it with more power;
+`03_Pathway_Enrichment/05_set_classification` keeps those two tasks for sets. The baseline task
+compares the legs before training, when nothing should separate them, so it shows what the method
+returns on no effect.
 
 ```{r tasks}
-arm <- split(legs, legs$treatment)
 tasks <- list(
-  pre_vs_post_BFR = list(
-    values = values, positive = arm$BFR$T2, negative = arm$BFR$T1,
-    label = "Pre to post, BFR", favours = "post", unit = "legs"
-  ),
-  pre_vs_post_HLRT = list(
-    values = values, positive = arm$HLRT$T2, negative = arm$HLRT$T1,
-    label = "Pre to post, HLRT", favours = "post", unit = "legs"
-  ),
   baseline_BFR_vs_HLRT = list(
     values = values, positive = baseline$BFR, negative = baseline$HLRT,
-    label = "Baseline BFR vs HLRT", favours = "BFR", unit = "participants"
+    label = "Baseline BFR vs HLRT"
   ),
   post_BFR_vs_HLRT = list(
-    values = values, positive = post$BFR, negative = post$HLRT,
-    label = "Post BFR vs HLRT", favours = "BFR", unit = "participants"
+    values = values, positive = post$BFR, negative = post$HLRT, label = "Post BFR vs HLRT"
   ),
   delta_BFR_vs_HLRT = list(
     values = delta, positive = delta_pairs$BFR, negative = delta_pairs$HLRT,
-    label = "Change, BFR vs HLRT", favours = "BFR", unit = "participants"
+    label = "Change, BFR vs HLRT"
   )
 )
 
@@ -248,11 +239,11 @@ roc_figure <- function(task_name) {
     arrange(panel, fpr, tpr)
   caption_body <- paste(
     sprintf(
-      "ROC curves for all %d proteins that separate the groups at nominal p, across %d paired %s,",
-      nrow(hits), length(spec$positive), spec$unit
+      "ROC curves for all %d proteins that separate the groups at nominal p, across %d paired",
+      nrow(hits), length(spec$positive)
     ),
-    "smallest p first;", chance_text, "AUC has its direction fixed: red",
-    sprintf("separates higher in %s, blue lower.", spec$favours),
+    "participants, smallest p first;", chance_text, "AUC has its direction fixed: red",
+    "separates higher in BFR, blue lower.",
     "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
     "signed-rank test, q from BH within task. Data: protein_auc sheet of",
     "04_protein_classification.xlsx."

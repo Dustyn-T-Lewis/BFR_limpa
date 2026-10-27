@@ -1,8 +1,9 @@
 # 04 · Protein classification
 
-Measures how well each protein separates the groups in five paired tasks (AUC from `pROC` with
-`direction = "<"`, p from the paired Wilcoxon signed-rank test, BH within task), the same tasks as
-`03_Pathway_Enrichment/05_set_classification`.
+Measures how well each protein separates a participant's BFR leg from their HLRT leg at baseline,
+after training and in change (AUC from `pROC` with `direction = "<"`, p from the paired Wilcoxon
+signed-rank test, BH within task). Pre to post within an arm is left to `02_Differential`;
+`03_Pathway_Enrichment/05_set_classification` keeps those two tasks for sets.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`,
 `02_Differential/c_data/02_differential.xlsx`, `03_Protein_Association/c_data/03_protein_association.xlsx`.
@@ -26,15 +27,12 @@ Outputs:
 
 | Task | Nominal | Expected | Ratio | BH < 0.05 |
 |---|---:|---:|---:|---:|
-| Pre to post, BFR | 477 | 152 | 3.14 | 53 |
-| Pre to post, HLRT | 664 | 152 | 4.37 | 220 |
 | Baseline BFR vs HLRT | 140 | 152 | 0.92 | 0 |
 | Post BFR vs HLRT | 172 | 152 | 1.13 | 0 |
 | Change, BFR vs HLRT | 120 | 152 | 0.79 | 0 |
 
-No protein separates BFR from HLRT beyond chance. The `candidates` sheet lists 45 proteins that pass
-DE at FDR 0.05 in any contrast and reach nominal p for association and classification; nine also
-separate the arms after training or in change (NAMPT, GSTK1, ATP1A1, MSN, NPEPPS, SUCLG1, ACTR2,
-ART3, ALDH1B1). Each protein gets eight association tests, so chance alone would put about 44 of
-the 130 DE hits past the association bar, close to the 45 listed. Treat the list, the nine
-included, as leads.
+No protein separates BFR from HLRT beyond chance. The `candidates` sheet lists the proteins that
+pass DE at FDR 0.05 in any contrast and reach nominal p for association and for separating the arms
+after training or in change (NAMPT, GSTK1, ATP1A1, MSN, NPEPPS, SUCLG1, ACTR2, ART3, ALDH1B1). Each
+protein gets eight association tests, so about a third of DE hits clear the association bar by
+chance. Treat the list as leads.

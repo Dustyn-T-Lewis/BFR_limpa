@@ -11,7 +11,7 @@ within-leg correlation. It writes `design.rds` and `01_design.xlsx`.
 ultrasound outcomes and writes `03_protein_association.xlsx`, one PDF per outcome and a chance
 summary.
 [`04_Protein_Classification`](04_Protein_Classification/README.md) measures how well each protein
-separates the study groups and writes ROC PDFs for four of its five tasks and a chance summary.
+separates the study groups and writes ROC PDFs for two of its three tasks and a chance summary.
 
 ## What each step answers
 

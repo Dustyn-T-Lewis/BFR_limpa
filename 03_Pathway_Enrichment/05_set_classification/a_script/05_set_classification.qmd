@@ -98,7 +98,9 @@ colnames(delta) <- legs$leg_id
 Each task holds a score matrix and two paired column sets: `positive` and `negative`, matched
 position by position. Pre against post compares the two time points within each arm. The three
 BFR against HLRT tasks compare the two legs of each participant at baseline, after training and
-in change. `favours` is the group an AUC above 0.5 points to, so the figures can state direction.
+in change. Protein classification drops the two pre against post tasks, which `02_Differential`
+tests with more power; sets keep them, since singscore gives a per-sample view fgsea and fry do not.
+`favours` is the group an AUC above 0.5 points to, so the figures can state direction.
 
 The baseline comparison is legs before any training, so it shows what the method returns when
 nothing is there.
