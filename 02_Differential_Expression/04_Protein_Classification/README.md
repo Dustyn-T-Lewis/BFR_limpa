@@ -21,6 +21,8 @@ Outputs:
   paired Wilcoxon p and BH q.
 - `b_reports/04_chance.pdf`: nominal hits against chance per task. Bar length is nominal hits
   divided by the chance count; red bars exceed 1, and labels give observed of tested.
+  Features co-vary, so under no effect the count swings widely around 5% (shuffled vl_csa gave
+  63 to 308 protein hits against 152); only a large departure from 1 means anything.
 - `c_data/04_protein_classification.xlsx`, one sheet per table:
   - `chance_expectation`: one row per task, with nominal hits against chance and BH hits.
   - `protein_auc`: one row per protein and task, with AUC, paired Wilcoxon p and BH q, smallest p

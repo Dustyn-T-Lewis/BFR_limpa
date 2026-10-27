@@ -28,6 +28,8 @@ Outputs:
 - `b_reports/05_chance_by_collection.pdf`: S18, nominal hits against chance by collection. Bar
   length is observed nominal hits over the null expectation, red above 1 and grey below; labels
   give observed of tested.
+  Features co-vary, so under no effect the count swings widely around 5% (shuffled vl_csa gave
+  63 to 308 protein hits against 152); only a large departure from 1 means anything.
 - `c_data/05_set_association.xlsx`, read by no later step:
   - `chance_expectation`: one row per analysis, outcome and collection; nominal hits against chance.
   - `set_association`: one row per set, analysis and outcome; Spearman r, p and BH q, smallest p

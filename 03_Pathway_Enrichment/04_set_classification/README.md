@@ -22,6 +22,8 @@ Outputs:
 - `b_reports/04_chance_by_collection.pdf`: S15, nominal hits against chance by collection and task.
   Bar length is observed nominal hits over the null expectation, red above 1 and grey below; labels
   give observed of tested.
+  Features co-vary, so under no effect the count swings widely around 5% (shuffled vl_csa gave
+  63 to 308 protein hits against 152); only a large departure from 1 means anything.
 - `c_data/04_set_classification.xlsx`, one sheet per table, read by no later step:
   - `chance_expectation`: one row per task and collection, with nominal hits against chance and BH
     hits.
