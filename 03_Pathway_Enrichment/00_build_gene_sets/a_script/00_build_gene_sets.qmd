@@ -59,8 +59,8 @@ cache_file <- file.path(cache_dir, paste0(
 basename(cache_file)
 ```
 
-`md5_ok()` takes a file path and returns `TRUE` when a `.md5` file sits beside it and holds the
-file's current checksum. It guards both frozen files.
+`md5_ok()` is `TRUE` when a `.md5` beside the file holds its current checksum. It guards both
+frozen files.
 
 ```{r md5-helper}
 md5_ok <- function(f) {
@@ -245,8 +245,8 @@ slim_catalog <- tibble(
 names(slim_sets) <- slim_catalog$set_id
 ```
 
-Append the slim sets to the catalogue and the tested list, and stop on any duplicated name. Of
-the 140 slim terms, the BP ones that remain are counted, with how many pass the size rule.
+Append the slim sets to the catalogue and the tested list, and stop on any duplicated name. Of the
+140 slim terms, the printout gives those left after dropping `NA` and how many pass the size rule.
 
 ```{r combine-sets}
 set_catalog <- bind_rows(set_catalog, slim_catalog)
@@ -273,25 +273,27 @@ length(sets)
 
 ## Save results
 
-`gene_sets.rds` holds the tested sets, a named list of gene-symbol vectors read by
-`01_run_fgsea_and_fry`, `03_run_singscore`, `06_leading_edge` and `07_pathway_maps`.
-`go_bp_measured.rds` holds the measured genes of every GO:BP set, tested or not, so
-`06_leading_edge` can break a parent into child terms too small to test. `00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
+`gene_sets.rds` holds the tested sets, a named list of gene-symbol vectors. `go_bp_measured.rds`
+holds the measured genes of every GO:BP set, tested or not, so `06_leading_edge` can break a
+parent into child terms too small to test.
+`00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
 plus the counts above.
 
 ```{r write}
-sheets <- list(
-  collection_summary = collection_summary,
-  set_catalog = set_catalog,
-  protein_gene_map = protein_map,
-  mapping_summary = mapping_summary
-)
 saveRDS(sets, file.path(out, "gene_sets.rds"), compress = "xz")
 saveRDS(
   sets_measured[set_catalog$set_id[set_catalog$database == "GOBP"]],
   file.path(out, "go_bp_measured.rds"), compress = "xz"
 )
-write_xlsx(sheets, file.path(out, "00_build_gene_sets.xlsx"))
+write_xlsx(
+  list(
+    collection_summary = collection_summary,
+    set_catalog = set_catalog,
+    protein_gene_map = protein_map,
+    mapping_summary = mapping_summary
+  ),
+  file.path(out, "00_build_gene_sets.xlsx")
+)
 ```
 
 ## Session information

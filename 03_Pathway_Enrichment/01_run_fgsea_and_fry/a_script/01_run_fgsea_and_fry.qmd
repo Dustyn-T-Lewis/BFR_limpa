@@ -11,7 +11,7 @@ knitr:
 
 ## Load packages
 
-`fgsea` and `enrichVolcano` (the user's own package, not on CRAN) are called with `::`.
+`fgsea` and `enrichVolcano` (not on CRAN) are called with `::`.
 
 ```{r setup}
 pacman::p_load(
@@ -65,8 +65,8 @@ contrast_names
 
 ## Protein results
 
-`topTable()` takes the fit and one contrast and returns one row per protein: log2 fold change,
-average abundance, moderated t, p and BH-adjusted p. BH stays as `02_Differential` applied it,
+`topTable()` gives one row per protein for each contrast: log2 fold change, average abundance,
+moderated t, p and BH-adjusted p. BH stays as `02_Differential` applied it,
 within each contrast. The rows are stacked across contrasts and joined to the protein map.
 
 `pi_score` is P.Value^|logFC| (Xiao et al. 2014, PMID 22321699), which combines effect size and
@@ -123,10 +123,10 @@ fgsea_raw <- map(ranked, function(stats) fgsea::fgsea(sets, stats, minSize = 15,
 
 ## Run fry
 
-fry reads rows of `proteins$E`, so each set's gene symbols are turned into row numbers through
-each symbol's representative protein. It reads limpa's precision weights through
-`proteins$weights`, with robust empirical Bayes as in the protein fit. No `block`: participant is a fixed term in the design, and the residual
-within-leg correlation is 0.027.
+fry reads rows of `proteins$E`, so each set's gene symbols are turned into row numbers through each
+symbol's representative protein. It reads limpa's precision weights through `proteins$weights`, with
+robust empirical Bayes as in the protein fit. No `block`: participant is a fixed term in the design,
+and the residual within-leg correlation is 0.027.
 
 ```{r fry-index}
 selected_rows <- which(protein_map$selected)
@@ -222,8 +222,8 @@ set_summary
 
 The figures go to one A4 PDF, S1 and S2.
 
-The dot plots show four contrasts; the baseline contrast is left out. `survivors` holds the
-significant fgsea sets that survived the collapse.
+The dot plots show the four contrasts other than baseline. `survivors` holds the significant
+fgsea sets that survived the collapse.
 
 ```{r survivors}
 shown <- c("BFR_Post-Pre", "HLRT_Post-Pre", "Modality_x_Time_Interaction", "BFR_Post-HLRT_Post")
@@ -296,29 +296,27 @@ figures <- c(figures, list(
 ))
 ```
 
-Write both pages to `b_reports/01_run_fgsea_and_fry_figures.pdf`.
-
 ```{r write-figures}
 pdf(file.path(stage, "b_reports", "01_run_fgsea_and_fry_figures.pdf"), width = 8.27, height = 11.69)
 walk(figures, print)
 invisible(dev.off())
-length(figures)
 ```
 
 ## Save results
 
 `01_run_fgsea_and_fry.xlsx` holds `set_tests`, one row per set, contrast and method, with the
 leading edge joined by `;`, and `protein_results`, every protein and contrast from the fit.
-`02_`, `06_` and `07_` read both.
 
 ```{r write}
-sheets <- list(
-  set_summary = set_summary,
-  protein_summary = protein_summary,
-  set_tests = mutate(set_tests, leadingEdge = map_chr(leadingEdge, paste, collapse = ";")),
-  protein_results = protein_results
+write_xlsx(
+  list(
+    set_summary = set_summary,
+    protein_summary = protein_summary,
+    set_tests = mutate(set_tests, leadingEdge = map_chr(leadingEdge, paste, collapse = ";")),
+    protein_results = protein_results
+  ),
+  file.path(stage, "c_data", "01_run_fgsea_and_fry.xlsx")
 )
-write_xlsx(sheets, file.path(stage, "c_data", "01_run_fgsea_and_fry.xlsx"))
 ```
 
 ## Session information
