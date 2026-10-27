@@ -20,5 +20,4 @@ Outputs:
   - `DEP_matrix`: one row per protein, with log2 fold change, p and BH-adjusted p per contrast;
   - `contrast_summary`: discoveries per contrast at FDR 0.05 and 0.10;
   - `null_summary`: per contrast, estimated share of true nulls, median |t| and share of p below
-    0.2;
-  - `treat_summary`: discoveries against the 15% fold-change threshold.
+    0.2.

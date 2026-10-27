@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tidyr, writexl)
+pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tibble, tidyr, writexl)
 here::i_am("02_Differential_Expression/02_Differential/a_script/02_differential.qmd")
 ```
 
@@ -38,10 +38,10 @@ stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 
 limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` takes the
 place of `lmFit()` because only it reads the standard errors from `dpcQuant()`, as precision
-weights. limpa's default adds no per-sample quality weights; tried, they ranged from 0.09 to 3.6 and
-did not follow contaminant load, so they stay off. `contrasts.fit()` forms the
-five comparisons and `eBayes()` moderates each protein's variance toward a prior fitted across all
-proteins; `robust = TRUE` keeps proteins with outlying variances from distorting that prior.
+weights. No per-sample quality weights (limpa's default): estimated, they ranged from 0.09 to 3.6
+and did not follow contaminant load. `contrasts.fit()` forms the five comparisons and `eBayes()`
+moderates each protein's variance toward a prior fitted across all proteins; `robust = TRUE` keeps
+proteins with outlying variances from distorting that prior.
 
 ```{r fit}
 fit <- dpcDE(proteins, d$design)
@@ -51,9 +51,9 @@ fit <- eBayes(fit, robust = TRUE)
 
 ## Results
 
-`topTable()` takes the fit and one contrast and returns one row per protein. `sort.by = "none"`
-keeps protein order (the default sorts on the B statistic). Benjamini–Hochberg (BH) adjustment
-controls the false discovery rate within each contrast, not across all five.
+In `topTable()`, `sort.by = "none"` keeps protein order (the default sorts on the B statistic).
+Benjamini–Hochberg (BH) adjustment controls the false discovery rate within each contrast, not
+across all five.
 
 ```{r results}
 results <- map(colnames(d$contrasts), function(cn) {
@@ -111,18 +111,6 @@ se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
 round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
-## Significant and large enough
-
-`treat()` tests whether |logFC| exceeds a threshold, here `log2(1.15)`, a 15% change, rather than
-filtering significant results on fold change afterwards, which controls no error rate. The
-threshold is a study choice fixed in advance, not swept; its rationale is not yet documented.
-
-```{r treat}
-ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
-treat_summary <- enframe(colSums(decideTests(ft) != 0), "contrast", "n_q_05")
-treat_summary
-```
-
 ## The pi score
 
 `pi_score` is `P.Value^abs(logFC)`, which equals 10 to the minus Xiao et al.'s π (|logFC| times
@@ -132,13 +120,11 @@ and selects nothing. The mean number of observed precursors per sample sits besi
 top of a pi ranking is often thinly observed.
 
 ```{r pi-ranking}
-obs_per_sample <- rowMeans(proteins$other$n.observations)
-
 results |>
   filter(contrast %in% c("BFR_Post-Pre", "HLRT_Post-Pre")) |>
   mutate(pi_score = P.Value^abs(logFC)) |>
   slice_min(pi_score, n = 10, by = contrast) |>
-  mutate(mean_obs = round(obs_per_sample[protein], 2)) |>
+  mutate(mean_obs = round(rowMeans(proteins$other$n.observations)[protein], 2)) |>
   select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
 ```
 
@@ -199,13 +185,14 @@ dep_matrix <- results |>
 
 out <- here("02_Differential_Expression", "02_Differential", "c_data")
 saveRDS(fit, file.path(out, "fit.rds"))
-sheets <- list(
-  DEP_matrix = dep_matrix,
-  contrast_summary = contrast_summary,
-  null_summary = null_summary,
-  treat_summary = treat_summary
+write_xlsx(
+  list(
+    DEP_matrix = dep_matrix,
+    contrast_summary = contrast_summary,
+    null_summary = null_summary
+  ),
+  file.path(out, "02_differential.xlsx")
 )
-write_xlsx(sheets, file.path(out, "02_differential.xlsx"))
 ```
 
 ## Session information
