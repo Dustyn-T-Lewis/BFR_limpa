@@ -76,7 +76,7 @@ notebook only calls as `pkg::fun()` are not attached, so install them once befor
 - Stages 01 and 02 attach `here`, `limpa`, `limma`, `readr`, `readxl`, `writexl`,
   `dplyr`, `tidyr`, `tibble`, `purrr`, `stringr` and `ggplot2`, and call `nanoparquet` (read by
   `readDIANN()`) and `pROC`.
-- Stage 03 adds `patchwork`, `clusterProfiler` and `enrichplot`, and calls `fgsea`, `singscore`,
-  `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi`, `eulerr` and `enrichVolcano` 2.0.0 or later
+- Stage 03 adds `patchwork`, `clusterProfiler`, `enrichplot` and `ggvenn`, and calls `fgsea`,
+  `singscore`, `msigdbr`, `GO.db`, `GSEABase`, `AnnotationDbi` and `enrichVolcano` 2.0.0 or later
   (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on CRAN).
 - Stages 05 and 06 need nothing new.

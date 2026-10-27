@@ -11,11 +11,11 @@ knitr:
 
 ## Load packages
 
-`GO.db`, `AnnotationDbi`, `eulerr` and `enrichVolcano` (the user's own package, not on CRAN) are
+`GO.db`, `AnnotationDbi` and `enrichVolcano` (the user's own package, not on CRAN) are
 called with `::` for one job each.
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, ggvenn, readxl, writexl)
 here::i_am("03_Pathway_Enrichment/07_leading_edge/a_script/07_leading_edge.qmd")
 ```
 
@@ -282,209 +282,193 @@ distinct(unique_children, parent, only_BFR, only_HLRT, shared, divergence, padj_
 
 ## Draw figures
 
-All pages share a caption style, with captions wrapped at 115 characters.
+Sam's figures, drawn from the tables above. Each page carries a short title; the README explains
+the encodings.
 
-```{r page-style}
-page_theme <- theme(
-  plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-  plot.caption.position = "plot"
-)
-```
-
-S20 puts every shared pathway on one page: a bar per pathway split into proteins in both leading
-edges and in one leg only, lowest overlap at the bottom of each collection.
+S20 is Sam's overlap heatmap: one tile per pathway coloured by Jaccard index and labelled with the
+shared count, one panel per collection.
 
 ```{r overlap-page}
 overlap_page <- leading_edge |>
-  mutate(label = factor(str_trunc(label, 60), unique(str_trunc(label, 60)))) |>
-  pivot_longer(c(both, BFR, HLRT), names_to = "in_arm", values_to = "proteins") |>
-  mutate(in_arm = factor(in_arm, c("BFR", "both", "HLRT"))) |>
-  ggplot(aes(proteins, label, fill = in_arm)) +
-  geom_col(width = 0.75) +
+  mutate(label = reorder(str_trunc(label, 60), jaccard)) |>
+  ggplot(aes("BFR vs HLRT", label, fill = jaccard)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = both), size = 2.2) +
   facet_grid(database ~ ., scales = "free_y", space = "free_y") +
-  scale_fill_manual(
-    values = c(BFR = "#B2182B", both = "grey55", HLRT = "#2166AC"), name = "leading edge in"
-  ) +
-  labs(
-    x = "leading-edge proteins", y = NULL,
-    caption = str_wrap(paste(
-      "S20 Figure. Leading-edge overlap between the legs. Every pathway that fgsea calls at FDR",
-      sprintf("< 0.05 in both training contrasts, in the same direction (%d,", nrow(leading_edge)),
-      "each a main set after collapse in at least one leg). Bars split each pathway's",
-      "leading-edge proteins into those shared by both legs and those in one leg only; lowest",
-      "overlap at the bottom of each collection. The leading_edge sheet adds the Jaccard index,",
-      "the overlap coefficient and the shared count expected by chance. Leading edges move with",
-      "small ranking changes, so this describes and does not test. Data: leading_edge sheet of",
-      "07_leading_edge.xlsx."
-    ), 115)
-  ) +
-  theme_minimal(base_size = 9) +
-  theme(
-    axis.text.y = element_text(size = 6), strip.text.y = element_text(angle = 0),
-    legend.position = "top", panel.grid.major.y = element_blank()
-  ) +
-  page_theme
+  scale_fill_gradient(low = "#f7fbff", high = "#08519c", limits = c(0, 1), name = "Jaccard") +
+  labs(x = NULL, y = NULL, title = "S20. Leading-edge overlap; label = shared proteins") +
+  theme_minimal(base_size = 8) +
+  theme(panel.grid = element_blank(), strip.text.y = element_text(angle = 0))
 ```
 
-S21 is Sam's Venn view: one Venn diagram per pathway, circle areas proportional to the counts
-(`eulerr` fits them), with each leg's NES and adjusted p (q), the shared count against chance,
-and the shared proteins named beneath, six to a page. `venn()` takes a set ID and returns that
-pathway's panel. `euler()` starts its layout search from random positions, so the seed keeps the
-drawing the same between renders.
+S21 is Sam's Venn view: one Venn per pathway with each leg's NES and adjusted p above and the
+shared proteins below, six to a page.
 
 ```{r venn-pages}
-set.seed(1)
 venn <- function(id) {
-  counts <- filter(leading_edge, set_id == id)
-  fit <- eulerr::euler(c(BFR = counts$BFR, HLRT = counts$HLRT, "BFR&HLRT" = counts$both))
-  shared <- sort(filter(proteins, set_id == id, in_arm == "both")$gene)
-  wrap_elements(full = plot(
-    fit,
-    fills = list(fill = arm_colours, alpha = 0.6), quantities = list(fontsize = 8),
-    labels = list(fontsize = 8)
-  )) +
+  row <- filter(leading_edge, set_id == id)
+  genes <- filter(proteins, set_id == id)
+  ggvenn(
+    list(
+      BFR = genes$gene[genes$in_arm != "HLRT"], HLRT = genes$gene[genes$in_arm != "BFR"]
+    ),
+    fill_color = unname(arm_colours), show_percentage = FALSE, set_name_size = 3,
+    text_size = 3, stroke_size = 0.4
+  ) +
     labs(
-      title = str_wrap(counts$label, 45),
-      subtitle = paste0(
-        sprintf(
-          "NES %.2f BFR, %.2f HLRT; q %.2g, %.2g; shared %d, expected %.1f\n",
-          counts$NES_BFR, counts$NES_HLRT, counts$padj_BFR, counts$padj_HLRT, counts$both,
-          counts$expected_shared
-        ),
-        str_wrap(paste(shared, collapse = " "), 70)
-      )
+      title = str_wrap(row$label, 40),
+      subtitle = sprintf(
+        "BFR: NES %.2f, padj %.2g\nHLRT: NES %.2f, padj %.2g\nshared %d, expected %.1f",
+        row$NES_BFR, row$padj_BFR, row$NES_HLRT, row$padj_HLRT, row$both, row$expected_shared
+      ),
+      caption = str_wrap(paste("Shared:", str_flatten(sort(genes$gene[genes$in_arm == "both"]),
+        ", "
+      )), 75)
     ) +
     theme(
-      plot.title = element_text(size = 8, face = "bold"),
-      plot.subtitle = element_text(size = 5, lineheight = 1.1)
+      plot.title = element_text(size = 7, face = "bold"),
+      plot.subtitle = element_text(size = 6), plot.caption = element_text(size = 4.5, hjust = 0)
     )
 }
 venn_pages <- split(leading_edge$set_id, ceiling(seq_along(leading_edge$set_id) / 6)) |>
-  imap(function(ids, page) {
-    wrap_plots(map(ids, venn), ncol = 2) +
-      plot_annotation(caption = str_wrap(sprintf(paste(
-        "S21 Figure (page %s of %d). Leading edges by leg, one Venn per pathway in the order of",
-        "S20. Areas follow the counts of proteins in each leg's leading edge only and in both.",
-        "Under each title: NES and BH-adjusted p (q) per leg, the shared count against the count",
-        "two random leading edges of the same sizes would share, and the shared proteins. Data:",
-        "leading_edge and proteins sheets of 07_leading_edge.xlsx."
-      ), page, ceiling(nrow(leading_edge) / 6)), 115), theme = page_theme)
+  map(function(ids) {
+    wrap_plots(map(ids, venn), ncol = 2, nrow = 3) +
+      plot_annotation(title = "S21. Leading edges by leg")
   })
 ```
 
-S22 is Sam's decomposition plot, six parents to a page: one row per child term (up to 15 per
-parent, those holding the largest share of either leg's leading edge), one column per leg. Fill is
-the share of the parent's leading edge in the child, size the count, and a black outline marks a
-child at BH-adjusted p < 0.05. Each panel title carries the coverage share per leg.
+S22 is Sam's NES scatter: every pathway tested in both legs, coloured by collection and shaped by
+where fgsea calls it at FDR < 0.05, with the count and share of pathways in each quadrant.
+
+```{r nes-scatter}
+nes <- fgsea |>
+  select(set_id, database, arm, NES, padj) |>
+  pivot_wider(names_from = arm, values_from = c(NES, padj)) |>
+  mutate(called = case_when(
+    padj_BFR < 0.05 & padj_HLRT < 0.05 ~ "both",
+    padj_BFR < 0.05 ~ "BFR only",
+    padj_HLRT < 0.05 ~ "HLRT only",
+    .default = "neither"
+  ))
+quadrants <- nes |>
+  count(bfr = sign(NES_BFR), hlrt = sign(NES_HLRT)) |>
+  mutate(label = sprintf("%d (%.1f%%)", n, 100 * n / sum(n)))
+nes_page <- ggplot(nes, aes(NES_BFR, NES_HLRT)) +
+  geom_hline(yintercept = 0, colour = "grey50") +
+  geom_vline(xintercept = 0, colour = "grey50") +
+  geom_abline(linetype = "dashed", colour = "grey70") +
+  geom_point(aes(colour = database, shape = called, alpha = called == "neither"), size = 1.4) +
+  geom_text(
+    data = quadrants, aes(x = bfr * Inf, y = hlrt * Inf, label = label),
+    hjust = "inward", vjust = "inward", size = 2.8
+  ) +
+  scale_shape_manual(values = c(both = 17, `BFR only` = 18, `HLRT only` = 15, neither = 4)) +
+  scale_alpha_manual(values = c(`FALSE` = 0.9, `TRUE` = 0.3), guide = "none") +
+  scale_colour_brewer(palette = "Dark2") +
+  coord_equal() +
+  labs(
+    x = "NES, BFR", y = "NES, HLRT", shape = "FDR < 0.05", colour = NULL,
+    title = "S22. Pathway NES, BFR against HLRT",
+    subtitle = sprintf(
+      "%d pathways, Spearman rho %.2f", nrow(nes),
+      cor(nes$NES_BFR, nes$NES_HLRT, method = "spearman")
+    )
+  ) +
+  theme_bw(base_size = 9)
+```
+
+S23 is Sam's decomposition, one parent per panel, two to a page (Sam's 8.5 by 6 inch shape), for the
+25 parents with the smallest larger adjusted p across legs: one row per child term (up to 15, those
+holding the largest share of either leg's leading edge) [relation], fill the share of the leading
+edge, size the count, black outline a child at BH-adjusted p < 0.05.
 
 ```{r child-pages}
-coverage_label <- go_coverage |>
-  select(parent_id, arm, explained) |>
-  pivot_wider(names_from = arm, values_from = explained) |>
-  transmute(
-    parent_id, panel = sprintf("explained BFR %.0f%%, HLRT %.0f%%", 100 * BFR, 100 * HLRT)
-  )
-child_pages <- decomposition |>
-  filter(max(in_child) > 0, .by = c(parent_id, child_id)) |>
-  filter(child_id %in% unique(child_id[order(-share_of_edge)])[1:15], .by = parent_id) |>
-  left_join(coverage_label, by = "parent_id") |>
-  mutate(
-    panel = paste0(str_wrap(parent, 38), "\n", panel),
-    child = str_trunc(sprintf("%s [%s]", child, relation), 55),
-    significant = factor(padj < 0.05, c(TRUE, FALSE)),
-    page = ceiling(match(parent_id, unique(parent_id)) / 6)
-  ) |>
-  split(~page) |>
-  imap(function(rows, page) {
-    ggplot(rows, aes(arm, reorder(child, share_of_edge))) +
-      geom_point(
-        aes(size = in_child, fill = share_of_edge, colour = significant),
-        shape = 21, stroke = 0.7
-      ) +
-      facet_wrap(~panel, ncol = 2, scales = "free_y") +
-      scale_fill_gradient(
-        low = "#f7fbff", high = "#08519c", limits = c(0, 1), name = "share of\nleading edge"
-      ) +
-      scale_colour_manual(
-        values = c(`TRUE` = "black", `FALSE` = "grey75"), labels = c("q < 0.05", "n.s."),
-        drop = FALSE, name = "child test"
-      ) +
-      scale_size_area(max_size = 5, name = "proteins") +
-      labs(
-        x = NULL, y = NULL,
-        caption = str_wrap(sprintf(paste(
-          "S22 Figure (page %s of %d). GO:BP pathways both legs move, broken into their direct",
-          "child terms [relation] with at least three measured proteins. Fill is the share of the",
-          "parent's leading edge in the child, size the protein count; a black outline marks a",
-          "one-sided hypergeometric p below 0.05 after BH within parent and leg. Children overlap",
-          "and the tests are nested, so they describe. Panel titles give the share of each leg's",
-          "leading edge already in significant descendant terms. Data: go_children and",
-          "go_coverage sheets of 07_leading_edge.xlsx."
-        ), page, ceiling(n_distinct(decomposition$parent_id) / 6)), 115)
-      ) +
-      theme_bw(base_size = 7) +
-      theme(strip.text = element_text(size = 6), panel.grid.minor = element_blank()) +
-      page_theme
-  })
+top_parents <- leading_edge |>
+  filter(set_id %in% decomposition$parent_id) |>
+  slice_min(pmax(padj_BFR, padj_HLRT), n = 25, with_ties = FALSE) |>
+  pull(set_id)
+child_pages <- map(top_parents, function(id) {
+  rows <- filter(decomposition, parent_id == id) |>
+    filter(max(in_child) > 0, .by = child_id) |>
+    filter(child_id %in% unique(child_id[order(-share_of_edge)])[1:15])
+  coverage <- filter(go_coverage, parent_id == id)
+  ggplot(rows, aes(arm, reorder(str_trunc(sprintf("%s [%s]", child, relation), 70),
+    share_of_edge
+  ))) +
+    geom_point(
+      aes(size = in_child, fill = share_of_edge, colour = factor(padj < 0.05, c(TRUE, FALSE))),
+      shape = 21, stroke = 0.8
+    ) +
+    scale_fill_gradient(
+      low = "#f7fbff", high = "#08519c", limits = c(0, 1), name = "share of\nleading edge"
+    ) +
+    scale_colour_manual(
+      values = c(`TRUE` = "black", `FALSE` = "grey75"), labels = c("padj < 0.05", "n.s."),
+      drop = FALSE, name = "child test"
+    ) +
+    scale_size_area(max_size = 8, name = "proteins") +
+    labs(
+      x = NULL, y = NULL, title = paste("S23.", str_wrap(rows$parent[1], 60)),
+      subtitle = sprintf(
+        "leading edge: BFR %d, HLRT %d; in significant descendants: BFR %.0f%%, HLRT %.0f%%",
+        rows$core_size[rows$arm == "BFR"][1], rows$core_size[rows$arm == "HLRT"][1],
+        100 * coverage$explained[coverage$arm == "BFR"],
+        100 * coverage$explained[coverage$arm == "HLRT"]
+      )
+    ) +
+    theme_bw(base_size = 9) +
+    theme(plot.subtitle = element_text(size = 7), panel.grid.minor = element_blank())
+})
 ```
 
-S23 is Sam's unique-protein view, four parents to a page in order of the divergence p: per child,
-BFR-only proteins to the left and HLRT-only to the right (up to 15 children, the most populated),
-with the shared count in brackets and an asterisk at Fisher BH p < 0.05.
+S24 is Sam's unique-protein view, one parent per panel, two to a page, in order of the divergence p,
+up to 25:
+per child, BFR-only proteins to the left and HLRT-only to the right (up to 15, the most
+populated), the shared count in brackets, an asterisk at Fisher BH-adjusted p < 0.05.
 
 ```{r unique-pages}
-unique_pages <- unique_children |>
-  filter(BFR_in_child + HLRT_in_child > 0) |>
-  slice_max(BFR_in_child + HLRT_in_child, n = 15, with_ties = FALSE, by = parent_id) |>
-  arrange(p_divergence) |>
-  mutate(
-    panel = sprintf(
-      "%s\nonly BFR %d, only HLRT %d, shared %d; divergence %.2f, p %.3g (BH %.3g)",
-      str_wrap(parent, 50), only_BFR, only_HLRT, shared, divergence, p_divergence,
-      padj_divergence
-    ),
-    panel = factor(panel, unique(panel)),
-    child = str_trunc(paste0(if_else(padj < 0.05, "* ", ""), child), 50),
-    page = ceiling(as.integer(panel) / 4)
-  ) |>
-  pivot_longer(c(BFR_in_child, HLRT_in_child), names_to = "arm", values_to = "proteins") |>
-  mutate(
-    arm = sub("_in_child", "", arm), proteins = if_else(arm == "BFR", -proteins, proteins)
-  ) |>
-  split(~page) |>
-  imap(function(rows, page) {
-    ggplot(rows, aes(proteins, reorder(child, proteins), fill = arm)) +
-      geom_col(width = 0.7, alpha = 0.85) +
-      geom_vline(xintercept = 0, colour = "grey40") +
-      facet_wrap(~panel, ncol = 1, scales = "free_y") +
-      scale_x_continuous(labels = abs) +
-      scale_fill_manual(values = arm_colours, name = "proteins unique to") +
-      labs(
-        x = "unique leading-edge proteins in the child term", y = NULL,
-        caption = str_wrap(sprintf(paste(
-          "S23 Figure (page %s of %d). Proteins in one leg's leading edge only, by child term, for",
-          "GO:BP parents with at least three such proteins in each leg; BFR-only to the left,",
-          "HLRT-only to the right. Panel titles give the counts and the divergence between the",
-          "two groups' child profiles, with p from 2,000 label shuffles (BH across parents); an",
-          "asterisk marks a child at Fisher BH p < 0.05. Both tests treat proteins as",
-          "exchangeable, so they describe. Children overlap. Data: unique_children sheet of",
-          "07_leading_edge.xlsx."
-        ), page, ceiling(n_distinct(unique_children$parent_id) / 4)), 115)
-      ) +
-      theme_bw(base_size = 7) +
-      theme(
-        legend.position = "top", strip.text = element_text(size = 6),
-        panel.grid.minor = element_blank()
-      ) +
-      page_theme
-  })
+unique_ids <- unique_children |>
+  distinct(parent_id, p_divergence) |>
+  slice_min(p_divergence, n = 25, with_ties = FALSE) |>
+  pull(parent_id)
+unique_pages <- map(unique_ids, function(id) {
+  rows <- filter(unique_children, parent_id == id, BFR_in_child + HLRT_in_child > 0) |>
+    slice_max(BFR_in_child + HLRT_in_child, n = 15, with_ties = FALSE) |>
+    mutate(child = str_trunc(paste0(if_else(padj < 0.05, "* ", ""), child), 70))
+  rows |>
+    pivot_longer(c(BFR_in_child, HLRT_in_child), names_to = "arm", values_to = "proteins") |>
+    mutate(
+      arm = sub("_in_child", "", arm), proteins = if_else(arm == "BFR", -proteins, proteins)
+    ) |>
+    ggplot(aes(proteins, reorder(child, proteins), fill = arm)) +
+    geom_col(width = 0.7, alpha = 0.85) +
+    geom_vline(xintercept = 0, colour = "grey40") +
+    scale_x_continuous(labels = abs) +
+    scale_fill_manual(values = arm_colours, name = "unique to") +
+    labs(
+      x = "unique leading-edge proteins in the child term", y = NULL,
+      title = paste("S24.", str_wrap(rows$parent[1], 60)),
+      subtitle = sprintf(
+        "only BFR %d, only HLRT %d, shared %d; divergence %.2f, permutation p %.3g (BH %.3g)",
+        rows$only_BFR[1], rows$only_HLRT[1], rows$shared[1], rows$divergence[1],
+        rows$p_divergence[1], rows$padj_divergence[1]
+      )
+    ) +
+    theme_bw(base_size = 9) +
+    theme(plot.subtitle = element_text(size = 7), panel.grid.minor = element_blank())
+})
 ```
 
-All pages go to one A4 PDF, S20 first.
+All pages go to one A4 PDF, S20 first; `pair_up()` stacks the S23 and S24 panels two to a page.
 
 ```{r write-figures}
 pdf(file.path(stage, "b_reports", "07_leading_edge.pdf"), width = 8.27, height = 11.69)
-walk(c(list(overlap_page), venn_pages, child_pages, unique_pages), print)
+set.seed(1)
+pair_up <- function(panels) map(split(panels, ceiling(seq_along(panels) / 2)), wrap_plots, ncol = 1, nrow = 2)
+pages <- c(
+  list(overlap_page), venn_pages, list(nes_page), pair_up(child_pages), pair_up(unique_pages)
+)
+walk(pages, print)
 invisible(dev.off())
 ```
 

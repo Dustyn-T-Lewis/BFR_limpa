@@ -147,13 +147,13 @@ source_note <- paste(
 `maps()` draws a collection's four pages from `compared`. Pathway similarity is computed only among
 the drawn pathways, since GO:BP holds 1,366 sets.
 
-- S24, dotplot: BFR and HLRT side by side, colour NES (signed), dot
+- S25, dotplot: BFR and HLRT side by side, colour NES (signed), dot
   size the share of the pathway in its leading edge, the proteins ranked before the running-sum
   peak.
-- S25, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
+- S26, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
   node a pie split by leg.
-- S26, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
-- S27, network: the five strongest pathways linked to their leading-edge proteins.
+- S27, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
+- S28, network: the five strongest pathways linked to their leading-edge proteins.
 
 ```{r maps}
 maps <- function(db) {
@@ -164,7 +164,7 @@ maps <- function(db) {
     # dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.
     dotplot(shown, showCategory = length(show), color = "NES", label_format = 45) +
       scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", name = "NES") +
-      caption(24, "Pathways by leg", db, paste(
+      caption(25, "Pathways by leg", db, paste(
         "Colour is NES, dot size the share of the pathway in its leading edge.", source_note
       )),
     # On the two small collections (Hallmark, GO Slim) few pathways share proteins, and emapplot
@@ -172,7 +172,7 @@ maps <- function(db) {
     suppressWarnings(
       emapplot(similar, showCategory = length(show), label_format = 30, size_category = 1.6)
     ) + arm_fill +
-      caption(25, "Enrichment map", db, paste(
+      caption(26, "Enrichment map", db, paste(
         "Nodes are pathways, pies split by leg, joined when their proteins overlap.", source_note
       )),
     treeplot(
@@ -180,12 +180,12 @@ maps <- function(db) {
       showCategory = length(show), nCluster = min(5, length(show) - 1), label_format = 32,
       fontsize_tiplab = 2.6, fontsize_cladelab = 2.6, hexpand = 0.5, cladelab_offset = 9
     ) + arm_fill +
-      caption(26, "Pathway tree", db, paste(
+      caption(27, "Pathway tree", db, paste(
         "Pathways clustered by shared proteins, each cluster named by its most frequent words.",
         source_note
       )),
     cnetplot(shown, showCategory = head(show, 5), node_label = "category") + arm_fill +
-      caption(27, "Pathways and their proteins", db, paste(
+      caption(28, "Pathways and their proteins", db, paste(
         "The five strongest pathways and their leading-edge proteins; pies show which leg each",
         "protein leads in. Leading edges here come from the compareCluster run, so they can differ",
         "slightly from those in S21 of 07_leading_edge.", source_note
