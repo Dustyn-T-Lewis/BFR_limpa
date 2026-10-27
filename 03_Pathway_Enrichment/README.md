@@ -17,8 +17,8 @@ phenotype. [`07_leading_edge`](07_leading_edge/README.md) asks whether the pathw
 are driven by the same proteins, and [`08_pathway_maps`](08_pathway_maps/README.md) draws both
 training responses as dotplots, enrichment maps, trees and protein networks.
 
-Figures run S1 to S26 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
-from `04_`, S12–S16 from `05_`, S17–S19 from `06_`, S20–S22 from `07_` and S23–S26 from `08_`.
+Figures run S1 to S27 through the stage: S1–S7 from `01_`, S8–S9 from `02_`, S10 from `03_`, S11
+from `04_`, S12–S16 from `05_`, S17–S19 from `06_`, S20–S23 from `07_` and S24–S27 from `08_`.
 Steps `01_` to `04_` and `07_` write one PDF each; `08_` writes one per collection;
 `05_` and `06_` write one per collection plus a chance summary. Each A4 page has a supplement-style
 caption with the title, one entry per lettered panel, the encodings and the source sheet. Findings

@@ -17,8 +17,8 @@ quarto render 03_Pathway_Enrichment/08_pathway_maps/a_script/08_pathway_maps.qmd
 Outputs:
 
 - `b_reports/08_pathway_maps.html`: the walkthrough, with the NES check against 01.
-- `b_reports/08_maps_<collection>.pdf`, one per collection, four pages: S23 dotplot, S24
-  enrichment map, S25 pathway tree, S26 pathway and protein network.
+- `b_reports/08_maps_<collection>.pdf`, one per collection, four pages: S24 dotplot, S25
+  enrichment map, S26 pathway tree, S27 pathway and protein network.
 
 Each map shows the main sets 01 calls at FDR < 0.05 in either leg, at most 30 per collection: 6
 Hallmark, 5 GO Slim, 11 KEGG, 30 of Reactome's 31 and 30 of GO:BP's 73. Across all 3,980 set

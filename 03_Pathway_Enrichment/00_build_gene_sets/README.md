@@ -18,6 +18,8 @@ Outputs:
 - `b_reports/00_build_gene_sets.html`: the walkthrough. No figures.
 - `c_data/gene_sets.rds`: the 1,990 tested sets, read by `01_run_fgsea_and_fry`,
   `04_run_singscore`, `07_leading_edge` and `08_pathway_maps`.
+- `c_data/go_bp_measured.rds`: the measured genes of every GO:BP set, tested or not, read by
+  `07_leading_edge` for child terms.
 - `c_data/00_build_gene_sets.xlsx`, read by `01_`, `04_` to `07_` and `05_Mitochondria`:
   - `collection_summary`: per collection, sets in the source, sets tested, median measured size.
   - `set_catalog`: one row per source set; `qualifies` marks the tested ones.

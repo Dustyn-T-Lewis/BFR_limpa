@@ -275,7 +275,8 @@ length(sets)
 
 `gene_sets.rds` holds the tested sets, a named list of gene-symbol vectors read by
 `01_run_fgsea_and_fry`, `04_run_singscore`, `07_leading_edge` and `08_pathway_maps`.
-`00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
+`go_bp_measured.rds` holds the measured genes of every GO:BP set, tested or not, so
+`07_leading_edge` can break a parent into child terms too small to test. `00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
 plus the counts above.
 
 ```{r write}
@@ -286,6 +287,10 @@ sheets <- list(
   mapping_summary = mapping_summary
 )
 saveRDS(sets, file.path(out, "gene_sets.rds"), compress = "xz")
+saveRDS(
+  sets_measured[set_catalog$set_id[set_catalog$database == "GOBP"]],
+  file.path(out, "go_bp_measured.rds"), compress = "xz"
+)
 write_xlsx(sheets, file.path(out, "00_build_gene_sets.xlsx"))
 ```
 
