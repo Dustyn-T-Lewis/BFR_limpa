@@ -38,9 +38,8 @@ head(protein_map, 3)
 ## Build the sets
 
 The "C MitoPathways" sheet holds one row per pathway with its genes in one comma-separated cell.
-`separate_longer_delim()` turns that into one row per pathway and gene. `col_types = "text"` stops
-readxl guessing each column's type, which warns on this file. The pathways nest, so a parent such
-as "Complex I" holds its children's genes too.
+`col_types = "text"` stops readxl guessing each column's type, which warns on this file. The
+pathways nest, so a parent such as "Complex I" holds its children's genes too.
 
 ```{r pathways}
 pathways <- read_excel(mitocarta, "C MitoPathways", col_types = "text") |>

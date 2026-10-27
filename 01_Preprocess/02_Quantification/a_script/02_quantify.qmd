@@ -40,9 +40,9 @@ head(proteins$genes, 6)
 
 ## Missingness
 
-In DIA data, low-intensity precursors go missing more often. The plot takes the precursor matrix
-and shows the proportion of missing values against mean observed intensity; a downward trend is
-that association.
+In DIA data, low-intensity precursors go missing more often. The plot shows each precursor's
+proportion of missing values against its mean observed intensity; a downward trend is that
+association.
 
 ```{r ave-vs-mis}
 plotAveVsMis(y)
@@ -51,9 +51,9 @@ plotAveVsMis(y)
 ## Fit the detection curve
 
 The detection probability curve (DPC) gives the probability that a precursor is observed as a
-function of its true intensity, through an intercept and a slope. `dpc()` takes the log2 matrix and
-returns the fitted pair. Its default, `model = "cn"`, is `dpcCN()`, the complete-normal estimator
-the limpa FAQ recommends for noisy data, fitted on a stratified subset of 2,000 precursors.
+function of its true intensity, through an intercept and a slope. The `dpc()` default,
+`model = "cn"`, is `dpcCN()`, the complete-normal estimator the limpa FAQ recommends for noisy
+data, fitted on a stratified subset of 2,000 precursors.
 
 ```{r dpc}
 dpcest <- dpc(y$E)
@@ -85,18 +85,22 @@ round(proteins$dpc, 3)
 
 ## Detection filter
 
-`filterByDetection()` takes the protein object and a minimum number of samples, and returns one
-`TRUE` or `FALSE` per protein. Its help page leaves the threshold to the analyst for a large
-dataset; here it is the smallest group size. The count runs across all samples, so it does not
-guarantee detection within any one group.
+`filterByDetection()` keeps a protein detected in at least `n.samples` samples. Its help page
+leaves the threshold to the analyst for a large dataset; here it is the smallest group size. The
+count runs across all samples, so it does not guarantee detection within any one group.
 
 ```{r detection}
 group_sizes <- table(proteins$targets$group)
 detected <- filterByDetection(proteins, n.samples = min(group_sizes))
 proteins <- proteins[detected, ]
 
+detection_summary <- data.frame(
+  before = length(detected), kept = sum(detected), dropped = sum(!detected),
+  minimum_samples = min(group_sizes)
+)
+
 group_sizes
-c(before = length(detected), kept = sum(detected), dropped = sum(!detected))
+detection_summary
 ```
 
 ## Normalisation
@@ -112,9 +116,9 @@ unnormalised <- proteins$E
 proteins$E <- normalizeBetweenArrays(proteins$E, method = "cyclicloess")
 ```
 
-Intensity distributions before and after, then a mean-difference (MD) plot, each protein's
-difference from the mean of the other samples against its average abundance, for the sample whose
-median sat furthest from the others before normalisation.
+Intensity distributions before and after. Then mean-difference (MD) plots for the sample whose
+median sat furthest from the others before normalisation: each protein's difference from the mean
+of the other samples against its average abundance.
 
 ```{r normalise-plots}
 #| fig-height: 8
@@ -201,19 +205,17 @@ later stage. `02_quantify.xlsx` holds the samples, the diagnostic curve fit, det
 per-protein quality.
 
 ```{r write}
-sheets <- list(
-  samples = as.data.frame(proteins$targets),
-  dpc_parameters = dpc_parameters,
-  detection_summary = data.frame(
-    before = length(detected), kept = sum(detected), dropped = sum(!detected),
-    minimum_samples = min(group_sizes)
-  ),
-  protein_quality = protein_quality
-)
-
 out <- here("01_Preprocess", "02_Quantification", "c_data")
 saveRDS(proteins, file.path(out, "proteins.rds"))
-write_xlsx(sheets, file.path(out, "02_quantify.xlsx"))
+write_xlsx(
+  list(
+    samples = as.data.frame(proteins$targets),
+    dpc_parameters = dpc_parameters,
+    detection_summary = detection_summary,
+    protein_quality = protein_quality
+  ),
+  file.path(out, "02_quantify.xlsx")
+)
 ```
 
 ## Session information
