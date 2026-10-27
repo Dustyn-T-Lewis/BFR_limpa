@@ -23,6 +23,8 @@ Outputs:
   the chance count; red bars exceed 1, and labels give observed of tested.
 - `c_data/association_t.rds`: moderated t, one row per protein, one column per analysis and
   outcome, for gene set tests.
+- `c_data/association_designs.rds`: the eight design matrices, read by
+  `03_Pathway_Enrichment/05_set_association` for fry.
 - `c_data/03_protein_association.xlsx`:
   - `summary`: one row per analysis and outcome; nominal and BH hits against chance;
   - `associations`: one row per protein, analysis and outcome; slope, t, p and FDR, sorted by FDR.

@@ -2,14 +2,16 @@
 
 Correlates each set's singscore change with the same leg's change in muscle size and echo
 intensity, pooled over 65 legs and within participant (BFR minus HLRT) over 32 participants. It
-also runs fgsea on the protein association rankings from
-`02_Differential_Expression/03_Protein_Association`.
+also tests sets on the protein association slope from
+`02_Differential_Expression/03_Protein_Association`: fgsea on its t ranking for leads, fry on the
+same design for confirmation.
 
 Inputs: `03_run_singscore/c_data/set_scores.rds`, the `set_catalog` sheet of
 `00_build_gene_sets/c_data/00_build_gene_sets.xlsx`, the targets in
 `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`, and for fgsea
-`02_Differential_Expression/03_Protein_Association/c_data/association_t.rds`, `gene_sets.rds` and
-the `protein_gene_map` sheet from `00_build_gene_sets`.
+`association_t.rds` and `association_designs.rds` from
+`02_Differential_Expression/03_Protein_Association/c_data/`, and `gene_sets.rds` and the
+`protein_gene_map` sheet from `00_build_gene_sets`.
 
 ```sh
 quarto render 03_Pathway_Enrichment/05_set_association/a_script/05_set_association.qmd --output-dir ../b_reports
@@ -31,10 +33,12 @@ Outputs:
   - `set_association`: one row per set, analysis and outcome; Spearman r, p and BH q, smallest p
     first.
   - `set_by_arm`: one row per set, arm and outcome; the same correlation inside each arm.
-  - `association_fgsea`: one row per set, analysis and outcome; fgsea NES, p and BH q over all sets
-    in the ranking, with the leading edge. fgsea treats proteins as independent, so its calls are
-    leads.
+  - `association_sets`: one row per set, analysis and outcome; fgsea NES, p, BH q and leading edge,
+    and fry direction, p and FDR. fgsea treats proteins as independent, so a set counts when fry
+    confirms it.
   - `set_catalog`: one row per tested set, with its collection and measured size.
 
-No set tracks the phenotype after correction, and no protein does either
-(`02_Differential_Expression/03_Protein_Association`).
+No set's singscore tracks the phenotype after correction, and no protein does either
+(`02_Differential_Expression/03_Protein_Association`). On the protein association ranking, fgsea
+calls up to 154 sets per outcome (mitochondrial translation and respiration top pooled rf_csa),
+and fry confirms none (smallest FDR 0.745): the fgsea calls come from co-moving proteins.

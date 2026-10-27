@@ -14,7 +14,9 @@ knitr:
 `enrichVolcano` (the user's own package, not on CRAN) is called with `::` for its label cleaner.
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl)
+pacman::p_load(
+  here, limpa, limma, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, readxl, writexl
+)
 here::i_am("03_Pathway_Enrichment/05_set_association/a_script/05_set_association.qmd")
 ```
 
@@ -243,7 +245,7 @@ A second view of the same question. `03_Protein_Association` saves each protein'
 the slope of its change on each outcome change, one column per analysis and outcome. fgsea ranks
 the representative protein of each gene by that t and tests every set, with the sets, size limits
 and seed of `01_run_fgsea_and_fry` and BH over all sets within each ranking. fgsea treats proteins
-as independent, so a set it calls is a lead.
+as independent, so a set it calls is a lead; fry, below, is the confirmation, as in `01_`.
 
 ```{r association-fgsea}
 association_t <- readRDS(here(
@@ -266,7 +268,34 @@ association_fgsea <- map(set_names(colnames(association_t)), function(column) {
   separate_wider_delim(ranking, "_", names = c("analysis", "outcome"), too_many = "merge") |>
   rename(set_id = pathway) |>
   left_join(select(set_catalog, set_id, database), by = "set_id")
-count(association_fgsea, analysis, outcome, wt = padj < 0.05, name = "sets_fdr_05")
+```
+
+fry tests the same slope with the protein correlation kept: for each analysis and outcome it reads
+the design saved by `03_Protein_Association`, refits `dpcDE()` for that design's precision weights
+and asks whether each set moved with the outcome (`post:x`). Set members become row numbers through
+each gene's representative protein, as in `01_`.
+
+```{r association-fry}
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+association_designs <- readRDS(here(
+  "02_Differential_Expression", "03_Protein_Association", "c_data", "association_designs.rds"
+))
+set_rows <- map(sets, function(genes) {
+  match(gene_of$protein[match(genes, gene_of$gene)], rownames(proteins))
+})
+association_fry <- imap(association_designs, function(design, ranking) {
+  proteins$weights <- dpcDE(proteins, design, plot = FALSE)$EList$weights
+  fry(proteins, set_rows, design, contrast = "post:x", sort = "none") |>
+    rownames_to_column("set_id") |>
+    transmute(ranking, set_id, fry_direction = Direction, fry_p = PValue, fry_fdr = FDR)
+}) |>
+  list_rbind() |>
+  separate_wider_delim(ranking, "_", names = c("analysis", "outcome"), too_many = "merge")
+association_sets <- left_join(
+  association_fgsea, association_fry, by = c("analysis", "outcome", "set_id")
+)
+association_sets |>
+  summarise(fgsea = sum(padj < 0.05), fry = sum(fry_fdr < 0.05), .by = c(analysis, outcome))
 ```
 
 ## Draw figures
@@ -411,7 +440,7 @@ chance_plot
 
 `05_set_association.xlsx` holds `chance_expectation` (nominal hits against chance),
 `set_association` (r, p and BH q per set, analysis and outcome, smallest p first), `set_by_arm`
-(the within-arm correlations), `association_fgsea` (fgsea on the protein association rankings)
+(the within-arm correlations), `association_sets` (fgsea and fry on the protein association)
 and `set_catalog` (every tested set).
 
 ```{r write}
@@ -419,7 +448,7 @@ sheets <- list(
   chance_expectation = chance_expectation,
   set_association = arrange(set_association, p),
   set_by_arm = by_arm,
-  association_fgsea = arrange(association_fgsea, pval),
+  association_sets = arrange(association_sets, pval),
   set_catalog = catalog
 )
 write_xlsx(sheets, file.path(stage, "c_data", "05_set_association.xlsx"))

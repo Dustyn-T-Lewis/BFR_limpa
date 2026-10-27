@@ -43,11 +43,12 @@ Each leg has a sample before training (T1) and after (T2). Widening on timepoint
 leg with both sample identifiers; legs missing either sample are dropped.
 
 ```{r legs}
-by_timepoint <- targets |>
+legs <- targets |>
   mutate(leg_id = paste(participant, leg, sep = "_")) |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
-  pivot_wider(names_from = timepoint, values_from = sample_id)
-legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
+  pivot_wider(names_from = timepoint, values_from = sample_id) |>
+  drop_na(T1, T2) |>
+  arrange(participant, treatment)
 
 nrow(legs)
 head(legs)
@@ -145,22 +146,26 @@ designs <- list(
 )
 ```
 
-Each fit returns the slope, its moderated t, p and the Benjamini–Hochberg (BH) false discovery
-rate, within each analysis and outcome.
+One design matrix per analysis and outcome, named like `pooled_vl_csa`, saved for the fry test in
+`03_Pathway_Enrichment/05_set_association`. Benjamini–Hochberg (BH) adjustment runs within each
+analysis and outcome.
 
 ```{r association-fits}
-results <- expand_grid(analysis = names(designs), outcome = outcomes) |>
-  pmap(function(analysis, outcome) {
-    design <- model.matrix(designs[[analysis]], mutate(samples, x = .data[[outcome]]))
-    stopifnot(qr(design)$rank == ncol(design))
-    fit <- eBayes(dpcDE(proteins, design, plot = FALSE), robust = TRUE)
-    topTable(fit, coef = "post:x", number = Inf, sort.by = "none") |>
-      as_tibble(rownames = "protein") |>
-      transmute(
-        analysis, outcome, protein, gene = Genes, slope = logFC, t, p = P.Value, fdr = adj.P.Val
-      )
-  }) |>
-  list_rbind()
+rankings <- expand_grid(analysis = names(designs), outcome = outcomes)
+association_designs <- pmap(rankings, function(analysis, outcome) {
+  design <- model.matrix(designs[[analysis]], mutate(samples, x = .data[[outcome]]))
+  stopifnot(qr(design)$rank == ncol(design))
+  design
+}) |>
+  set_names(paste(rankings$analysis, rankings$outcome, sep = "_"))
+results <- imap(association_designs, function(design, ranking) {
+  fit <- eBayes(dpcDE(proteins, design, plot = FALSE), robust = TRUE)
+  topTable(fit, coef = "post:x", number = Inf, sort.by = "none") |>
+    as_tibble(rownames = "protein") |>
+    transmute(ranking, protein, gene = Genes, slope = logFC, t, p = P.Value, fdr = adj.P.Val)
+}) |>
+  list_rbind() |>
+  separate_wider_delim(ranking, "_", names = c("analysis", "outcome"), too_many = "merge")
 
 results |>
   slice_min(p, n = 6) |>
@@ -168,7 +173,7 @@ results |>
 ```
 
 The model has no participant block because a participant's two legs do not correlate in protein
-change: the median Spearman r between their BFR and HLRT legs, across proteins, is printed below.
+change (median Spearman r between their BFR and HLRT legs, across proteins, below).
 
 ```{r leg-correlation}
 leg_r <- map_dbl(rownames(delta), function(id) {
@@ -212,8 +217,6 @@ summary_table
 ```
 
 ## Figures
-
-The figures share a theme and an A4 writer.
 
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -322,8 +325,7 @@ walk(outcomes, function(outcome_name) {
 })
 ```
 
-The chance page draws each ratio from the summary as a bar: nominal hits divided by the chance
-expectation.
+The chance page draws each ratio as a bar.
 
 ```{r chance-pdf}
 #| fig-height: 6
@@ -351,12 +353,16 @@ chance_plot
 
 `03_protein_association.xlsx` holds the summary and every association sorted by FDR;
 `04_Protein_Classification` reads the `associations` sheet. `association_t.rds` holds the t matrix
-for gene set tests, as rds because a workbook round trip can change the last bit of a double.
+for gene set tests, as rds because a workbook round trip can change the last bit of a double, and
+`association_designs.rds` the design matrices for fry.
 
 ```{r write}
-sheets <- list(summary = summary_table, associations = arrange(results, fdr))
 saveRDS(association_t, file.path(stage, "c_data", "association_t.rds"))
-write_xlsx(sheets, file.path(stage, "c_data", "03_protein_association.xlsx"))
+saveRDS(association_designs, file.path(stage, "c_data", "association_designs.rds"))
+write_xlsx(
+  list(summary = summary_table, associations = arrange(results, fdr)),
+  file.path(stage, "c_data", "03_protein_association.xlsx")
+)
 ```
 
 ## Session information
