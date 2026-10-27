@@ -14,13 +14,16 @@ quarto render 05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.q
 Outputs:
 
 - `b_reports/03_complex_subunits.html`: the walkthrough.
-- `b_reports/03_complex_subunits.pdf`: Sam's summary from PR #26 (mean subunit change per complex
-  and leg as bars, subunits as points, fry's interaction FDR above each complex), then every
-  subunit and every assembly factor by leg, ordered within complex by BFR minus HLRT. The bars are
-  not tested against each other; fry's FDR sits in the subunit panel titles.
+- `b_reports/03_complex_subunits.pdf`: page 1 stacks Sam's two summaries from PR #26, complex
+  subunits and then assembly factors with "Other" (CYCS, HCCS and the respirasome assembly genes
+  tied to no complex): mean change per group and leg as bars with the standard error across the
+  proteins, proteins as points, axis labels giving measured of all MitoCarta members, and fry's
+  interaction FDR above each complex's subunits. The standard error describes spread among
+  correlated proteins and is not a test. Pages 2 and 3 show every subunit and every assembly
+  factor by leg, ordered within complex by BFR minus HLRT.
 - `c_data/03_complex_subunits.xlsx`, one sheet:
   - `subunits`: one row per complex, role and measured protein, with training logFC and BH FDR per
-    leg and for the interaction (BFR minus HLRT) from the stage 02 fit. 88 subunits and 42 assembly
-    factors; TMEM70 is listed under both CI and CV, so the sheet has 131 rows.
+    leg and for the interaction (BFR minus HLRT) from the stage 02 fit: subunits, assembly factors
+    and the "Other" proteins. TMEM70 is listed under both CI and CV.
 
 No protein's interaction reaches FDR 0.05, and fry's interaction FDR is 0.99 for every complex.
