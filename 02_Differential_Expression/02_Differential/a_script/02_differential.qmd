@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tibble, tidyr, writexl)
+pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tidyr, writexl)
 here::i_am("02_Differential_Expression/02_Differential/a_script/02_differential.qmd")
 ```
 
@@ -38,25 +38,15 @@ stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 
 limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` takes the
 place of `lmFit()` because only it reads the standard errors from `dpcQuant()`, as precision
-weights. `sample.weights = TRUE` adds one quality weight per sample, since removing contaminant
-rows does not undo what a bloody biopsy did to the rest of the sample. `contrasts.fit()` forms the
+weights. limpa's default adds no per-sample quality weights; tried, they ranged from 0.09 to 3.6 and
+did not follow contaminant load, so they stay off. `contrasts.fit()` forms the
 five comparisons and `eBayes()` moderates each protein's variance toward a prior fitted across all
 proteins; `robust = TRUE` keeps proteins with outlying variances from distorting that prior.
 
 ```{r fit}
-fit <- dpcDE(proteins, d$design, sample.weights = TRUE)
+fit <- dpcDE(proteins, d$design)
 fit <- contrasts.fit(fit, d$contrasts)
 fit <- eBayes(fit, robust = TRUE)
-```
-
-A lower weight reduces a sample's contribution without dropping it. The weights by group:
-
-```{r sample-weights}
-tibble(group = fit$targets$group, weight = fit$targets$sample.weight) |>
-  summarise(
-    n = n(), median_weight = round(median(weight), 2),
-    lowest_weight = round(min(weight), 2), .by = group
-  )
 ```
 
 ## Results
@@ -179,7 +169,7 @@ fitted_slope <- fitted_slope[
 ]
 fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
 stopifnot(identical(colnames(fitted_slope$E), rownames(d$design)))
-refit <- dpcDE(fitted_slope, d$design, sample.weights = TRUE) |>
+refit <- dpcDE(fitted_slope, d$design) |>
   contrasts.fit(d$contrasts) |>
   eBayes(robust = TRUE)
 primary_hits <- decideTests(fit) != 0
@@ -196,7 +186,7 @@ rbind(
 
 `fit.rds` keeps the fitted model for the stages that rebuild contrasts. `02_differential.xlsx`
 holds `DEP_matrix` (one row per protein: log2 fold change, p and BH-adjusted p per contrast),
-discovery counts, sample weights and the distribution summaries.
+discovery counts and the distribution summaries.
 
 ```{r write}
 dep_matrix <- results |>
@@ -212,10 +202,6 @@ saveRDS(fit, file.path(out, "fit.rds"))
 sheets <- list(
   DEP_matrix = dep_matrix,
   contrast_summary = contrast_summary,
-  sample_weights = data.frame(
-    sample_id = colnames(proteins$E), group = proteins$targets$group,
-    weight = fit$targets$sample.weight
-  ),
   null_summary = null_summary,
   treat_summary = treat_summary
 )

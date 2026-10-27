@@ -60,7 +60,7 @@ c(
 ## Contrasts
 
 A contrast is a difference between model coefficients; positive values follow the subtraction
-order below. `makeContrasts()` returns one column of coefficient weights per comparison.
+order below.
 
 ```{r contrasts}
 contrast_matrix <- makeContrasts(
@@ -89,8 +89,8 @@ between treatments. Baseline differences can exist and are inspected, not assume
 ## Check within-leg correlation
 
 Samples from the same leg may stay correlated after the participant term. `leg_id` marks each
-participant and leg; `duplicateCorrelation()` takes the protein matrix, the design and that block,
-and returns the average residual correlation within legs.
+participant and leg; `duplicateCorrelation()` estimates the average residual correlation within
+legs.
 
 ```{r correlation-strata}
 leg_id <- paste(targets$participant, targets$leg, sep = "_")
@@ -102,7 +102,7 @@ strata <- data.frame(
 round(strata$correlation, 3)
 ```
 
-The estimate ignores the standard errors and sample weights the later fit uses. `02_Differential`
+The estimate ignores the standard errors the later fit uses. `02_Differential`
 fits without a leg block while this stays near zero. If it rose, the fix is `block = leg_id`
 there; `leg_id` is not saved, so read this value on every rerun.
 
@@ -118,15 +118,17 @@ saveRDS(
   list(design = design, contrasts = contrast_matrix, baseline = "BFR_Pre-HLRT_Pre"),
   file.path(out, "design.rds")
 )
-sheets <- list(
-  samples = as.data.frame(targets),
-  design = data.frame(sample_id = rownames(design), design, check.names = FALSE),
-  contrasts = data.frame(
-    coefficient = rownames(contrast_matrix), contrast_matrix, check.names = FALSE
+write_xlsx(
+  list(
+    samples = as.data.frame(targets),
+    design = data.frame(sample_id = rownames(design), design, check.names = FALSE),
+    contrasts = data.frame(
+      coefficient = rownames(contrast_matrix), contrast_matrix, check.names = FALSE
+    ),
+    correlation_strata = strata
   ),
-  correlation_strata = strata
+  file.path(out, "01_design.xlsx")
 )
-write_xlsx(sheets, file.path(out, "01_design.xlsx"))
 ```
 
 ## Session information
