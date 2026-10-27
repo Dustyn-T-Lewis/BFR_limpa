@@ -1,5 +1,5 @@
 ---
-title: "07 · Leading edge"
+title: "06 · Leading edge"
 format:
   html:
     toc: true
@@ -282,10 +282,9 @@ distinct(unique_children, parent, only_BFR, only_HLRT, shared, divergence, padj_
 
 ## Draw figures
 
-Sam's figures, drawn from the tables above. Each page carries a short title; the README explains
-the encodings.
+Sam's figures, drawn from the tables above.
 
-S20 is Sam's overlap heatmap: one tile per pathway coloured by Jaccard index and labelled with the
+S19 is Sam's overlap heatmap: one tile per pathway coloured by Jaccard index and labelled with the
 shared count, one panel per collection.
 
 ```{r overlap-page}
@@ -296,12 +295,12 @@ overlap_page <- leading_edge |>
   geom_text(aes(label = both), size = 2.2) +
   facet_grid(database ~ ., scales = "free_y", space = "free_y") +
   scale_fill_gradient(low = "#f7fbff", high = "#08519c", limits = c(0, 1), name = "Jaccard") +
-  labs(x = NULL, y = NULL, title = "S20. Leading-edge overlap; label = shared proteins") +
+  labs(x = NULL, y = NULL, title = "S19. Leading-edge overlap; label = shared proteins") +
   theme_minimal(base_size = 8) +
   theme(panel.grid = element_blank(), strip.text.y = element_text(angle = 0))
 ```
 
-S21 is Sam's Venn view: one Venn per pathway with each leg's NES and adjusted p above and the
+S20 is Sam's Venn view: one Venn per pathway with each leg's NES and adjusted p above and the
 shared proteins below, six to a page.
 
 ```{r venn-pages}
@@ -333,11 +332,11 @@ venn <- function(id) {
 venn_pages <- split(leading_edge$set_id, ceiling(seq_along(leading_edge$set_id) / 6)) |>
   map(function(ids) {
     wrap_plots(map(ids, venn), ncol = 2, nrow = 3) +
-      plot_annotation(title = "S21. Leading edges by leg")
+      plot_annotation(title = "S20. Leading edges by leg")
   })
 ```
 
-S22 is Sam's NES scatter: every pathway tested in both legs, coloured by collection and shaped by
+S21 is Sam's NES scatter: every pathway tested in both legs, coloured by collection and shaped by
 where fgsea calls it at FDR < 0.05, with the count and share of pathways in each quadrant.
 
 ```{r nes-scatter}
@@ -368,7 +367,7 @@ nes_page <- ggplot(nes, aes(NES_BFR, NES_HLRT)) +
   coord_equal() +
   labs(
     x = "NES, BFR", y = "NES, HLRT", shape = "FDR < 0.05", colour = NULL,
-    title = "S22. Pathway NES, BFR against HLRT",
+    title = "S21. Pathway NES, BFR against HLRT",
     subtitle = sprintf(
       "%d pathways, Spearman rho %.2f", nrow(nes),
       cor(nes$NES_BFR, nes$NES_HLRT, method = "spearman")
@@ -377,14 +376,14 @@ nes_page <- ggplot(nes, aes(NES_BFR, NES_HLRT)) +
   theme_bw(base_size = 9)
 ```
 
-S23 is Sam's decomposition, one parent per panel, two to a page (Sam's 8.5 by 6 inch shape), for the
+S22 is Sam's decomposition, one parent per panel, two to a page (Sam's 8.5 by 6 inch shape), for the
 25 parents with the smallest larger adjusted p across legs: one row per child term (up to 15, those
 holding the largest share of either leg's leading edge) [relation], fill the share of the leading
 edge, size the count, black outline a child at BH-adjusted p < 0.05.
 
 ```{r child-pages}
 top_parents <- leading_edge |>
-  filter(set_id %in% decomposition$parent_id) |>
+  filter(set_id %in% filter(decomposition, in_child > 0)$parent_id) |>
   slice_min(pmax(padj_BFR, padj_HLRT), n = 25, with_ties = FALSE) |>
   pull(set_id)
 child_pages <- map(top_parents, function(id) {
@@ -408,7 +407,7 @@ child_pages <- map(top_parents, function(id) {
     ) +
     scale_size_area(max_size = 8, name = "proteins") +
     labs(
-      x = NULL, y = NULL, title = paste("S23.", str_wrap(rows$parent[1], 60)),
+      x = NULL, y = NULL, title = paste("S22.", str_wrap(rows$parent[1], 60)),
       subtitle = sprintf(
         "leading edge: BFR %d, HLRT %d; in significant descendants: BFR %.0f%%, HLRT %.0f%%",
         rows$core_size[rows$arm == "BFR"][1], rows$core_size[rows$arm == "HLRT"][1],
@@ -421,7 +420,7 @@ child_pages <- map(top_parents, function(id) {
 })
 ```
 
-S24 is Sam's unique-protein view, one parent per panel, two to a page, in order of the divergence p,
+S23 is Sam's unique-protein view, one parent per panel, two to a page, in order of the divergence p,
 up to 25:
 per child, BFR-only proteins to the left and HLRT-only to the right (up to 15, the most
 populated), the shared count in brackets, an asterisk at Fisher BH-adjusted p < 0.05.
@@ -447,7 +446,7 @@ unique_pages <- map(unique_ids, function(id) {
     scale_fill_manual(values = arm_colours, name = "unique to") +
     labs(
       x = "unique leading-edge proteins in the child term", y = NULL,
-      title = paste("S24.", str_wrap(rows$parent[1], 60)),
+      title = paste("S23.", str_wrap(rows$parent[1], 60)),
       subtitle = sprintf(
         "only BFR %d, only HLRT %d, shared %d; divergence %.2f, permutation p %.3g (BH %.3g)",
         rows$only_BFR[1], rows$only_HLRT[1], rows$shared[1], rows$divergence[1],
@@ -459,12 +458,14 @@ unique_pages <- map(unique_ids, function(id) {
 })
 ```
 
-All pages go to one A4 PDF, S20 first; `pair_up()` stacks the S23 and S24 panels two to a page.
+All pages go to one A4 PDF, S19 first; `pair_up()` stacks the S22 and S23 panels two to a page.
 
 ```{r write-figures}
 pdf(file.path(stage, "b_reports", "06_leading_edge.pdf"), width = 8.27, height = 11.69)
 set.seed(1)
-pair_up <- function(panels) map(split(panels, ceiling(seq_along(panels) / 2)), wrap_plots, ncol = 1, nrow = 2)
+pair_up <- function(panels) {
+  map(split(panels, ceiling(seq_along(panels) / 2)), wrap_plots, ncol = 1, nrow = 2)
+}
 pages <- c(
   list(overlap_page), venn_pages, list(nes_page), pair_up(child_pages), pair_up(unique_pages)
 )

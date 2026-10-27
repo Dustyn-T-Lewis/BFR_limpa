@@ -16,8 +16,11 @@ Outputs:
 
 - `b_reports/04_protein_classification.html`: the walkthrough, with previews and the chance figure.
 - `b_reports/04_classification_<task>.pdf`: ROC curves for every protein at nominal p, one file per
-  task except baseline, which is reported but not drawn.
-- `b_reports/04_chance.pdf`: nominal hits against chance per task.
+  task except baseline, which is reported but not drawn. Red curves separate higher in BFR, blue
+  lower; shading is the area under the curve and the dashed line is chance. Panel headers give AUC,
+  paired Wilcoxon p and BH q.
+- `b_reports/04_chance.pdf`: nominal hits against chance per task. Bar length is nominal hits
+  divided by the chance count; red bars exceed 1, and labels give observed of tested.
 - `c_data/04_protein_classification.xlsx`, one sheet per table:
   - `chance_expectation`: one row per task, with nominal hits against chance and BH hits.
   - `protein_auc`: one row per protein and task, with AUC, paired Wilcoxon p and BH q, smallest p

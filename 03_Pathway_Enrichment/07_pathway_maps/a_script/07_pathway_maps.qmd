@@ -1,5 +1,5 @@
 ---
-title: "08 · Pathway maps"
+title: "07 · Pathway maps"
 format:
   html:
     toc: true
@@ -15,7 +15,7 @@ knitr:
 package, not on CRAN) is called with `::` for its label cleaner.
 
 ```{r setup}
-pacman::p_load(here, dplyr, purrr, stringr, ggplot2, readxl, clusterProfiler, enrichplot)
+pacman::p_load(here, dplyr, purrr, ggplot2, readxl, clusterProfiler, enrichplot)
 here::i_am("03_Pathway_Enrichment/07_pathway_maps/a_script/07_pathway_maps.qmd")
 ```
 
@@ -126,34 +126,26 @@ nes_check |>
 
 ## Draw figures
 
-Every page carries an S-numbered caption. `caption()` takes the figure number, title, collection
-and text, and returns the caption layer. `arm_fill` colours the two legs as in the other steps.
+Every page carries an S-numbered title. `figure_title()` takes the figure number, title and
+collection, and returns the title layer. `arm_fill` colours the two legs as in the other steps.
 
 ```{r figure-style}
-caption <- function(number, title, db, text) {
-  labs(caption = str_wrap(sprintf("S%d Figure. %s, %s. %s", number, title, db, text), 115))
+figure_title <- function(number, title, db) {
+  labs(title = sprintf("S%d. %s, %s", number, title, db))
 }
 arm_fill <- scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL)
-caption_theme <- theme(
-  plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-  plot.caption.position = "plot"
-)
-source_note <- paste(
-  "Pathways chosen from set_tests (01_run_fgsea_and_fry.xlsx): the collapse-surviving fgsea sets",
-  "at FDR < 0.05 in either training contrast. NES and leading edges from the compareCluster run."
-)
 ```
 
 `maps()` draws a collection's four pages from `compared`. Pathway similarity is computed only among
 the drawn pathways, since GO:BP holds 1,366 sets.
 
-- S25, dotplot: BFR and HLRT side by side, colour NES (signed), dot
+- S24, dotplot: BFR and HLRT side by side, colour NES (signed), dot
   size the share of the pathway in its leading edge, the proteins ranked before the running-sum
   peak.
-- S26, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
+- S25, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
   node a pie split by leg.
-- S27, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
-- S28, network: the five strongest pathways linked to their leading-edge proteins.
+- S26, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
+- S27, network: the five strongest pathways linked to their leading-edge proteins.
 
 ```{r maps}
 maps <- function(db) {
@@ -164,34 +156,20 @@ maps <- function(db) {
     # dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.
     dotplot(shown, showCategory = length(show), color = "NES", label_format = 45) +
       scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", name = "NES") +
-      caption(25, "Pathways by leg", db, paste(
-        "Colour is NES, dot size the share of the pathway in its leading edge.", source_note
-      )),
+      figure_title(24, "Pathways by leg", db),
     # On the two small collections (Hallmark, GO Slim) few pathways share proteins, and emapplot
     # warns from an internal max() over no edges; the map still draws.
     suppressWarnings(
       emapplot(similar, showCategory = length(show), label_format = 30, size_category = 1.6)
-    ) + arm_fill +
-      caption(26, "Enrichment map", db, paste(
-        "Nodes are pathways, pies split by leg, joined when their proteins overlap.", source_note
-      )),
+    ) + arm_fill + figure_title(25, "Enrichment map", db),
     treeplot(
       similar,
       showCategory = length(show), nCluster = min(5, length(show) - 1), label_format = 32,
       fontsize_tiplab = 2.6, fontsize_cladelab = 2.6, hexpand = 0.5, cladelab_offset = 9
-    ) + arm_fill +
-      caption(27, "Pathway tree", db, paste(
-        "Pathways clustered by shared proteins, each cluster named by its most frequent words.",
-        source_note
-      )),
+    ) + arm_fill + figure_title(26, "Pathway tree", db),
     cnetplot(shown, showCategory = head(show, 5), node_label = "category") + arm_fill +
-      caption(28, "Pathways and their proteins", db, paste(
-        "The five strongest pathways and their leading-edge proteins; pies show which leg each",
-        "protein leads in. Leading edges here come from the compareCluster run, so they can differ",
-        "slightly from those in S21 of 06_leading_edge.", source_note
-      ))
-  ) |>
-    map(function(p) p + caption_theme)
+      figure_title(27, "Pathways and their proteins", db)
+  )
 }
 ```
 

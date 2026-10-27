@@ -86,10 +86,7 @@ Three A4 pages go to `b_reports/03_complex_subunits.pdf`, sharing one theme.
 
 ```{r theme}
 theme_set(theme_minimal(base_size = 9))
-theme_update(
-  plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-  plot.caption.position = "plot", legend.position = "top", panel.grid.major.x = element_blank()
-)
+theme_update(legend.position = "top", panel.grid.major.x = element_blank())
 ```
 
 Page 1 is Sam's summary layout: each complex's mean subunit change per leg as a bar, and every
@@ -116,21 +113,16 @@ summary_page <- subunits |>
   scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
   labs(
     x = NULL, y = "log2 change, post - pre",
-    caption = str_wrap(paste(
-      "Complex subunits, summary by leg. Bars are the mean training change of each complex's",
-      "measured subunits; points are the subunits. The label is fry's interaction FDR on the",
-      "complex, the set-level test of BFR against HLRT. Data: subunits sheet of",
-      "03_complex_subunits.xlsx."
-    ), 115)
+    title = "Complex subunits, summary by leg"
   )
 ```
 
 Pages 2 and 3 draw every protein of one role by leg, one panel per complex. `role_page()` takes
-the role and the caption's opening sentence. Panel titles carry the protein count and, on the
+the role and the page title. Panel titles carry the protein count and, on the
 subunit page, fry's interaction FDR, since fry tested the subunits only.
 
 ```{r role-page}
-role_page <- function(which_role, title_text) {
+role_page <- function(which_role, title) {
   rows <- filter(subunits, role == which_role)
   fry <- if (which_role == "subunits") interaction_fry else interaction_fry[0, ]
   headers <- rows |>
@@ -153,13 +145,7 @@ role_page <- function(which_role, title_text) {
     scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL) +
     labs(
       x = NULL, y = "log2 change, post - pre",
-      caption = str_wrap(paste(
-        title_text, "Bars are each measured protein's training change in the BFR and the HLRT",
-        "leg from the stage 02 fit, ordered within complex by BFR minus HLRT. Bars are not",
-        "tested against each other: proteins of a complex are correlated, so the set-level test",
-        "is fry in 02_test_mito, given in the panel title where it exists. Data: subunits sheet",
-        "of 03_complex_subunits.xlsx."
-      ), 115)
+      title = title
     ) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6))
 }
@@ -170,8 +156,8 @@ pdf(file.path(stage, "b_reports", "03_complex_subunits.pdf"), width = 8.27, heig
 walk(
   list(
     summary_page,
-    role_page("subunits", "Complex subunits by leg."),
-    role_page("assembly factors", "Complex assembly factors by leg.")
+    role_page("subunits", "Complex subunits by leg"),
+    role_page("assembly factors", "Complex assembly factors by leg")
   ),
   print
 )

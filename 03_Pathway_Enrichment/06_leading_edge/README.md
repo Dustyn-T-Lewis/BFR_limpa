@@ -1,4 +1,4 @@
-# 07 · Leading edge
+# 06 · Leading edge
 
 Asks whether the pathways both legs move with training are driven by the same proteins, by
 comparing the fgsea leading edges of the two training contrasts. Sam's analysis from PR #26 (his
@@ -18,18 +18,18 @@ Outputs:
 
 - `b_reports/06_leading_edge.html`: the walkthrough.
 - `b_reports/06_leading_edge.pdf`, Sam's figures, each page titled only:
-  - S20: overlap heatmap, one tile per pathway coloured by Jaccard index, labelled with the shared
+  - S19: overlap heatmap, one tile per pathway coloured by Jaccard index, labelled with the shared
     count, one panel per collection;
-  - S21: one Venn per pathway (ggvenn), each leg's NES and adjusted p and the shared count against
+  - S20: one Venn per pathway (ggvenn), each leg's NES and adjusted p and the shared count against
     chance above, the shared proteins below, six to a page;
-  - S22: NES in BFR against HLRT for every tested pathway, colour by collection, shape by where
+  - S21: NES in BFR against HLRT for every tested pathway, colour by collection, shape by where
     fgsea calls it at FDR < 0.05, quadrant counts and Spearman rho;
-  - S23: GO:BP decomposition, one parent per panel (top 25 by the larger adjusted p), child terms
+  - S22: GO:BP decomposition, one parent per panel (top 25 by the larger adjusted p), child terms
     [relation] by leg; fill is the share of the leading edge, size the count, a black outline a
     hypergeometric BH-adjusted p < 0.05; the subtitle gives the share in significant descendants;
-  - S24: proteins unique to each leg by child term, one parent per panel (top 25 by divergence p),
+  - S23: proteins unique to each leg by child term, one parent per panel (top 25 by divergence p),
     BFR-only left and HLRT-only right, shared count and Fisher asterisks per child.
-  S23 and S24 put two panels on a page.
+  S22 and S23 put two panels on a page.
 - `c_data/06_leading_edge.xlsx`, read by no later step:
   - `leading_edge`: one row per pathway: shared and one-leg counts, NES and q per leg, Jaccard
     index, overlap coefficient and the shared count expected by chance;

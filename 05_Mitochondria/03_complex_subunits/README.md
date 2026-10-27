@@ -15,7 +15,9 @@ Outputs:
 
 - `b_reports/03_complex_subunits.html`: the walkthrough.
 - `b_reports/03_complex_subunits.pdf`: Sam's summary from PR #26 (mean subunit change per complex
-  and leg), then every subunit and every assembly factor by leg.
+  and leg as bars, subunits as points, fry's interaction FDR above each complex), then every
+  subunit and every assembly factor by leg, ordered within complex by BFR minus HLRT. The bars are
+  not tested against each other; fry's FDR sits in the subunit panel titles.
 - `c_data/03_complex_subunits.xlsx`, one sheet:
   - `subunits`: one row per complex, role and measured protein, with training logFC and BH FDR per
     leg and for the interaction (BFR minus HLRT) from the stage 02 fit. 88 subunits and 42 assembly

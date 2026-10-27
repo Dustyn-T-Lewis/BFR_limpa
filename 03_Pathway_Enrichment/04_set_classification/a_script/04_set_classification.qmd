@@ -1,5 +1,5 @@
 ---
-title: "05 · Set classification"
+title: "04 · Set classification"
 format:
   html:
     toc: true
@@ -222,7 +222,7 @@ summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = comparison)
 
 ## Draw figures
 
-The figures share a theme, a caption builder and an A4 writer.
+The figures share a theme and an A4 writer.
 
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -230,14 +230,8 @@ figure_theme <- theme_minimal(base_size = 9) +
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
     panel.grid.minor = element_blank(),
     panel.spacing = unit(4, "mm"),
-    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-    plot.caption.position = "plot",
     legend.position = "top"
   )
-caption_text <- function(title, text, page = 1, n_pages = 1) {
-  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
-  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
-}
 write_pdf <- function(pages, name) {
   pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
   walk(pages, print)
@@ -276,25 +270,9 @@ roc_figure <- function(task_name, number, db) {
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
-  n_sets <- collection_sizes$n[collection_sizes$database == db]
-  caption_body <- paste(
-    paste0(spec$label, ", ", db, "."),
-    sprintf(
-      "ROC curves for all %d %s sets whose singscore separates the groups at nominal p, across %d",
-      nrow(hits), db, length(spec$positive)
-    ),
-    sprintf("paired %s, smallest p first. AUC has its direction fixed: red", spec$unit),
-    sprintf("separates higher in %s, blue lower.", spec$favours),
-    "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
-    "signed-rank test, q from BH within collection and task.",
-    sprintf(
-      "Nominal p, uncorrected: chance alone returns %.1f of the %d %s sets.",
-      n_sets * 0.05, n_sets, db
-    ),
-    "Data: set_auc sheet of 04_set_classification.xlsx."
-  )
   pages <- split(curves, (as.integer(curves$panel) - 1) %/% 12)
   imap(unname(pages), function(page, i) {
+    page_note <- if (length(pages) > 1) sprintf(" (page %d of %d)", i, length(pages)) else ""
     ggplot(droplevels(page), aes(fpr, tpr, colour = direction, fill = direction)) +
       geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
       geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
@@ -309,28 +287,28 @@ roc_figure <- function(task_name, number, db) {
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
       labs(
         x = "1 - specificity", y = "sensitivity",
-        caption = caption_text(sprintf("S%d Figure", number), caption_body, i, length(pages))
+        title = sprintf("S%d. ROC curves, %s, %s%s", number, spec$label, db, page_note)
       ) +
       figure_theme
   })
 }
 ```
 
-One PDF per collection, so each can be read on its own. The four drawn tasks are S12 to S15 in
-the order of `drawn_tasks`; S16 is the chance page across all five tasks. The baseline task is
+One PDF per collection, so each can be read on its own. The four drawn tasks are S11 to S14 in
+the order of `drawn_tasks`; S15 is the chance page across all five tasks. The baseline task is
 reported in the chance table but not drawn.
 
 ```{r write-figures}
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
 walk(unique(catalog$database), function(db) {
   write_pdf(
-    list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 11 + i, db))),
+    list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 10 + i, db))),
     paste0("04_classification_", db, ".pdf")
   )
 })
 ```
 
-S16 draws each ratio as a bar, one panel per task.
+S15 draws each ratio as a bar, one panel per task.
 
 ```{r chance-figure}
 chance_plot <- chance_expectation |>
@@ -347,13 +325,7 @@ chance_plot <- chance_expectation |>
   scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
   labs(
     x = "observed nominal hits / chance expectation", y = NULL,
-    caption = caption_text("S16 Figure", paste(
-      "Nominal hits relative to chance, by collection. Paired Wilcoxon per set across",
-      nrow(collection_sizes), "collections, uncorrected p. Bar length is observed nominal hits",
-      "divided by the count that collection returns under the null; red clears 1, grey does not.",
-      "Labels give observed of tested.",
-      "Data: chance_expectation sheet of 04_set_classification.xlsx."
-    ))
+    title = "S15. Nominal hits against chance, by collection and task"
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())

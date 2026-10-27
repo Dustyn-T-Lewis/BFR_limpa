@@ -15,7 +15,7 @@ knitr:
 
 ```{r setup}
 pacman::p_load(
-  here, dplyr, tibble, tidyr, purrr, stringr, limma, ggplot2, patchwork, readxl, writexl
+  here, dplyr, tibble, tidyr, purrr, limma, ggplot2, patchwork, readxl, writexl
 )
 here::i_am("03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and_fry.qmd")
 ```
@@ -220,18 +220,7 @@ set_summary
 
 ## Figures
 
-The figures go to one A4 PDF, S1 to S7. `supplement()` takes a figure number, title and caption
-text and returns a patchwork annotation with the supplement-style caption and panel tags.
-
-```{r supplement-helper}
-supplement <- function(number, title, text, tags = "A") {
-  plot_annotation(
-    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 115),
-    tag_levels = tags,
-    theme = theme(plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2))
-  )
-}
-```
+The figures go to one A4 PDF, S1 to S7.
 
 The dot plots show four contrasts; the baseline contrast is left out. `survivors` holds the
 significant fgsea sets that survived the collapse.
@@ -296,18 +285,9 @@ dotplot_figure <- function(rows, number, name, by_database = FALSE) {
       theme(panel.grid.major.y = element_blank(), plot.title = element_text(size = 9))
   })
   wrap_plots(panels, ncol = 1, guides = "collect") +
-    supplement(
-      number, paste("Ten strongest collapse survivors,", name),
-      paste0(
-        paste(sprintf("(%s) %s.", LETTERS[seq_along(by_contrast)], names(by_contrast)),
-          collapse = " "
-        ),
-        " Up to ten collapsePathways survivors per contrast, lowest adjusted p first; FDR is",
-        " BH within contrast. Point size is the number of measured genes in the set; colour is ",
-        if (by_database) "the collection" else "-log10 FDR",
-        ". Contrasts with no survivor are omitted. Data: set_tests sheet of",
-        " 01_run_fgsea_and_fry.xlsx."
-      )
+    plot_annotation(
+      title = sprintf("S%d. Ten strongest collapse survivors, %s", number, name),
+      tag_levels = "A"
     )
 }
 ```
@@ -340,16 +320,7 @@ figures <- c(figures, list(
     labs(x = NULL, y = "significant sets") +
     theme_minimal(base_size = 10) +
     theme(legend.position = "bottom") +
-    supplement(
-      7, "Significant sets before and after collapse",
-      paste(
-        "Sets at FDR 0.05 per collection and contrast, before and after collapsePathways, which",
-        "makes a set the child of another significant set when it shows no enrichment of its own",
-        "(p > 0.05) either outside or inside that set's genes. Data: set_tests sheet of",
-        "01_run_fgsea_and_fry.xlsx."
-      ),
-      tags = NULL
-    )
+    plot_annotation(title = "S7. Significant sets before and after collapse")
 ))
 ```
 

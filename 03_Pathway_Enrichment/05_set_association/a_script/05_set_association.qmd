@@ -1,5 +1,5 @@
 ---
-title: "06 · Set association"
+title: "05 · Set association"
 format:
   html:
     toc: true
@@ -239,8 +239,7 @@ summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = c(analysis, comparis
 
 ## Draw figures
 
-The figures share a theme, a caption builder that adds "page i of n" when a figure spans pages,
-and an A4 writer.
+The figures share a theme and an A4 writer.
 
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -248,14 +247,8 @@ figure_theme <- theme_minimal(base_size = 9) +
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
     panel.grid.minor = element_blank(),
     panel.spacing = unit(4, "mm"),
-    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-    plot.caption.position = "plot",
     legend.position = "top"
   )
-caption_text <- function(title, text, page = 1, n_pages = 1) {
-  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
-  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
-}
 write_pdf <- function(pages, name) {
   pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
   walk(pages, print)
@@ -265,15 +258,15 @@ write_pdf <- function(pages, name) {
 
 `association_figure()` draws every set-outcome pair in one collection that reaches nominal p in
 one analysis, smallest p first, twelve panels to a page; a collection without hits gets no pages.
-Pooled pages (S17) plot each leg's score change against its outcome change, with a line fitted
-inside each arm and the within-arm correlations inset. Differential pages (S18) plot what was
+Pooled pages (S16) plot each leg's score change against its outcome change, with a line fitted
+inside each arm and the within-arm correlations inset. Differential pages (S17) plot what was
 tested: one point per participant, the BFR minus HLRT difference in score change against the same
 difference in outcome change. Each page pools the hits of all four outcomes, so its chance count
 covers every set-outcome pair in the collection. Pages are built one at a time from their own
 rows, because a paginating facet would build every panel for every page.
 
 ```{r association-figure}
-association_figure <- function(which_analysis, number, title, population, db) {
+association_figure <- function(which_analysis, number, title, db) {
   hits <- set_association |>
     filter(analysis == which_analysis, database == db, p < 0.05) |>
     arrange(p)
@@ -288,12 +281,6 @@ association_figure <- function(which_analysis, number, title, population, db) {
     x_label <- "change in set score, T2 - T1, BFR minus HLRT, one point per participant"
     y_label <- "change in phenotype, BFR minus HLRT"
     headroom <- 0.06
-    encoding <- paste(
-      "One point per participant: the change in their BFR leg minus the change in their HLRT",
-      "leg, on both axes. The line is a least-squares fit; the header r is the differential",
-      "correlation, the one tested. q from BH within collection and outcome. Data:",
-      "set_association sheet of 05_set_association.xlsx."
-    )
   } else {
     score_change <- delta
     phenotype_change <- leg_phenotype
@@ -301,11 +288,6 @@ association_figure <- function(which_analysis, number, title, population, db) {
     x_label <- "change in set score, T2 - T1, one point per leg"
     y_label <- "change in phenotype"
     headroom <- 0.35
-    encoding <- paste(
-      "Lines are fitted within each arm; the header r is the pooled correlation and the inset",
-      "gives it within each arm. q from BH within collection and outcome. Data: set_association",
-      "and set_by_arm sheets of 05_set_association.xlsx."
-    )
   }
   points <- pmap(hits, function(set_id, database, pathway, outcome, r, p, fdr, ...) {
     arms <- by_arm |>
@@ -323,23 +305,10 @@ association_figure <- function(which_analysis, number, title, population, db) {
   }) |>
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
-  n_sets <- collection_sizes$n[collection_sizes$database == db]
-  text <- paste(
-    paste0(title, ", ", db, "."),
-    sprintf(
-      "All %d %s set-outcome pairs whose Spearman correlation reaches nominal p in the %s",
-      nrow(hits), db, which_analysis
-    ),
-    sprintf("analysis (%s), smallest p first.", population),
-    sprintf(
-      "Nominal p, uncorrected: chance alone returns %.1f of the %d x %d %s set-outcome pairs.",
-      n_sets * 0.05 * length(outcomes), length(outcomes), n_sets, db
-    ),
-    encoding
-  )
   pages <- unname(split(points, (as.integer(points$panel) - 1) %/% 12))
   imap(pages, function(page, i) {
     page <- droplevels(page)
+    page_note <- if (length(pages) > 1) sprintf(" (page %d of %d)", i, length(pages)) else ""
     ggplot(page, aes(change, d_outcome, colour = series, fill = series)) +
       geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
@@ -358,35 +327,29 @@ association_figure <- function(which_analysis, number, title, population, db) {
       facet_wrap(~panel, ncol = 3, nrow = 4, scales = "free") +
       labs(
         x = x_label, y = y_label,
-        caption = caption_text(sprintf("S%d Figure", number), text, i, length(pages))
+        title = sprintf("S%d. %s, %s%s", number, title, db, page_note)
       ) +
       figure_theme
   })
 }
 ```
 
-One PDF per collection, so each can be read on its own: S17 for the pooled analysis, S18 for the
+One PDF per collection, so each can be read on its own: S16 for the pooled analysis, S17 for the
 differential one.
 
 ```{r write-figures}
 walk(unique(catalog$database), function(db) {
   write_pdf(
     c(
-      association_figure(
-        "pooled", 17, "Training response against phenotype, all legs",
-        sprintf("%d legs, both arms pooled", nrow(legs)), db
-      ),
-      association_figure(
-        "differential", 18, "BFR minus HLRT, within participant",
-        sprintf("%d paired participants", nrow(delta_pairs)), db
-      )
+      association_figure("pooled", 16, "Pooled association, all legs", db),
+      association_figure("differential", 17, "Differential association, BFR minus HLRT", db)
     ),
     paste0("05_association_", db, ".pdf")
   )
 })
 ```
 
-S19 is the chance page across all analyses and outcomes: each ratio from `chance_expectation`
+S18 is the chance page across all analyses and outcomes: each ratio from `chance_expectation`
 drawn as a bar, one panel per analysis and outcome.
 
 ```{r chance-figure}
@@ -404,12 +367,7 @@ chance_plot <- chance_expectation |>
   scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
   labs(
     x = "observed nominal hits / chance expectation", y = NULL,
-    caption = caption_text("S19 Figure", paste(
-      "Nominal hits relative to chance, by collection. Spearman per set, uncorrected p. Bar length",
-      "is observed nominal hits divided by the count that collection returns under the null; red",
-      "clears 1, grey does not. Labels give observed of tested. Data: chance_expectation sheet of",
-      "05_set_association.xlsx."
-    ))
+    title = "S18. Nominal hits against chance, by collection and outcome"
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())

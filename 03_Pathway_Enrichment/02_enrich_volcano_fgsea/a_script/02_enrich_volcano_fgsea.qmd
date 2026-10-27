@@ -27,7 +27,8 @@ contrast is not drawn.
 Both tables come from `01_run_fgsea_and_fry.xlsx`. Only fgsea sets that survived
 `collapsePathways` (`main`) are kept for the rings. The leading edge, the set members that drive
 fgsea's score, was saved as one `;`-joined string and is split back into a vector per set. fry's
-significant sets per contrast go into the S8 caption. S9 labels each protein with its mean
+significant sets per contrast are counted for reference: where fry finds none, the ring is an
+fgsea lead only. S9 labels each protein with its mean
 observed precursors per sample (`pi_label`), so a thinly observed protein near the top of the pi
 ranking reads as such.
 
@@ -158,54 +159,20 @@ make_volcano <- function(cn, rank_by = "fdr") {
 }
 ```
 
-`supplement()` takes a figure number, title and caption text and returns the patchwork
-annotation with a supplement-style caption; `panel_list()` turns contrast names into the
-"(A) name." list the captions open with. `ring_text` is the caption text both figures share.
-
-```{r caption-helpers}
-supplement <- function(number, title, text) {
-  plot_annotation(
-    caption = str_wrap(sprintf("S%d Figure. %s. %s", number, title, text), 115),
-    tag_levels = "A",
-    theme = theme(plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2))
-  )
-}
-panel_list <- function(contrasts) {
-  paste(sprintf("(%s) %s.", LETTERS[seq_along(contrasts)], contrasts), collapse = " ")
-}
-ring_text <- paste(
-  "The ring shows up to twelve fgsea sets that survived collapsePathways, lowest adjusted p",
-  "first, in either direction, coloured by NES; ticks mark their leading-edge proteins. Protein",
-  "colour and counts read protein-level BH FDR, the ring set-level fgsea FDR: two separate",
-  "claims. Data: protein_results and set_tests sheets of 01_run_fgsea_and_fry.xlsx."
-)
-```
-
 S8 puts the primary question first, then the two training responses and the between-treatment
-comparison; its caption names the panels where fry finds no set. S9 repeats the training
-responses with the same points, colours and rings; only the labels move, to the pi-score ranking,
-so no protein named there is a discovery.
+comparison. S9 repeats the training responses with the same points, colours and rings; only the
+labels move, to the pi-score ranking, so no protein named there is a discovery.
 
 ```{r figures}
 fdr_order <- c(
   "Modality_x_Time_Interaction", "BFR_Post-Pre", "HLRT_Post-Pre", "BFR_Post-HLRT_Post"
 )
 pi_order <- c("BFR_Post-Pre", "HLRT_Post-Pre")
-no_fry <- LETTERS[seq_along(fdr_order)][fdr_order %in% filter(fry_hits, hits == 0)$contrast]
 figures <- list(
   wrap_plots(map(fdr_order, make_volcano), ncol = 2) +
-    supplement(8, "Protein volcanoes with collapse-surviving fgsea sets ringed", paste(
-      panel_list(fdr_order), "Points are proteins, coloured when BH FDR < 0.05 within the",
-      "contrast, with the five lowest-FDR proteins named.",
-      paste0("fry finds no set for panels ", paste(no_fry, collapse = " and "), "."), ring_text
-    )),
+    plot_annotation(title = "S8. Protein volcanoes with fgsea sets ringed", tag_levels = "A"),
   wrap_plots(map(pi_order, make_volcano, rank_by = "pi"), ncol = 1) +
-    supplement(9, "Protein volcanoes labelled by pi-score", paste(
-      panel_list(pi_order), "As S8 Figure, but the five proteins named are those with the",
-      "smallest pi-score, P.Value^|logFC| (Xiao et al. 2014), each followed by its mean observed",
-      "precursors per sample in brackets. Pi controls no error rate, so no protein named here is",
-      "a discovery.", ring_text
-    ))
+    plot_annotation(title = "S9. Protein volcanoes labelled by pi-score", tag_levels = "A")
 )
 ```
 

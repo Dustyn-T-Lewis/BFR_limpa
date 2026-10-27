@@ -1,4 +1,4 @@
-# 06 · Set association
+# 05 · Set association
 
 Correlates each set's singscore change with the same leg's change in muscle size and echo
 intensity, pooled over 65 legs and within participant (BFR minus HLRT) over 32 participants.
@@ -15,10 +15,13 @@ Outputs:
 
 - `b_reports/05_set_association.html`: the walkthrough.
 - `b_reports/05_association_<collection>.pdf`, one per collection: every set-outcome pair
-  reaching nominal p, smallest p first. S17 (pooled) plots each leg, with the within-arm
-  correlations inset; S18 (differential) plots the BFR minus HLRT differences that were tested,
-  one point per participant.
-- `b_reports/05_chance_by_collection.pdf`: S19, nominal hits against chance by collection.
+  reaching nominal p, smallest p first. S16 (pooled) plots each leg, with a line fitted in each
+  arm and the within-arm correlations inset; S17 (differential) plots the BFR minus HLRT
+  differences that were tested, one point per participant, with a least-squares line. Each panel
+  header gives the tested Spearman r, its p and BH q within collection and outcome.
+- `b_reports/05_chance_by_collection.pdf`: S18, nominal hits against chance by collection. Bar
+  length is observed nominal hits over the null expectation, red above 1 and grey below; labels
+  give observed of tested.
 - `c_data/05_set_association.xlsx`, read by no later step:
   - `chance_expectation`: one row per analysis, outcome and collection; nominal hits against chance.
   - `set_association`: one row per set, analysis and outcome; Spearman r, p and BH q, smallest p

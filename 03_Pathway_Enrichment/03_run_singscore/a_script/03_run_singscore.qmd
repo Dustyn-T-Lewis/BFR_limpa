@@ -1,5 +1,5 @@
 ---
-title: "04 · Run singscore"
+title: "03 · Run singscore"
 format:
   html:
     toc: true
@@ -14,7 +14,7 @@ knitr:
 `singscore` is called with `::`.
 
 ```{r setup}
-pacman::p_load(here, dplyr, tibble, purrr, stringr, ggplot2, readxl, writexl)
+pacman::p_load(here, dplyr, tibble, purrr, ggplot2, readxl, writexl)
 here::i_am("03_Pathway_Enrichment/03_run_singscore/a_script/03_run_singscore.qmd")
 ```
 
@@ -102,7 +102,7 @@ the raw value.
 
 ## Figure
 
-singscore's own `plotDispersion()` and `plotRankDensity()` draw one signature at a time. S11 is a
+singscore's own `plotDispersion()` and `plotRankDensity()` draw one signature at a time. S10 is a
 plain ggplot over the matrices `multiScore()` already returned: each set's mean score against its
 mean dispersion.
 
@@ -114,25 +114,13 @@ figure <- ggplot(set_spread, aes(score, dispersion, colour = database)) +
   guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
   labs(
     x = "mean score across samples", y = "mean dispersion across samples",
-    title = "Set score against dispersion",
-    caption = str_wrap(paste(
-      "S11 Figure. singscore across the cohort.",
-      sprintf("One point per set, %d sets, score and dispersion averaged", nrow(scores)),
-      sprintf("over %d samples.", ncol(scores)),
-      "Dispersion is the spread of a set's member ranks within a sample: low means members sit",
-      "together. Scores are in the set_scores sheet of 03_run_singscore.xlsx; dispersions are",
-      "computed in 03_run_singscore and not saved."
-    ), 115)
+    title = "S10. singscore: set score against dispersion"
   ) +
   theme_minimal(base_size = 10) +
-  theme(
-    aspect.ratio = 1,
-    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-    plot.caption.position = "plot"
-  )
+  theme(aspect.ratio = 1)
 ```
 
-S11 goes to `b_reports/03_run_singscore_figures.pdf`.
+S10 goes to `b_reports/03_run_singscore_figures.pdf`.
 
 ```{r write-figure}
 pdf(file.path(stage, "b_reports", "03_run_singscore_figures.pdf"), width = 8.27, height = 11.69)

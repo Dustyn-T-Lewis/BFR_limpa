@@ -17,8 +17,11 @@ quarto render 05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd --output-di
 Outputs:
 
 - `b_reports/02_test_mito.html`: the walkthrough.
-- `b_reports/02_test_mito.pdf`: MPE by arm and time; complexes I to V by contrast for both fits,
-  coloured by fry; volcanoes of the normalised proteins with fgsea rings (no baseline volcano).
+- `b_reports/02_test_mito.pdf`: MPE by arm and time, with lines joining each leg before and after
+  training; complexes I to V by contrast for both fits, labelled with fry FDR and coloured by its
+  signed −log10; volcanoes of the normalised proteins (no baseline volcano), coloured at BH FDR
+  0.05 with five named per direction, ringed by up to twelve MitoPathways at fgsea FDR 0.05,
+  coloured by NES, with ticks on leading-edge proteins.
 - `c_data/02_test_mito.xlsx`, one sheet per table:
   - `mpe`: one row per biopsy, with its MPE.
   - `mpe_test`: one row per contrast; log2 MPE through the saved design and contrasts, plain

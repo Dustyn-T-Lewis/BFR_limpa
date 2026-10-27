@@ -92,11 +92,10 @@ colnames(delta) <- legs$leg_id
 ## Define the tasks
 
 Three paired tasks, each comparing a participant's BFR leg with their HLRT leg. Each holds its
-matrix and two paired column sets, `positive` (BFR) and `negative` (HLRT). Pre to post within an arm
-is left to `02_Differential`, which tests it with more power;
-`03_Pathway_Enrichment/04_set_classification` keeps those two tasks for sets. The baseline task
-compares the legs before training, when nothing should separate them, so it shows what the method
-returns on no effect.
+matrix and two paired column sets, `positive` (BFR) and `negative` (HLRT). Pre-to-post within an
+arm is tested in `02_Differential`, with more power, and for sets in
+`03_Pathway_Enrichment/04_set_classification`. The baseline task compares the legs before
+training, when nothing should separate them.
 
 ```{r tasks}
 tasks <- list(
@@ -179,37 +178,19 @@ chance_expectation
 
 ## Figures
 
-The figures share a theme, a caption builder and an A4 writer.
-
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
     panel.grid.minor = element_blank(),
     panel.spacing = unit(4, "mm"),
-    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-    plot.caption.position = "plot",
     legend.position = "top"
   )
-caption_text <- function(title, text, page = 1, n_pages = 1) {
-  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
-  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
-}
 write_pdf <- function(pages, name) {
   pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
   walk(pages, print)
   invisible(dev.off())
 }
-```
-
-Every caption quotes the chance expectation.
-
-```{r chance-text}
-chance_text <- sprintf(
-  "chance alone returns %.0f of %s proteins.", nrow(values) * 0.05,
-  format(nrow(values), big.mark = ",")
-)
-chance_text
 ```
 
 Each drawn task gets pages of ROC curves for its nominal hits, smallest p first, twelve to a page.
@@ -237,19 +218,9 @@ roc_figure <- function(task_name) {
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel))) |>
     arrange(panel, fpr, tpr)
-  caption_body <- paste(
-    sprintf(
-      "ROC curves for all %d proteins that separate the groups at nominal p, across %d paired",
-      nrow(hits), length(spec$positive)
-    ),
-    "participants, smallest p first;", chance_text, "AUC has its direction fixed: red",
-    "separates higher in BFR, blue lower.",
-    "Shading is area under the curve, dashed line chance. p from the paired Wilcoxon",
-    "signed-rank test, q from BH within task. Data: protein_auc sheet of",
-    "04_protein_classification.xlsx."
-  )
   pages <- split(curves, (as.integer(curves$panel) - 1) %/% 12)
   imap(unname(pages), function(page, i) {
+    page_count <- if (length(pages) > 1) sprintf(" (page %d of %d)", i, length(pages)) else ""
     ggplot(droplevels(page), aes(fpr, tpr, colour = direction, fill = direction)) +
       geom_abline(linetype = "22", linewidth = 0.35, colour = "grey60") +
       geom_ribbon(aes(ymin = 0, ymax = tpr), alpha = 0.16, colour = NA) +
@@ -264,7 +235,7 @@ roc_figure <- function(task_name) {
       scale_y_continuous(breaks = c(0, 0.5, 1)) +
       labs(
         x = "1 - specificity", y = "sensitivity",
-        caption = caption_text(spec$label, caption_body, i, length(pages))
+        title = paste0("ROC curves, ", spec$label, page_count)
       ) +
       figure_theme
   })
@@ -296,11 +267,7 @@ chance_plot <- ggplot(chance_expectation, aes(ratio, task_label, fill = ratio > 
   scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
   labs(
     x = "observed nominal hits / chance expectation", y = NULL,
-    caption = caption_text("Nominal hits relative to chance", paste(
-      "Paired Wilcoxon per protein, uncorrected p;", chance_text, "Bar length is observed nominal",
-      "hits divided by that count; red clears 1, grey does not. Labels give observed of tested.",
-      "Data: chance_expectation sheet of 04_protein_classification.xlsx."
-    ))
+    title = "Nominal hits relative to chance"
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())
@@ -357,12 +324,14 @@ head(select(candidates, protein, gene, best_de_fdr, best_association_p))
 by p, and the candidate list.
 
 ```{r write}
-sheets <- list(
-  chance_expectation = chance_expectation,
-  protein_auc = arrange(protein_auc, p_paired),
-  candidates = candidates
+write_xlsx(
+  list(
+    chance_expectation = chance_expectation,
+    protein_auc = arrange(protein_auc, p_paired),
+    candidates = candidates
+  ),
+  file.path(stage, "c_data", "04_protein_classification.xlsx")
 )
-write_xlsx(sheets, file.path(stage, "c_data", "04_protein_classification.xlsx"))
 ```
 
 ## Session information

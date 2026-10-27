@@ -213,8 +213,7 @@ summary_table
 
 ## Figures
 
-The figures share a theme, the chance sentence, a caption builder that adds "page i of n" when a
-figure spans pages, and an A4 writer.
+The figures share a theme and an A4 writer.
 
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -222,18 +221,8 @@ figure_theme <- theme_minimal(base_size = 9) +
     strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
     panel.grid.minor = element_blank(),
     panel.spacing = unit(4, "mm"),
-    plot.caption = element_text(hjust = 0, size = 9, lineheight = 1.2),
-    plot.caption.position = "plot",
     legend.position = "top"
   )
-chance_text <- sprintf(
-  "chance alone returns %.0f of %s proteins.", nrow(values) * 0.05,
-  format(nrow(values), big.mark = ",")
-)
-caption_text <- function(title, text, page = 1, n_pages = 1) {
-  pages <- if (n_pages > 1) sprintf(" (page %d of %d)", page, n_pages) else ""
-  str_wrap(sprintf("%s%s. %s", title, pages, text), 115)
-}
 write_pdf <- function(pages, name) {
   pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
   walk(pages, print)
@@ -249,7 +238,7 @@ same difference in outcome change. Pages are built one at a time from their own 
 paginating facet would build every panel for every page.
 
 ```{r association-figure}
-association_figure <- function(which_analysis, outcome_name, title, population) {
+association_figure <- function(which_analysis, outcome_name, title) {
   differential <- which_analysis == "differential"
   if (differential) {
     protein_change <- paired
@@ -258,12 +247,6 @@ association_figure <- function(which_analysis, outcome_name, title, population) 
     x_label <- "change in protein, log2, T2 - T1, BFR minus HLRT, one point per participant"
     y_label <- "change in phenotype, BFR minus HLRT"
     headroom <- 0.06
-    encoding <- paste(
-      "One point per participant: the change in their BFR leg minus the change in their HLRT",
-      "leg, on both axes. The line is a least-squares fit; the header t is the tested slope.",
-      "q from BH within analysis and outcome. Data: associations sheet of",
-      "03_protein_association.xlsx."
-    )
   } else {
     protein_change <- delta
     phenotype_change <- leg_phenotype
@@ -271,11 +254,6 @@ association_figure <- function(which_analysis, outcome_name, title, population) 
     x_label <- "change in protein, log2, T2 - T1, one point per leg"
     y_label <- "change in phenotype"
     headroom <- 0.35
-    encoding <- paste(
-      "Lines are fitted within each arm; the header t is the tested slope and the inset gives",
-      "the Spearman r within each arm. q from BH within analysis and outcome. Data: associations",
-      "sheet of 03_protein_association.xlsx."
-    )
   }
   hits <- results |>
     filter(analysis == which_analysis, outcome == outcome_name, p < 0.05) |>
@@ -298,16 +276,10 @@ association_figure <- function(which_analysis, outcome_name, title, population) 
   }) |>
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
-  text <- paste(
-    sprintf(
-      "All %d proteins whose association with %s reaches nominal p in the %s",
-      nrow(hits), outcome_name, which_analysis
-    ),
-    sprintf("analysis (%s), smallest p first;", population), chance_text, encoding
-  )
   pages <- unname(split(points, (as.integer(points$panel) - 1) %/% 12))
   imap(pages, function(page, i) {
     page <- droplevels(page)
+    page_count <- if (length(pages) > 1) sprintf(" (page %d of %d)", i, length(pages)) else ""
     ggplot(page, aes(change, d_outcome, colour = series, fill = series)) +
       geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
       geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
@@ -326,7 +298,7 @@ association_figure <- function(which_analysis, outcome_name, title, population) 
       facet_wrap(~panel, ncol = 3, nrow = 4, scales = "free") +
       labs(
         x = x_label, y = y_label,
-        caption = caption_text(paste0(title, ", ", outcome_name), text, i, length(pages))
+        title = paste0(title, ", ", outcome_name, page_count)
       ) +
       figure_theme
   })
@@ -341,13 +313,9 @@ walk(outcomes, function(outcome_name) {
   write_pdf(
     c(
       association_figure(
-        "pooled", outcome_name, "Training response against phenotype, all legs",
-        sprintf("%d legs, both arms pooled", nrow(legs))
+        "pooled", outcome_name, "Training response against phenotype, all legs"
       ),
-      association_figure(
-        "differential", outcome_name, "BFR minus HLRT, within participant",
-        sprintf("%d paired participants", nrow(delta_pairs))
-      )
+      association_figure("differential", outcome_name, "BFR minus HLRT, within participant")
     ),
     paste0("03_association_", outcome_name, ".pdf")
   )
@@ -371,11 +339,7 @@ chance_plot <- ggplot(summary_table, aes(ratio, outcome, fill = ratio > 1)) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
   labs(
     x = "observed nominal hits / chance expectation", y = NULL,
-    caption = caption_text("Nominal hits relative to chance", paste(
-      "limma slope per protein, uncorrected p;", chance_text, "Bar length is observed nominal hits",
-      "divided by that count; red clears 1, grey does not. Labels give observed of tested. Data:",
-      "summary sheet of 03_protein_association.xlsx."
-    ))
+    title = "Nominal hits relative to chance"
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())

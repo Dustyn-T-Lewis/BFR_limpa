@@ -17,8 +17,10 @@ Outputs:
 - `b_reports/03_association_<outcome>.pdf`: one per outcome (`vl_csa`, `vl_echo`, `rf_csa`,
   `rf_echo`), every protein at nominal p, twelve to a page. Pooled pages plot each leg, with the
   within-arm Spearman r inset; differential pages plot the BFR minus HLRT differences, one point
-  per participant.
-- `b_reports/03_chance.pdf`: nominal hits against chance.
+  per participant. Lines are least-squares fits (within each arm on pooled pages); panel headers
+  give the tested slope's t, p and BH q within analysis and outcome.
+- `b_reports/03_chance.pdf`: nominal hits against chance. Bar length is nominal hits divided by
+  the chance count; red bars exceed 1, and labels give observed of tested.
 - `c_data/association_t.rds`: moderated t, one row per protein, one column per analysis and
   outcome, for gene set tests.
 - `c_data/03_protein_association.xlsx`:

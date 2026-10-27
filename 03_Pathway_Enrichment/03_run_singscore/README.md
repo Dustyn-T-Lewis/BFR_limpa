@@ -1,4 +1,4 @@
-# 04 · Run singscore
+# 03 · Run singscore
 
 Scores every sample on every tested set with singscore, which ranks within each sample, so a
 score has no p-value and never sees a contrast.
@@ -13,7 +13,9 @@ quarto render 03_Pathway_Enrichment/03_run_singscore/a_script/03_run_singscore.q
 Outputs:
 
 - `b_reports/03_run_singscore.html`: the walkthrough.
-- `b_reports/03_run_singscore_figures.pdf`: S11, mean score against mean dispersion per set.
+- `b_reports/03_run_singscore_figures.pdf`: S10, mean score against mean dispersion per set,
+  each averaged over all samples. Dispersion is the spread of a set's member ranks within a
+  sample, low when members sit together; it is not saved.
 - `c_data/set_scores.rds`: the set-by-sample score matrix, read by `04_set_classification` and
   `05_set_association`. It travels as rds because an Excel round trip breaks singscore's exact
   rank ties.
