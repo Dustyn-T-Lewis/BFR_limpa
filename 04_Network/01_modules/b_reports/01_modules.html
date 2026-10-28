@@ -2209,11 +2209,11 @@ vertical-align: -.125em;
   <ul>
   <li><a href="#load-packages" id="toc-load-packages" class="nav-link active" data-scroll-target="#load-packages">Load packages</a></li>
   <li><a href="#read-inputs" id="toc-read-inputs" class="nav-link" data-scroll-target="#read-inputs">Read inputs</a></li>
-  <li><a href="#remove-participant" id="toc-remove-participant" class="nav-link" data-scroll-target="#remove-participant">Remove participant</a></li>
-  <li><a href="#pick-the-soft-threshold" id="toc-pick-the-soft-threshold" class="nav-link" data-scroll-target="#pick-the-soft-threshold">Pick the soft threshold</a></li>
+  <li><a href="#build-the-four-inputs" id="toc-build-the-four-inputs" class="nav-link" data-scroll-target="#build-the-four-inputs">Build the four inputs</a></li>
   <li><a href="#find-modules" id="toc-find-modules" class="nav-link" data-scroll-target="#find-modules">Find modules</a></li>
-  <li><a href="#test-the-eigengenes" id="toc-test-the-eigengenes" class="nav-link" data-scroll-target="#test-the-eigengenes">Test the eigengenes</a></li>
-  <li><a href="#enrich-the-modules" id="toc-enrich-the-modules" class="nav-link" data-scroll-target="#enrich-the-modules">Enrich the modules</a></li>
+  <li><a href="#name-the-modules" id="toc-name-the-modules" class="nav-link" data-scroll-target="#name-the-modules">Name the modules</a></li>
+  <li><a href="#test-the-main-network-eigengenes" id="toc-test-the-main-network-eigengenes" class="nav-link" data-scroll-target="#test-the-main-network-eigengenes">Test the main-network eigengenes</a></li>
+  <li><a href="#test-the-change-network-modules" id="toc-test-the-change-network-modules" class="nav-link" data-scroll-target="#test-the-change-network-modules">Test the change-network modules</a></li>
   <li><a href="#check-preservation" id="toc-check-preservation" class="nav-link" data-scroll-target="#check-preservation">Check preservation</a></li>
   <li><a href="#draw-figures" id="toc-draw-figures" class="nav-link" data-scroll-target="#draw-figures">Draw figures</a></li>
   <li><a href="#save-results" id="toc-save-results" class="nav-link" data-scroll-target="#save-results">Save results</a></li>
@@ -2253,359 +2253,304 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>The question: which proteins move together across samples, whether or not a curated set groups them, and do those groups respond to training, differ between the arms, or track muscle growth? WGCNA (weighted gene co-expression network analysis; Langfelder and Horvath 2008, doi:10.1186/1471-2105-9-559) groups proteins into modules by correlation and summarises each module by its eigengene, the first principal component of its members.</p>
-<p>Inputs: the protein estimates, the stage 02 design and contrasts, the association designs from <code>03_Protein_Association</code>, and the gene sets and protein-to-gene map from <code>00_build_gene_sets</code>.</p>
+<p>The question: which proteins move together across samples, whether or not a curated set groups them, and do those groups respond to training or differ between the arms? WGCNA (weighted gene co-expression network analysis; Langfelder and Horvath 2008, doi:10.1186/1471-2105-9-559) groups proteins into modules by correlation and summarises each module by its eigengene, the first principal component of its members. Associations with muscle size and echo intensity are in <code>02_module_traits</code>.</p>
+<p>Inputs: the protein estimates, the stage 02 design and contrasts, and the gene sets and protein-to-gene map from <code>00_build_gene_sets</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;01_modules&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;design.rds&quot;</span>))</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>association_designs <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Protein_Association&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;association_designs.rds&quot;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>sets_dir <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(sets_dir, <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>gene_of <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">file.path</span>(sets_dir, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>), <span class="st">&quot;protein_gene_map&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(selected)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">colnames</span>(proteins<span class="sc">$</span>E), <span class="fu">rownames</span>(d<span class="sc">$</span>design)))</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>sets_dir <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(sets_dir, <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>gene_of <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">file.path</span>(sets_dir, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>), <span class="st">&quot;protein_gene_map&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(selected)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">colnames</span>(proteins<span class="sc">$</span>E), <span class="fu">rownames</span>(d<span class="sc">$</span>design)))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 3042  131</code></pre>
 </div>
 </div>
 </section>
-<section id="remove-participant" class="level2">
-<h2 class="anchored" data-anchor-id="remove-participant">Remove participant</h2>
-<p>Participant explains most of the leading variation, so a network on raw abundance would mostly group proteins by who the biopsy came from. The WGCNA FAQ asks for such effects to be removed first, and the Bioconductor forum answer for paired designs (support.bioconductor.org/p/86486, /p/126464) is <code>removeBatchEffect()</code> with participant as the batch and the treatment-by-time group as the design to protect. Every protein enters: the FAQ advises against filtering by differential expression.</p>
+<section id="build-the-four-inputs" class="level2">
+<h2 class="anchored" data-anchor-id="build-the-four-inputs">Build the four inputs</h2>
+<p>Each network answers a different question, so each starts from a different matrix:</p>
+<ul>
+<li><strong>main</strong>: all 131 samples with participant removed. Participant explains most of the leading variation, so without this step the network would mostly group proteins by who the biopsy came from. The WGCNA FAQ asks for such effects to be removed first, and the Bioconductor forum answer for paired designs (support.bioconductor.org/p/86486, /p/126464) is <code>removeBatchEffect()</code> with participant as the batch and the treatment-by-time group as the design to protect.</li>
+<li><strong>change</strong>: each leg’s post- minus pre-training abundance, so proteins group by whether they change together with training, whatever their level. A leg’s own baseline cancels, and with it the participant.</li>
+<li><strong>pre</strong> and <strong>post</strong>: the samples from one timepoint, participant kept, because these networks feed associations with muscle size across people and between-person differences are the signal.</li>
+</ul>
+<p>Every protein enters every network: the FAQ advises against filtering by differential expression.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>adjusted <span class="ot">&lt;-</span> <span class="fu">removeBatchEffect</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>E, <span class="at">batch =</span> targets<span class="sc">$</span>participant, <span class="at">design =</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group, targets)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>expression <span class="ot">&lt;-</span> <span class="fu">t</span>(adjusted)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section>
-<section id="pick-the-soft-threshold" class="level2">
-<h2 class="anchored" data-anchor-id="pick-the-soft-threshold">Pick the soft threshold</h2>
-<p>A signed network keeps the sign of correlation, so proteins that move in opposite directions do not join. Biweight midcorrelation (bicor) down-weights outlying samples; <code>maxPOutliers = 0.1</code> caps how many count as outliers, as the FAQ suggests. The soft power raises correlations to make the network approximately scale-free; <code>pickSoftThreshold()</code> returns the lowest power whose fit reaches R² 0.85, and the FAQ’s table value for a signed network on more than 40 samples, 12, stands in if none does.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>soft <span class="ot">&lt;-</span> <span class="fu">pickSoftThreshold</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  expression,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">powerVector =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="fu">seq</span>(<span class="dv">12</span>, <span class="dv">20</span>, <span class="dv">2</span>)), <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">corOptions =</span> <span class="fu">list</span>(<span class="at">maxPOutliers =</span> <span class="fl">0.1</span>), <span class="at">verbose =</span> <span class="dv">0</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>power <span class="ot">&lt;-</span> <span class="fu">coalesce</span>(soft<span class="sc">$</span>powerEstimate, <span class="dv">12</span>)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>soft_threshold <span class="ot">&lt;-</span> <span class="fu">transmute</span>(</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  soft<span class="sc">$</span>fitIndices,</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">power =</span> Power, <span class="at">signed_r2 =</span> <span class="sc">-</span><span class="fu">sign</span>(slope) <span class="sc">*</span> SFT.R.sq, <span class="at">mean_connectivity =</span> mean.k.</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>power</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>legs <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(leg_id, participant, treatment, timepoint, sample_id) <span class="sc">|&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> timepoint, <span class="at">values_from =</span> sample_id) <span class="sc">|&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>(T1, T2)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>change <span class="ot">&lt;-</span> <span class="fu">t</span>(proteins<span class="sc">$</span>E[, legs<span class="sc">$</span>T2] <span class="sc">-</span> proteins<span class="sc">$</span>E[, legs<span class="sc">$</span>T1])</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(change) <span class="ot">&lt;-</span> legs<span class="sc">$</span>leg_id</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>pre <span class="ot">&lt;-</span> targets<span class="sc">$</span>timepoint <span class="sc">==</span> <span class="st">&quot;T1&quot;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>inputs <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">main =</span> <span class="fu">t</span>(adjusted), <span class="at">change =</span> change, <span class="at">pre =</span> <span class="fu">t</span>(proteins<span class="sc">$</span>E[, pre]), <span class="at">post =</span> <span class="fu">t</span>(proteins<span class="sc">$</span>E[, <span class="sc">!</span>pre])</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">map_int</span>(inputs, nrow)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 4</code></pre>
+<pre><code>  main change    pre   post 
+   131     65     66     65 </code></pre>
 </div>
 </div>
 </section>
 <section id="find-modules" class="level2">
 <h2 class="anchored" data-anchor-id="find-modules">Find modules</h2>
-<p><code>blockwiseModules()</code> builds the network in one block and cuts the topological-overlap tree into modules with the tutorial settings: at least 30 proteins, modules merged when their eigengenes correlate above 0.75 (<code>mergeCutHeight = 0.25</code>). Module 0 (grey) holds the proteins no module takes, and it is never tested.</p>
+<p>A signed network keeps the sign of correlation, so proteins that move in opposite directions do not join. Biweight midcorrelation (bicor) down-weights outlying samples; <code>maxPOutliers = 0.1</code> caps how many count as outliers, as the FAQ suggests. The soft power raises correlations to make the network approximately scale-free; <code>pickSoftThreshold()</code> returns the lowest power whose fit reaches R² 0.85, and the FAQ’s table value for a signed network, 12, stands in if none does.</p>
+<p><code>blockwiseModules()</code> builds each network in one block and cuts the topological-overlap tree into modules of at least 10 proteins at <code>deepSplit = 3</code>, merging modules whose eigengenes correlate above 0.75 (<code>mergeCutHeight = 0.25</code>). The tutorial uses 30 proteins and <code>deepSplit = 2</code>; those settings gave 11 main-network modules, and a grid over <code>deepSplit</code> 2 to 4 and minimum sizes 10 to 30 found no between-arm module at any setting. The finer cut keeps small groups apart that the coarse one merges into large mixed modules, while the median kME of members stays near 0.5. Module 0 holds the proteins no module takes, and it is never tested.</p>
+<p>Module membership (kME) is each protein’s bicor with each eigengene; a protein’s kME with its own module says how central it is. <code>find_modules()</code> runs these steps on one input.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>network <span class="ot">&lt;-</span> <span class="fu">blockwiseModules</span>(</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  expression,</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">power =</span> power, <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">TOMType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corType =</span> <span class="st">&quot;bicor&quot;</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">maxPOutliers =</span> <span class="fl">0.1</span>, <span class="at">minModuleSize =</span> <span class="dv">30</span>, <span class="at">mergeCutHeight =</span> <span class="fl">0.25</span>, <span class="at">deepSplit =</span> <span class="dv">2</span>,</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">pamRespectsDendro =</span> <span class="cn">FALSE</span>, <span class="at">maxBlockSize =</span> <span class="dv">5000</span>, <span class="at">numericLabels =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="dv">0</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>modules <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, network<span class="sc">$</span>colors)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>eigengenes <span class="ot">&lt;-</span> network<span class="sc">$</span>MEs <span class="sc">|&gt;</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>ME0) <span class="sc">|&gt;</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(<span class="cf">function</span>(x) <span class="fu">sub</span>(<span class="st">&quot;ME&quot;</span>, <span class="st">&quot;M&quot;</span>, x)) <span class="sc">|&gt;</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">t</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>find_modules <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  soft <span class="ot">&lt;-</span> <span class="fu">pickSoftThreshold</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">powerVector =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="fu">seq</span>(<span class="dv">12</span>, <span class="dv">20</span>, <span class="dv">2</span>)), <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">corOptions =</span> <span class="fu">list</span>(<span class="at">maxPOutliers =</span> <span class="fl">0.1</span>), <span class="at">verbose =</span> <span class="dv">0</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  power <span class="ot">&lt;-</span> <span class="fu">coalesce</span>(soft<span class="sc">$</span>powerEstimate, <span class="dv">12</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  network <span class="ot">&lt;-</span> <span class="fu">blockwiseModules</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">power =</span> power, <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">TOMType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corType =</span> <span class="st">&quot;bicor&quot;</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">maxPOutliers =</span> <span class="fl">0.1</span>, <span class="at">minModuleSize =</span> <span class="dv">10</span>, <span class="at">mergeCutHeight =</span> <span class="fl">0.25</span>, <span class="at">deepSplit =</span> <span class="dv">3</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">pamRespectsDendro =</span> <span class="cn">FALSE</span>, <span class="at">maxBlockSize =</span> <span class="dv">5000</span>, <span class="at">numericLabels =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="dv">0</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  kme <span class="ot">&lt;-</span> <span class="fu">signedKME</span>(x, network<span class="sc">$</span>MEs, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>, <span class="at">corOptions =</span> <span class="st">&quot;maxPOutliers = 0.1&quot;</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">power =</span> power, <span class="at">network =</span> network,</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">soft_threshold =</span> <span class="fu">transmute</span>(</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>      soft<span class="sc">$</span>fitIndices,</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">power =</span> Power, <span class="at">signed_r2 =</span> <span class="sc">-</span><span class="fu">sign</span>(slope) <span class="sc">*</span> SFT.R.sq, <span class="at">mean_connectivity =</span> mean.k.</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">membership =</span> <span class="fu">tibble</span>(</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">protein =</span> <span class="fu">colnames</span>(x), <span class="at">module =</span> <span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, network<span class="sc">$</span>colors),</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">kme =</span> kme[<span class="fu">cbind</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(kme)), <span class="fu">match</span>(<span class="fu">paste0</span>(<span class="st">&quot;kME&quot;</span>, network<span class="sc">$</span>colors), <span class="fu">colnames</span>(kme)))]</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Module membership (kME) is each protein’s bicor with each eigengene; a protein’s kME with its own module says how central it is.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>kme <span class="ot">&lt;-</span> <span class="fu">signedKME</span>(</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  expression, network<span class="sc">$</span>MEs, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>, <span class="at">corOptions =</span> <span class="st">&quot;maxPOutliers = 0.1&quot;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>membership <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein =</span> <span class="fu">colnames</span>(expression), <span class="at">gene =</span> proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes, <span class="at">module =</span> modules,</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">kme =</span> kme[<span class="fu">cbind</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(kme)), <span class="fu">match</span>(<span class="fu">paste0</span>(<span class="st">&quot;kME&quot;</span>, network<span class="sc">$</span>colors), <span class="fu">colnames</span>(kme)))]</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(module, <span class="fu">desc</span>(kme))</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(membership, module)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>networks <span class="ot">&lt;-</span> <span class="fu">map</span>(inputs, find_modules)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>membership <span class="ot">&lt;-</span> <span class="fu">map</span>(networks, <span class="st">&quot;membership&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;network&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">gene =</span> proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes[<span class="fu">match</span>(protein, <span class="fu">rownames</span>(proteins<span class="sc">$</span>E))], <span class="at">.after =</span> protein) <span class="sc">|&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(network, <span class="fu">names</span>(inputs)), <span class="fu">as.integer</span>(<span class="fu">sub</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;&quot;</span>, module)), <span class="fu">desc</span>(kme))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>network_summary <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">modules =</span> <span class="fu">n_distinct</span>(module[module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>]), <span class="at">unassigned =</span> <span class="fu">mean</span>(module <span class="sc">==</span> <span class="st">&quot;M0&quot;</span>),</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_kme =</span> <span class="fu">median</span>(kme[module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>]), <span class="at">.by =</span> network</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="fu">map_int</span>(inputs, nrow)[network], <span class="at">power =</span> <span class="fu">map_dbl</span>(networks, <span class="st">&quot;power&quot;</span>)[network],</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">.after =</span> network</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>network_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 12 × 2
-   module     n
-   &lt;chr&gt;  &lt;int&gt;
- 1 M0      1313
- 2 M1       391
- 3 M10       57
- 4 M11       55
- 5 M2       291
- 6 M3       271
- 7 M4       158
- 8 M5       148
- 9 M6       139
-10 M7        80
-11 M8        74
-12 M9        65</code></pre>
+<pre><code># A tibble: 4 × 6
+  network samples power modules unassigned median_kme
+  &lt;chr&gt;     &lt;int&gt; &lt;dbl&gt;   &lt;int&gt;      &lt;dbl&gt;      &lt;dbl&gt;
+1 main        131     4      50      0.272      0.496
+2 change       65     5      43      0.314      0.490
+3 pre          66     6      40      0.249      0.512
+4 post         65     5      45      0.268      0.519</code></pre>
 </div>
 </div>
 </section>
-<section id="test-the-eigengenes" class="level2">
-<h2 class="anchored" data-anchor-id="test-the-eigengenes">Test the eigengenes</h2>
-<p>Eigengenes carry no standard errors, so they go through plain limma, with the stage 02 design (participant fixed) and its five contrasts. With about ten rows there is little for <code>eBayes()</code> to borrow, so, as for log2 MPE in <code>05_Mitochondria/02_test_mito</code>, the test is the least-squares t with <code>df.residual</code> degrees of freedom and a 95% interval. BH runs within each contrast across modules. <code>plain_t()</code> turns one coefficient of a fit into that table.</p>
+<section id="name-the-modules" class="level2">
+<h2 class="anchored" data-anchor-id="name-the-modules">Name the modules</h2>
+<p><code>fgsea::fora()</code> runs a hypergeometric test of each module’s genes against the project’s one set list, with every measured gene as the universe and the size limits of <code>01_run_fgsea_and_fry</code>; its <code>padj</code> is BH within the module. A module is named by its top set when that set passes BH; with thousands of sets some set always reaches nominal p &lt; 0.05, so a nominal set names nothing. Every module also carries its hub, the member with the highest kME. The saved table keeps sets with nominal p &lt; 0.05.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>plain_t <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, coef) {</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">module =</span> <span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), <span class="at">estimate =</span> fit<span class="sc">$</span>coefficients[, coef],</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> fit<span class="sc">$</span>stdev.unscaled[, coef] <span class="sc">*</span> fit<span class="sc">$</span>sigma, <span class="at">df =</span> fit<span class="sc">$</span>df.residual</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">t =</span> estimate <span class="sc">/</span> se, <span class="at">p =</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pt</span>(<span class="sc">-</span><span class="fu">abs</span>(t), df),</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">conf.low =</span> estimate <span class="sc">-</span> <span class="fu">qt</span>(<span class="fl">0.975</span>, df) <span class="sc">*</span> se, <span class="at">conf.high =</span> estimate <span class="sc">+</span> <span class="fu">qt</span>(<span class="fl">0.975</span>, df) <span class="sc">*</span> se,</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>)</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>enrichment <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(<span class="fu">select</span>(gene_of, protein, <span class="at">set_gene =</span> gene), <span class="at">by =</span> <span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">genes =</span> <span class="fu">list</span>(set_gene), <span class="at">.by =</span> <span class="fu">c</span>(network, module)) <span class="sc">|&gt;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">result =</span> <span class="fu">map</span>(genes, <span class="cf">function</span>(genes) {</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(fgsea<span class="sc">::</span><span class="fu">fora</span>(sets, genes, <span class="at">universe =</span> gene_of<span class="sc">$</span>gene, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>))</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  })) <span class="sc">|&gt;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(network, module, result) <span class="sc">|&gt;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(result) <span class="sc">|&gt;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(pval <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">overlapGenes =</span> <span class="fu">map_chr</span>(overlapGenes, paste, <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(network, <span class="fu">names</span>(inputs)), <span class="fu">as.integer</span>(<span class="fu">sub</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;&quot;</span>, module)), padj)</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>modules <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">proteins =</span> <span class="fu">n</span>(), <span class="at">hub =</span> gene[<span class="fu">which.max</span>(kme)], <span class="at">.by =</span> <span class="fu">c</span>(network, module)) <span class="sc">|&gt;</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    enrichment <span class="sc">|&gt;</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">by =</span> <span class="fu">c</span>(network, module), <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(network, module, <span class="at">top_set =</span> pathway, <span class="at">top_set_padj =</span> padj),</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;network&quot;</span>, <span class="st">&quot;module&quot;</span>)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(modules, network, <span class="at">named =</span> <span class="sc">!</span><span class="fu">is.na</span>(top_set))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 8 × 3
+  network named     n
+  &lt;chr&gt;   &lt;lgl&gt; &lt;int&gt;
+1 change  FALSE    33
+2 change  TRUE     10
+3 main    FALSE    36
+4 main    TRUE     14
+5 post    FALSE    28
+6 post    TRUE     17
+7 pre     FALSE    28
+8 pre     TRUE     12</code></pre>
+</div>
+</div>
+</section>
+<section id="test-the-main-network-eigengenes" class="level2">
+<h2 class="anchored" data-anchor-id="test-the-main-network-eigengenes">Test the main-network eigengenes</h2>
+<p>Eigengenes carry no standard errors, so they go through plain limma, with the stage 02 design (participant fixed) and its five contrasts. With a few dozen rows there is little for <code>eBayes()</code> to borrow, so, as for log2 MPE in <code>05_Mitochondria/02_test_mito</code>, the test is the least-squares t with <code>df.residual</code> degrees of freedom and a 95% interval. BH runs within each contrast across modules. <code>plain_t()</code> turns one coefficient of a fit into that table.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>plain_t <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, coef) {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">module =</span> <span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), <span class="at">estimate =</span> fit<span class="sc">$</span>coefficients[, coef],</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> fit<span class="sc">$</span>stdev.unscaled[, coef] <span class="sc">*</span> fit<span class="sc">$</span>sigma, <span class="at">df =</span> fit<span class="sc">$</span>df.residual</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">t =</span> estimate <span class="sc">/</span> se, <span class="at">p =</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pt</span>(<span class="sc">-</span><span class="fu">abs</span>(t), df),</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">conf.low =</span> estimate <span class="sc">-</span> <span class="fu">qt</span>(<span class="fl">0.975</span>, df) <span class="sc">*</span> se, <span class="at">conf.high =</span> estimate <span class="sc">+</span> <span class="fu">qt</span>(<span class="fl">0.975</span>, df) <span class="sc">*</span> se,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>contrast_fit <span class="ot">&lt;-</span> <span class="fu">contrasts.fit</span>(<span class="fu">lmFit</span>(eigengenes, d<span class="sc">$</span>design), d<span class="sc">$</span>contrasts)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>eigengene_tests <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts)), <span class="cf">function</span>(cn) <span class="fu">plain_t</span>(contrast_fit, cn)) <span class="sc">|&gt;</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>)</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(eigengene_tests, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>eigengenes <span class="ot">&lt;-</span> networks<span class="sc">$</span>main<span class="sc">$</span>network<span class="sc">$</span>MEs <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>ME0) <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(<span class="cf">function</span>(x) <span class="fu">sub</span>(<span class="st">&quot;ME&quot;</span>, <span class="st">&quot;M&quot;</span>, x)) <span class="sc">|&gt;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">t</span>()</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>contrast_fit <span class="ot">&lt;-</span> <span class="fu">contrasts.fit</span>(<span class="fu">lmFit</span>(eigengenes, d<span class="sc">$</span>design), d<span class="sc">$</span>contrasts)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>eigengene_tests <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts)), <span class="cf">function</span>(cn) <span class="fu">plain_t</span>(contrast_fit, cn)) <span class="sc">|&gt;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(eigengene_tests, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 7 × 10
-  contrast module estimate     se    df     t       p conf.low conf.high     fdr
+<pre><code># A tibble: 21 × 10
+   contrast     module estimate     se    df     t          p conf.low conf.high
+   &lt;chr&gt;        &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+ 1 BFR_Post-Pre M43      0.0641 0.0242    95  2.65    9.50e-3   0.0160    0.112 
+ 2 BFR_Post-Pre M8      -0.0873 0.0210    95 -4.16    6.97e-5  -0.129    -0.0456
+ 3 BFR_Post-Pre M20     -0.0778 0.0224    95 -3.48    7.60e-4  -0.122    -0.0334
+ 4 BFR_Post-Pre M26     -0.0772 0.0237    95 -3.26    1.55e-3  -0.124    -0.0302
+ 5 BFR_Post-Pre M42     -0.0655 0.0223    95 -2.93    4.22e-3  -0.110    -0.0211
+ 6 BFR_Post-Pre M6      -0.0860 0.0211    95 -4.08    9.50e-5  -0.128    -0.0441
+ 7 BFR_Post-Pre M7      -0.0728 0.0222    95 -3.28    1.46e-3  -0.117    -0.0287
+ 8 BFR_Post-Pre M2       0.114  0.0194    95  5.91    5.42e-8   0.0759    0.153 
+ 9 BFR_Post-Pre M14      0.0672 0.0238    95  2.83    5.75e-3   0.0200    0.114 
+10 BFR_Post-Pre M10      0.0655 0.0237    95  2.76    6.90e-3   0.0184    0.113 
+# ℹ 11 more rows
+# ℹ 1 more variable: fdr &lt;dbl&gt;</code></pre>
+</div>
+</div>
+</section>
+<section id="test-the-change-network-modules" class="level2">
+<h2 class="anchored" data-anchor-id="test-the-change-network-modules">Test the change-network modules</h2>
+<p>Change-network eigengenes are centred across legs, so their mean is zero by construction and says nothing about training. The training test uses each module’s mean member change per leg instead, in log2 units: its mean in each arm against zero, and BFR minus HLRT paired within participant (participant as a fixed term). BH runs within each test across modules.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>change_modules <span class="ot">&lt;-</span> <span class="fu">filter</span>(membership, network <span class="sc">==</span> <span class="st">&quot;change&quot;</span>, module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>member_change <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">sapply</span>(<span class="fu">split</span>(change_modules<span class="sc">$</span>protein, change_modules<span class="sc">$</span>module), <span class="cf">function</span>(ids) {</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowMeans</span>(change[, ids, <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>arms <span class="ot">&lt;-</span> <span class="fu">mutate</span>(legs, <span class="at">arm =</span> <span class="fu">factor</span>(treatment, <span class="fu">c</span>(<span class="st">&quot;HLRT&quot;</span>, <span class="st">&quot;BFR&quot;</span>)))</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>per_arm <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(member_change, <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> arm, arms))</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>paired <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(member_change, <span class="fu">model.matrix</span>(<span class="sc">~</span> participant <span class="sc">+</span> arm, arms))</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>change_tests <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;BFR training&quot;</span> <span class="ot">=</span> <span class="fu">plain_t</span>(per_arm, <span class="st">&quot;armBFR&quot;</span>), <span class="st">&quot;HLRT training&quot;</span> <span class="ot">=</span> <span class="fu">plain_t</span>(per_arm, <span class="st">&quot;armHLRT&quot;</span>),</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;BFR - HLRT&quot;</span> <span class="ot">=</span> <span class="fu">plain_t</span>(paired, <span class="st">&quot;armBFR&quot;</span>), <span class="at">.id =</span> <span class="st">&quot;test&quot;</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(change_tests, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 10
+  test     module estimate     se    df     t       p conf.low conf.high     fdr
   &lt;chr&gt;    &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
-1 BFR_Pos… M5      -0.0610 0.0228    95 -2.68 8.74e-3  -0.106    -0.0158 3.21e-2
-2 BFR_Pos… M2       0.106  0.0207    95  5.12 1.60e-6   0.0649    0.147  1.76e-5
-3 BFR_Pos… M4      -0.0783 0.0213    95 -3.68 3.87e-4  -0.121    -0.0361 2.13e-3
-4 HLRT_Po… M5      -0.0928 0.0226    95 -4.12 8.19e-5  -0.138    -0.0481 3.00e-4
-5 HLRT_Po… M2       0.0934 0.0205    95  4.55 1.56e-5   0.0527    0.134  8.56e-5
-6 HLRT_Po… M8       0.0701 0.0236    95  2.97 3.77e-3   0.0233    0.117  1.04e-2
-7 HLRT_Po… M4      -0.112  0.0211    95 -5.30 7.41e-7  -0.153    -0.0698 8.15e-6</code></pre>
-</div>
-</div>
-<p>The association slope uses the eight designs of <code>03_Protein_Association</code>: each module’s eigengene change against each leg’s outcome change, pooled over legs and within participant, coefficient <code>post:x</code>. BH runs within each analysis and outcome across modules.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>eigengene_association <span class="ot">&lt;-</span> <span class="fu">imap</span>(association_designs, <span class="cf">function</span>(design, ranking) {</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plain_t</span>(<span class="fu">lmFit</span>(eigengenes, design), <span class="st">&quot;post:x&quot;</span>)</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;ranking&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;analysis&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(eigengene_association, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 0 × 11
-# ℹ 11 variables: analysis &lt;chr&gt;, outcome &lt;chr&gt;, module &lt;chr&gt;, estimate &lt;dbl&gt;,
-#   se &lt;dbl&gt;, df &lt;int&gt;, t &lt;dbl&gt;, p &lt;dbl&gt;, conf.low &lt;dbl&gt;, conf.high &lt;dbl&gt;,
-#   fdr &lt;dbl&gt;</code></pre>
-</div>
-</div>
-</section>
-<section id="enrich-the-modules" class="level2">
-<h2 class="anchored" data-anchor-id="enrich-the-modules">Enrich the modules</h2>
-<p><code>fgsea::fora()</code> runs a hypergeometric test of each module’s genes against the project’s one set list, with every measured gene as the universe and the size limits of <code>01_run_fgsea_and_fry</code>; its <code>padj</code> is BH within the module.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>module_genes <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>, protein <span class="sc">%in%</span> gene_of<span class="sc">$</span>protein) <span class="sc">|&gt;</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">gene =</span> gene_of<span class="sc">$</span>gene[<span class="fu">match</span>(protein, gene_of<span class="sc">$</span>protein)])</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>enrichment <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">split</span>(module_genes<span class="sc">$</span>gene, module_genes<span class="sc">$</span>module), <span class="cf">function</span>(genes) {</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  fgsea<span class="sc">::</span><span class="fu">fora</span>(sets, genes, <span class="at">universe =</span> gene_of<span class="sc">$</span>gene, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>)</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;module&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">overlapGenes =</span> <span class="fu">map_chr</span>(overlapGenes, paste, <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>))</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>enrichment <span class="sc">|&gt;</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">3</span>, <span class="at">by =</span> module) <span class="sc">|&gt;</span></span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(module, pathway, overlap, padj)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>    module
-    &lt;char&gt;
- 1:     M1
- 2:     M1
- 3:     M1
- 4:    M11
- 5:    M11
- 6:    M11
- 7:     M2
- 8:     M2
- 9:     M2
-10:     M3
-11:     M3
-12:     M3
-13:     M3
-14:     M5
-15:     M5
-16:     M5
-17:     M6
-18:     M6
-19:     M6
-20:     M6
-21:     M6
-22:     M6
-23:     M6
-24:     M8
-25:     M8
-26:     M8
-    module
-    &lt;char&gt;
-                                                                       pathway
-                                                                        &lt;char&gt;
- 1:                                      GOBP|GOBP_MUSCLE_CELL_DIFFERENTIATION
- 2:                             GOBP|GOBP_STRIATED_MUSCLE_CELL_DIFFERENTIATION
- 3:                                               GOBP|GOBP_MUSCLE_CONTRACTION
- 4:                                Reactome|REACTOME_MITOCHONDRIAL_TRANSLATION
- 5:                     Reactome|REACTOME_MITOCHONDRIAL_TRANSLATION_ELONGATION
- 6:                                        GOBP|GOBP_MITOCHONDRIAL_TRANSLATION
- 7:   Reactome|REACTOME_AEROBIC_RESPIRATION_AND_RESPIRATORY_ELECTRON_TRANSPORT
- 8:                                Hallmark|HALLMARK_OXIDATIVE_PHOSPHORYLATION
- 9:                              Reactome|REACTOME_CITRIC_ACID_CYCLE_TCA_CYCLE
-10:                                                      GO_Slim|CELL_MOTILITY
-11:                                          GO_Slim|CYTOSKELETON_ORGANIZATION
-12:                        Hallmark|HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION
-13:                                      GOBP|GOBP_ACTIN_FILAMENT_ORGANIZATION
-14:                   GOBP|GOBP_PYRIDINE_CONTAINING_COMPOUND_METABOLIC_PROCESS
-15:                                               Hallmark|HALLMARK_GLYCOLYSIS
-16:                                GOBP|GOBP_ORGANOPHOSPHATE_CATABOLIC_PROCESS
-17:                                          Hallmark|HALLMARK_HEME_METABOLISM
-18:                                 KEGG_Legacy|KEGG_PENTOSE_PHOSPHATE_PATHWAY
-19:                   GOBP|GOBP_PYRIDINE_CONTAINING_COMPOUND_METABOLIC_PROCESS
-20:                                 Reactome|REACTOME_NEUTROPHIL_DEGRANULATION
-21:                            GOBP|GOBP_GLUCOSE_6_PHOSPHATE_METABOLIC_PROCESS
-22:                     Reactome|REACTOME_CELLULAR_RESPONSE_TO_CHEMICAL_STRESS
-23: Reactome|REACTOME_METABOLISM_OF_CARBOHYDRATES_AND_CARBOHYDRATE_DERIVATIVES
-24:                                        KEGG_Legacy|KEGG_PARKINSONS_DISEASE
-25:                         GOBP|GOBP_ATP_SYNTHESIS_COUPLED_ELECTRON_TRANSPORT
-26:                                        GOBP|GOBP_OXIDATIVE_PHOSPHORYLATION
-                                                                       pathway
-                                                                        &lt;char&gt;
-    overlap         padj
-      &lt;int&gt;        &lt;num&gt;
- 1:      96 1.686706e-42
- 2:      84 1.929195e-38
- 3:      94 2.511121e-36
- 4:      15 9.469080e-09
- 5:      13 4.988047e-08
- 6:      14 1.120258e-07
- 7:      75 3.132637e-28
- 8:      66 6.822697e-23
- 9:      25 1.415740e-19
-10:      70 9.529959e-12
-11:      77 5.392883e-11
-12:      26 2.516057e-09
-13:      41 2.516057e-09
-14:      18 5.292618e-04
-15:      16 1.069283e-03
-16:      17 1.069283e-03
-17:      27 3.584255e-17
-18:       9 4.208158e-05
-19:      14 2.169604e-02
-20:      22 2.169604e-02
-21:       6 2.169604e-02
-22:      15 2.169604e-02
-23:      14 2.169604e-02
-24:      33 2.956271e-29
-25:      31 7.832022e-29
-26:      34 1.297541e-28
-    overlap         padj
-      &lt;int&gt;        &lt;num&gt;</code></pre>
+1 BFR tra… M10       0.206 0.0572    63  3.60 6.27e-4   0.0917     0.320 0.0135 
+2 BFR tra… M4        0.215 0.0516    63  4.17 9.58e-5   0.112      0.318 0.00412
+3 HLRT tr… M10       0.196 0.0564    63  3.48 9.06e-4   0.0837     0.309 0.0195 
+4 HLRT tr… M4        0.195 0.0508    63  3.85 2.81e-4   0.0939     0.297 0.0121 </code></pre>
 </div>
 </div>
 </section>
 <section id="check-preservation" class="level2">
 <h2 class="anchored" data-anchor-id="check-preservation">Check preservation</h2>
-<p>Module preservation (Langfelder et al. 2011, doi:10.1371/journal.pcbi.1001057) asks whether the modules found in the pre-training samples hold in the post-training ones. Zsummary above 10 is strong evidence of preservation, 2 to 10 weak to moderate, below 2 none. The module labels come from all samples, so this check is mildly optimistic. 200 permutations, seeded.</p>
+<p>Module preservation (Langfelder et al. 2011, doi:10.1371/journal.pcbi.1001057) asks whether the pre-network modules hold in the post-training samples. Zsummary above 10 is strong evidence of preservation, 2 to 10 weak to moderate, below 2 none. 200 permutations, seeded.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>pre <span class="ot">&lt;-</span> targets<span class="sc">$</span>timepoint <span class="sc">==</span> <span class="st">&quot;T1&quot;</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>preserved <span class="ot">&lt;-</span> <span class="fu">modulePreservation</span>(</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">T1 =</span> <span class="fu">list</span>(<span class="at">data =</span> expression[pre, ]), <span class="at">T2 =</span> <span class="fu">list</span>(<span class="at">data =</span> expression[<span class="sc">!</span>pre, ])),</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">T1 =</span> <span class="fu">labels2colors</span>(network<span class="sc">$</span>colors)),</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">referenceNetworks =</span> <span class="dv">1</span>, <span class="at">nPermutations =</span> <span class="dv">200</span>, <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>,</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">corOptions =</span> <span class="st">&quot;maxPOutliers = 0.1&quot;</span>, <span class="at">randomSeed =</span> <span class="dv">1</span>, <span class="at">savePermutedStatistics =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="dv">0</span></span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> preserved<span class="sc">$</span>preservation<span class="sc">$</span>Z<span class="sc">$</span>ref.T1<span class="sc">$</span>inColumnsAlsoPresentIn.T2</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>ranks <span class="ot">&lt;-</span> preserved<span class="sc">$</span>preservation<span class="sc">$</span>observed<span class="sc">$</span>ref.T1<span class="sc">$</span>inColumnsAlsoPresentIn.T2</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>colour_of <span class="ot">&lt;-</span> <span class="fu">set_names</span>(<span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, network<span class="sc">$</span>colors), <span class="fu">labels2colors</span>(network<span class="sc">$</span>colors))</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>preservation <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">module =</span> colour_of[<span class="fu">rownames</span>(z)], <span class="at">colour =</span> <span class="fu">rownames</span>(z), <span class="at">size =</span> z<span class="sc">$</span>moduleSize,</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">z_summary =</span> z<span class="sc">$</span>Zsummary.pres, <span class="at">median_rank =</span> ranks[<span class="fu">rownames</span>(z), <span class="st">&quot;medianRank.pres&quot;</span>]</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>colour <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;grey&quot;</span>, <span class="st">&quot;gold&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(z_summary))</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>preservation</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>preserved <span class="ot">&lt;-</span> <span class="fu">modulePreservation</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pre =</span> <span class="fu">list</span>(<span class="at">data =</span> inputs<span class="sc">$</span>pre), <span class="at">post =</span> <span class="fu">list</span>(<span class="at">data =</span> inputs<span class="sc">$</span>post)),</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pre =</span> networks<span class="sc">$</span>pre<span class="sc">$</span>network<span class="sc">$</span>colors),</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">referenceNetworks =</span> <span class="dv">1</span>, <span class="at">nPermutations =</span> <span class="dv">200</span>, <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">corOptions =</span> <span class="st">&quot;maxPOutliers = 0.1&quot;</span>, <span class="at">randomSeed =</span> <span class="dv">1</span>, <span class="at">savePermutedStatistics =</span> <span class="cn">FALSE</span>, <span class="at">verbose =</span> <span class="dv">0</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> preserved<span class="sc">$</span>preservation<span class="sc">$</span>Z<span class="sc">$</span>ref.pre<span class="sc">$</span>inColumnsAlsoPresentIn.post</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>ranks <span class="ot">&lt;-</span> preserved<span class="sc">$</span>preservation<span class="sc">$</span>observed<span class="sc">$</span>ref.pre<span class="sc">$</span>inColumnsAlsoPresentIn.post</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>preservation <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">module =</span> <span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, <span class="fu">rownames</span>(z)), <span class="at">size =</span> z<span class="sc">$</span>moduleSize, <span class="at">z_summary =</span> z<span class="sc">$</span>Zsummary.pres,</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">median_rank =</span> ranks[<span class="fu">rownames</span>(z), <span class="st">&quot;medianRank.pres&quot;</span>]</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>module <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;M0&quot;</span>, <span class="st">&quot;M0.1&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(z_summary))</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(preservation, <span class="at">evidence =</span> <span class="fu">cut</span>(z_summary, <span class="fu">c</span>(<span class="sc">-</span><span class="cn">Inf</span>, <span class="dv">2</span>, <span class="dv">10</span>, <span class="cn">Inf</span>), <span class="fu">c</span>(<span class="st">&quot;none&quot;</span>, <span class="st">&quot;moderate&quot;</span>, <span class="st">&quot;strong&quot;</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 11 × 5
-   module colour       size z_summary median_rank
-   &lt;chr&gt;  &lt;chr&gt;       &lt;dbl&gt;     &lt;dbl&gt;       &lt;dbl&gt;
- 1 M1     turquoise     391     55.5            1
- 2 M3     brown         271     30.2            7
- 3 M6     red           139     30.0            2
- 4 M2     blue          291     17.3            8
- 5 M7     black          80     17.1            4
- 6 M8     pink           74     14.8            3
- 7 M5     green         148     11.9           10
- 8 M4     yellow        158     10.4           11
- 9 M9     magenta        65      7.69           9
-10 M10    purple         57      7.55           6
-11 M11    greenyellow    55      6.59           8</code></pre>
+<pre><code># A tibble: 3 × 2
+  evidence     n
+  &lt;fct&gt;    &lt;int&gt;
+1 none         2
+2 moderate    30
+3 strong       8</code></pre>
 </div>
 </div>
 </section>
 <section id="draw-figures" class="level2">
 <h2 class="anchored" data-anchor-id="draw-figures">Draw figures</h2>
-<p>One A4 PDF: the soft-threshold fit, the protein dendrogram with module colours (WGCNA’s own <code>plotDendroAndColors()</code>), and a heatmap of module t statistics across the contrasts and the association slopes, labelled where BH-adjusted p &lt; 0.05.</p>
+<p>One A4 PDF: the soft-threshold fit of each network, then each network’s protein dendrogram with module colours (WGCNA’s own <code>plotDendroAndColors()</code>).</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>threshold_page <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(soft_threshold, <span class="fu">aes</span>(power, signed_r2, <span class="at">label =</span> power)) <span class="sc">+</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.85</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="at">colour =</span> <span class="st">&quot;grey60&quot;</span>) <span class="sc">+</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">&quot;point&quot;</span>, <span class="at">x =</span> power, <span class="at">y =</span> soft_threshold<span class="sc">$</span>signed_r2[soft_threshold<span class="sc">$</span>power <span class="sc">==</span> power],</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">shape =</span> <span class="dv">21</span>, <span class="at">size =</span> <span class="dv">6</span>, <span class="at">colour =</span> <span class="st">&quot;#B2182B&quot;</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;soft power&quot;</span>, <span class="at">y =</span> <span class="st">&quot;scale-free fit, signed R²&quot;</span>, <span class="at">title =</span> <span class="st">&quot;Soft-threshold choice&quot;</span>) <span class="sc">+</span></span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>)</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>heatmap_rows <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(eigengene_tests, module, <span class="at">column =</span> contrast, t, fdr),</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(eigengene_association, module, <span class="at">column =</span> <span class="fu">paste</span>(analysis, outcome), t, fdr)</span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">column =</span> <span class="fu">factor</span>(column, <span class="fu">unique</span>(column)),</span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">module =</span> <span class="fu">factor</span>(module, <span class="fu">rev</span>(<span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, <span class="fu">sort</span>(<span class="fu">unique</span>(network<span class="sc">$</span>colors[network<span class="sc">$</span>colors <span class="sc">&gt;</span> <span class="dv">0</span>])))))</span>
-<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>heatmap_page <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(heatmap_rows, <span class="fu">aes</span>(column, module, <span class="at">fill =</span> t)) <span class="sc">+</span></span>
-<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_tile</span>(<span class="at">colour =</span> <span class="st">&quot;white&quot;</span>) <span class="sc">+</span></span>
-<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">if_else</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="fu">sprintf</span>(<span class="st">&quot;%.2g&quot;</span>, fdr), <span class="st">&quot;&quot;</span>)), <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
-<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient2</span>(<span class="at">low =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="at">mid =</span> <span class="st">&quot;white&quot;</span>, <span class="at">high =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">name =</span> <span class="st">&quot;t&quot;</span>) <span class="sc">+</span></span>
-<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="cn">NULL</span>, <span class="at">title =</span> <span class="st">&quot;Module eigengenes: contrasts and association slopes&quot;</span>) <span class="sc">+</span></span>
-<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>) <span class="sc">+</span></span>
-<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">hjust =</span> <span class="dv">1</span>), <span class="at">panel.grid =</span> <span class="fu">element_blank</span>())</span>
-<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;01_modules.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
-<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(threshold_page)</span>
-<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a><span class="fu">plotDendroAndColors</span>(</span>
-<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>  network<span class="sc">$</span>dendrograms[[<span class="dv">1</span>]], <span class="fu">labels2colors</span>(network<span class="sc">$</span>colors[network<span class="sc">$</span>blockGenes[[<span class="dv">1</span>]]]),</span>
-<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;module&quot;</span>, <span class="at">dendroLabels =</span> <span class="cn">FALSE</span>, <span class="at">hang =</span> <span class="fl">0.03</span>, <span class="at">main =</span> <span class="st">&quot;Protein dendrogram and modules&quot;</span></span>
-<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(heatmap_page)</span>
-<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>soft_threshold <span class="ot">&lt;-</span> <span class="fu">map</span>(networks, <span class="st">&quot;soft_threshold&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;network&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">network =</span> <span class="fu">factor</span>(network, <span class="fu">names</span>(networks)))</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>chosen <span class="ot">&lt;-</span> <span class="fu">semi_join</span>(soft_threshold, <span class="fu">enframe</span>(<span class="fu">map_dbl</span>(networks, <span class="st">&quot;power&quot;</span>), <span class="st">&quot;network&quot;</span>, <span class="st">&quot;power&quot;</span>),</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;network&quot;</span>, <span class="st">&quot;power&quot;</span>))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>threshold_page <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(soft_threshold, <span class="fu">aes</span>(power, signed_r2, <span class="at">label =</span> power)) <span class="sc">+</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.85</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>, <span class="at">colour =</span> <span class="st">&quot;grey60&quot;</span>) <span class="sc">+</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> chosen, <span class="at">shape =</span> <span class="dv">21</span>, <span class="at">size =</span> <span class="dv">5</span>, <span class="at">colour =</span> <span class="st">&quot;#B2182B&quot;</span>) <span class="sc">+</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>network) <span class="sc">+</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;soft power&quot;</span>, <span class="at">y =</span> <span class="st">&quot;scale-free fit, signed R²&quot;</span>, <span class="at">title =</span> <span class="st">&quot;Soft-threshold choice&quot;</span>) <span class="sc">+</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;01_modules.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(threshold_page)</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="fu">iwalk</span>(networks, <span class="cf">function</span>(n, name) {</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotDendroAndColors</span>(</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    n<span class="sc">$</span>network<span class="sc">$</span>dendrograms[[<span class="dv">1</span>]], <span class="fu">labels2colors</span>(n<span class="sc">$</span>network<span class="sc">$</span>colors[n<span class="sc">$</span>network<span class="sc">$</span>blockGenes[[<span class="dv">1</span>]]]),</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;module&quot;</span>, <span class="at">dendroLabels =</span> <span class="cn">FALSE</span>, <span class="at">hang =</span> <span class="fl">0.03</span>, <span class="at">main =</span> <span class="fu">paste</span>(name, <span class="st">&quot;network: proteins and modules&quot;</span>)</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <p><code>01_modules.xlsx</code> holds one sheet per table.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">soft_threshold =</span> soft_threshold, <span class="at">membership =</span> membership,</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">eigengene_tests =</span> eigengene_tests, <span class="at">eigengene_association =</span> eigengene_association,</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">enrichment =</span> <span class="fu">arrange</span>(enrichment, module, padj), <span class="at">preservation =</span> preservation</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_modules.xlsx&quot;</span>)</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">networks =</span> network_summary, <span class="at">soft_threshold =</span> <span class="fu">select</span>(soft_threshold, network, <span class="fu">everything</span>()),</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">membership =</span> membership, <span class="at">modules =</span> modules, <span class="at">enrichment =</span> enrichment,</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">eigengene_tests =</span> eigengene_tests, <span class="at">change_tests =</span> change_tests, <span class="at">preservation =</span> preservation</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_modules.xlsx&quot;</span>)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
