@@ -1,0 +1,342 @@
+---
+title: "02 · Module traits"
+format:
+  html:
+    toc: true
+    embed-resources: true
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+`WGCNA`, `fgsea`, `ggnewscale` and `scales` are called with `::`.
+
+```{r setup}
+pacman::p_load(here, limma, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, ggrepel, readr,
+  readxl, writexl)
+here::i_am("04_Network/02_module_traits/a_script/02_module_traits.qmd")
+```
+
+## Read inputs
+
+The module-trait view of the YvO Figure 5 for each of the four networks from `01_modules`: the
+training and between-leg contrasts, and the association of each module with muscle size and echo
+intensity before training, after training and in change. Inputs: the membership, module names and
+eigengene tests from `01_modules`, the protein estimates, the stage 02 fit and the phenotype table.
+
+```{r read}
+stage <- here("04_Network", "02_module_traits")
+modules_book <- here("04_Network", "01_modules", "c_data", "01_modules.xlsx")
+membership <- read_excel(modules_book, "membership")
+module_info <- read_excel(modules_book, "modules")
+eigengene_tests <- read_excel(modules_book, "eigengene_tests")
+change_tests <- read_excel(modules_book, "change_tests")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
+phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
+targets <- proteins$targets
+count(module_info, network)
+```
+
+## Recompute the eigengenes
+
+The main network removes each participant's mean, which a change keeps intact but a level loses,
+so its eigengenes are recomputed on the raw abundance with the network's memberships and
+between-person differences in module level stay in. The pre and post networks use their own
+timepoint's samples and the change network each leg's post minus pre change, as in `01_modules`.
+
+```{r eigengenes}
+legs <- targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
+  select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = timepoint, values_from = sample_id) |>
+  drop_na(T1, T2)
+change <- t(proteins$E[, legs$T2] - proteins$E[, legs$T1])
+rownames(change) <- legs$leg_id
+pre <- targets$timepoint == "T1"
+inputs <- list(
+  main = t(proteins$E), change = change, pre = t(proteins$E[, pre]), post = t(proteins$E[, !pre])
+)
+eigengenes <- imap(inputs, function(x, name) {
+  labels <- filter(membership, network == name)
+  me <- WGCNA::moduleEigengenes(x, labels$module[match(colnames(x), labels$protein)])$eigengenes
+  me <- as.matrix(select(me, -MEM0))
+  dimnames(me) <- list(rownames(x), sub("^ME", "", colnames(me)))
+  me
+})
+main_change <- eigengenes$main[legs$T2, ] - eigengenes$main[legs$T1, ]
+rownames(main_change) <- legs$leg_id
+```
+
+## Test the phenotype associations
+
+Each module gets one test per outcome, using both arms. Levels are regressed on the outcome with
+arm as a covariate, and participant enters as a block: each person gave two legs, and
+`duplicateCorrelation()` estimates how alike those two legs are so that the second counts for
+less than an independent leg. Changes use the two analyses of `03_Protein_Association`, on each
+leg's eigengene change against its outcome change: pooled, with one intercept per arm, and within
+participant, with one intercept per participant. On per-leg changes these reproduce the slope t
+of that step's sample-level designs exactly.
+
+The test is the least-squares t on the outcome coefficient, shown as an r-equivalent,
+sign(t) × √(t² / (t² + df)): the partial correlation of module and outcome given the other terms,
+the same scale as the YvO figure. BH runs within each network, block and outcome across modules.
+Echo intensity falls as muscle quality improves. `slope_t()` fits one design to an eigengene
+matrix; `level_slopes()` and `change_slopes()` build the designs for one network.
+
+```{r slope-t}
+slope_t <- function(eigengenes, design, block = NULL) {
+  correlation <- if (!is.null(block)) {
+    duplicateCorrelation(eigengenes, design, block = block)$consensus.correlation
+  }
+  fit <- lmFit(eigengenes, design, block = block, correlation = correlation)
+  t <- fit$coefficients[, "value"] / (fit$stdev.unscaled[, "value"] * fit$sigma)
+  tibble(module = rownames(eigengenes), n = nrow(design), t, df = fit$df.residual,
+    p = 2 * pt(-abs(t), df))
+}
+r_equivalent <- function(t, df) sign(t) * sqrt(t^2 / (t^2 + df))
+```
+
+```{r phenotype-tests}
+outcomes <- c(vl_csa = "VL CSA", rf_csa = "RF CSA", vl_echo = "VL echo", rf_echo = "RF echo")
+measured <- phenotype |>
+  select(participant, leg, matches("_(pre|post)_")) |>
+  pivot_longer(-c(participant, leg), names_to = c("outcome", "timepoint"),
+    names_pattern = "^(.*)_(pre|post)_.*$", values_to = "value") |>
+  mutate(timepoint = c(pre = "T1", post = "T2")[timepoint])
+measured_change <- measured |>
+  pivot_wider(names_from = timepoint, values_from = value) |>
+  transmute(participant, leg, outcome, value = T2 - T1)
+level_slopes <- function(me, timepoint) {
+  samples <- filter(targets, sample_id %in% rownames(me), .data$timepoint == .env$timepoint)
+  block <- c(T1 = "Pre", T2 = "Post")[[timepoint]]
+  map(set_names(names(outcomes)), function(o) {
+    data <- inner_join(samples, filter(measured, outcome == o),
+      by = c("participant", "leg", "timepoint"))
+    slope_t(t(me[data$sample_id, ]), model.matrix(~ treatment + value, data), data$participant)
+  }) |>
+    list_rbind(names_to = "outcome") |>
+    mutate(block = .env$block)
+}
+change_slopes <- function(me) {
+  map(set_names(names(outcomes)), function(o) {
+    data <- inner_join(legs, filter(measured_change, outcome == o), by = c("participant", "leg"))
+    bind_rows(
+      Change = slope_t(t(me[data$leg_id, ]), model.matrix(~ treatment + value, data)),
+      "Change within participant" = slope_t(
+        t(me[data$leg_id, ]), model.matrix(~ participant + treatment + value, data)
+      ),
+      .id = "block"
+    )
+  }) |>
+    list_rbind(names_to = "outcome")
+}
+phenotype_tests <- bind_rows(
+  main = bind_rows(
+    level_slopes(eigengenes$main, "T1"), level_slopes(eigengenes$main, "T2"),
+    change_slopes(main_change)
+  ),
+  change = change_slopes(eigengenes$change),
+  pre = level_slopes(eigengenes$pre, "T1"),
+  post = level_slopes(eigengenes$post, "T2"),
+  .id = "network"
+) |>
+  mutate(r = r_equivalent(t, df), padj = p.adjust(p, "BH"), .by = c(network, block, outcome))
+phenotype_tests |>
+  summarise(tests = n(), nominal = sum(p < 0.05), expected = 0.05 * n(), bh = sum(padj < 0.05),
+    .by = c(network, block))
+filter(phenotype_tests, padj < 0.05) |> arrange(network, padj)
+```
+
+## Contrasts as correlations
+
+The contrast columns convert each eigengene t from `01_modules` to the same r-equivalent: the five
+stage 02 contrasts for the main network, and the per-arm training means and their paired
+difference for the change network. The difference of the training changes is the BFR × Time
+interaction, so it shares that label.
+
+```{r contrasts}
+contrast_label <- c(
+  "BFR_Post-Pre" = "Tr. BFR", "HLRT_Post-Pre" = "Tr. HLRT",
+  "Modality_x_Time_Interaction" = "BFR × Time", "BFR_Pre-HLRT_Pre" = "Pre",
+  "BFR_Post-HLRT_Post" = "Post",
+  "BFR training" = "Tr. BFR", "HLRT training" = "Tr. HLRT", "BFR - HLRT" = "BFR × Time"
+)
+contrast_cells <- bind_rows(
+  main = rename(eigengene_tests, test = contrast),
+  change = change_tests,
+  .id = "network"
+) |>
+  transmute(
+    network, module, column = contrast_label[test], t, df, p, padj = fdr, kind = "contrast",
+    block = if_else(test %in% c("BFR_Pre-HLRT_Pre", "BFR_Post-HLRT_Post"), "BFR vs HLRT",
+      "Training"),
+    r = r_equivalent(t, df)
+  )
+cells <- phenotype_tests |>
+  mutate(column = outcomes[outcome], kind = "phenotype") |>
+  bind_rows(contrast_cells) |>
+  mutate(
+    column = factor(column, unique(c(contrast_label, outcomes))),
+    stars = case_when(padj < 0.001 ~ "***", padj < 0.01 ~ "**", padj < 0.05 ~ "*", .default = ""),
+    strip = if_else(kind == "phenotype", paste0(block, "\nn = ", n), block)
+  )
+```
+
+## Draw the heatmaps
+
+One page per network. Purple and green show the contrasts, red and blue the phenotype
+associations. A solid outline marks BH p < 0.05 with stars, a dashed outline nominal p < 0.05, and
+bold text |r| ≥ 0.40. The left bar gives each module's size, labelled with its BH-enriched top set
+(or "no set" when none passes) and its hub protein. `module_heatmap()` draws one network's page.
+
+```{r heatmap}
+block_order <- c("Training", "BFR vs HLRT", "Pre", "Post", "Change", "Change within participant")
+module_info <- module_info |>
+  mutate(
+    colour = WGCNA::labels2colors(as.integer(sub("M", "", module))),
+    term = str_trunc(str_to_sentence(str_replace_all(
+      str_remove(top_set, "^.*\\|([A-Z]+_)?"), "_", " "
+    )), 32),
+    label = paste0(module, ": ", coalesce(term, "no set"), " | ", hub)
+  )
+module_heatmap <- function(name, title) {
+  info <- filter(module_info, network == name) |>
+    arrange(desc(as.integer(sub("M", "", module)))) |>
+    mutate(module = factor(module, module))
+  data <- filter(cells, network == name) |>
+    mutate(
+      module = factor(module, levels(info$module)),
+      strip = factor(strip, unique(strip[order(match(block, block_order))]))
+    )
+  heatmap <- ggplot(data, aes(column, module)) +
+    geom_tile(data = filter(data, kind == "contrast"), aes(fill = r), colour = "white") +
+    scale_fill_gradient2(low = "#1b7837", mid = "white", high = "#762a83", limits = c(-0.8, 0.8),
+      oob = scales::squish, name = "r-equivalent (contrasts)") +
+    ggnewscale::new_scale_fill() +
+    geom_tile(data = filter(data, kind == "phenotype"), aes(fill = r), colour = "white") +
+    scale_fill_gradient2(low = "#2166ac", mid = "white", high = "#b2182b", limits = c(-0.8, 0.8),
+      oob = scales::squish, name = "r-equivalent (phenotype)") +
+    geom_tile(data = filter(data, padj < 0.05), fill = NA, colour = "black", linewidth = 0.5) +
+    geom_tile(data = filter(data, padj >= 0.05, p < 0.05), fill = NA, colour = "black",
+      linewidth = 0.3, linetype = "dashed") +
+    geom_text(aes(label = sprintf("%.2f", r), fontface = if_else(abs(r) >= 0.4, "bold", "plain")),
+      size = 1.6) +
+    geom_text(aes(label = stars), size = 1.6, nudge_y = 0.3) +
+    facet_grid(~strip, scales = "free_x", space = "free_x") +
+    labs(x = NULL, y = NULL) +
+    theme_minimal(base_size = 6) +
+    theme(
+      panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.y = element_blank(), strip.text = element_text(face = "bold"),
+      legend.position = "bottom"
+    )
+  size_bars <- ggplot(info, aes(sqrt(proteins), module)) +
+    geom_col(aes(fill = colour), width = 0.7, colour = "grey30", linewidth = 0.2) +
+    scale_fill_identity() +
+    scale_x_reverse(breaks = sqrt(c(10, 50, 200, 400)), labels = c(10, 50, 200, 400)) +
+    scale_y_discrete(labels = set_names(info$label, info$module)) +
+    labs(x = "proteins", y = NULL) +
+    theme_minimal(base_size = 6) +
+    theme(panel.grid = element_blank())
+  size_bars + heatmap + plot_layout(widths = c(0.8, 4)) + plot_annotation(title = title)
+}
+heatmap_pages <- list(
+  module_heatmap("main", "Main network: module-trait associations"),
+  module_heatmap("change", "Change network: module-trait associations"),
+  module_heatmap("pre", "Pre-training network: module-trait associations"),
+  module_heatmap("post", "Post-training network: module-trait associations")
+)
+```
+
+## Draw the scatters
+
+For the main network, the left scatter places each module by its fgsea NES in the two training
+contrasts, with the module's proteins as the set and the stage 02 moderated t as the ranking, as
+in the YvO figure. The right scatter places each module by its eigengene r-equivalent, BFR against
+HLRT, before and after training. It uses the eigengene tests rather than NES: modules are built
+from proteins that move together, and fgsea, which treats proteins as independent, gives
+between-leg NES near ±3 where the eigengene tests are flat. `quadrant_scatter()` takes the table,
+the two columns, the axis labels and the quadrant names, clockwise from top left.
+
+```{r scatters}
+main_info <- filter(module_info, network == "main")
+main_members <- filter(membership, network == "main", module != "M0")
+set.seed(1)
+training_nes <- map(c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre"), function(cn) {
+  ranking <- sort(set_names(topTable(fit, coef = cn, number = Inf, sort.by = "none")$t,
+    rownames(fit)), decreasing = TRUE)
+  fgsea::fgsea(split(main_members$protein, main_members$module), ranking, minSize = 10,
+    maxSize = 1000, eps = 0) |>
+    as_tibble() |>
+    select(module = pathway, size, NES, padj)
+}) |>
+  list_rbind(names_to = "arm") |>
+  pivot_wider(names_from = arm, values_from = c(NES, padj)) |>
+  left_join(select(main_info, module, colour), by = "module")
+between_legs <- contrast_cells |>
+  filter(network == "main", block == "BFR vs HLRT") |>
+  select(module, column, r) |>
+  pivot_wider(names_from = column, values_from = r) |>
+  left_join(select(main_info, module, size = proteins, colour), by = "module")
+quadrant_scatter <- function(data, x, y, xlab, ylab, quadrants) {
+  limit <- max(abs(c(data[[x]], data[[y]]))) * 1.15
+  counts <- c(
+    sum(data[[x]] < 0 & data[[y]] > 0), sum(data[[x]] > 0 & data[[y]] > 0),
+    sum(data[[x]] > 0 & data[[y]] < 0), sum(data[[x]] < 0 & data[[y]] < 0)
+  )
+  ggplot(data, aes(.data[[x]], .data[[y]])) +
+    geom_hline(yintercept = 0, colour = "grey60") +
+    geom_vline(xintercept = 0, colour = "grey60") +
+    geom_abline(linetype = "dashed", colour = "grey60") +
+    geom_point(aes(size = size, fill = colour), shape = 21) +
+    geom_text_repel(aes(label = module), size = 2.2, seed = 1, max.overlaps = 20) +
+    annotate("text", x = limit * c(-1, 1, 1, -1), y = limit * c(1, 1, -1, -1),
+      hjust = c(0, 1, 1, 0), vjust = c(1, 1, 0, 0), size = 2.2,
+      label = paste0(quadrants, "\nn=", counts)) +
+    scale_fill_identity() +
+    scale_size_area(max_size = 6, name = "proteins") +
+    coord_equal(xlim = c(-limit, limit), ylim = c(-limit, limit)) +
+    labs(x = xlab, y = ylab) +
+    theme_bw(base_size = 8)
+}
+scatter_page <- (
+  quadrant_scatter(training_nes, "NES_BFR", "NES_HLRT", "NES, BFR training", "NES, HLRT training",
+    c("Discordant", "Concordant up", "Discordant", "Concordant down")) /
+    quadrant_scatter(between_legs, "Pre", "Post", "BFR vs HLRT before training (r-equivalent)",
+      "BFR vs HLRT after training (r-equivalent)",
+      c("Flipped", "Same, BFR higher", "Flipped", "Same, BFR lower"))
+) +
+  plot_layout(guides = "collect") +
+  plot_annotation(title = "Main network: training response and between-leg difference")
+```
+
+```{r write-figures}
+pdf(file.path(stage, "b_reports", "02_module_traits.pdf"), width = 8.27, height = 11.69)
+walk(heatmap_pages, print)
+print(scatter_page)
+invisible(dev.off())
+```
+
+## Save results
+
+```{r write}
+write_xlsx(
+  list(
+    heatmap = cells |>
+      select(network, block, column, module, n, r, t, df, p, padj) |>
+      arrange(match(network, names(inputs)), match(block, block_order), column,
+        as.integer(sub("M", "", module))),
+    module_nes = training_nes |> select(-colour)
+  ),
+  file.path(stage, "c_data", "02_module_traits.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

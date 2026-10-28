@@ -1,0 +1,212 @@
+---
+title: "03 · Complex subunits"
+format:
+  html:
+    toc: true
+    embed-resources: true
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)
+here::i_am("05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.qmd")
+```
+
+## Read inputs
+
+Each subunit and assembly factor of complexes I to V, with its training change in each leg, side
+by side. From Sam's PR #26 (sc-norton). It is descriptive only: the inference is fry on the
+complexes in `02_test_mito`.
+
+`de` is the stage 02 `DEP_matrix`, one row per protein with logFC, p and BH-adjusted p per
+contrast. `membership` lists the MitoCarta sets; `complex_tests` holds fry's complex results.
+
+```{r read}
+stage <- here("05_Mitochondria", "03_complex_subunits")
+de <- read_excel(
+  here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
+  "DEP_matrix"
+)
+membership <- read_excel(
+  here("05_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx"),
+  "membership"
+)
+complex_tests <- read_excel(
+  here("05_Mitochondria", "02_test_mito", "c_data", "02_test_mito.xlsx"),
+  "complex_tests"
+)
+```
+
+## Collect the subunits
+
+Keep the measured genes of the MitoPathways "CI subunits" to "CV assembly factors", split the set
+name into complex and role, and join each gene to its stage 02 row by symbol. Sam's "Other" group
+joins them: the MitoPathways "Cytochrome C" and "Respirasome assembly" genes that belong to no
+single complex. Rows sort within complex and role by the interaction logFC, BFR minus HLRT.
+
+```{r subunits}
+complexes <- c("CI", "CII", "CIII", "CIV", "CV", "Other")
+complex_members <- membership |>
+  filter(str_detect(set, "^C(I|II|III|IV|V) (subunits|assembly factors)$")) |>
+  separate_wider_delim(set, " ", names = c("complex", "role"), too_many = "merge")
+other_members <- membership |>
+  filter(set %in% c("Cytochrome C", "Respirasome assembly"), !gene %in% complex_members$gene) |>
+  mutate(complex = "Other", role = "other")
+members <- bind_rows(complex_members, other_members)
+subunits <- members |>
+  filter(measured) |>
+  inner_join(de, by = c(gene = "Genes")) |>
+  transmute(
+    complex = factor(complex, complexes), role, gene, protein,
+    BFR_logFC = `BFR_Post-Pre_logFC`,
+    BFR_fdr = `BFR_Post-Pre_adj.P.Val`,
+    HLRT_logFC = `HLRT_Post-Pre_logFC`,
+    HLRT_fdr = `HLRT_Post-Pre_adj.P.Val`,
+    difference = `Modality_x_Time_Interaction_logFC`,
+    difference_fdr = `Modality_x_Time_Interaction_adj.P.Val`
+  ) |>
+  arrange(complex, role, desc(difference))
+head(subunits, 3)
+```
+
+## The set-level test
+
+A paired t-test across the subunits of a complex counts correlated proteins as independent
+replicates and makes p too small. The set-level test is fry on the subunits, standard fit,
+interaction contrast, and it goes in the panel titles. Assembly factors have no set test.
+
+```{r interaction-fry}
+interaction_fry <- complex_tests |>
+  filter(fit == "standard", contrast == "Modality_x_Time_Interaction") |>
+  transmute(complex = str_remove(set, " subunits"), fry_fdr = FDR)
+interaction_fry
+```
+
+## Figures
+
+Three A4 pages go to `b_reports/03_complex_subunits.pdf`, sharing one theme.
+
+```{r theme}
+theme_set(theme_minimal(base_size = 9))
+theme_update(legend.position = "top", panel.grid.major.x = element_blank())
+arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
+```
+
+Page 1 holds Sam's two summaries, stacked: complex subunits, then assembly factors with "Other".
+Each bar is the mean change of a group's measured proteins per leg, with the standard error across
+them, and every protein is a point. The standard error describes spread among correlated proteins
+and is not a test; the test is fry, whose interaction FDR labels the subunit summary. Axis labels
+give measured of all MitoCarta members. The jitter has its own seed, so the points land in the
+same place on every run.
+
+```{r summary-page}
+group_size <- members |>
+  summarise(measured = sum(measured), total = n(), .by = c(complex, role)) |>
+  mutate(label = sprintf("%s\n(n = %d/%d)", complex, measured, total))
+summary_plot <- function(roles, title, fry) {
+  rows <- filter(subunits, role %in% roles) |>
+    pivot_longer(c(BFR_logFC, HLRT_logFC), names_to = "arm", values_to = "logFC") |>
+    mutate(arm = str_remove(arm, "_logFC"))
+  labels <- filter(group_size, role %in% roles)
+  ggplot(rows, aes(complex, logFC, fill = arm)) +
+    geom_hline(yintercept = 0, linewidth = 0.3, colour = "grey50") +
+    stat_summary(fun = mean, geom = "col", position = position_dodge(0.8), width = 0.7) +
+    stat_summary(
+      fun.data = mean_se, geom = "errorbar", position = position_dodge(0.8), width = 0.25,
+      linewidth = 0.4
+    ) +
+    geom_point(
+      position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8, seed = 1),
+      size = 0.9, alpha = 0.6, show.legend = FALSE
+    ) +
+    geom_text(
+      data = fry, inherit.aes = FALSE, size = 2.8,
+      aes(complex, Inf, label = paste("fry FDR", signif(fry_fdr, 2))), vjust = 1.5
+    ) +
+    scale_x_discrete(labels = set_names(labels$label, labels$complex)) +
+    scale_fill_manual(values = arm_colours, name = NULL) +
+    labs(x = NULL, y = "log2 change, post - pre", title = title)
+}
+summary_page <- summary_plot("subunits", "Complex subunits, summary by leg", interaction_fry) /
+  summary_plot(
+    c("assembly factors", "other"), "Assembly factors and other OXPHOS proteins, by leg",
+    interaction_fry[0, ]
+  )
+```
+
+Pages 2 and 3 draw every protein of one role by leg, one panel per complex. Panel titles carry the
+protein count and, on the subunit page, fry's interaction FDR.
+
+```{r role-page}
+role_page <- function(which_role, title) {
+  rows <- filter(subunits, role == which_role)
+  fry <- if (which_role == "subunits") interaction_fry else interaction_fry[0, ]
+  headers <- rows |>
+    count(complex) |>
+    left_join(fry, by = "complex") |>
+    mutate(panel = if_else(
+      is.na(fry_fdr), sprintf("%s (%d)", complex, n),
+      sprintf("%s (%d), fry interaction FDR %s", complex, n, signif(fry_fdr, 2))
+    ))
+  rows |>
+    pivot_longer(c(BFR_logFC, HLRT_logFC), names_to = "arm", values_to = "logFC") |>
+    mutate(
+      arm = str_remove(arm, "_logFC"), gene = factor(gene, unique(rows$gene)),
+      panel = headers$panel[match(complex, headers$complex)]
+    ) |>
+    ggplot(aes(gene, logFC, fill = arm)) +
+    geom_hline(yintercept = 0, linewidth = 0.3, colour = "grey50") +
+    geom_col(position = position_dodge(width = 0.75), width = 0.7) +
+    facet_wrap(~panel, ncol = 1, scales = "free_x") +
+    scale_fill_manual(values = arm_colours, name = NULL) +
+    labs(
+      x = NULL, y = "log2 change, post - pre",
+      title = title
+    ) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6))
+}
+```
+
+```{r pdf}
+pdf(file.path(stage, "b_reports", "03_complex_subunits.pdf"), width = 8.27, height = 11.69)
+walk(
+  list(
+    summary_page,
+    role_page("subunits", "Complex subunits by leg"),
+    role_page("assembly factors", "Complex assembly factors by leg")
+  ),
+  print
+)
+invisible(dev.off())
+```
+
+## Summary
+
+Proteins per complex and role, and how many reach BH FDR < 0.05 in each leg and for the
+interaction.
+
+```{r summary}
+subunits |>
+  summarise(
+    proteins = n(), bfr_fdr_05 = sum(BFR_fdr < 0.05), hlrt_fdr_05 = sum(HLRT_fdr < 0.05),
+    interaction_fdr_05 = sum(difference_fdr < 0.05), .by = c(role, complex)
+  )
+```
+
+## Save results
+
+`03_complex_subunits.xlsx` holds the `subunits` table.
+
+```{r write}
+write_xlsx(list(subunits = subunits), file.path(stage, "c_data", "03_complex_subunits.xlsx"))
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

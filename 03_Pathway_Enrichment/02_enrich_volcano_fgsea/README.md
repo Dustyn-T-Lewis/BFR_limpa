@@ -1,19 +1,24 @@
-# 02_enrich_volcano_fgsea
+# 02 · Enrichment volcanoes, fgsea
 
-This step draws protein volcanoes with the collapse-surviving fgsea sets ringed, computing nothing.
-It reads `protein_results` and `set_tests` from
-`01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx` and writes S8–S9 to
-`b_reports/02_enrich_volcano_fgsea_figures.pdf`; with no table to write, it has no `c_data/`.
+Draws protein volcanoes with the collapse-surviving fgsea sets ringed; computes nothing. The
+baseline contrast is not drawn.
+
+Inputs: `protein_results` and `set_tests` from
+`01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`.
 
 ```sh
-Rscript 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.R
+quarto render 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.qmd --output-dir ../b_reports
 ```
 
-Point colour shows protein BH FDR and the ring set fgsea FDR, red for up and blue for down. The ring
-holds the twelve collapse survivors with the lowest adjusted p in either direction. S8 has four
-panels (the interaction, both training responses, post-training BFR against HLRT); S9 repeats the
-training responses labelled by Π. The control is not drawn.
+Outputs:
 
-Leading-edge genes match the label of the protein fgsea ranked for that symbol, since a label
-carries an accession when two proteins share a symbol. When two ringed sets shorten to the same
-name, the collection is appended.
+- `b_reports/02_enrich_volcano_fgsea.html`: the walkthrough.
+- `b_reports/02_enrich_volcano_fgsea_figures.pdf`: S3 (the interaction, both training responses
+  and post-training BFR against HLRT, five lowest-FDR proteins named) and S4 (the training
+  responses with labels ranked by pi-score, which selects nothing, each followed by the protein's
+  mean observed precursors). Points are coloured when protein BH FDR < 0.05; the ring shows up to
+  twelve collapse survivors, lowest adjusted p first, coloured by NES, with ticks on their
+  leading-edge proteins.
+
+No table is written, so there is no `c_data/`. fry finds no set on S3's panels A and D, the
+interaction and BFR_Post-HLRT_Post (see `01_run_fgsea_and_fry`).

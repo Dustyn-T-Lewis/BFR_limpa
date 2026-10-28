@@ -1,26 +1,27 @@
 ---
 title: "01 · Design"
-subtitle: "Design matrix and the five contrasts"
 format:
   html:
     toc: true
-    toc-depth: 3
     embed-resources: true
-    df-print: kable
-    fig-width: 7
-    fig-height: 5
-    fig-dpi: 150
-    fig-align: center
-execute:
-  message: false
+knitr:
+  opts_chunk:
+    message: false
 ---
 
-limpa accepts any limma design. This notebook builds and checks it apart from the fit, so a design
-problem surfaces in seconds.
+## Load packages
 
 ```{r setup}
 pacman::p_load(here, limma, writexl)
+here::i_am("02_Differential_Expression/01_Design/a_script/01_design.qmd")
+```
 
+## Read sample metadata
+
+The design uses the metadata attached to the protein matrix, so it follows the same sample order.
+The table counts samples per treatment and timepoint.
+
+```{r read}
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
 
@@ -29,21 +30,22 @@ with(targets, table(treatment, timepoint))
 
 ## Design
 
-Four cells, one per treatment-and-timepoint combination, plus participant as a fixed block: 131 rows
-by 36 columns, four group means and 32 participant dummies, 95 residual degrees of freedom.
-Participant is fixed rather than random because every contrast sits within one person (limma User's
-Guide §9.4.2), which makes pre-to-post paired. `sex` is constant within participant, so this design
-cannot test it. One participant contributes three cells, so the group columns are
-participant-adjusted cell means.
+A design matrix has one row per sample and one column per model coefficient, marking which group
+and participant each sample belongs to. `~ 0 + group + participant` gives one mean per
+treatment-by-timepoint group, no separate intercept, and a fixed effect per participant. Participant
+is fixed rather than random because every contrast sits within one person (limma User's Guide
+§9.4.2), which makes pre-to-post comparisons paired. A participant-level variable such as sex is
+constant within person and cannot be estimated here.
+
+`makeContrasts()` reads its arguments as R code, so a column named `groupBFR_T1` must become
+`BFR_T1` and every name must be syntactic. `is.fullrank()` checks that the columns are linearly
+independent; a rank-deficient design would leave contrasts inestimable.
 
 ```{r design}
 design <- model.matrix(~ 0 + group + participant, data = targets)
-# makeContrasts() parses its arguments as R code, so a column left named "group2E-T1" would
-# read as subtraction. The sub() strips the prefix and make.names() below checks the result.
 colnames(design) <- sub("^group", "", colnames(design))
 rownames(design) <- targets$sample_id
 
-# Rank deficiency would make the contrasts inestimable and surface as silent NA coefficients.
 stopifnot(
   is.fullrank(design),
   identical(make.names(colnames(design)), colnames(design))
@@ -55,28 +57,10 @@ c(
 )
 ```
 
-## Is a fixed participant term enough
-
-Samples share a participant and, within that, a leg. The participant term removes the first exactly;
-the second stays in the residual. A large leg-level correlation would make within-leg contrasts too
-conservative and between-leg ones too liberal.
-
-```{r correlation-strata}
-leg_id <- paste(targets$participant, targets$leg, sep = "_")
-
-strata <- data.frame(
-  level = "within leg, participant fixed (unweighted matrix correlation)",
-  correlation = duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
-)
-round(strata$correlation, 3)
-```
-
-The estimate runs on the bare matrix, without the fit's precision and sample weights, which is
-enough for a near-zero check. While it stays near zero, as it has on this data, `02_Differential`
-calls `dpcDE()` without `block =`. If it rose, the fix is `block = leg_id` in the next notebook, but
-`leg_id` is not saved and nothing will warn you. Read the row on every rerun.
-
 ## Contrasts
+
+A contrast is a difference between model coefficients; positive values follow the subtraction
+order below.
 
 ```{r contrasts}
 contrast_matrix <- makeContrasts(
@@ -93,27 +77,61 @@ contrast_matrix[rowSums(abs(contrast_matrix)) > 0, ]
 | Name | Role | Compares | Reads as |
 |---|---|---|---|
 | `Modality_x_Time_Interaction` | primary | difference of the two time effects | the study question |
-| `BFR_Pre-HLRT_Pre` | negative control | two legs before training | must find nothing |
-| `BFR_Post-Pre` | descriptive | one leg over time | what restricted training did |
-| `HLRT_Post-Pre` | descriptive | the other leg over time | what conventional training did |
-| `BFR_Post-HLRT_Post` | descriptive | two legs after training | leg difference at the end |
+| `BFR_Pre-HLRT_Pre` | baseline | two legs before training | baseline leg difference |
+| `BFR_Post-Pre` | secondary, exploratory | one leg over time | what restricted training did |
+| `HLRT_Post-Pre` | secondary, exploratory | the other leg over time | what conventional training did |
+| `BFR_Post-HLRT_Post` | secondary, exploratory | two legs after training | leg difference at the end |
 
-`Modality_x_Time_Interaction` equals `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so these
-are not five independent questions. The primary and the control are the result; the other three
-describe the path.
+`Modality_x_Time_Interaction` equals `BFR_Post-HLRT_Post` minus `BFR_Pre-HLRT_Pre` exactly, so the
+five are not independent questions. The interaction tests whether the change over time differs
+between treatments. Baseline differences can exist and are inspected, not assumed absent.
+
+## Check within-leg correlation
+
+Samples from the same leg may stay correlated after the participant term. `leg_id` marks each
+participant and leg; `duplicateCorrelation()` estimates the average residual correlation within
+legs.
+
+```{r correlation-strata}
+leg_id <- paste(targets$participant, targets$leg, sep = "_")
+
+strata <- data.frame(
+  level = "within leg, participant fixed (unweighted matrix correlation)",
+  correlation = duplicateCorrelation(proteins$E, design, block = leg_id)$consensus.correlation
+)
+round(strata$correlation, 3)
+```
+
+The estimate ignores the standard errors the later fit uses. `02_Differential`
+fits without a leg block while this stays near zero. If it rose, the fix is `block = leg_id`
+there; `leg_id` is not saved, so read this value on every rerun.
+
+## Save results
+
+`design.rds` holds the design, the contrasts and the name of the baseline contrast for the models
+downstream. `01_design.xlsx` holds the samples, the design, the contrasts and the correlation
+check; identifier columns keep the matrix row names in Excel.
 
 ```{r write}
 out <- here("02_Differential_Expression", "01_Design", "c_data")
 saveRDS(
-  list(design = design, contrasts = contrast_matrix, negative_control = "BFR_Pre-HLRT_Pre"),
+  list(design = design, contrasts = contrast_matrix, baseline = "BFR_Pre-HLRT_Pre"),
   file.path(out, "design.rds")
 )
-overview <- data.frame(
-  sheet = "correlation_strata", rows = nrow(strata), columns = ncol(strata),
-  description = "Within-leg correlation, participant fixed"
+write_xlsx(
+  list(
+    samples = as.data.frame(targets),
+    design = data.frame(sample_id = rownames(design), design, check.names = FALSE),
+    contrasts = data.frame(
+      coefficient = rownames(contrast_matrix), contrast_matrix, check.names = FALSE
+    ),
+    correlation_strata = strata
+  ),
+  file.path(out, "01_design.xlsx")
 )
-write_xlsx(list(overview = overview, correlation_strata = strata), file.path(out, "01_design.xlsx"))
 ```
+
+## Session information
 
 ```{r session}
 sessionInfo()

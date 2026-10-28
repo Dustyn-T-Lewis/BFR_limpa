@@ -1,0 +1,200 @@
+---
+title: "07 · Pathway maps"
+format:
+  html:
+    toc: true
+    embed-resources: true
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+`clusterProfiler` runs the enrichment and `enrichplot` draws it; `enrichVolcano` (not on CRAN) is
+called with `::` for its label cleaner.
+
+```{r setup}
+pacman::p_load(here, dplyr, purrr, ggplot2, readxl, clusterProfiler, enrichplot)
+here::i_am("03_Pathway_Enrichment/07_pathway_maps/a_script/07_pathway_maps.qmd")
+```
+
+## Read inputs
+
+Pathway maps of the two training responses: which pathways each leg moves, how they cluster by
+shared proteins, and which proteins link them. Figures only: every test and table stays in
+`01_run_fgsea_and_fry`. Adapted from Sam's PR #26 (sc-norton).
+
+Three inputs: `protein_results` and `set_tests` from `01_run_fgsea_and_fry` (per-protein
+statistics per contrast, and per-set results), and the gene sets from `00_build_gene_sets`.
+
+```{r read}
+stage <- here("03_Pathway_Enrichment", "07_pathway_maps")
+book <- here(
+  "03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"
+)
+protein_results <- read_excel(book, "protein_results")
+set_tests <- read_excel(book, "set_tests")
+sets <- readRDS(here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "gene_sets.rds"))
+arms <- c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre")
+```
+
+## Rank the proteins
+
+The same ranking `01` used: for each training contrast, the selected proteins' moderated t
+statistics, named by gene and sorted from largest to smallest.
+
+```{r ranked}
+ranked <- map(arms, function(cn) {
+  with(filter(protein_results, contrast == cn, selected), sort(set_names(t, gene), TRUE))
+})
+lengths(ranked)
+map(ranked, function(x) head(x, 3))
+```
+
+`labels` gives every set a readable name for the figures.
+
+```{r labels}
+labels <- set_tests |>
+  distinct(set_id, database, pathway) |>
+  mutate(label = enrichVolcano::clean_label(pathway, width = 1000))
+```
+
+## Choose the pathways to draw
+
+The main sets `01` kept, one per cluster of overlapping sets, significant at FDR < 0.05 in either
+leg. GO:BP has 77 and Reactome 37, so each is cut to the 30 with the smallest adjusted p.
+
+```{r drawn}
+drawn <- set_tests |>
+  filter(method == "fgsea", contrast %in% arms, padj < 0.05, main) |>
+  summarise(padj = min(padj), .by = c(set_id, database)) |>
+  slice_min(padj, n = 30, by = database, with_ties = FALSE) |>
+  left_join(select(labels, set_id, label), by = "set_id")
+count(drawn, database)
+```
+
+## Run the enrichment
+
+enrichplot's maps need a clusterProfiler result object, so `compareCluster()` runs GSEA on both
+rankings at once, with the same sets, size limits and rankings as `01`. clusterProfiler 4.20 runs
+GSEA through enrichit, whose multilevel algorithm is derived from fgsea's but is separate code, so
+the check below compares its normalised enrichment scores (NES) with `01`'s. `run_gsea()` runs once
+per collection, and the check and the maps both read the results in `compared`. The seed is set
+right before each call, so the permutations are the same on every run.
+
+```{r run-gsea}
+run_gsea <- function(db) {
+  members <- sets[startsWith(names(sets), paste0(db, "|"))]
+  term_gene <- stack(members)[, c("ind", "values")]
+  term_name <- select(filter(labels, database == db), set_id, label)
+  set.seed(1)
+  # GSEA() drops `...`, so eps never reaches enrichit and p below 1e-10 is floored with a warning.
+  # The floored p reach no figure: the pathways come from 01, and colour is NES.
+  suppressWarnings(compareCluster(
+    ranked,
+    fun = "GSEA", TERM2GENE = term_gene, TERM2NAME = term_name,
+    minGSSize = 15, maxGSSize = 500, pvalueCutoff = 1, verbose = FALSE
+  ))
+}
+compared <- map(set_names(unique(labels$database)), run_gsea)
+```
+
+## Check against 01
+
+Join each set and leg's NES from this run to the fgsea NES in `set_tests`, and report the
+correlation and the largest absolute difference per collection.
+
+```{r check}
+nes_check <- compared |>
+  map(function(result) {
+    transmute(
+      as.data.frame(result),
+      set_id = as.character(ID), contrast = arms[as.character(Cluster)], NES_07 = NES
+    )
+  }) |>
+  list_rbind() |>
+  inner_join(
+    filter(set_tests, method == "fgsea") |> select(set_id, database, contrast, NES),
+    by = c("set_id", "contrast")
+  )
+nes_check |>
+  summarise(
+    pairs = n(), r = cor(NES_07, NES), max_abs_diff = max(abs(NES_07 - NES)), .by = database
+  )
+```
+
+## Draw figures
+
+Every page carries an S-numbered title. `arm_fill` colours the two legs as in the other steps.
+
+```{r figure-style}
+figure_title <- function(number, title, db) {
+  labs(title = sprintf("S%d. %s, %s", number, title, db))
+}
+arm_fill <- scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL)
+```
+
+`maps()` draws a collection's four pages from `compared`. Pathway similarity is computed only among
+the drawn pathways, since GO:BP holds 1,366 sets.
+
+- S19, dotplot: BFR and HLRT side by side, colour NES (signed), dot
+  size the share of the pathway in its leading edge, the proteins ranked before the running-sum
+  peak.
+- S20, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each
+  node a pie split by leg.
+- S21, tree: pathways clustered by shared proteins, each cluster named by its most frequent words.
+- S22, network: the five strongest pathways linked to their leading-edge proteins.
+
+```{r maps}
+maps <- function(db) {
+  show <- filter(drawn, database == db)$label
+  shown <- filter(compared[[db]], Description %in% show)
+  similar <- pairwise_termsim(shown, showCategory = length(show))
+  list(
+    # dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.
+    dotplot(shown, showCategory = length(show), color = "NES", label_format = 45) +
+      scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B", name = "NES") +
+      figure_title(19, "Pathways by leg", db),
+    # On the two small collections (Hallmark, GO Slim) few pathways share proteins, and emapplot
+    # warns from an internal max() over no edges; the map still draws.
+    suppressWarnings(
+      emapplot(similar, showCategory = length(show), label_format = 30, size_category = 1.6)
+    ) + arm_fill + figure_title(20, "Enrichment map", db),
+    treeplot(
+      similar,
+      showCategory = length(show), nCluster = min(5, length(show) - 1), label_format = 32,
+      fontsize_tiplab = 2.6, fontsize_cladelab = 2.6, hexpand = 0.5, cladelab_offset = 9
+    ) + arm_fill + figure_title(21, "Pathway tree", db),
+    cnetplot(shown, showCategory = head(show, 5), node_label = "category") + arm_fill +
+      figure_title(22, "Pathways and their proteins", db)
+  )
+}
+```
+
+One A4 PDF per collection, four pages each.
+
+```{r write-figures}
+walk(unique(drawn$database), function(db) {
+  pdf(file.path(stage, "b_reports", paste0("07_maps_", db, ".pdf")), width = 8.27, height = 11.69)
+  walk(maps(db), print)
+  invisible(dev.off())
+})
+```
+
+## Summary
+
+Pathways drawn per collection and leg, as the maps show them: how many of the drawn sets each
+leg calls at FDR < 0.05.
+
+```{r summary}
+set_tests |>
+  filter(method == "fgsea", contrast %in% arms, set_id %in% drawn$set_id) |>
+  summarise(drawn = n(), fdr_05 = sum(padj < 0.05), .by = c(database, contrast))
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

@@ -1,0 +1,372 @@
+---
+title: "03 · Protein association"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, limpa, limma, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, writexl)
+here::i_am(
+  "02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd"
+)
+```
+
+## Read proteins and phenotype
+
+`proteins` holds the normalised log2 abundances (`E`), the sample table (`targets`) and the gene
+annotation. `phenotype.csv` holds one row per leg with muscle size (cross-sectional area, CSA) and
+echo intensity, before and after training, for vastus lateralis (`vl_`) and rectus femoris (`rf_`).
+
+```{r read}
+stage <- here("02_Differential_Expression", "03_Protein_Association")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+targets <- proteins$targets
+values <- proteins$E
+phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
+
+dim(values)
+head(phenotype)
+```
+
+## Pair the samples
+
+Each leg has a sample before training (T1) and after (T2). Widening on timepoint gives one row per
+leg with both sample identifiers; legs missing either sample are dropped.
+
+```{r legs}
+legs <- targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
+  select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = timepoint, values_from = sample_id) |>
+  drop_na(T1, T2) |>
+  arrange(participant, treatment)
+
+nrow(legs)
+head(legs)
+```
+
+Widening the legs on treatment gives one row per participant with the BFR and HLRT legs side by
+side. Participants without both legs drop out.
+
+```{r pairs}
+delta_pairs <- legs |>
+  select(participant, treatment, leg_id) |>
+  pivot_wider(names_from = treatment, values_from = leg_id) |>
+  drop_na(BFR, HLRT)
+
+nrow(delta_pairs)
+head(delta_pairs)
+```
+
+## Compute changes
+
+The protein change per leg is T2 minus T1 on the log2 scale, one column per leg.
+
+```{r delta}
+delta <- values[, legs$T2] - values[, legs$T1]
+colnames(delta) <- legs$leg_id
+```
+
+The phenotype change per leg is post minus pre for each of the four outcomes. The join is declared
+one-to-one because a duplicated phenotype row would silently misalign every leg after it.
+Treatment comes from the sample table, so the phenotype file's copy is dropped. Echo intensity
+falls as muscle composition improves, so a negative change there is the favourable one.
+
+```{r phenotype-change}
+outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
+leg_phenotype <- legs |>
+  left_join(
+    select(phenotype, -treatment),
+    by = c("participant", "leg"), relationship = "one-to-one"
+  ) |>
+  mutate(
+    vl_csa = vl_csa_post_cm2 - vl_csa_pre_cm2,
+    vl_echo = vl_echo_post_au - vl_echo_pre_au,
+    rf_csa = rf_csa_post_cm2 - rf_csa_pre_cm2,
+    rf_echo = rf_echo_post_au - rf_echo_pre_au
+  )
+
+head(select(leg_phenotype, leg_id, treatment, all_of(outcomes)))
+```
+
+The differential analysis works within participant: BFR change minus HLRT change, for protein and
+for each outcome alike. One column per participant.
+
+```{r paired-change}
+paired <- delta[, delta_pairs$BFR] - delta[, delta_pairs$HLRT]
+colnames(paired) <- delta_pairs$participant
+paired_outcome <- map(set_names(outcomes), function(name) {
+  value <- set_names(leg_phenotype[[name]], leg_phenotype$leg_id)
+  value[delta_pairs$BFR] - value[delta_pairs$HLRT]
+})
+
+dim(paired)
+```
+
+## Fit the association
+
+The association is a slope in the same limpa model as `02_Differential`, so it carries the
+`dpcQuant()` standard errors. For protein *g* in leg *l* at time *s* (0 before, 1 after):
+
+y(g, l, s) = a(g, l) + s × [b(g, arm) + c(g) × x(l)]
+
+`a` is each leg's own baseline, so only change within a leg counts; `b` is the mean training change
+in each arm, so an arm difference cannot pose as association; `x` is the leg's outcome change,
+centred on the mean leg. `c(g)` is the extra protein change per unit of extra outcome change, and
+its moderated t ranks proteins for gene set tests. Two versions per outcome:
+
+- pooled: the model above, over every leg of both arms;
+- differential: one time effect per participant replaces the two arm terms (plus one for BFR), so
+  `c(g)` comes only from comparing a participant's two legs.
+
+The paired designs follow the limma User's Guide (sections 9.4.1 and 9.5.3).
+
+```{r samples}
+# The one leg without a T2 sample has no outcome change; its x is set to 0, which it never
+# multiplies, because its only sample has s = 0.
+samples <- targets |>
+  mutate(
+    leg_id = paste(participant, leg, sep = "_"), post = as.integer(timepoint == "T2"),
+    bfr_post = post * (treatment == "BFR")
+  ) |>
+  left_join(select(leg_phenotype, leg_id, all_of(outcomes)), by = "leg_id") |>
+  mutate(across(all_of(outcomes), function(x) coalesce(x - mean(x, na.rm = TRUE), 0)))
+designs <- list(
+  pooled = ~ 0 + leg_id + treatment:post + post:x,
+  differential = ~ 0 + leg_id + participant:post + bfr_post + post:x
+)
+```
+
+One design matrix per analysis and outcome, named like `pooled_vl_csa`, saved for the fry test in
+`03_Pathway_Enrichment/05_set_association`. Benjamini–Hochberg (BH) adjustment runs within each
+analysis and outcome.
+
+```{r association-fits}
+rankings <- expand_grid(analysis = names(designs), outcome = outcomes)
+association_designs <- pmap(rankings, function(analysis, outcome) {
+  design <- model.matrix(designs[[analysis]], mutate(samples, x = .data[[outcome]]))
+  stopifnot(qr(design)$rank == ncol(design))
+  design
+}) |>
+  set_names(paste(rankings$analysis, rankings$outcome, sep = "_"))
+results <- imap(association_designs, function(design, ranking) {
+  fit <- eBayes(dpcDE(proteins, design, plot = FALSE), robust = TRUE)
+  topTable(fit, coef = "post:x", number = Inf, sort.by = "none") |>
+    as_tibble(rownames = "protein") |>
+    transmute(ranking, protein, gene = Genes, slope = logFC, t, p = P.Value, fdr = adj.P.Val)
+}) |>
+  list_rbind() |>
+  separate_wider_delim(ranking, "_", names = c("analysis", "outcome"), too_many = "merge")
+
+results |>
+  slice_min(p, n = 6) |>
+  mutate(across(c(slope, t, p, fdr), function(x) signif(x, 3)))
+```
+
+The model has no participant block because a participant's two legs do not correlate in protein
+change (median Spearman r between their BFR and HLRT legs, across proteins, below).
+
+```{r leg-correlation}
+leg_r <- map_dbl(rownames(delta), function(id) {
+  cor(delta[id, delta_pairs$BFR], delta[id, delta_pairs$HLRT], method = "spearman")
+})
+round(median(leg_r), 3)
+```
+
+`association_t` is the matrix the gene set tests read: one row per protein, one column per
+analysis and outcome, values the moderated t.
+
+```{r association-t}
+association_t <- results |>
+  mutate(column = paste(analysis, outcome, sep = "_")) |>
+  select(protein, column, t) |>
+  pivot_wider(names_from = column, values_from = t) |>
+  column_to_rownames("protein") |>
+  as.matrix()
+dim(association_t)
+```
+
+## Hits against chance
+
+A nominal hit is a protein with unadjusted p below 0.05. The chance expectation is the number of
+nominal hits expected if no protein were related to the outcome: 5% of those tested. Per analysis
+and outcome the table gives proteins tested, nominal hits, the chance expectation, BH hits at 0.05,
+the best adjusted p, and the ratio of nominal hits to chance. A ratio near 1 is what no
+association at all would produce.
+
+```{r summary}
+summary_table <- results |>
+  summarise(
+    proteins = n(), nominal = sum(p < 0.05), expected = round(n() * 0.05, 1),
+    fdr_sig = sum(fdr < 0.05), best_fdr = signif(min(fdr), 3),
+    # divide by the exact expectation, not the rounded column above
+    ratio = round(nominal / (n() * 0.05), 2),
+    .by = c(analysis, outcome)
+  ) |>
+  arrange(analysis, outcome)
+summary_table
+```
+
+## Figures
+
+```{r figure-helpers}
+figure_theme <- theme_minimal(base_size = 9) +
+  theme(
+    strip.text = element_text(size = 6.8, lineheight = 1.2, margin = margin(3, 3, 4, 3)),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(4, "mm"),
+    legend.position = "top"
+  )
+write_pdf <- function(pages, name) {
+  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
+  walk(pages, print)
+  invisible(dev.off())
+}
+```
+
+`association_figure()` draws every nominal hit for one analysis and outcome, smallest p first,
+twelve panels to a page. Pooled pages plot each leg's protein change against its outcome change,
+with a line fitted inside each arm and the within-arm Spearman r inset. Differential pages plot what
+was tested: one point per participant, the BFR minus HLRT difference in protein change against the
+same difference in outcome change. Pages are built one at a time from their own rows, because a
+paginating facet would build every panel for every page.
+
+```{r association-figure}
+association_figure <- function(which_analysis, outcome_name, title) {
+  differential <- which_analysis == "differential"
+  if (differential) {
+    protein_change <- paired
+    phenotype_change <- paired_outcome
+    point_series <- "BFR - HLRT"
+    x_label <- "change in protein, log2, T2 - T1, BFR minus HLRT, one point per participant"
+    y_label <- "change in phenotype, BFR minus HLRT"
+    headroom <- 0.06
+  } else {
+    protein_change <- delta
+    phenotype_change <- leg_phenotype
+    point_series <- leg_phenotype$treatment
+    x_label <- "change in protein, log2, T2 - T1, one point per leg"
+    y_label <- "change in phenotype"
+    headroom <- 0.35
+  }
+  hits <- results |>
+    filter(analysis == which_analysis, outcome == outcome_name, p < 0.05) |>
+    arrange(p) |>
+    mutate(gene = coalesce(gene, protein))
+  points <- pmap(hits, function(protein, gene, outcome, t, p, fdr, ...) {
+    arms <- map_chr(c("BFR", "HLRT"), function(arm) {
+      keep <- leg_phenotype$treatment == arm
+      r <- cor(delta[protein, keep], leg_phenotype[[outcome]][keep], method = "spearman")
+      sprintf("%-5s n=%d  r=%+.2f", arm, sum(keep), r)
+    })
+    tibble(
+      panel = sprintf(
+        "%s\nvs %s   t = %+.2f   p %s   q %s",
+        paste(gene, protein, sep = "  "), outcome, t, signif(p, 2), signif(fdr, 2)
+      ),
+      change = protein_change[protein, ], d_outcome = phenotype_change[[outcome]],
+      series = point_series, inset = if (differential) "" else paste(arms, collapse = "\n")
+    )
+  }) |>
+    list_rbind() |>
+    mutate(panel = factor(panel, levels = unique(panel)))
+  pages <- unname(split(points, (as.integer(points$panel) - 1) %/% 12))
+  imap(pages, function(page, i) {
+    page <- droplevels(page)
+    page_count <- if (length(pages) > 1) sprintf(" (page %d of %d)", i, length(pages)) else ""
+    ggplot(page, aes(change, d_outcome, colour = series, fill = series)) +
+      geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
+      geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
+      geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.5) +
+      geom_point(size = 1.2, alpha = 0.9) +
+      geom_text(
+        data = distinct(page, panel, inset), inherit.aes = FALSE,
+        aes(x = -Inf, y = Inf, label = inset), family = "mono",
+        hjust = -0.05, vjust = 1.25, size = 1.9, lineheight = 1.2, colour = "grey25"
+      ) +
+      scale_y_continuous(expand = expansion(mult = c(0.06, headroom))) +
+      scale_colour_manual(
+        values = c(BFR = "#B2182B", HLRT = "#2166AC", `BFR - HLRT` = "grey25"),
+        aesthetics = c("colour", "fill"), name = NULL
+      ) +
+      facet_wrap(~panel, ncol = 3, nrow = 4, scales = "free") +
+      labs(
+        x = x_label, y = y_label,
+        title = paste0(title, ", ", outcome_name, page_count)
+      ) +
+      figure_theme
+  })
+}
+```
+
+One PDF per outcome, so each can be read on its own: the pooled pages first, then the
+differential ones.
+
+```{r association-pdfs}
+walk(outcomes, function(outcome_name) {
+  write_pdf(
+    c(
+      association_figure(
+        "pooled", outcome_name, "Training response against phenotype, all legs"
+      ),
+      association_figure("differential", outcome_name, "BFR minus HLRT, within participant")
+    ),
+    paste0("03_association_", outcome_name, ".pdf")
+  )
+})
+```
+
+The chance page draws each ratio as a bar.
+
+```{r chance-pdf}
+#| fig-height: 6
+chance_plot <- ggplot(summary_table, aes(ratio, outcome, fill = ratio > 1)) +
+  geom_vline(xintercept = 1, linewidth = 0.4, colour = "grey40") +
+  geom_col(width = 0.65) +
+  geom_text(
+    aes(label = sprintf("%d of %d", nominal, proteins)),
+    hjust = -0.12, size = 2.5, colour = "grey25"
+  ) +
+  facet_wrap(~analysis, ncol = 1) +
+  scale_fill_manual(values = c(`TRUE` = "#B2182B", `FALSE` = "grey72"), guide = "none") +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.22))) +
+  labs(
+    x = "observed nominal hits / chance expectation", y = NULL,
+    title = "Nominal hits relative to chance"
+  ) +
+  figure_theme +
+  theme(panel.grid.major.y = element_blank())
+write_pdf(list(chance_plot), "03_chance.pdf")
+chance_plot
+```
+
+## Save results
+
+`03_protein_association.xlsx` holds the summary and every association sorted by FDR;
+`04_Protein_Classification` reads the `associations` sheet. `association_t.rds` holds the t matrix
+for gene set tests, as rds because a workbook round trip can change the last bit of a double, and
+`association_designs.rds` the design matrices for fry.
+
+```{r write}
+saveRDS(association_t, file.path(stage, "c_data", "association_t.rds"))
+saveRDS(association_designs, file.path(stage, "c_data", "association_designs.rds"))
+write_xlsx(
+  list(summary = summary_table, associations = arrange(results, fdr)),
+  file.path(stage, "c_data", "03_protein_association.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

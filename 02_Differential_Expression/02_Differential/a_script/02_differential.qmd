@@ -1,80 +1,62 @@
 ---
 title: "02 · Differential expression"
-subtitle: "Five contrasts on the protein matrix"
 format:
   html:
     toc: true
-    toc-depth: 3
     embed-resources: true
-    df-print: kable
     fig-width: 7
     fig-height: 5
-    fig-dpi: 150
-    fig-align: center
-execute:
-  message: false
+knitr:
+  opts_chunk:
+    message: false
 ---
 
-limpa's contrast sequence is `dpcDE`, `contrasts.fit`, `eBayes`, `topTable`. `dpcDE()` replaces
-`lmFit()` because only it reads the standard errors from `dpcQuant()`. `proteins.rds` arrives
-normalised from `01_Preprocess/02_Quantification`.
+## Load packages
 
 ```{r setup}
 pacman::p_load(here, limpa, limma, dplyr, ggplot2, purrr, tibble, tidyr, writexl)
+here::i_am("02_Differential_Expression/02_Differential/a_script/02_differential.qmd")
+```
 
+## Read proteins and design
+
+`proteins` holds the normalised log2 abundances and their standard errors; `d` holds the design,
+the contrasts and the baseline contrast's name. Design rows and matrix columns must name the same
+samples in the same order; equal dimensions alone would not catch a swapped sample.
+
+```{r read}
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
 fitted_slope_file <- here(
   "01_Preprocess", "02_Quantification", "c_data", "quant_runs", "proteins_slope_fitted.rds"
 )
 
-# Same samples in the same order. limma compares only the counts, so a reordering would fit
-# every protein against the wrong samples and report nothing.
 stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 ```
 
 ## Fit
 
-`sample.weights = TRUE` estimates one quality weight per sample, because removing contaminant rows
-does not undo what a bloody biopsy did to the sample.
+limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` takes the
+place of `lmFit()` because only it reads the standard errors from `dpcQuant()`, as precision
+weights. No per-sample quality weights (limpa's default): estimated, they ranged from 0.09 to 3.6
+and did not follow contaminant load. `contrasts.fit()` forms the five comparisons and `eBayes()`
+moderates each protein's variance toward a prior fitted across all proteins; `robust = TRUE` keeps
+proteins with outlying variances from distorting that prior.
 
 ```{r fit}
-fit <- dpcDE(proteins, d$design, sample.weights = TRUE)
-# Captured before contrasts.fit(), which does not carry $targets through.
-sample_weights <- fit$targets$sample.weight
+fit <- dpcDE(proteins, d$design)
 fit <- contrasts.fit(fit, d$contrasts)
 fit <- eBayes(fit, robust = TRUE)
 ```
 
-Weights scale with how noisy a sample looks; none is dropped. They should fall evenly across the
-four cells, since uneven weighting acts as an undeclared covariate.
-
-```{r sample-weights}
-tibble(group = proteins$targets$group, weight = sample_weights) |>
-  summarise(
-    n = n(), median_weight = round(median(weight), 2),
-    lowest_weight = round(min(weight), 2), .by = group
-  )
-```
-
-Effect size the interaction could detect at 80% power, two-sided 0.05. An empty contrast says
-nothing about smaller effects, so quote the two together. The interaction has returned no hits under
-every variant tried.
-
-```{r detectable-effect}
-se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
-round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
-```
-
 ## Results
 
-BH runs within each contrast. The five share participants and the interaction is a difference of two
-others, so pooling them would control nothing that can be stated.
+In `topTable()`, `sort.by = "none"` keeps protein order (the default sorts on the B statistic).
+Benjamini–Hochberg (BH) adjustment controls the false discovery rate within each contrast, not
+across all five.
 
 ```{r results}
-results <- map(colnames(d$contrasts), \(cn) {
-  # sort.by = "none" keeps every contrast in the matrix's own protein order, so the five
-  # blocks line up row for row. topTable() would otherwise sort on the B statistic.
+results <- map(colnames(d$contrasts), function(cn) {
   topTable(fit, coef = cn, number = Inf, sort.by = "none") |>
     rownames_to_column("protein") |>
     mutate(contrast = cn, .before = 1)
@@ -93,27 +75,23 @@ contrast_summary |>
   mutate(min_adj_p = signif(min_adj_p, 3))
 ```
 
-## Is a contrast empty, or is it being tested conservatively
+## Inspect p-value distributions
 
-Each number misleads alone. `propTrueNull()` estimates the null proportion from the p-value
-distribution but saturates at 1, so it cannot separate a flat null from a conservative one. Median
-\|t\| is 0.674 under a calibrated null and `p_below_0.2` is 0.2 under a uniform one; values below
-these mean conservative tests and a distribution rising toward 1.
-
-Read the between-leg contrasts against `BFR_Pre-HLRT_Pre`, a true null by construction, rather than
-against theory.
+Per contrast: the estimated share of true nulls (`propTrueNull()`), the median absolute t and the
+fraction of p below 0.2. Under a flat null, 20% of p fall below 0.2 and the median |t| is about
+0.67.
 
 ```{r null-calibration}
-results |>
+null_summary <- results |>
   summarise(
     prop_true_null = round(propTrueNull(P.Value), 3),
     median_abs_t = round(median(abs(t)), 3),
     p_below_0.2 = round(mean(P.Value < 0.2), 3), .by = contrast
   )
+null_summary
 ```
 
-All three numbers read the same histogram, drawn below. A spike at zero on a flat background is
-signal; a slope up toward 1 is a conservative test.
+The dashed line is the count per bin if p-values were uniform.
 
 ```{r p-histogram}
 ggplot(results, aes(P.Value)) +
@@ -124,53 +102,77 @@ ggplot(results, aes(P.Value)) +
   theme_minimal()
 ```
 
-The two within-leg contrasts spike at zero on a roughly flat background. The three between-leg
-contrasts slope upward, the negative control among them. So the empty interaction means no
-between-modality difference is detectable under an under-calling test, a weaker claim than
-equivalent proteomes.
+From the fitted standard errors, the interaction effect each protein would need for 80% power at
+an unadjusted two-sided 0.05 threshold, on the log2 scale: median and 90th percentile across
+proteins. It describes sensitivity, not FDR-adjusted power.
 
-## Significant and large enough
-
-`treat()` tests against a fold-change floor and, unlike filtering on logFC afterwards, controls an
-error rate. `lfc = log2(1.15)` tests the null that \|logFC\| is at most 0.202. The floor is fixed in
-advance, not swept, so the count belongs to that threshold. `robust = TRUE` matches the main fit and
-is explicit because `treat()` defaults to `FALSE`.
-
-```{r treat}
-ft <- treat(fit, lfc = log2(1.15), robust = TRUE)
-enframe(colSums(decideTests(ft) != 0), "contrast", "n_q_05")
+```{r detectable-effect}
+se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
+round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
 ## The pi score
 
-`pi_score` is `P.Value^abs(logFC)`, equal to `10^(-pi)` for the score of Xiao et al. (2014, PMID
-22321699), so it ranks as the published `-log10(p) * |log2FC|` does. It controls no error rate, so
-it ranks within a contrast and selects nothing.
-
-It rewards large `|logFC|`, and the largest fold changes here come from proteins with the fewest
-detected precursors, whose values lean on DPC recovery; the observation count sits alongside.
-
-It is applied only to the two contrasts that carry signal. On the interaction, whose `propTrueNull`
-sits at its ceiling, it would rank noise.
+`pi_score` is `P.Value^abs(logFC)`, which equals 10 to the minus Xiao et al.'s π (|logFC| times
+−log10 p; 2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest
+first: large effects with small p. It ranks the two within-leg contrasts, controls no error rate
+and selects nothing. The mean number of observed precursors per sample sits beside it, because the
+top of a pi ranking is often thinly observed.
 
 ```{r pi-ranking}
-obs_per_sample <- rowMeans(proteins$other$n.observations)
-
 results |>
   filter(contrast %in% c("BFR_Post-Pre", "HLRT_Post-Pre")) |>
   mutate(pi_score = P.Value^abs(logFC)) |>
   slice_min(pi_score, n = 10, by = contrast) |>
-  mutate(mean_obs = round(obs_per_sample[protein], 2)) |>
+  mutate(mean_obs = round(rowMeans(proteins$other$n.observations)[protein], 2)) |>
   select(contrast, protein, Genes, logFC, adj.P.Val, pi_score, NPrec, mean_obs)
 ```
 
-## Outputs
+## Baseline comparison
 
-`DEP_matrix` has one row per protein and three columns per contrast, for reading across contrasts
-and for later stages. The long form is not written, since `fit.rds` holds the complete fit.
+The two legs before training, where counterbalanced legs should differ by nothing; a difference
+can be biological or technical. The five smallest p:
 
-It is written before the negative control is checked, so a failure leaves the evidence on disk. The
-workbook keeps full precision; only printed tables are rounded.
+```{r baseline}
+baseline <- filter(results, contrast == d$baseline)
+stopifnot(nrow(baseline) == nrow(proteins))
+
+slice_min(baseline, P.Value, n = 5) |>
+  select(protein, Genes, logFC, P.Value, adj.P.Val)
+```
+
+## Slope sensitivity
+
+`02_quantify_run.R --sensitivity` also quantifies with the detection-curve (DPC) slope fitted to
+these data (0.478) instead of the preset 0.7. When that run exists, it gets the same detection
+filter, normalisation and design, and its discovery counts are set beside the primary run's.
+
+```{r slope-sensitivity}
+#| eval: !expr file.exists(fitted_slope_file)
+fitted_slope <- readRDS(fitted_slope_file)
+fitted_slope <- fitted_slope[
+  filterByDetection(fitted_slope, n.samples = min(table(fitted_slope$targets$group))),
+]
+fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
+stopifnot(identical(colnames(fitted_slope$E), rownames(d$design)))
+refit <- dpcDE(fitted_slope, d$design) |>
+  contrasts.fit(d$contrasts) |>
+  eBayes(robust = TRUE)
+primary_hits <- decideTests(fit) != 0
+stopifnot(all(rownames(primary_hits) %in% rownames(refit)))
+refit_hits <- decideTests(refit)[rownames(primary_hits), , drop = FALSE] != 0
+rbind(
+  slope_0.7 = colSums(primary_hits),
+  fitted_curve = colSums(refit_hits),
+  both = colSums(primary_hits & refit_hits)
+)
+```
+
+## Save results
+
+`fit.rds` keeps the fitted model for the stages that rebuild contrasts. `02_differential.xlsx`
+holds `DEP_matrix` (one row per protein: log2 fold change, p and BH-adjusted p per contrast),
+discovery counts and the distribution summaries.
 
 ```{r write}
 dep_matrix <- results |>
@@ -183,58 +185,17 @@ dep_matrix <- results |>
 
 out <- here("02_Differential_Expression", "02_Differential", "c_data")
 saveRDS(fit, file.path(out, "fit.rds"))
-sheets <- list(DEP_matrix = dep_matrix, contrast_summary = contrast_summary)
-overview <- data.frame(
-  sheet = names(sheets), rows = map_int(sheets, nrow), columns = map_int(sheets, ncol),
-  description = c(
-    "logFC, p and BH p per contrast",
-    "Hits per contrast at FDR 0.05 and 0.10"
-  )
-)
-write_xlsx(c(list(overview = overview), sheets), file.path(out, "02_differential.xlsx"))
-```
-
-## Negative control
-
-If two untrained legs of the same person differ, the cause is upstream, and the difference is itself
-a result.
-
-```{r negative-control}
-nc <- filter(results, contrast == d$negative_control)
-# sum(logical(0)) is zero, so a contrast name matching nothing would look like a clean control.
-stopifnot(nrow(nc) == nrow(proteins))
-sum(nc$adj.P.Val < 0.05)
-
-slice_min(nc, P.Value, n = 5) |>
-  select(protein, Genes, logFC, P.Value, adj.P.Val)
-```
-
-The hit count is printed, not asserted, so a difference lands in the report instead of halting the
-render.
-
-## Slope sensitivity
-
-This refits the model on the fitted-slope run (0.488), with the same detection filter and
-normalisation as the preset 0.7. Rows count BH hits at 0.05 under each slope and under both.
-
-```{r slope-sensitivity}
-#| eval: !expr file.exists(fitted_slope_file)
-fitted_slope <- readRDS(fitted_slope_file)
-fitted_slope <- fitted_slope[
-  filterByDetection(fitted_slope, n.samples = min(table(fitted_slope$targets$group))),
-]
-fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
-refit <- dpcDE(fitted_slope, d$design, sample.weights = TRUE) |>
-  contrasts.fit(d$contrasts) |>
-  eBayes(robust = TRUE)
-primary_hits <- decideTests(fit) != 0
-refit_hits <- decideTests(refit)[rownames(primary_hits), ] != 0
-rbind(
-  slope_0.7 = colSums(primary_hits),
-  slope_0.488 = colSums(refit_hits),
-  both = colSums(primary_hits & refit_hits)
+write_xlsx(
+  list(
+    DEP_matrix = dep_matrix,
+    contrast_summary = contrast_summary,
+    null_summary = null_summary
+  ),
+  file.path(out, "02_differential.xlsx")
 )
 ```
+
+## Session information
 
 ```{r session}
 sessionInfo()
