@@ -2269,7 +2269,7 @@ vertical-align: -.125em;
 </section>
 <section id="build-the-sets" class="level2">
 <h2 class="anchored" data-anchor-id="build-the-sets">Build the sets</h2>
-<p>The “C MitoPathways” sheet holds one row per pathway with its genes in one comma-separated cell. <code>separate_longer_delim()</code> turns that into one row per pathway and gene. <code>col_types = &quot;text&quot;</code> stops readxl guessing each column’s type, which warns on this file. The pathways nest, so a parent such as “Complex I” holds its children’s genes too.</p>
+<p>The “C MitoPathways” sheet holds one row per pathway with its genes in one comma-separated cell. <code>col_types = &quot;text&quot;</code> stops readxl guessing each column’s type, which warns on this file. The pathways nest, so a parent such as “Complex I” holds its children’s genes too.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pathways <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(mitocarta, <span class="st">&quot;C MitoPathways&quot;</span>, <span class="at">col_types =</span> <span class="st">&quot;text&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(MitoPathway)) <span class="sc">|&gt;</span></span>

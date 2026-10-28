@@ -2242,13 +2242,13 @@ vertical-align: -.125em;
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>Each subunit and assembly factor of complexes I to V, with its training change in each leg, side by side. Adapted from Sam’s PR #26 (sc-norton). It is descriptive only: the inference is fry on the complexes in <code>02_test_mito</code>.</p>
+<p>Each subunit and assembly factor of complexes I to V, with its training change in each leg, side by side. From Sam’s PR #26 (sc-norton). It is descriptive only: the inference is fry on the complexes in <code>02_test_mito</code>.</p>
 <p><code>de</code> is the stage 02 <code>DEP_matrix</code>, one row per protein with logFC, p and BH-adjusted p per contrast. <code>membership</code> lists the MitoCarta sets; <code>complex_tests</code> holds fry’s complex results.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;03_complex_subunits&quot;</span>)</span>
@@ -2268,38 +2268,44 @@ vertical-align: -.125em;
 </section>
 <section id="collect-the-subunits" class="level2">
 <h2 class="anchored" data-anchor-id="collect-the-subunits">Collect the subunits</h2>
-<p>Keep the measured genes of the MitoPathways “CI subunits” to “CV assembly factors”, split the set name into complex and role, and join each gene to its stage 02 row by symbol. Rows sort within complex and role by the interaction logFC, BFR minus HLRT.</p>
+<p>Keep the measured genes of the MitoPathways “CI subunits” to “CV assembly factors”, split the set name into complex and role, and join each gene to its stage 02 row by symbol. Sam’s “Other” group joins them: the MitoPathways “Cytochrome C” and “Respirasome assembly” genes that belong to no single complex. Rows sort within complex and role by the interaction logFC, BFR minus HLRT.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>complexes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;CI&quot;</span>, <span class="st">&quot;CII&quot;</span>, <span class="st">&quot;CIII&quot;</span>, <span class="st">&quot;CIV&quot;</span>, <span class="st">&quot;CV&quot;</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>subunits <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(measured, <span class="fu">str_detect</span>(set, <span class="st">&quot;^C(I|II|III|IV|V) (subunits|assembly factors)$&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(set, <span class="st">&quot; &quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;complex&quot;</span>, <span class="st">&quot;role&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(de, <span class="at">by =</span> <span class="fu">c</span>(<span class="at">gene =</span> <span class="st">&quot;Genes&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">complex =</span> <span class="fu">factor</span>(complex, complexes), role, gene, protein,</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">BFR_logFC =</span> <span class="st">`</span><span class="at">BFR_Post-Pre_logFC</span><span class="st">`</span>,</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">BFR_fdr =</span> <span class="st">`</span><span class="at">BFR_Post-Pre_adj.P.Val</span><span class="st">`</span>,</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">HLRT_logFC =</span> <span class="st">`</span><span class="at">HLRT_Post-Pre_logFC</span><span class="st">`</span>,</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">HLRT_fdr =</span> <span class="st">`</span><span class="at">HLRT_Post-Pre_adj.P.Val</span><span class="st">`</span>,</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">difference =</span> <span class="st">`</span><span class="at">Modality_x_Time_Interaction_logFC</span><span class="st">`</span>,</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">difference_fdr =</span> <span class="st">`</span><span class="at">Modality_x_Time_Interaction_adj.P.Val</span><span class="st">`</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(complex, role, <span class="fu">desc</span>(difference))</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(subunits, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>complexes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;CI&quot;</span>, <span class="st">&quot;CII&quot;</span>, <span class="st">&quot;CIII&quot;</span>, <span class="st">&quot;CIV&quot;</span>, <span class="st">&quot;CV&quot;</span>, <span class="st">&quot;Other&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>complex_members <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">str_detect</span>(set, <span class="st">&quot;^C(I|II|III|IV|V) (subunits|assembly factors)$&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(set, <span class="st">&quot; &quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;complex&quot;</span>, <span class="st">&quot;role&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>other_members <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(set <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;Cytochrome C&quot;</span>, <span class="st">&quot;Respirasome assembly&quot;</span>), <span class="sc">!</span>gene <span class="sc">%in%</span> complex_members<span class="sc">$</span>gene) <span class="sc">|&gt;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">complex =</span> <span class="st">&quot;Other&quot;</span>, <span class="at">role =</span> <span class="st">&quot;other&quot;</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(complex_members, other_members)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>subunits <span class="ot">&lt;-</span> members <span class="sc">|&gt;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(measured) <span class="sc">|&gt;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(de, <span class="at">by =</span> <span class="fu">c</span>(<span class="at">gene =</span> <span class="st">&quot;Genes&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">complex =</span> <span class="fu">factor</span>(complex, complexes), role, gene, protein,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">BFR_logFC =</span> <span class="st">`</span><span class="at">BFR_Post-Pre_logFC</span><span class="st">`</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">BFR_fdr =</span> <span class="st">`</span><span class="at">BFR_Post-Pre_adj.P.Val</span><span class="st">`</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">HLRT_logFC =</span> <span class="st">`</span><span class="at">HLRT_Post-Pre_logFC</span><span class="st">`</span>,</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">HLRT_fdr =</span> <span class="st">`</span><span class="at">HLRT_Post-Pre_adj.P.Val</span><span class="st">`</span>,</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">difference =</span> <span class="st">`</span><span class="at">Modality_x_Time_Interaction_logFC</span><span class="st">`</span>,</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">difference_fdr =</span> <span class="st">`</span><span class="at">Modality_x_Time_Interaction_adj.P.Val</span><span class="st">`</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(complex, role, <span class="fu">desc</span>(difference))</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(subunits, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 10
   complex role    gene  protein BFR_logFC BFR_fdr HLRT_logFC HLRT_fdr difference
   &lt;fct&gt;   &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;       &lt;dbl&gt;   &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;
-1 CI      assemb… NDUF… Q9P032      0.379   0.265     0.204     0.611     0.175 
-2 CI      assemb… DMAC1 Q96GE9      0.148   0.646     0.0203    0.971     0.128 
-3 CI      assemb… TMEM… Q9BUB7      0.307   0.508     0.231     0.638     0.0760
+1 CI      assemb… TMEM… Q9BUB7      0.459   0.161     0.211     0.544      0.248
+2 CI      assemb… NDUF… Q9P032      0.469   0.122     0.293     0.334      0.175
+3 CI      assemb… DMAC1 Q96GE9      0.166   0.577     0.0503    0.874      0.116
 # ℹ 1 more variable: difference_fdr &lt;dbl&gt;</code></pre>
 </div>
 </div>
 </section>
 <section id="the-set-level-test" class="level2">
 <h2 class="anchored" data-anchor-id="the-set-level-test">The set-level test</h2>
-<p>Sam’s version tested BFR against HLRT with a paired t-test across the subunits of each complex. That counts correlated proteins as independent replicates and makes p too small. The set-level test here is fry on the subunits, standard fit, interaction contrast, and it goes in the panel titles. Assembly factors have no set test.</p>
+<p>A paired t-test across the subunits of a complex counts correlated proteins as independent replicates and makes p too small. The set-level test is fry on the subunits, standard fit, interaction contrast, and it goes in the panel titles. Assembly factors have no set test.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>interaction_fry <span class="ot">&lt;-</span> complex_tests <span class="sc">|&gt;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(fit <span class="sc">==</span> <span class="st">&quot;standard&quot;</span>, contrast <span class="sc">==</span> <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -2309,11 +2315,11 @@ vertical-align: -.125em;
 <pre><code># A tibble: 5 × 2
   complex fry_fdr
   &lt;chr&gt;     &lt;dbl&gt;
-1 CI        0.992
-2 CII       0.992
-3 CIII      0.992
-4 CIV       0.992
-5 CV        0.992</code></pre>
+1 CI        0.931
+2 CII       0.931
+3 CIII      0.931
+4 CIV       0.931
+5 CV        0.931</code></pre>
 </div>
 </div>
 </section>
@@ -2322,42 +2328,47 @@ vertical-align: -.125em;
 <p>Three A4 pages go to <code>b_reports/03_complex_subunits.pdf</code>, sharing one theme.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>))</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_update</span>(</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption.position =</span> <span class="st">&quot;plot&quot;</span>, <span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>, <span class="at">panel.grid.major.x =</span> <span class="fu">element_blank</span>()</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_update</span>(<span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>, <span class="at">panel.grid.major.x =</span> <span class="fu">element_blank</span>())</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>arm_colours <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Page 1 is Sam’s summary layout: each complex’s mean subunit change per leg as a bar, and every subunit as a point. His standard error across subunits is left out, because it treats correlated subunits as independent replicates, the flaw of the paired t above. The jitter has its own seed, so the points land in the same place on every run.</p>
+<p>Page 1 holds Sam’s two summaries, stacked: complex subunits, then assembly factors with “Other”. Each bar is the mean change of a group’s measured proteins per leg, with the standard error across them, and every protein is a point. The standard error describes spread among correlated proteins and is not a test; the test is fry, whose interaction FDR labels the subunit summary. Axis labels give measured of all MitoCarta members. The jitter has its own seed, so the points land in the same place on every run.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>summary_page <span class="ot">&lt;-</span> subunits <span class="sc">|&gt;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(role <span class="sc">==</span> <span class="st">&quot;subunits&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(BFR_logFC, HLRT_logFC), <span class="at">names_to =</span> <span class="st">&quot;arm&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;logFC&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">arm =</span> <span class="fu">str_remove</span>(arm, <span class="st">&quot;_logFC&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(complex, logFC, <span class="at">fill =</span> arm)) <span class="sc">+</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey50&quot;</span>) <span class="sc">+</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary</span>(<span class="at">fun =</span> mean, <span class="at">geom =</span> <span class="st">&quot;col&quot;</span>, <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="fl">0.8</span>), <span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">position =</span> <span class="fu">position_jitterdodge</span>(<span class="at">jitter.width =</span> <span class="fl">0.15</span>, <span class="at">dodge.width =</span> <span class="fl">0.8</span>, <span class="at">seed =</span> <span class="dv">1</span>),</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="fl">0.9</span>, <span class="at">alpha =</span> <span class="fl">0.6</span>, <span class="at">show.legend =</span> <span class="cn">FALSE</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> interaction_fry, <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>, <span class="at">size =</span> <span class="fl">2.8</span>,</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(complex, <span class="cn">Inf</span>, <span class="at">label =</span> <span class="fu">paste</span>(<span class="st">&quot;fry FDR&quot;</span>, <span class="fu">signif</span>(fry_fdr, <span class="dv">2</span>))), <span class="at">vjust =</span> <span class="fl">1.5</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;log2 change, post - pre&quot;</span>,</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">paste</span>(</span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;Complex subunits, summary by leg. Bars are the mean training change of each complex&#39;s&quot;</span>,</span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;measured subunits; points are the subunits. The label is fry&#39;s interaction FDR on the&quot;</span>,</span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;complex, the set-level test of BFR against HLRT. Data: subunits sheet of&quot;</span>,</span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;03_complex_subunits.xlsx.&quot;</span></span>
-<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>    ), <span class="dv">115</span>)</span>
-<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>group_size <span class="ot">&lt;-</span> members <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">measured =</span> <span class="fu">sum</span>(measured), <span class="at">total =</span> <span class="fu">n</span>(), <span class="at">.by =</span> <span class="fu">c</span>(complex, role)) <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">label =</span> <span class="fu">sprintf</span>(<span class="st">&quot;%s</span><span class="sc">\n</span><span class="st">(n = %d/%d)&quot;</span>, complex, measured, total))</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>summary_plot <span class="ot">&lt;-</span> <span class="cf">function</span>(roles, title, fry) {</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  rows <span class="ot">&lt;-</span> <span class="fu">filter</span>(subunits, role <span class="sc">%in%</span> roles) <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(<span class="fu">c</span>(BFR_logFC, HLRT_logFC), <span class="at">names_to =</span> <span class="st">&quot;arm&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;logFC&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">arm =</span> <span class="fu">str_remove</span>(arm, <span class="st">&quot;_logFC&quot;</span>))</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  labels <span class="ot">&lt;-</span> <span class="fu">filter</span>(group_size, role <span class="sc">%in%</span> roles)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(rows, <span class="fu">aes</span>(complex, logFC, <span class="at">fill =</span> arm)) <span class="sc">+</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey50&quot;</span>) <span class="sc">+</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stat_summary</span>(<span class="at">fun =</span> mean, <span class="at">geom =</span> <span class="st">&quot;col&quot;</span>, <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="fl">0.8</span>), <span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stat_summary</span>(</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">fun.data =</span> mean_se, <span class="at">geom =</span> <span class="st">&quot;errorbar&quot;</span>, <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="fl">0.8</span>), <span class="at">width =</span> <span class="fl">0.25</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">linewidth =</span> <span class="fl">0.4</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">position =</span> <span class="fu">position_jitterdodge</span>(<span class="at">jitter.width =</span> <span class="fl">0.15</span>, <span class="at">dodge.width =</span> <span class="fl">0.8</span>, <span class="at">seed =</span> <span class="dv">1</span>),</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">size =</span> <span class="fl">0.9</span>, <span class="at">alpha =</span> <span class="fl">0.6</span>, <span class="at">show.legend =</span> <span class="cn">FALSE</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_text</span>(</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">data =</span> fry, <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>, <span class="at">size =</span> <span class="fl">2.8</span>,</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">aes</span>(complex, <span class="cn">Inf</span>, <span class="at">label =</span> <span class="fu">paste</span>(<span class="st">&quot;fry FDR&quot;</span>, <span class="fu">signif</span>(fry_fdr, <span class="dv">2</span>))), <span class="at">vjust =</span> <span class="fl">1.5</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_discrete</span>(<span class="at">labels =</span> <span class="fu">set_names</span>(labels<span class="sc">$</span>label, labels<span class="sc">$</span>complex)) <span class="sc">+</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> arm_colours, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;log2 change, post - pre&quot;</span>, <span class="at">title =</span> title)</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>summary_page <span class="ot">&lt;-</span> <span class="fu">summary_plot</span>(<span class="st">&quot;subunits&quot;</span>, <span class="st">&quot;Complex subunits, summary by leg&quot;</span>, interaction_fry) <span class="sc">/</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summary_plot</span>(</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">&quot;assembly factors&quot;</span>, <span class="st">&quot;other&quot;</span>), <span class="st">&quot;Assembly factors and other OXPHOS proteins, by leg&quot;</span>,</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    interaction_fry[<span class="dv">0</span>, ]</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Pages 2 and 3 draw every protein of one role by leg, one panel per complex. <code>role_page()</code> takes the role and the caption’s opening sentence. Panel titles carry the protein count and, on the subunit page, fry’s interaction FDR, since fry tested the subunits only.</p>
+<p>Pages 2 and 3 draw every protein of one role by leg, one panel per complex. Panel titles carry the protein count and, on the subunit page, fry’s interaction FDR.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>role_page <span class="ot">&lt;-</span> <span class="cf">function</span>(which_role, title_text) {</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>role_page <span class="ot">&lt;-</span> <span class="cf">function</span>(which_role, title) {</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  rows <span class="ot">&lt;-</span> <span class="fu">filter</span>(subunits, role <span class="sc">==</span> which_role)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  fry <span class="ot">&lt;-</span> <span class="cf">if</span> (which_role <span class="sc">==</span> <span class="st">&quot;subunits&quot;</span>) interaction_fry <span class="cf">else</span> interaction_fry[<span class="dv">0</span>, ]</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  headers <span class="ot">&lt;-</span> rows <span class="sc">|&gt;</span></span>
@@ -2377,27 +2388,21 @@ vertical-align: -.125em;
 <span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey50&quot;</span>) <span class="sc">+</span></span>
 <span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.75</span>), <span class="at">width =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
 <span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">scales =</span> <span class="st">&quot;free_x&quot;</span>) <span class="sc">+</span></span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> arm_colours, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
 <span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
 <span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;log2 change, post - pre&quot;</span>,</span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">paste</span>(</span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        title_text, <span class="st">&quot;Bars are each measured protein&#39;s training change in the BFR and the HLRT&quot;</span>,</span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;leg from the stage 02 fit, ordered within complex by BFR minus HLRT. Bars are not&quot;</span>,</span>
-<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;tested against each other: proteins of a complex are correlated, so the set-level test&quot;</span>,</span>
-<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;is fry in 02_test_mito, given in the panel title where it exists. Data: subunits sheet&quot;</span>,</span>
-<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;of 03_complex_subunits.xlsx.&quot;</span></span>
-<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>      ), <span class="dv">115</span>)</span>
-<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">hjust =</span> <span class="dv">1</span>, <span class="at">vjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">6</span>))</span>
-<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> title</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">90</span>, <span class="at">hjust =</span> <span class="dv">1</span>, <span class="at">vjust =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">6</span>))</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_complex_subunits.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    summary_page,</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">role_page</span>(<span class="st">&quot;subunits&quot;</span>, <span class="st">&quot;Complex subunits by leg.&quot;</span>),</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">role_page</span>(<span class="st">&quot;assembly factors&quot;</span>, <span class="st">&quot;Complex assembly factors by leg.&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">role_page</span>(<span class="st">&quot;subunits&quot;</span>, <span class="st">&quot;Complex subunits by leg&quot;</span>),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">role_page</span>(<span class="st">&quot;assembly factors&quot;</span>, <span class="st">&quot;Complex assembly factors by leg&quot;</span>)</span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  print</span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>)</span>
@@ -2414,19 +2419,20 @@ vertical-align: -.125em;
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">interaction_fdr_05 =</span> <span class="fu">sum</span>(difference_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> <span class="fu">c</span>(role, complex)</span>
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 10 × 6
+<pre><code># A tibble: 11 × 6
    role             complex proteins bfr_fdr_05 hlrt_fdr_05 interaction_fdr_05
    &lt;chr&gt;            &lt;fct&gt;      &lt;int&gt;      &lt;int&gt;       &lt;int&gt;              &lt;int&gt;
- 1 assembly factors CI            14          0           0                  0
+ 1 assembly factors CI            14          0           1                  0
  2 subunits         CI            41          0           0                  0
  3 assembly factors CII            2          0           0                  0
  4 subunits         CII            4          0           0                  0
  5 assembly factors CIII           5          1           0                  0
- 6 subunits         CIII          10          0           0                  0
+ 6 subunits         CIII          10          0           1                  0
  7 assembly factors CIV           18          1           0                  0
- 8 subunits         CIV           16          0           0                  0
+ 8 subunits         CIV           16          0           1                  0
  9 assembly factors CV             4          0           0                  0
-10 subunits         CV            17          0           0                  0</code></pre>
+10 subunits         CV            17          0           0                  0
+11 other            Other          2          1           1                  0</code></pre>
 </div>
 </div>
 </section>
@@ -2460,8 +2466,9 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] writexl_1.5.4 readxl_1.4.5  ggplot2_4.0.3 stringr_1.6.0 purrr_1.2.2  
-[6] tidyr_1.3.2   dplyr_1.2.1   here_1.0.2   
+[1] writexl_1.5.4   readxl_1.4.5    patchwork_1.3.2 ggplot2_4.0.3  
+[5] stringr_1.6.0   purrr_1.2.2     tidyr_1.3.2     dplyr_1.2.1    
+[9] here_1.0.2     
 
 loaded via a namespace (and not attached):
  [1] gtable_0.3.6       jsonlite_2.0.0     compiler_4.6.0     tidyselect_1.2.1  

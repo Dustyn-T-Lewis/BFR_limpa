@@ -18,6 +18,6 @@ separates a participant's BFR leg from their HLRT leg in three tasks and writes
 
 | Step | Question | Answer |
 |---|---|---|
-| `02_Differential` | Which proteins change? | 60 with BFR training and 107 with HLRT at FDR 0.05; none between the arms or in the interaction. |
+| `02_Differential` | Which proteins change? | 86 with BFR training and 161 with HLRT at FDR 0.05; none between the arms or in the interaction. |
 | `03_Protein_Association` | Does a protein's change track the phenotype? | No protein survives BH. |
 | `04_Protein_Classification` | Does a protein separate BFR from HLRT legs? | At chance at baseline, after training and in change. |

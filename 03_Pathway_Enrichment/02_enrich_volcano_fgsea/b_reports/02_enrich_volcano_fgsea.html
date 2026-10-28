@@ -2240,7 +2240,7 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<p><code>enrichVolcano</code>, the user’s own plotting package (not on CRAN), is called with <code>::</code>.</p>
+<p><code>enrichVolcano</code>, a plotting package not on CRAN, is called with <code>::</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, purrr, stringr, ggplot2, patchwork, readxl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_volcano_fgsea.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2249,7 +2249,7 @@ vertical-align: -.125em;
 <section id="read-results" class="level2">
 <h2 class="anchored" data-anchor-id="read-results">Read results</h2>
 <p>This step computes nothing. It draws protein volcanoes with a ring of fgsea sets around each: point colour reads protein-level BH FDR, the ring reads set-level fgsea FDR. The baseline contrast is not drawn.</p>
-<p>Both tables come from <code>01_run_fgsea_and_fry.xlsx</code>. Only fgsea sets that survived <code>collapsePathways</code> (<code>main</code>) are kept for the rings. The leading edge, the set members that drive fgsea’s score, was saved as one <code>;</code>-joined string and is split back into a vector per set. fry’s significant sets per contrast go into the S8 caption. S9 labels each protein with its mean observed precursors per sample (<code>pi_label</code>), so a thinly observed protein near the top of the pi ranking reads as such.</p>
+<p>Both tables come from <code>01_run_fgsea_and_fry.xlsx</code>. Only fgsea sets that survived <code>collapsePathways</code> (<code>main</code>) are kept for the rings. The leading edge, the set members that drive fgsea’s score, was saved as one <code>;</code>-joined string and is split back into a vector per set. fry’s significant sets per contrast are counted for reference; fry finds no set on S3’s panels A and D (see <code>01_run_fgsea_and_fry</code>).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>tests <span class="ot">&lt;-</span> <span class="fu">here</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry.xlsx&quot;</span></span>
@@ -2268,19 +2268,19 @@ vertical-align: -.125em;
 <pre><code># A tibble: 5 × 2
   contrast                        n
   &lt;chr&gt;                       &lt;int&gt;
-1 BFR_Post-HLRT_Post             52
-2 BFR_Post-Pre                   88
-3 BFR_Pre-HLRT_Pre                1
-4 HLRT_Post-Pre                  68
-5 Modality_x_Time_Interaction    10</code></pre>
+1 BFR_Post-HLRT_Post             50
+2 BFR_Post-Pre                  102
+3 BFR_Pre-HLRT_Pre               14
+4 HLRT_Post-Pre                  66
+5 Modality_x_Time_Interaction     3</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fry_hits</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 2
   contrast                     hits
   &lt;chr&gt;                       &lt;int&gt;
-1 BFR_Post-Pre                  656
-2 HLRT_Post-Pre                 589
+1 BFR_Post-Pre                  604
+2 HLRT_Post-Pre                 401
 3 BFR_Pre-HLRT_Pre                0
 4 BFR_Post-HLRT_Post              0
 5 Modality_x_Time_Interaction     0</code></pre>
@@ -2289,7 +2289,7 @@ vertical-align: -.125em;
 </section>
 <section id="match-leading-edges-to-labels" class="level2">
 <h2 class="anchored" data-anchor-id="match-leading-edges-to-labels">Match leading edges to labels</h2>
-<p><code>plot_volcano_ring()</code> matches leading-edge genes against point labels, and a label carries an accession when a symbol sits on more than one protein. S8 labels points with <code>label</code> and S9 with <code>pi_label</code>, so each label column gets its own copy of the leading edges, with each symbol mapped to the label of its representative protein, the one fgsea ranked. The map is the same in every contrast, so the first contrast’s rows build it.</p>
+<p><code>plot_volcano_ring()</code> matches leading-edge genes against point labels, and a label carries an accession when a symbol sits on more than one protein. S3 labels points with <code>label</code> and S4 with <code>pi_label</code>, so each label column gets its own copy of the leading edges, with each symbol mapped to the label of its representative protein, the one fgsea ranked. The map is the same in every contrast, so the first contrast’s rows build it.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>label_columns <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">fdr =</span> <span class="st">&quot;label&quot;</span>, <span class="at">pi =</span> <span class="st">&quot;pi_label&quot;</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>representatives <span class="ot">&lt;-</span> <span class="fu">filter</span>(protein_results, contrast <span class="sc">==</span> contrast[<span class="dv">1</span>], selected)</span>
@@ -2337,7 +2337,7 @@ vertical-align: -.125em;
 </section>
 <section id="draw-volcanoes" class="level2">
 <h2 class="anchored" data-anchor-id="draw-volcanoes">Draw volcanoes</h2>
-<p><code>make_volcano()</code> takes a contrast name and a label rule and returns one ringed volcano. With <code>rank_by = &quot;fdr&quot;</code> it names the five proteins with the lowest BH FDR below 0.05; with <code>rank_by = &quot;pi&quot;</code> it names the five with the smallest pi-score, P.Value^|logFC|, which ranks and selects nothing, each with its mean observed precursors. The ring draws the twelve collapse survivors with the lowest adjusted p, in either direction.</p>
+<p><code>make_volcano()</code> draws one ringed volcano. With <code>rank_by = &quot;fdr&quot;</code> it names the five proteins with the lowest BH FDR below 0.05; with <code>rank_by = &quot;pi&quot;</code> it names the five with the smallest pi-score, P.Value^|logFC|, which ranks and selects nothing, each with its mean observed precursors. The ring draws the twelve collapse survivors with the lowest adjusted p, in either direction.</p>
 <p>The ring draws with <code>clip = &quot;off&quot;</code> on a square panel and puts the NES key on the right, so a label on that edge lands on the colour bar. The key goes below the plot, where nothing collides.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>make_volcano <span class="ot">&lt;-</span> <span class="cf">function</span>(cn, <span class="at">rank_by =</span> <span class="st">&quot;fdr&quot;</span>) {</span>
@@ -2374,70 +2374,39 @@ vertical-align: -.125em;
 <span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p><code>supplement()</code> takes a figure number, title and caption text and returns the patchwork annotation with a supplement-style caption; <code>panel_list()</code> turns contrast names into the “(A) name.” list the captions open with. <code>ring_text</code> is the caption text both figures share.</p>
+<p>S3 puts the primary question first, then the two training responses and the between-treatment comparison. S4 repeats the training responses with the same points, colours and rings; only the labels move, to the pi-score ranking, so no protein named there is a discovery. S4 labels each protein with its mean observed precursors per sample (<code>pi_label</code>), so a thinly observed protein near the top of the pi ranking reads as such.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>supplement <span class="ot">&lt;-</span> <span class="cf">function</span>(number, title, text) {</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_annotation</span>(</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">sprintf</span>(<span class="st">&quot;S%d Figure. %s. %s&quot;</span>, number, title, text), <span class="dv">115</span>),</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">theme =</span> <span class="fu">theme</span>(<span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>))</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>panel_list <span class="ot">&lt;-</span> <span class="cf">function</span>(contrasts) {</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">paste</span>(<span class="fu">sprintf</span>(<span class="st">&quot;(%s) %s.&quot;</span>, LETTERS[<span class="fu">seq_along</span>(contrasts)], contrasts), <span class="at">collapse =</span> <span class="st">&quot; &quot;</span>)</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>ring_text <span class="ot">&lt;-</span> <span class="fu">paste</span>(</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;The ring shows up to twelve fgsea sets that survived collapsePathways, lowest adjusted p&quot;</span>,</span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;first, in either direction, coloured by NES; ticks mark their leading-edge proteins. Protein&quot;</span>,</span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;colour and counts read protein-level BH FDR, the ring set-level fgsea FDR: two separate&quot;</span>,</span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;claims. Data: protein_results and set_tests sheets of 01_run_fgsea_and_fry.xlsx.&quot;</span></span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>S8 puts the primary question first, then the two training responses and the between-treatment comparison; its caption names the panels where fry finds no set. S9 repeats the training responses with the same points, colours and rings; only the labels move, to the pi-score ranking, so no protein named there is a discovery.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>fdr_order <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>, <span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>, <span class="st">&quot;BFR_Post-HLRT_Post&quot;</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>pi_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>no_fry <span class="ot">&lt;-</span> LETTERS[<span class="fu">seq_along</span>(fdr_order)][fdr_order <span class="sc">%in%</span> <span class="fu">filter</span>(fry_hits, hits <span class="sc">==</span> <span class="dv">0</span>)<span class="sc">$</span>contrast]</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>figures <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(<span class="fu">map</span>(fdr_order, make_volcano), <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">supplement</span>(<span class="dv">8</span>, <span class="st">&quot;Protein volcanoes with collapse-surviving fgsea sets ringed&quot;</span>, <span class="fu">paste</span>(</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">panel_list</span>(fdr_order), <span class="st">&quot;Points are proteins, coloured when BH FDR &lt; 0.05 within the&quot;</span>,</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;contrast, with the five lowest-FDR proteins named.&quot;</span>,</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;fry finds no set for panels &quot;</span>, <span class="fu">paste</span>(no_fry, <span class="at">collapse =</span> <span class="st">&quot; and &quot;</span>), <span class="st">&quot;.&quot;</span>), ring_text</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    )),</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(<span class="fu">map</span>(pi_order, make_volcano, <span class="at">rank_by =</span> <span class="st">&quot;pi&quot;</span>), <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">supplement</span>(<span class="dv">9</span>, <span class="st">&quot;Protein volcanoes labelled by pi-score&quot;</span>, <span class="fu">paste</span>(</span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">panel_list</span>(pi_order), <span class="st">&quot;As S8 Figure, but the five proteins named are those with the&quot;</span>,</span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;smallest pi-score, P.Value^|logFC| (Xiao et al. 2014), each followed by its mean observed&quot;</span>,</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;precursors per sample in brackets. Pi controls no error rate, so no protein named here is&quot;</span>,</span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;a discovery.&quot;</span>, ring_text</span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    ))</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fdr_order <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>, <span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>, <span class="st">&quot;BFR_Post-HLRT_Post&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>pi_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>figures <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(<span class="fu">map</span>(fdr_order, make_volcano), <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S3. Protein volcanoes with fgsea sets ringed&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>),</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(<span class="fu">map</span>(pi_order, make_volcano, <span class="at">rank_by =</span> <span class="st">&quot;pi&quot;</span>), <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S4. Protein volcanoes labelled by pi-score&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p>Both pages go to <code>b_reports/02_enrich_volcano_fgsea_figures.pdf</code>. The step writes no table.</p>
+<p>The step writes no table.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>figure_file <span class="ot">&lt;-</span> <span class="st">&quot;02_enrich_volcano_fgsea_figures.pdf&quot;</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;02_enrich_volcano_fgsea&quot;</span>, <span class="st">&quot;b_reports&quot;</span>, figure_file),</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(figures, print)</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(figures)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 2</code></pre>
-</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;02_enrich_volcano_fgsea&quot;</span>, <span class="st">&quot;b_reports&quot;</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;02_enrich_volcano_fgsea_figures.pdf&quot;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(figures, print)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23

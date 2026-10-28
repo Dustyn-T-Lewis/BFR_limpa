@@ -32,14 +32,14 @@ Outputs:
 
 | Analysis | Outcome | Nominal | Ratio to chance | BH < 0.05 |
 |---|---|---:|---:|---:|
-| pooled | vl_csa | 127 | 0.83 | 0 |
-| pooled | vl_echo | 158 | 1.04 | 0 |
-| pooled | rf_csa | 119 | 0.78 | 0 |
+| pooled | vl_csa | 126 | 0.83 | 0 |
+| pooled | vl_echo | 157 | 1.03 | 0 |
+| pooled | rf_csa | 118 | 0.78 | 0 |
 | pooled | rf_echo | 100 | 0.66 | 0 |
-| differential | vl_csa | 92 | 0.60 | 0 |
+| differential | vl_csa | 93 | 0.61 | 0 |
 | differential | vl_echo | 110 | 0.72 | 0 |
-| differential | rf_csa | 126 | 0.83 | 0 |
-| differential | rf_echo | 93 | 0.61 | 0 |
+| differential | rf_csa | 125 | 0.82 | 0 |
+| differential | rf_echo | 92 | 0.60 | 0 |
 
 Chance is 152 nominal hits from 3,042 proteins, but proteins move together, so one analysis swings
 widely around it: shuffling vl_csa across legs within arm gave 63 to 308 nominal hits (middle 90%

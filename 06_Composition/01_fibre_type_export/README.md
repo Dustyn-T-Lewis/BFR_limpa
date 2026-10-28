@@ -16,14 +16,14 @@ Outputs:
 
 - `b_reports/01_fibre_type_export.html`: the walkthrough.
 - `c_data/fibertyper_input.csv`: one row per gene, first column `identifier`, one column per
-  `sample_id`; unquantified cells blank. 4,339 genes, 22 of them filled from limpa. The only CSV
+  `sample_id`; unquantified cells blank. 4,340 genes, 23 of them filled from limpa. The only CSV
   output, because the app accepts nothing else.
 
 The search FASTA lists 43 human proteins twice, because the appended cRAP database repeats them,
-and DIA-NN writes zero MaxLFQ for them in every run. The 22 of them that survive the main analysis
+and DIA-NN writes zero MaxLFQ for them in every run. The 23 of them that survive the main analysis
 (MB, CKM, FABP3, CYCS among them) are filled from limpa's repaired estimates, shifted per sample by
 the median log2 difference from DIA-NN's MaxLFQ over shared genes; a cell stays blank where limpa
-observed no precursor. The other 21 are contaminants the main analysis removes.
+observed no precursor. The other 20 are contaminants the main analysis removes.
 
 ## Upload
 

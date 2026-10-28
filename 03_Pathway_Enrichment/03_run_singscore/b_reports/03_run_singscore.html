@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>04 · Run singscore</title>
+<title>03 · Run singscore</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -2222,7 +2222,7 @@ vertical-align: -.125em;
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">04 · Run singscore</h1>
+<h1 class="title">03 · Run singscore</h1>
 </div>
 
 
@@ -2243,16 +2243,16 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <p><code>singscore</code> is called with <code>::</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tibble, purrr, stringr, ggplot2, readxl, writexl)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/04_run_singscore/a_script/04_run_singscore.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tibble, purrr, ggplot2, readxl, writexl)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/03_run_singscore/a_script/03_run_singscore.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>singscore gives each sample one score per gene set. Within a sample it ranks every gene by abundance, then scores a set by how high its members rank on average, centred so that 0 is what random members would give. The ranks are within the sample, so a score ignores the rest of the cohort; there is no p-value and no contrast. Later steps (<code>05_set_classification</code>, <code>06_set_association</code>) test the scores.</p>
+<p>singscore gives each sample one score per gene set. Within a sample it ranks every gene by abundance, then scores a set by how high its members rank on average, centred so that 0 is what random members would give. The ranks are within the sample, so a score ignores the rest of the cohort; there is no p-value and no contrast. Later steps (<code>04_set_classification</code>, <code>05_set_association</code>) test the scores.</p>
 <p>The inputs are the tested sets, the catalogue and protein-to-gene map from <code>00_build_gene_sets</code>, and the protein abundance matrix from quantification.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;04_run_singscore&quot;</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_run_singscore&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(gene_sets, <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>book <span class="ot">&lt;-</span> <span class="fu">file.path</span>(gene_sets, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>)</span>
@@ -2281,15 +2281,15 @@ vertical-align: -.125em;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>scores[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                                          S02_L_T1     S02_L_T2    S02_R_T1
-Hallmark|HALLMARK_ADIPOGENESIS         0.194773093  0.186736606  0.19569859
-Hallmark|HALLMARK_ALLOGRAFT_REJECTION -0.023283241  0.008426859  0.02173293
-Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.011401440 -0.018437872  0.03677493
-Hallmark|HALLMARK_APICAL_JUNCTION     -0.005223649 -0.073701843 -0.03027483
+Hallmark|HALLMARK_ADIPOGENESIS         0.194802144  0.186611794  0.19563162
+Hallmark|HALLMARK_ALLOGRAFT_REJECTION -0.023270739  0.008333729  0.02165439
+Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.011483307 -0.018577864  0.03671736
+Hallmark|HALLMARK_APICAL_JUNCTION     -0.005159882 -0.073782590 -0.03035152
                                           S02_R_T2
-Hallmark|HALLMARK_ADIPOGENESIS         0.188193038
-Hallmark|HALLMARK_ALLOGRAFT_REJECTION  0.039376070
-Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.001774229
-Hallmark|HALLMARK_APICAL_JUNCTION     -0.014920280</code></pre>
+Hallmark|HALLMARK_ADIPOGENESIS         0.188102530
+Hallmark|HALLMARK_ALLOGRAFT_REJECTION  0.039234609
+Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.001758523
+Hallmark|HALLMARK_APICAL_JUNCTION     -0.015033118</code></pre>
 </div>
 </div>
 </section>
@@ -2316,9 +2316,9 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.014920280</code></pre>
   &lt;chr&gt;       &lt;int&gt;        &lt;dbl&gt;             &lt;dbl&gt;
 1 Hallmark       41       0.0256             1010.
 2 Reactome      430       0.0777              854.
-3 KEGG_Legacy    94       0.0254              932.
+3 KEGG_Legacy    94       0.0253              935.
 4 GOBP         1366      -0.0068             1006.
-5 GO_Slim        59      -0.0036             1045.</code></pre>
+5 GO_Slim        59      -0.0037             1046.</code></pre>
 </div>
 </div>
 </section>
@@ -2349,7 +2349,7 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.014920280</code></pre>
 </section>
 <section id="figure" class="level2">
 <h2 class="anchored" data-anchor-id="figure">Figure</h2>
-<p>singscore’s own <code>plotDispersion()</code> and <code>plotRankDensity()</code> draw one signature at a time. S11 is a plain ggplot over the matrices <code>multiScore()</code> already returned: each set’s mean score against its mean dispersion.</p>
+<p>singscore’s own <code>plotDispersion()</code> and <code>plotRankDensity()</code> draw one signature at a time. S5 plots each set’s mean score against its mean dispersion from the <code>multiScore()</code> matrices.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>figure <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(set_spread, <span class="fu">aes</span>(score, dispersion, <span class="at">colour =</span> database)) <span class="sc">+</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey80&quot;</span>) <span class="sc">+</span></span>
@@ -2358,41 +2358,30 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.014920280</code></pre>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">3</span>, <span class="at">alpha =</span> <span class="dv">1</span>))) <span class="sc">+</span></span>
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;mean score across samples&quot;</span>, <span class="at">y =</span> <span class="st">&quot;mean dispersion across samples&quot;</span>,</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Set score against dispersion&quot;</span>,</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">paste</span>(</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;S11 Figure. singscore across the cohort.&quot;</span>,</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sprintf</span>(<span class="st">&quot;One point per set, %d sets, score and dispersion averaged&quot;</span>, <span class="fu">nrow</span>(scores)),</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sprintf</span>(<span class="st">&quot;over %d samples.&quot;</span>, <span class="fu">ncol</span>(scores)),</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;Dispersion is the spread of a set&#39;s member ranks within a sample: low means members sit&quot;</span>,</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;together. Scores are in the set_scores sheet of 04_run_singscore.xlsx; dispersions are&quot;</span>,</span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;computed in 04_run_singscore and not saved.&quot;</span></span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    ), <span class="dv">115</span>)</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">aspect.ratio =</span> <span class="dv">1</span>,</span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>),</span>
-<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.caption.position =</span> <span class="st">&quot;plot&quot;</span></span>
-<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;S5. singscore: set score against dispersion&quot;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">aspect.ratio =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>S11 goes to <code>b_reports/04_run_singscore_figures.pdf</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;04_run_singscore_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_run_singscore_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(figure)</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p>The score matrix is written twice. <code>set_scores.rds</code> is what <code>05_set_classification</code> and <code>06_set_association</code> read: singscore values carry exact rank ties, and a round trip through Excel changes the last bit of some, which breaks ties and moves 05’s Wilcoxon and Spearman p. <code>04_run_singscore.xlsx</code> holds the same matrix for reading, beside the collection medians and the component check.</p>
+<p>The score matrix is written twice. <code>set_scores.rds</code> is the copy later steps read: singscore values carry exact rank ties, and a round trip through Excel changes the last bit of some, which breaks ties and moves 05’s Wilcoxon and Spearman p. <code>03_run_singscore.xlsx</code> holds the same matrix for reading, beside the collection medians and the component check.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection_spread =</span> collection_spread,</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">structure_check =</span> structure_check,</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>)</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(scores, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;set_scores.rds&quot;</span>))</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;04_run_singscore.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(scores, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;set_scores.rds&quot;</span>))</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">collection_spread =</span> collection_spread,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">structure_check =</span> structure_check,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;03_run_singscore.xlsx&quot;</span>)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
@@ -2418,8 +2407,8 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] writexl_1.5.4 readxl_1.4.5  ggplot2_4.0.3 stringr_1.6.0 purrr_1.2.2  
-[6] tibble_3.3.1  dplyr_1.2.1   here_1.0.2   
+[1] writexl_1.5.4 readxl_1.4.5  ggplot2_4.0.3 purrr_1.2.2   tibble_3.3.1 
+[6] dplyr_1.2.1   here_1.0.2   
 
 loaded via a namespace (and not attached):
  [1] tidyselect_1.2.1            farver_2.1.2               
@@ -2444,25 +2433,25 @@ loaded via a namespace (and not attached):
 [39] crayon_1.5.3                generics_0.1.4             
 [41] otel_0.2.0                  httr_1.4.8                 
 [43] reshape2_1.4.5              DBI_1.3.0                  
-[45] cachem_1.1.0                AnnotationDbi_1.74.0       
-[47] cellranger_1.1.0            XVector_0.52.0             
-[49] matrixStats_1.5.0           vctrs_0.7.3                
-[51] Matrix_1.7-5                jsonlite_2.0.0             
-[53] IRanges_2.46.0              S4Vectors_0.50.0           
-[55] bit64_4.8.0                 GSEABase_1.74.0            
-[57] locfit_1.5-9.12             limma_3.68.1               
-[59] tidyr_1.3.2                 annotate_1.90.0            
-[61] glue_1.8.1                  stringi_1.8.7              
-[63] gtable_0.3.6                GenomicRanges_1.64.0       
-[65] pillar_1.11.1               htmltools_0.5.9            
-[67] Seqinfo_1.2.0               graph_1.90.0               
-[69] R6_2.6.1                    rprojroot_2.1.1            
-[71] evaluate_1.0.5              singscore_1.32.0           
-[73] Biobase_2.72.0              lattice_0.22-9             
-[75] png_0.1-9                   memoise_2.0.1              
-[77] Rcpp_1.1.2                  SparseArray_1.12.2         
-[79] xfun_0.57                   MatrixGenerics_1.24.0      
-[81] pkgconfig_2.0.3            </code></pre>
+[45] cachem_1.1.0                stringr_1.6.0              
+[47] AnnotationDbi_1.74.0        cellranger_1.1.0           
+[49] XVector_0.52.0              matrixStats_1.5.0          
+[51] vctrs_0.7.3                 Matrix_1.7-5               
+[53] jsonlite_2.0.0              IRanges_2.46.0             
+[55] S4Vectors_0.50.0            bit64_4.8.0                
+[57] GSEABase_1.74.0             locfit_1.5-9.12            
+[59] limma_3.68.1                tidyr_1.3.2                
+[61] annotate_1.90.0             glue_1.8.1                 
+[63] stringi_1.8.7               gtable_0.3.6               
+[65] GenomicRanges_1.64.0        pillar_1.11.1              
+[67] htmltools_0.5.9             Seqinfo_1.2.0              
+[69] graph_1.90.0                R6_2.6.1                   
+[71] rprojroot_2.1.1             evaluate_1.0.5             
+[73] singscore_1.32.0            Biobase_2.72.0             
+[75] lattice_0.22-9              png_0.1-9                  
+[77] memoise_2.0.1               Rcpp_1.1.2                 
+[79] SparseArray_1.12.2          xfun_0.57                  
+[81] MatrixGenerics_1.24.0       pkgconfig_2.0.3            </code></pre>
 </div>
 </div>
 </section>

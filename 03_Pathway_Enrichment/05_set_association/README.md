@@ -45,5 +45,5 @@ Outputs:
 
 No set's singscore tracks the phenotype after correction, and no protein does either
 (`02_Differential_Expression/03_Protein_Association`). On the protein association ranking, fgsea
-calls up to 154 sets per outcome (mitochondrial translation and respiration top pooled rf_csa),
-and fry confirms none (smallest FDR 0.745).
+calls up to 149 sets per outcome (mitochondrial translation and respiration top pooled rf_csa),
+and fry confirms none (smallest FDR 0.748).

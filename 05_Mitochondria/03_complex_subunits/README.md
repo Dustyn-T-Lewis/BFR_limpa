@@ -26,4 +26,4 @@ Outputs:
     leg and for the interaction (BFR minus HLRT) from the stage 02 fit: subunits, assembly factors
     and the "Other" proteins. TMEM70 is listed under both CI and CV.
 
-No protein's interaction reaches FDR 0.05, and fry's interaction FDR is 0.99 for every complex.
+No protein's interaction reaches FDR 0.05, and fry's interaction FDR is 0.93 for every complex.

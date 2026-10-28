@@ -31,8 +31,8 @@ The steps run in order:
 | [`02_test_mito`](02_test_mito/README.md) | Did MPE rise differently between legs, and did any complex or pathway change beyond it? |
 | [`03_complex_subunits`](03_complex_subunits/README.md) | Which subunits and assembly factors carry each complex's change in each leg? |
 
-Mean MPE rose from 29.6% to 32.8% in the BFR leg and from 29.0% to 32.2% in the HLRT leg. The
-interaction, BFR's rise minus HLRT's, is −0.003 log2, and its 95% CI (−0.123 to 0.117) excludes
+Mean MPE rose from 29.7% to 32.9% in the BFR leg and from 29.1% to 32.3% in the HLRT leg. The
+interaction, BFR's rise minus HLRT's, is −0.004 log2, and its 95% CI (−0.124 to 0.117) excludes
 a difference in the MPE rise beyond about ±8%. After mitochondrial normalisation no protein,
 complex or pathway differs between legs by fry or protein-level FDR.
 

@@ -3,8 +3,8 @@
 Fits the protein estimates with `dpcDE()` and tests the five contrasts with
 `eBayes(robust = TRUE)` and BH adjustment within each contrast. `dpcDE()` uses the standard errors
 as precision weights and, as in limpa's default, adds no sample quality weights. When the
-fitted-slope quantification run exists, the notebook refits on it as a sensitivity check: 82 and
-114 training hits against the primary 60 and 107 (57 and 99 shared), and none between legs under
+fitted-slope quantification run exists, the notebook refits on it as a sensitivity check: 85 and
+177 training hits against the primary 86 and 161 (76 and 151 shared), and none between legs under
 either slope.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`, `01_Design/c_data/design.rds`.

@@ -2244,10 +2244,10 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<p><code>fgsea</code> and <code>enrichVolcano</code> (the user’s own package, not on CRAN) are called with <code>::</code>.</p>
+<p><code>fgsea</code> and <code>enrichVolcano</code> (not on CRAN) are called with <code>::</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  here, dplyr, tibble, tidyr, purrr, stringr, limma, ggplot2, patchwork, readxl, writexl</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  here, dplyr, tibble, tidyr, purrr, limma, ggplot2, patchwork, readxl, writexl</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and_fry.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -2292,7 +2292,7 @@ vertical-align: -.125em;
 </section>
 <section id="protein-results" class="level2">
 <h2 class="anchored" data-anchor-id="protein-results">Protein results</h2>
-<p><code>topTable()</code> takes the fit and one contrast and returns one row per protein: log2 fold change, average abundance, moderated t, p and BH-adjusted p. BH stays as <code>02_Differential</code> applied it, within each contrast. The rows are stacked across contrasts and joined to the protein map.</p>
+<p><code>topTable()</code> gives one row per protein for each contrast: log2 fold change, average abundance, moderated t, p and BH-adjusted p. BH stays as <code>02_Differential</code> applied it, within each contrast. The rows are stacked across contrasts and joined to the protein map.</p>
 <p><code>pi_score</code> is P.Value^|logFC| (Xiao et al. 2014, PMID 22321699), which combines effect size and significance. It orders proteins within a contrast and selects nothing.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>protein_results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(contrast_names), <span class="cf">function</span>(contrast) {</span>
@@ -2305,11 +2305,11 @@ vertical-align: -.125em;
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pi_score =</span> P.Value<span class="sc">^</span><span class="fu">abs</span>(logFC))</span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_results[<span class="fu">c</span>(<span class="st">&quot;contrast&quot;</span>, <span class="st">&quot;protein&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;logFC&quot;</span>, <span class="st">&quot;t&quot;</span>, <span class="st">&quot;adj.P.Val&quot;</span>, <span class="st">&quot;pi_score&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      contrast    protein    gene       logFC          t adj.P.Val  pi_score
-1 BFR_Post-Pre A0A0B4J2F0 PIGBOS1  0.25798983  1.7719434 0.4114439 0.5203048
-2 BFR_Post-Pre A0A0U1RRL7 MMP24OS  0.02614654  0.2249304 0.9416693 0.9949035
-3 BFR_Post-Pre     A0AVT1    UBA6 -0.06680731 -0.3493288 0.9008278 0.9789767
-4 BFR_Post-Pre     A0FGR8   ESYT2 -0.06990327 -0.7309636 0.7674929 0.9480949</code></pre>
+<pre><code>      contrast    protein    gene      logFC          t adj.P.Val  pi_score
+1 BFR_Post-Pre A0A0B4J2F0 PIGBOS1  0.1862366  1.5087732 0.5081575 0.6882711
+2 BFR_Post-Pre A0A0U1RRL7 MMP24OS -0.0411697 -0.3730895 0.9027705 0.9859913
+3 BFR_Post-Pre     A0AVT1    UBA6 -0.1045789 -0.5742655 0.8433528 0.9424018
+4 BFR_Post-Pre     A0FGR8   ESYT2 -0.1319026 -1.3050809 0.5854570 0.8059571</code></pre>
 </div>
 </div>
 <p>Proteins up and down at FDR 0.05, per contrast.</p>
@@ -2324,11 +2324,11 @@ vertical-align: -.125em;
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>protein_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                     contrast tested up down  min_fdr
-1                BFR_Post-Pre   3042 33   27 2.62e-05
-2               HLRT_Post-Pre   3042 61   46 2.18e-08
-3            BFR_Pre-HLRT_Pre   3042  0    0 9.99e-01
-4          BFR_Post-HLRT_Post   3042  0    0 1.00e+00
-5 Modality_x_Time_Interaction   3042  0    0 1.00e+00</code></pre>
+1                BFR_Post-Pre   3042 53   33 1.39e-04
+2               HLRT_Post-Pre   3042 90   71 2.98e-10
+3            BFR_Pre-HLRT_Pre   3042  0    0 4.84e-01
+4          BFR_Post-HLRT_Post   3042  0    0 5.16e-01
+5 Modality_x_Time_Interaction   3042  0    0 9.98e-01</code></pre>
 </div>
 </div>
 </section>
@@ -2342,11 +2342,11 @@ vertical-align: -.125em;
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="fu">lengths</span>(ranked)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>               BFR_Post-Pre               HLRT_Post-Pre 
-                       3039                        3039 
+                       3040                        3040 
            BFR_Pre-HLRT_Pre          BFR_Post-HLRT_Post 
-                       3039                        3039 
+                       3040                        3040 
 Modality_x_Time_Interaction 
-                       3039 </code></pre>
+                       3040 </code></pre>
 </div>
 </div>
 <p>For each set fgsea returns a p-value, its BH-adjusted <code>padj</code> over all sets in the contrast, the NES (normalised enrichment score: positive when members sit towards the top of the ranking, negative towards the bottom, scaled for set size) and the leading edge, the members that drive the score.</p>
@@ -2357,7 +2357,7 @@ Modality_x_Time_Interaction
 </section>
 <section id="run-fry" class="level2">
 <h2 class="anchored" data-anchor-id="run-fry">Run fry</h2>
-<p>fry reads rows of <code>proteins$E</code>, so each set’s gene symbols are turned into row numbers through each symbol’s representative protein. It reads limpa’s precision weights through <code>proteins$weights</code>. No <code>block</code>: participant is a fixed term in the design, and the residual within-leg correlation is 0.027.</p>
+<p>fry reads rows of <code>proteins$E</code>, so each set’s gene symbols are turned into row numbers through each symbol’s representative protein. It reads limpa’s precision weights through <code>proteins$weights</code>, with robust empirical Bayes as in the protein fit. No <code>block</code>: participant is a fixed term in the design, and the residual within-leg correlation is 0.027.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>selected_rows <span class="ot">&lt;-</span> <span class="fu">which</span>(protein_map<span class="sc">$</span>selected)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>set_rows <span class="ot">&lt;-</span> <span class="fu">map</span>(sets, <span class="cf">function</span>(genes) {</span>
@@ -2377,7 +2377,7 @@ Modality_x_Time_Interaction
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>      )</span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  }),</span>
 <span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(contrast_names, <span class="cf">function</span>(contrast) {</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fry</span>(proteins, set_rows, d<span class="sc">$</span>design, d<span class="sc">$</span>contrasts[, contrast], <span class="at">sort =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fry</span>(proteins, set_rows, d<span class="sc">$</span>design, d<span class="sc">$</span>contrasts[, contrast], <span class="at">robust =</span> <span class="cn">TRUE</span>, <span class="at">sort =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">transmute</span>(</span>
 <span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>        set_id, contrast,</span>
@@ -2409,11 +2409,11 @@ fgsea   fry
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lengths</span>(main_sets)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>               BFR_Post-Pre               HLRT_Post-Pre 
-                         88                          68 
+                        102                          66 
            BFR_Pre-HLRT_Pre          BFR_Post-HLRT_Post 
-                          1                          52 
+                         14                          50 
 Modality_x_Time_Interaction 
-                         10 </code></pre>
+                          3 </code></pre>
 </div>
 </div>
 <p>Survivors get <code>main = TRUE</code>; fry rows get <code>NA</code>, since only fgsea results are collapsed.</p>
@@ -2431,12 +2431,12 @@ Modality_x_Time_Interaction
 <span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">select</span>(set_tests, contrast, method, set_id, n, NES, p, padj, main), <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 8
-  contrast     method set_id                      n    NES       p    padj main 
-  &lt;chr&gt;        &lt;chr&gt;  &lt;chr&gt;                   &lt;int&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;lgl&gt;
-1 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_B…    18  1.62  2.27e-2 0.0966  FALSE
-2 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_M…    26  1.66  1.17e-2 0.0588  FALSE
-3 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAME…    52 -2.02  1.05e-4 0.00132 FALSE
-4 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAME…    57  0.668 9.68e-1 0.998   FALSE</code></pre>
+  contrast     method set_id                       n   NES       p    padj main 
+  &lt;chr&gt;        &lt;chr&gt;  &lt;chr&gt;                    &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;lgl&gt;
+1 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_BI…    18  1.83 5.26e-3 0.0274  FALSE
+2 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_ME…    26  1.68 1.11e-2 0.0484  FALSE
+3 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAMEN…    52 -1.82 4.16e-4 0.00325 FALSE
+4 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAMEN…    57 -1.34 5.31e-2 0.161   FALSE</code></pre>
 </div>
 </div>
 </section>
@@ -2457,168 +2457,112 @@ Modality_x_Time_Interaction
 <pre><code># A tibble: 5 × 5
   contrast                     sets fgsea collapsed   fry
   &lt;chr&gt;                       &lt;int&gt; &lt;int&gt;     &lt;int&gt; &lt;int&gt;
-1 BFR_Post-Pre                 1990   376        88   656
-2 HLRT_Post-Pre                1990   281        68   589
-3 BFR_Pre-HLRT_Pre             1990     1         1     0
-4 BFR_Post-HLRT_Post           1990   159        52     0
-5 Modality_x_Time_Interaction  1990    26        10     0</code></pre>
+1 BFR_Post-Pre                 1990   460       102   604
+2 HLRT_Post-Pre                1990   298        66   401
+3 BFR_Pre-HLRT_Pre             1990    34        14     0
+4 BFR_Post-HLRT_Post           1990   155        50     0
+5 Modality_x_Time_Interaction  1990     3         3     0</code></pre>
 </div>
 </div>
 </section>
 <section id="figures" class="level2">
 <h2 class="anchored" data-anchor-id="figures">Figures</h2>
-<p>The figures go to one A4 PDF, S1 to S7. <code>supplement()</code> takes a figure number, title and caption text and returns a patchwork annotation with the supplement-style caption and panel tags.</p>
+<p>The figures go to one A4 PDF, S1 and S2.</p>
+<p>The dot plots show the four contrasts other than baseline. <code>survivors</code> holds the significant fgsea sets that survived the collapse.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>supplement <span class="ot">&lt;-</span> <span class="cf">function</span>(number, title, text, <span class="at">tags =</span> <span class="st">&quot;A&quot;</span>) {</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_annotation</span>(</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">str_wrap</span>(<span class="fu">sprintf</span>(<span class="st">&quot;S%d Figure. %s. %s&quot;</span>, number, title, text), <span class="dv">115</span>),</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">tag_levels =</span> tags,</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">theme =</span> <span class="fu">theme</span>(<span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>))</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>The dot plots show four contrasts; the baseline contrast is left out. <code>survivors</code> holds the significant fgsea sets that survived the collapse.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>shown <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>, <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>, <span class="st">&quot;BFR_Post-HLRT_Post&quot;</span>)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>collections <span class="ot">&lt;-</span> <span class="fu">unique</span>(set_catalog<span class="sc">$</span>database[set_catalog<span class="sc">$</span>qualifies])</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">==</span> <span class="st">&quot;fgsea&quot;</span>, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, main, contrast <span class="sc">%in%</span> shown) <span class="sc">|&gt;</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">contrast =</span> <span class="fu">factor</span>(contrast, shown))</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(survivors, contrast, <span class="at">.drop =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>shown <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>, <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>, <span class="st">&quot;BFR_Post-HLRT_Post&quot;</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>collections <span class="ot">&lt;-</span> <span class="fu">unique</span>(set_catalog<span class="sc">$</span>database[set_catalog<span class="sc">$</span>qualifies])</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>survivors <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">==</span> <span class="st">&quot;fgsea&quot;</span>, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, main, contrast <span class="sc">%in%</span> shown) <span class="sc">|&gt;</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">contrast =</span> <span class="fu">factor</span>(contrast, shown))</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(survivors, contrast, <span class="at">.drop =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 2
   contrast                        n
   &lt;fct&gt;                       &lt;int&gt;
-1 BFR_Post-Pre                   88
-2 HLRT_Post-Pre                  68
-3 Modality_x_Time_Interaction    10
-4 BFR_Post-HLRT_Post             52</code></pre>
+1 BFR_Post-Pre                  102
+2 HLRT_Post-Pre                  66
+3 Modality_x_Time_Interaction     3
+4 BFR_Post-HLRT_Post             50</code></pre>
 </div>
 </div>
-<p><code>dotplot_figure()</code> stacks one dot plot per contrast that has a survivor, each showing its ten survivors with the lowest adjusted p: NES on the x axis, point size for set size, and colour for the collection when <code>by_database</code> is <code>TRUE</code>, otherwise -log10 FDR. The size and colour scales span every row on the page, so the panels compare. Labels drop the collection prefix, and <code>GOBP_MUSCLE_CONTRACTION</code> and <code>REACTOME_MUSCLE_CONTRACTION</code> would then share a row, so a name whose stem repeats within a contrast gets its collection appended.</p>
+<p>S1 stacks one dot plot per contrast that has a survivor, each showing its ten survivors with the lowest adjusted p: NES on the x axis, point size for set size, colour for the collection. The size scale spans every row on the page, so the panels compare. Labels drop the collection prefix, and <code>GOBP_MUSCLE_CONTRACTION</code> and <code>REACTOME_MUSCLE_CONTRACTION</code> would then share a row, so a name whose stem repeats within a contrast gets its collection appended. Each collection’s own view is the dotplot in <code>07_pathway_maps</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>dotplot_figure <span class="ot">&lt;-</span> <span class="cf">function</span>(rows, number, name, <span class="at">by_database =</span> <span class="cn">FALSE</span>) {</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  rows <span class="ot">&lt;-</span> <span class="fu">mutate</span>(</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    rows,</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">stem =</span> <span class="fu">sub</span>(<span class="st">&quot;^[A-Z0-9]+_&quot;</span>, <span class="st">&quot;&quot;</span>, pathway),</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">pathway =</span> <span class="fu">if_else</span>(</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">duplicated</span>(stem) <span class="sc">|</span> <span class="fu">duplicated</span>(stem, <span class="at">fromLast =</span> <span class="cn">TRUE</span>), <span class="fu">paste0</span>(pathway, <span class="st">&quot; &quot;</span>, database), pathway</span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> contrast</span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>  colour <span class="ot">&lt;-</span> <span class="cf">if</span> (by_database) {</span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(</span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_colour_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>, <span class="at">limits =</span> collections, <span class="at">name =</span> <span class="cn">NULL</span>),</span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">3</span>)))</span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_colour_viridis_c</span>(</span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">option =</span> <span class="st">&quot;rocket&quot;</span>, <span class="at">direction =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">end =</span> <span class="fl">0.9</span>, <span class="at">limits =</span> <span class="fu">range</span>(<span class="sc">-</span><span class="fu">log10</span>(rows<span class="sc">$</span>padj)),</span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">name =</span> <span class="fu">expression</span>(<span class="sc">-</span>log[<span class="dv">10</span>] <span class="sc">~</span> FDR)</span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>  by_contrast <span class="ot">&lt;-</span> <span class="fu">split</span>(rows, rows<span class="sc">$</span>contrast, <span class="at">drop =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>  panels <span class="ot">&lt;-</span> <span class="fu">map</span>(by_contrast, <span class="cf">function</span>(contrast_rows) {</span>
-<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>    top <span class="ot">&lt;-</span> contrast_rows <span class="sc">|&gt;</span></span>
-<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">10</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">label =</span> enrichVolcano<span class="sc">::</span><span class="fu">clean_label</span>(pathway, <span class="at">width =</span> <span class="dv">45</span>))</span>
-<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(top, <span class="fu">aes</span>(NES, <span class="fu">reorder</span>(label, NES), <span class="at">size =</span> n)) <span class="sc">+</span></span>
-<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey75&quot;</span>) <span class="sc">+</span></span>
-<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_point</span>(</span>
-<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>        <span class="fu">aes</span>(<span class="at">colour =</span> <span class="cf">if</span> (by_database) database <span class="cf">else</span> <span class="sc">-</span><span class="fu">log10</span>(padj)),</span>
-<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>        <span class="at">alpha =</span> <span class="fl">0.9</span>, <span class="at">show.legend =</span> <span class="cn">TRUE</span></span>
-<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a>      colour <span class="sc">+</span></span>
-<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_size_continuous</span>(<span class="at">range =</span> <span class="fu">c</span>(<span class="fl">1.5</span>, <span class="dv">5</span>), <span class="at">limits =</span> <span class="fu">range</span>(rows<span class="sc">$</span>n), <span class="at">name =</span> <span class="st">&quot;genes&quot;</span>) <span class="sc">+</span></span>
-<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
-<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> <span class="st">&quot;normalised enrichment score&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
-<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a>        <span class="at">title =</span> <span class="fu">sprintf</span>(</span>
-<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a>          <span class="st">&quot;%s, %d of %d survivors&quot;</span>, contrast_rows<span class="sc">$</span>contrast[<span class="dv">1</span>], <span class="fu">nrow</span>(top), <span class="fu">nrow</span>(contrast_rows)</span>
-<span id="cb25-38"><a href="#cb25-38" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>) <span class="sc">+</span></span>
-<span id="cb25-41"><a href="#cb25-41" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">9</span>))</span>
-<span id="cb25-42"><a href="#cb25-42" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb25-43"><a href="#cb25-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(panels, <span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">guides =</span> <span class="st">&quot;collect&quot;</span>) <span class="sc">+</span></span>
-<span id="cb25-44"><a href="#cb25-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">supplement</span>(</span>
-<span id="cb25-45"><a href="#cb25-45" aria-hidden="true" tabindex="-1"></a>      number, <span class="fu">paste</span>(<span class="st">&quot;Ten strongest collapse survivors,&quot;</span>, name),</span>
-<span id="cb25-46"><a href="#cb25-46" aria-hidden="true" tabindex="-1"></a>      <span class="fu">paste0</span>(</span>
-<span id="cb25-47"><a href="#cb25-47" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(<span class="fu">sprintf</span>(<span class="st">&quot;(%s) %s.&quot;</span>, LETTERS[<span class="fu">seq_along</span>(by_contrast)], <span class="fu">names</span>(by_contrast)),</span>
-<span id="cb25-48"><a href="#cb25-48" aria-hidden="true" tabindex="-1"></a>          <span class="at">collapse =</span> <span class="st">&quot; &quot;</span></span>
-<span id="cb25-49"><a href="#cb25-49" aria-hidden="true" tabindex="-1"></a>        ),</span>
-<span id="cb25-50"><a href="#cb25-50" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot; Up to ten collapsePathways survivors per contrast, lowest adjusted p first; FDR is&quot;</span>,</span>
-<span id="cb25-51"><a href="#cb25-51" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot; BH within contrast. Point size is the number of measured genes in the set; colour is &quot;</span>,</span>
-<span id="cb25-52"><a href="#cb25-52" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (by_database) <span class="st">&quot;the collection&quot;</span> <span class="cf">else</span> <span class="st">&quot;-log10 FDR&quot;</span>,</span>
-<span id="cb25-53"><a href="#cb25-53" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;. Contrasts with no survivor are omitted. Data: set_tests sheet of&quot;</span>,</span>
-<span id="cb25-54"><a href="#cb25-54" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot; 01_run_fgsea_and_fry.xlsx.&quot;</span></span>
-<span id="cb25-55"><a href="#cb25-55" aria-hidden="true" tabindex="-1"></a>      )</span>
-<span id="cb25-56"><a href="#cb25-56" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb25-57"><a href="#cb25-57" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>labelled <span class="ot">&lt;-</span> <span class="fu">mutate</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  survivors,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">stem =</span> <span class="fu">sub</span>(<span class="st">&quot;^[A-Z0-9]+_&quot;</span>, <span class="st">&quot;&quot;</span>, pathway),</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pathway =</span> <span class="fu">if_else</span>(</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">duplicated</span>(stem) <span class="sc">|</span> <span class="fu">duplicated</span>(stem, <span class="at">fromLast =</span> <span class="cn">TRUE</span>), <span class="fu">paste0</span>(pathway, <span class="st">&quot; &quot;</span>, database), pathway</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">.by =</span> contrast</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>panels <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">split</span>(labelled, labelled<span class="sc">$</span>contrast, <span class="at">drop =</span> <span class="cn">TRUE</span>), <span class="cf">function</span>(contrast_rows) {</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  top <span class="ot">&lt;-</span> contrast_rows <span class="sc">|&gt;</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">10</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">label =</span> enrichVolcano<span class="sc">::</span><span class="fu">clean_label</span>(pathway, <span class="at">width =</span> <span class="dv">45</span>))</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(top, <span class="fu">aes</span>(NES, <span class="fu">reorder</span>(label, NES), <span class="at">size =</span> n, <span class="at">colour =</span> database)) <span class="sc">+</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey75&quot;</span>) <span class="sc">+</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.9</span>, <span class="at">show.legend =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_colour_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>, <span class="at">limits =</span> collections, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">3</span>))) <span class="sc">+</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_size_continuous</span>(<span class="at">range =</span> <span class="fu">c</span>(<span class="fl">1.5</span>, <span class="dv">5</span>), <span class="at">limits =</span> <span class="fu">range</span>(labelled<span class="sc">$</span>n), <span class="at">name =</span> <span class="st">&quot;genes&quot;</span>) <span class="sc">+</span></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">&quot;normalised enrichment score&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">sprintf</span>(</span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;%s, %d of %d survivors&quot;</span>, contrast_rows<span class="sc">$</span>contrast[<span class="dv">1</span>], <span class="fu">nrow</span>(top), <span class="fu">nrow</span>(contrast_rows)</span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>) <span class="sc">+</span></span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">9</span>))</span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>figures <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(panels, <span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">guides =</span> <span class="st">&quot;collect&quot;</span>) <span class="sc">+</span></span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S1. Ten strongest collapse survivors&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>)</span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>S1 covers all collections, coloured by collection; S2 to S6 repeat it within each collection.</p>
+<p>S2 shows how much redundancy the collapse removed: significant sets per collection and contrast, before and after.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>figures <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fu">dotplot_figure</span>(survivors, <span class="dv">1</span>, <span class="st">&quot;all collections&quot;</span>, <span class="at">by_database =</span> <span class="cn">TRUE</span>)),</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(collections, <span class="cf">function</span>(db, i) {</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">dotplot_figure</span>(<span class="fu">filter</span>(survivors, database <span class="sc">==</span> db), i <span class="sc">+</span> <span class="dv">1</span>, db)</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>collapse_effect <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">==</span> <span class="st">&quot;fgsea&quot;</span>, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, contrast <span class="sc">%in%</span> shown) <span class="sc">|&gt;</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">before =</span> <span class="fu">n</span>(), <span class="at">after =</span> <span class="fu">sum</span>(main), <span class="at">.by =</span> <span class="fu">c</span>(contrast, database)) <span class="sc">|&gt;</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(before, after), <span class="at">names_to =</span> <span class="st">&quot;stage&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;sets&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">stage =</span> <span class="fu">factor</span>(stage, <span class="fu">c</span>(<span class="st">&quot;before&quot;</span>, <span class="st">&quot;after&quot;</span>)), <span class="at">contrast =</span> <span class="fu">factor</span>(contrast, shown))</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>figures <span class="ot">&lt;-</span> <span class="fu">c</span>(figures, <span class="fu">list</span>(</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(collapse_effect, <span class="fu">aes</span>(stage, sets, <span class="at">fill =</span> database)) <span class="sc">+</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">&quot;dodge&quot;</span>) <span class="sc">+</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">facet_wrap</span>(<span class="sc">~</span>contrast, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;significant sets&quot;</span>) <span class="sc">+</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>) <span class="sc">+</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S2. Significant sets before and after collapse&quot;</span>)</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>S7 shows how much redundancy the collapse removed: significant sets per collection and contrast, before and after.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>collapse_effect <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">==</span> <span class="st">&quot;fgsea&quot;</span>, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, contrast <span class="sc">%in%</span> shown) <span class="sc">|&gt;</span></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">before =</span> <span class="fu">n</span>(), <span class="at">after =</span> <span class="fu">sum</span>(main), <span class="at">.by =</span> <span class="fu">c</span>(contrast, database)) <span class="sc">|&gt;</span></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="fu">c</span>(before, after), <span class="at">names_to =</span> <span class="st">&quot;stage&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;sets&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">stage =</span> <span class="fu">factor</span>(stage, <span class="fu">c</span>(<span class="st">&quot;before&quot;</span>, <span class="st">&quot;after&quot;</span>)), <span class="at">contrast =</span> <span class="fu">factor</span>(contrast, shown))</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>figures <span class="ot">&lt;-</span> <span class="fu">c</span>(figures, <span class="fu">list</span>(</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(collapse_effect, <span class="fu">aes</span>(stage, sets, <span class="at">fill =</span> database)) <span class="sc">+</span></span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">&quot;dodge&quot;</span>) <span class="sc">+</span></span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">facet_wrap</span>(<span class="sc">~</span>contrast, <span class="at">scales =</span> <span class="st">&quot;free_y&quot;</span>, <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_fill_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;significant sets&quot;</span>) <span class="sc">+</span></span>
-<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">&quot;bottom&quot;</span>) <span class="sc">+</span></span>
-<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">supplement</span>(</span>
-<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>      <span class="dv">7</span>, <span class="st">&quot;Significant sets before and after collapse&quot;</span>,</span>
-<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>      <span class="fu">paste</span>(</span>
-<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;Sets at FDR 0.05 per collection and contrast, before and after collapsePathways, which&quot;</span>,</span>
-<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;makes a set the child of another significant set when it shows no enrichment of its own&quot;</span>,</span>
-<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;(p &gt; 0.05) either outside or inside that set&#39;s genes. Data: set_tests sheet of&quot;</span>,</span>
-<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;01_run_fgsea_and_fry.xlsx.&quot;</span></span>
-<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>      ),</span>
-<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">tags =</span> <span class="cn">NULL</span></span>
-<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>Write all seven pages to <code>b_reports/01_run_fgsea_and_fry_figures.pdf</code>.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(figures, print)</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(figures)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 7</code></pre>
-</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(figures, print)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>01_run_fgsea_and_fry.xlsx</code> holds <code>set_tests</code>, one row per set, contrast and method, with the leading edge joined by <code>;</code>, and <code>protein_results</code>, every protein and contrast from the fit. <code>02_</code> and <code>08_</code> read both; <code>03_</code> and <code>07_</code> read <code>set_tests</code> only.</p>
+<p><code>01_run_fgsea_and_fry.xlsx</code> holds <code>set_tests</code>, one row per set, contrast and method, with the leading edge joined by <code>;</code>, and <code>protein_results</code>, every protein and contrast from the fit.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_summary =</span> set_summary,</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein_summary =</span> protein_summary,</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_tests =</span> <span class="fu">mutate</span>(set_tests, <span class="at">leadingEdge =</span> <span class="fu">map_chr</span>(leadingEdge, paste, <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>)),</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein_results =</span> protein_results</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_summary =</span> set_summary,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_summary =</span> protein_summary,</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_tests =</span> <span class="fu">mutate</span>(set_tests, <span class="at">leadingEdge =</span> <span class="fu">map_chr</span>(leadingEdge, paste, <span class="at">collapse =</span> <span class="st">&quot;;&quot;</span>)),</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_results =</span> protein_results</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry.xlsx&quot;</span>)</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
@@ -2639,21 +2583,21 @@ attached base packages:
 
 other attached packages:
  [1] writexl_1.5.4   readxl_1.4.5    patchwork_1.3.2 ggplot2_4.0.3  
- [5] limma_3.68.1    stringr_1.6.0   purrr_1.2.2     tidyr_1.3.2    
- [9] tibble_3.3.1    dplyr_1.2.1     here_1.0.2     
+ [5] limma_3.68.1    purrr_1.2.2     tidyr_1.3.2     tibble_3.3.1   
+ [9] dplyr_1.2.1     here_1.0.2     
 
 loaded via a namespace (and not attached):
  [1] utf8_1.2.6          generics_0.1.4      fgsea_1.38.0       
- [4] lattice_0.22-9      stringi_1.8.7       digest_0.6.39      
+ [4] stringi_1.8.7       lattice_0.22-9      digest_0.6.39      
  [7] magrittr_2.0.5      evaluate_1.0.5      grid_4.6.0         
-[10] RColorBrewer_1.1-3  fastmap_1.2.0       Matrix_1.7-5       
-[13] cellranger_1.1.0    rprojroot_2.1.1     jsonlite_2.0.0     
-[16] viridisLite_0.4.3   scales_1.4.0        codetools_0.2-20   
-[19] cli_3.6.6           rlang_1.2.0         cowplot_1.2.0      
-[22] withr_3.0.2         yaml_2.3.12         otel_0.2.0         
-[25] tools_4.6.0         parallel_4.6.0      BiocParallel_1.46.0
-[28] fastmatch_1.1-8     pacman_0.5.1        vctrs_0.7.3        
-[31] R6_2.6.1            lifecycle_1.0.5     enrichVolcano_2.3.0
+[10] RColorBrewer_1.1-3  fastmap_1.2.0       cellranger_1.1.0   
+[13] rprojroot_2.1.1     jsonlite_2.0.0      Matrix_1.7-5       
+[16] scales_1.4.0        codetools_0.2-20    cli_3.6.6          
+[19] rlang_1.2.0         cowplot_1.2.0       withr_3.0.2        
+[22] yaml_2.3.12         otel_0.2.0          tools_4.6.0        
+[25] parallel_4.6.0      BiocParallel_1.46.0 fastmatch_1.1-8    
+[28] pacman_0.5.1        vctrs_0.7.3         R6_2.6.1           
+[31] lifecycle_1.0.5     stringr_1.6.0       enrichVolcano_2.3.0
 [34] htmlwidgets_1.6.4   pkgconfig_2.0.3     pillar_1.11.1      
 [37] gtable_0.3.6        glue_1.8.1          data.table_1.18.4  
 [40] Rcpp_1.1.2          statmod_1.5.1       xfun_0.57          

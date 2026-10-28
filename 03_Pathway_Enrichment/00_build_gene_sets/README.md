@@ -28,7 +28,7 @@ Outputs:
   - `mapping_summary`: proteins per mapping outcome.
 
 A set is tested with 15 to 500 source genes and at least 15 measured; no set is excluded by name.
-The measured universe is 3,039 symbols. GO Slim keeps the BP slim terms that have GO:BP offspring:
+The measured universe is 3,040 symbols. GO Slim keeps the BP slim terms that have GO:BP offspring:
 the CC and MF terms drop out, and so do BP leaf terms.
 
 | Collection | In source | Tested | Median measured |

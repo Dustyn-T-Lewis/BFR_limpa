@@ -2295,7 +2295,7 @@ vertical-align: -.125em;
 </section>
 <section id="prepare-the-sets" class="level2">
 <h2 class="anchored" data-anchor-id="prepare-the-sets">Prepare the sets</h2>
-<p><code>coverage</code> counts, for each set, the genes MitoCarta lists and how many of them we measure. <code>sets</code> turns the measured genes into a named list, one character vector per set.</p>
+<p><code>coverage</code> counts, for each set, the genes MitoCarta lists and how many of them we measure.</p>
 <p>MitoCarta keeps small pathways because some functions are one or two proteins, so there is no size floor. The 20% coverage floor is ours, not a published rule: below it the measured part says little about the pathway. The complexes are the structural-subunit pathways, “CI subunits” to “CV subunits”.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>coverage <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
@@ -2328,10 +2328,10 @@ vertical-align: -.125em;
 <pre><code># A tibble: 4 × 3
   treatment timepoint mean_mpe_pct
   &lt;chr&gt;     &lt;chr&gt;            &lt;dbl&gt;
-1 HLRT      T1                29  
-2 HLRT      T2                32.2
-3 BFR       T1                29.6
-4 BFR       T2                32.8</code></pre>
+1 HLRT      T1                29.1
+2 HLRT      T2                32.3
+3 BFR       T1                29.7
+4 BFR       T2                32.9</code></pre>
 </div>
 </div>
 <p>log2 MPE goes through the same design and contrasts as the protein fit, as a single outcome row. With one row there is nothing for <code>eBayes()</code> to borrow from, so the test is the plain least-squares t: estimate over standard error, with <code>df.residual</code> degrees of freedom and a 95% interval.</p>
@@ -2348,13 +2348,13 @@ vertical-align: -.125em;
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(mpe_test, <span class="fu">across</span>(<span class="fu">where</span>(is.double), <span class="cf">function</span>(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 8
-  contrast                 log2FC     se    df      t       p conf.low conf.high
-  &lt;chr&gt;                     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt;  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-1 BFR_Post-Pre            0.152   0.043     95  3.52  6.55e-4   0.0662     0.237
-2 HLRT_Post-Pre           0.155   0.0426    95  3.63  4.58e-4   0.0701     0.239
-3 BFR_Pre-HLRT_Pre        0.0308  0.0426    95  0.723 4.72e-1  -0.0538     0.115
-4 BFR_Post-HLRT_Post      0.0278  0.043     95  0.646 5.2 e-1  -0.0576     0.113
-5 Modality_x_Time_Inter… -0.00296 0.0605    95 -0.049 9.61e-1  -0.123      0.117</code></pre>
+  contrast                log2FC     se    df       t       p conf.low conf.high
+  &lt;chr&gt;                    &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+1 BFR_Post-Pre           0.151   0.0432    95  3.5    7.03e-4   0.0655     0.237
+2 HLRT_Post-Pre          0.155   0.0427    95  3.62   4.71e-4   0.07       0.24 
+3 BFR_Pre-HLRT_Pre       0.0305  0.0427    95  0.714  4.77e-1  -0.0543     0.115
+4 BFR_Post-HLRT_Post     0.027   0.0432    95  0.625  5.34e-1  -0.0587     0.113
+5 Modality_x_Time_Inte… -0.00354 0.0607    95 -0.0582 9.54e-1  -0.124      0.117</code></pre>
 </div>
 </div>
 </section>
@@ -2370,24 +2370,24 @@ vertical-align: -.125em;
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tibble</span>(citrate_synthase)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 4
-  contrast                     logFC P.Value adj.P.Val
-  &lt;chr&gt;                        &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;
-1 BFR_Post-Pre                0.219  0.00280    0.0761
-2 HLRT_Post-Pre               0.176  0.0150     0.166 
-3 BFR_Pre-HLRT_Pre            0.0358 0.615      0.999 
-4 BFR_Post-HLRT_Post          0.0783 0.278      1.000 
-5 Modality_x_Time_Interaction 0.0425 0.674      1.000 </code></pre>
+  contrast                      logFC  P.Value adj.P.Val
+  &lt;chr&gt;                         &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+1 BFR_Post-Pre                0.262   0.000177    0.0142
+2 HLRT_Post-Pre               0.205   0.00258     0.0495
+3 BFR_Pre-HLRT_Pre            0.00989 0.882       1.000 
+4 BFR_Post-HLRT_Post          0.0667  0.321       0.964 
+5 Modality_x_Time_Interaction 0.0568  0.548       0.998 </code></pre>
 </div>
 </div>
 </section>
 <section id="mitochondrial-normalisation" class="level2">
 <h2 class="anchored" data-anchor-id="mitochondrial-normalisation">Mitochondrial normalisation</h2>
 <p>Mitochondrial normalisation, as both papers did it: take the mitochondrial proteins out of the unnormalised data, normalise that subset alone, and refit. Each protein is then read against total mitochondrial content, so a protein that only rose with the rest of the mitochondrion no longer shows a change. The papers used VSN; we use cyclic loess, as for the main matrix.</p>
-<p>The refit follows stage 02: <code>dpcDE()</code> reads the standard errors from <code>dpcQuant()</code> as precision weights, <code>sample.weights = TRUE</code> adds one quality weight per sample, and <code>eBayes(robust = TRUE)</code> moderates the variances. <code>plot = FALSE</code> skips <code>dpcDE()</code>’s diagnostic plot.</p>
+<p>The refit follows stage 02: <code>dpcDE()</code> reads the standard errors from <code>dpcQuant()</code> as precision weights, with no per-sample quality weights, and <code>eBayes(robust = TRUE)</code> moderates the variances. <code>plot = FALSE</code> skips <code>dpcDE()</code>’s diagnostic plot.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>mito <span class="ot">&lt;-</span> raw[is_mito, ]</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>mito<span class="sc">$</span>E <span class="ot">&lt;-</span> <span class="fu">normalizeBetweenArrays</span>(mito<span class="sc">$</span>E, <span class="at">method =</span> <span class="st">&quot;cyclicloess&quot;</span>)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>mito_fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(mito, d<span class="sc">$</span>design, <span class="at">plot =</span> <span class="cn">FALSE</span>, <span class="at">sample.weights =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>mito_fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(mito, d<span class="sc">$</span>design, <span class="at">plot =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">contrasts.fit</span>(d<span class="sc">$</span>contrasts) <span class="sc">|&gt;</span></span>
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">eBayes</span>(<span class="at">robust =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -2403,9 +2403,9 @@ vertical-align: -.125em;
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(mito_proteins, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      contrast    protein      logFC  AveExpr         t   P.Value adj.P.Val
-1 BFR_Post-Pre A0A0B4J2F0 0.18675576 17.43781 1.0808565 0.2821813 0.7182333
-2 BFR_Post-Pre     A3KMH1 0.06763919 15.52639 0.5362833 0.5928612 0.8652435
-3 BFR_Post-Pre     A8MXV4 0.13594604 17.34585 0.9285939 0.3551621 0.7677706
+1 BFR_Post-Pre A0A0B4J2F0 0.09432611 17.43696 0.6346466 0.5270146 0.8257675
+2 BFR_Post-Pre     A3KMH1 0.13636600 15.52409 1.1509797 0.2522843 0.6011106
+3 BFR_Post-Pre     A8MXV4 0.16305546 17.34436 1.1770068 0.2417822 0.5928046
      gene   label selected
 1 PIGBOS1 PIGBOS1     TRUE
 2    VWA8    VWA8     TRUE
@@ -2416,17 +2416,18 @@ vertical-align: -.125em;
 <section id="complexes-i-to-v" class="level2">
 <h2 class="anchored" data-anchor-id="complexes-i-to-v">Complexes I to V</h2>
 <p>fry is limma’s fast self-contained gene-set test: it asks whether the proteins of a set, taken together, moved in one direction, and it allows for correlation between them. It reads limpa’s precision weights from <code>y$weights</code>. <code>ids2indices()</code> turns each set’s gene symbols into row positions, matching only each symbol’s representative protein, as in <code>01_run_fgsea_and_fry</code>. fry returns its own BH FDR per contrast.</p>
-<p><code>fry_sets()</code> takes a protein matrix, its weights and a list of sets, and returns one row per set and contrast. It runs on both fits for the complexes and on the normalised fit for MitoPathways.</p>
+<p><code>fry_sets()</code> returns one row per set and contrast. It runs on both fits for the complexes and on the normalised fit for MitoPathways.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>representative <span class="ot">&lt;-</span> <span class="fu">with</span>(protein_map, <span class="fu">set_names</span>(<span class="fu">if_else</span>(selected, gene, <span class="cn">NA</span>), protein))</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>fry_sets <span class="ot">&lt;-</span> <span class="cf">function</span>(y, weights, sets) {</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  y<span class="sc">$</span>weights <span class="ot">&lt;-</span> weights</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  index <span class="ot">&lt;-</span> <span class="fu">ids2indices</span>(sets, representative[<span class="fu">rownames</span>(y)])</span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">set_names</span>(contrast_names), <span class="cf">function</span>(cn) {</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fry</span>(y, index, d<span class="sc">$</span>design, d<span class="sc">$</span>contrasts[, cn], <span class="at">sort =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span> <span class="fu">rownames_to_column</span>(<span class="st">&quot;set&quot;</span>)</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fry</span>(y, index, d<span class="sc">$</span>design, d<span class="sc">$</span>contrasts[, cn], <span class="at">robust =</span> <span class="cn">TRUE</span>, <span class="at">sort =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rownames_to_column</span>(<span class="st">&quot;set&quot;</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>)</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>On the standard fit fry asks whether a complex changed; on the normalised fit, whether it changed beyond overall mitochondrial content.</p>
 <div class="cell">
@@ -2438,12 +2439,12 @@ vertical-align: -.125em;
 <span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(fit, contrast, set, NGenes, Direction, PValue, FDR)</span>
 <span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(complex_tests, <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       fit     contrast           set NGenes Direction     PValue        FDR
-1 standard BFR_Post-Pre   CI subunits     41        Up 0.09804684 0.09804684
-2 standard BFR_Post-Pre  CII subunits      4        Up 0.07866818 0.09804684
-3 standard BFR_Post-Pre CIII subunits     10        Up 0.00418497 0.01046243
-4 standard BFR_Post-Pre  CIV subunits     16        Up 0.01398893 0.02331489
-5 standard BFR_Post-Pre   CV subunits     17        Up 0.00292239 0.01046243</code></pre>
+<pre><code>       fit     contrast           set NGenes Direction      PValue        FDR
+1 standard BFR_Post-Pre   CI subunits     41        Up 0.113552472 0.11355247
+2 standard BFR_Post-Pre  CII subunits      4        Up 0.016114062 0.02685677
+3 standard BFR_Post-Pre CIII subunits     10        Up 0.002224194 0.00826077
+4 standard BFR_Post-Pre  CIV subunits     16        Up 0.035796305 0.04474538
+5 standard BFR_Post-Pre   CV subunits     17        Up 0.003304308 0.00826077</code></pre>
 </div>
 </div>
 </section>
@@ -2476,15 +2477,10 @@ vertical-align: -.125em;
 </section>
 <section id="figures" class="level2">
 <h2 class="anchored" data-anchor-id="figures">Figures</h2>
-<p>Three A4 pages go to <code>b_reports/02_test_mito.pdf</code>. They share a theme and a caption helper; <code>caption()</code> joins a title and text and wraps it to the page.</p>
+<p>Three A4 pages go to <code>b_reports/02_test_mito.pdf</code>. They share a theme and the arm colours.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>))</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_update</span>(</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="dv">0</span>, <span class="at">size =</span> <span class="dv">9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>),</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot.caption.position =</span> <span class="st">&quot;plot&quot;</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>caption <span class="ot">&lt;-</span> <span class="cf">function</span>(title, text) <span class="fu">str_wrap</span>(<span class="fu">paste0</span>(title, <span class="st">&quot;. &quot;</span>, text), <span class="dv">115</span>)</span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>arm_colours <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>arm_colours <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Page 1: MPE by arm and time, with each leg’s pair joined.</p>
 <div class="cell">
@@ -2496,14 +2492,8 @@ vertical-align: -.125em;
 <span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_manual</span>(<span class="at">values =</span> arm_colours, <span class="at">guide =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span></span>
 <span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
 <span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">&quot;MPE, % of summed dpcQuant protein values&quot;</span>,</span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">caption</span>(<span class="st">&quot;Mitochondrial protein enrichment by arm and time&quot;</span>, <span class="fu">paste</span>(</span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;MPE is the summed dpcQuant value of the&quot;</span>, <span class="fu">sum</span>(is_mito), <span class="st">&quot;measured MitoCarta 3.0 proteins&quot;</span>,</span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;over that of all&quot;</span>, <span class="fu">format</span>(<span class="fu">nrow</span>(raw), <span class="at">big.mark =</span> <span class="st">&quot;,&quot;</span>), <span class="st">&quot;proteins, per biopsy, before&quot;</span>,</span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;normalisation. dpcQuant puts each protein at its typical precursor intensity, so each&quot;</span>,</span>
-<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;protein counts once. Lines join each leg before and after training. Tests: mpe_test sheet&quot;</span>,</span>
-<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;of 02_test_mito.xlsx.&quot;</span></span>
-<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    ))</span>
-<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Mitochondrial protein enrichment by arm and time&quot;</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Page 2: a complex by contrast grid for both fits, coloured by signed −log10 fry FDR.</p>
 <div class="cell">
@@ -2523,15 +2513,11 @@ vertical-align: -.125em;
 <span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_gradient2</span>(<span class="at">low =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="at">high =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">name =</span> <span class="st">&quot;signed -log10 FDR&quot;</span>) <span class="sc">+</span></span>
 <span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
 <span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
-<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="fu">caption</span>(<span class="st">&quot;Complexes I to V, standard and mitochondria-normalised fits&quot;</span>, <span class="fu">paste</span>(</span>
-<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;fry on the structural subunits of each complex; labels give fry FDR within the contrast,&quot;</span>,</span>
-<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;colour its direction. The standard fit asks whether a complex changed; the normalised fit&quot;</span>,</span>
-<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>      <span class="st">&quot;whether it changed beyond overall mitochondrial content. Data: complex_tests sheet.&quot;</span></span>
-<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>    ))</span>
-<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">30</span>, <span class="at">hjust =</span> <span class="dv">1</span>), <span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Complexes I to V, standard and mitochondria-normalised fits&quot;</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">30</span>, <span class="at">hjust =</span> <span class="dv">1</span>), <span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Page 3: volcanoes of the normalised proteins with fgsea rings, drawn by <code>enrichVolcano</code>. <code>as_da()</code> and <code>as_enrichment()</code> put the protein and pathway tables into its format; the leading-edge genes become protein labels so the ring’s ticks find their points. <code>dedup_terms()</code> keeps one pathway per overlapping cluster, and the ring draws the twelve with the lowest adjusted p.</p>
+<p>Page 3: volcanoes of the normalised proteins with fgsea rings, drawn by <code>enrichVolcano</code>. The leading-edge genes become protein labels so the ring’s ticks find their points. <code>dedup_terms()</code> keeps one pathway per overlapping cluster, and the ring draws the twelve with the lowest adjusted p.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>da <span class="ot">&lt;-</span> enrichVolcano<span class="sc">::</span><span class="fu">as_da</span>(</span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(mito_proteins, protein, <span class="at">gene =</span> label, contrast, logFC, t, P.Value, adj.P.Val),</span>
@@ -2544,7 +2530,7 @@ vertical-align: -.125em;
 <span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">as_enrichment</span>(<span class="at">enrichment_test =</span> <span class="st">&quot;fgsea&quot;</span>, <span class="at">database =</span> <span class="st">&quot;MitoPathways&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">dedup_terms</span>(pathways)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p><code>volcano()</code> draws one contrast. As in <code>02_enrich_volcano_fgsea</code>, the NES key goes horizontal below the ring. The baseline contrast is not drawn.</p>
+<p>As in <code>02_enrich_volcano_fgsea</code>, the NES key goes horizontal below the ring. The baseline contrast is not drawn.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>volcano <span class="ot">&lt;-</span> <span class="cf">function</span>(cn) {</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">plot_volcano_ring</span>(</span>
@@ -2558,15 +2544,8 @@ vertical-align: -.125em;
 <span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">legend.key.width =</span> <span class="fu">unit</span>(<span class="dv">16</span>, <span class="st">&quot;mm&quot;</span>)</span>
 <span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>drawn <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(contrast_names, d<span class="sc">$</span>baseline)</span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>volcano_page <span class="ot">&lt;-</span> <span class="fu">wrap_plots</span>(<span class="fu">map</span>(drawn, volcano), <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_annotation</span>(<span class="at">caption =</span> <span class="fu">caption</span>(<span class="st">&quot;Mitochondria-normalised proteins&quot;</span>, <span class="fu">paste</span>(</span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Points are the&quot;</span>, <span class="fu">nrow</span>(mito), <span class="st">&quot;MitoCarta proteins after normalising them alone, coloured at&quot;</span>,</span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;BH FDR &lt; 0.05, five named per direction. The ring shows up to twelve MitoPathways at fgsea&quot;</span>,</span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;FDR &lt; 0.05, one per overlapping cluster, coloured by NES; ticks mark leading-edge proteins.&quot;</span>,</span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;fgsea treats proteins as independent, so ringed pathways that fry does not call are leads.&quot;</span>,</span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Data: mito_proteins and pathway_tests sheets.&quot;</span></span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>  )))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>volcano_page <span class="ot">&lt;-</span> <span class="fu">wrap_plots</span>(<span class="fu">map</span>(<span class="fu">setdiff</span>(contrast_names, d<span class="sc">$</span>baseline), volcano), <span class="at">ncol =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;Mitochondria-normalised proteins&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;02_test_mito.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
@@ -2582,8 +2561,8 @@ vertical-align: -.125em;
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">tested =</span> <span class="fu">n</span>(), <span class="at">fdr_05 =</span> <span class="fu">sum</span>(adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> contrast)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                     contrast tested fdr_05
-1                BFR_Post-Pre    660     17
-2               HLRT_Post-Pre    660     28
+1                BFR_Post-Pre    660     24
+2               HLRT_Post-Pre    660     42
 3            BFR_Pre-HLRT_Pre    660      0
 4          BFR_Post-HLRT_Post    660      0
 5 Modality_x_Time_Interaction    660      0</code></pre>
@@ -2595,16 +2574,16 @@ vertical-align: -.125em;
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">fdr_05 =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">min_fdr =</span> <span class="fu">signif</span>(<span class="fu">min</span>(FDR), <span class="dv">2</span>), <span class="at">.by =</span> <span class="fu">c</span>(fit, contrast))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                       fit                    contrast fdr_05 min_fdr
-1                 standard                BFR_Post-Pre      3  0.0100
-2                 standard               HLRT_Post-Pre      4  0.0017
-3                 standard            BFR_Pre-HLRT_Pre      0  0.9400
-4                 standard          BFR_Post-HLRT_Post      0  0.6600
-5                 standard Modality_x_Time_Interaction      0  0.9900
-6  mitochondria_normalised                BFR_Post-Pre      0  0.8100
-7  mitochondria_normalised               HLRT_Post-Pre      0  0.1400
-8  mitochondria_normalised            BFR_Pre-HLRT_Pre      0  0.9300
-9  mitochondria_normalised          BFR_Post-HLRT_Post      0  0.0650
-10 mitochondria_normalised Modality_x_Time_Interaction      0  0.6400</code></pre>
+1                 standard                BFR_Post-Pre      4  0.0083
+2                 standard               HLRT_Post-Pre      4  0.0057
+3                 standard            BFR_Pre-HLRT_Pre      0  0.9500
+4                 standard          BFR_Post-HLRT_Post      0  0.4300
+5                 standard Modality_x_Time_Interaction      0  0.9300
+6  mitochondria_normalised                BFR_Post-Pre      0  0.7100
+7  mitochondria_normalised               HLRT_Post-Pre      0  0.3700
+8  mitochondria_normalised            BFR_Pre-HLRT_Pre      0  0.8500
+9  mitochondria_normalised          BFR_Post-HLRT_Post      0  0.0570
+10 mitochondria_normalised Modality_x_Time_Interaction      0  0.8200</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>pathway_tests <span class="sc">|&gt;</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">fdr_05 =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> <span class="fu">c</span>(method, contrast)) <span class="sc">|&gt;</span></span>
@@ -2613,11 +2592,11 @@ vertical-align: -.125em;
 <pre><code># A tibble: 5 × 3
   contrast                      fry fgsea
   &lt;chr&gt;                       &lt;int&gt; &lt;int&gt;
-1 BFR_Post-Pre                   18     2
-2 HLRT_Post-Pre                  36    13
-3 BFR_Pre-HLRT_Pre                0     0
-4 BFR_Post-HLRT_Post              0     8
-5 Modality_x_Time_Interaction     0     4</code></pre>
+1 BFR_Post-Pre                   13     7
+2 HLRT_Post-Pre                  17    11
+3 BFR_Pre-HLRT_Pre                0     3
+4 BFR_Post-HLRT_Post              0    11
+5 Modality_x_Time_Interaction     0     1</code></pre>
 </div>
 </div>
 </section>
@@ -2625,12 +2604,14 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <p><code>02_test_mito.xlsx</code> holds one sheet per table. <code>03_complex_subunits</code> reads <code>complex_tests</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">mpe =</span> mpe, <span class="at">mpe_test =</span> mpe_test, <span class="at">citrate_synthase =</span> citrate_synthase,</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">complex_tests =</span> complex_tests,</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pathway_tests =</span> pathway_tests, <span class="at">mito_proteins =</span> mito_proteins</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_test_mito.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">mpe =</span> mpe, <span class="at">mpe_test =</span> mpe_test, <span class="at">citrate_synthase =</span> citrate_synthase,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">complex_tests =</span> complex_tests,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">pathway_tests =</span> pathway_tests, <span class="at">mito_proteins =</span> mito_proteins</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_test_mito.xlsx&quot;</span>)</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

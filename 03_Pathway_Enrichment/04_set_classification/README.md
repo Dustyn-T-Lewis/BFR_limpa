@@ -34,11 +34,11 @@ Nominal hits as a multiple of chance (5% of the sets tested):
 
 | Task | Hallmark | KEGG | Reactome | GO:BP | GO Slim |
 |---|---:|---:|---:|---:|---:|
-| pre vs post, BFR | 1.46 | 3.83 | 3.44 | 4.01 | 7.46 |
-| pre vs post, HLRT | 4.88 | 4.04 | 4.23 | 3.73 | 4.75 |
-| post, BFR vs HLRT | 0.98 | 0.64 | 0.37 | 1.16 | 0.68 |
-| change, BFR vs HLRT | 0.98 | 0.00 | 0.14 | 0.53 | 0.68 |
+| pre vs post, BFR | 1.46 | 3.83 | 3.49 | 4.01 | 7.46 |
+| pre vs post, HLRT | 4.88 | 4.04 | 4.33 | 3.69 | 4.75 |
+| post, BFR vs HLRT | 0.98 | 0.64 | 0.37 | 1.19 | 1.02 |
+| change, BFR vs HLRT | 0.98 | 0.00 | 0.14 | 0.54 | 0.68 |
 | baseline | 0.98 | 0.43 | 0.47 | 0.48 | 0.00 |
 
-After BH, 9 sets survive on BFR training, 49 on HLRT and none elsewhere. Protein-level
+After BH, 8 sets survive on BFR training, 50 on HLRT and none elsewhere. Protein-level
 classification is `02_Differential_Expression/04_Protein_Classification`.

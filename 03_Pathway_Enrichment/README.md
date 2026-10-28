@@ -27,10 +27,10 @@ READMEs describe the encodings and findings.
 
 | Step | Question | Answer |
 |---|---|---|
-| `01_run_fgsea_and_fry` | Which sets move with training? | fgsea 376 BFR and 281 HLRT sets (88 and 68 after collapse); fry 656 and 589. On the between-leg contrasts fry finds none, so fgsea's between-leg sets are leads only. |
-| `04_set_classification` | Does a set's score separate the groups? | 9 sets on BFR training and 49 on HLRT after BH; BFR against HLRT sits at chance. |
+| `01_run_fgsea_and_fry` | Which sets move with training? | fgsea 460 BFR and 298 HLRT sets (102 and 66 after collapse); fry 604 and 401. On the between-leg contrasts fry finds none, so fgsea's between-leg sets are leads only. |
+| `04_set_classification` | Does a set's score separate the groups? | 8 sets on BFR training and 50 on HLRT after BH; BFR against HLRT sits at chance. |
 | `05_set_association` | Does a set's score change track the phenotype? | No set survives BH. |
-| `06_leading_edge` | Do both legs move the same sets, through the same proteins? | Across all 1,990 sets the two legs' NES correlate (Spearman rho 0.83). Leading-edge overlap, untested: across the 71 pathways both legs move, a median 58% of leading-edge proteins are shared (41% to 100%). |
+| `06_leading_edge` | Do both legs move the same sets, through the same proteins? | Across all 1,990 sets the two legs' NES correlate (Spearman rho 0.78). Leading-edge overlap, untested: across the 74 pathways both legs move, the median Jaccard index is 0.56 (0.37 to 0.94). |
 | `07_pathway_maps` | How do the pathways each leg moves cluster, and which proteins link them? | Figures only; the main sets of `01_` drawn as maps per collection. |
 
 ## Methods

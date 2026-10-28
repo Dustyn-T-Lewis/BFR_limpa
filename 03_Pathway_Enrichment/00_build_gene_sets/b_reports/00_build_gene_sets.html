@@ -2250,7 +2250,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins">Read proteins</h2>
-<p>A gene set is a named list of genes that share a pathway, process or location. Every later enrichment step (<code>01_run_fgsea_and_fry</code>, <code>04_run_singscore</code> and on) reads the list built here, so set membership is decided once.</p>
+<p>A gene set is a named list of genes that share a pathway, process or location. Every later enrichment step (<code>01_run_fgsea_and_fry</code>, <code>03_run_singscore</code> and on) reads the list built here, so set membership is decided once.</p>
 <p><code>proteins.rds</code> is limpa’s protein-level <code>EList</code> from quantification. Only its annotation (<code>genes</code>) and observation counts (<code>other$n.observations</code>) are used here.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
@@ -2290,7 +2290,7 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <pre><code>[1] &quot;msigdb_2026.1.Hs_Hallmark-Reactome-KEGG_Legacy-GOBP.rds&quot;</code></pre>
 </div>
 </div>
-<p><code>md5_ok()</code> takes a file path and returns <code>TRUE</code> when a <code>.md5</code> file sits beside it and holds the file’s current checksum. It guards both frozen files.</p>
+<p><code>md5_ok()</code> is <code>TRUE</code> when a <code>.md5</code> beside the file holds its current checksum. It guards both frozen files.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>md5_ok <span class="ot">&lt;-</span> <span class="cf">function</span>(f) {</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.exists</span>(<span class="fu">paste0</span>(f, <span class="st">&quot;.md5&quot;</span>)) <span class="sc">&amp;&amp;</span></span>
@@ -2404,14 +2404,13 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>mapping_summary <span class="ot">&lt;-</span> <span class="fu">count</span>(protein_map, mapping_status, <span class="at">name =</span> <span class="st">&quot;proteins&quot;</span>)</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>mapping_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>    mapping_status proteins
-1   duplicate_gene        2
-2 multiple_symbols        1
-3   representative     3039</code></pre>
+<pre><code>  mapping_status proteins
+1 duplicate_gene        2
+2 representative     3040</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(gene_universe)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 3039</code></pre>
+<pre><code>[1] 3040</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_map[<span class="fu">c</span>(<span class="st">&quot;protein&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;mapping_status&quot;</span>, <span class="st">&quot;label&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -2473,7 +2472,7 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 <span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(slim_sets) <span class="ot">&lt;-</span> slim_catalog<span class="sc">$</span>set_id</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Append the slim sets to the catalogue and the tested list, and stop on any duplicated name. Of the 140 slim terms, the BP ones that remain are counted, with how many pass the size rule.</p>
+<p>Append the slim sets to the catalogue and the tested list, and stop on any duplicated name. Of the 140 slim terms, the printout gives those left after dropping <code>NA</code> and how many pass the size rule.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(set_catalog, slim_catalog)</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">c</span>(sets, slim_sets[slim_catalog<span class="sc">$</span>set_id[slim_catalog<span class="sc">$</span>qualifies]])</span>
@@ -2514,16 +2513,22 @@ A0FGR8       ESYT2_HUMAN   ESYT2    14 0.3347874</code></pre>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>gene_sets.rds</code> holds the tested sets, a named list of gene-symbol vectors read by <code>01_run_fgsea_and_fry</code>, <code>04_run_singscore</code>, <code>07_leading_edge</code> and <code>08_pathway_maps</code>. <code>00_build_gene_sets.xlsx</code> holds the set catalogue and protein-to-gene map that later steps read, plus the counts above.</p>
+<p><code>gene_sets.rds</code> holds the tested sets, a named list of gene-symbol vectors. <code>go_bp_measured.rds</code> holds the measured genes of every GO:BP set, tested or not, so <code>06_leading_edge</code> can break a parent into child terms too small to test. <code>00_build_gene_sets.xlsx</code> holds the set catalogue and protein-to-gene map that later steps read, plus the counts above.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection_summary =</span> collection_summary,</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">set_catalog =</span> set_catalog,</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">protein_gene_map =</span> protein_map,</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">mapping_summary =</span> mapping_summary</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sets, <span class="fu">file.path</span>(out, <span class="st">&quot;gene_sets.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(out, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(sets, <span class="fu">file.path</span>(out, <span class="st">&quot;gene_sets.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  sets_measured[set_catalog<span class="sc">$</span>set_id[set_catalog<span class="sc">$</span>database <span class="sc">==</span> <span class="st">&quot;GOBP&quot;</span>]],</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;go_bp_measured.rds&quot;</span>), <span class="at">compress =</span> <span class="st">&quot;xz&quot;</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">collection_summary =</span> collection_summary,</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_catalog =</span> set_catalog,</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_gene_map =</span> protein_map,</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">mapping_summary =</span> mapping_summary</span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>)</span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

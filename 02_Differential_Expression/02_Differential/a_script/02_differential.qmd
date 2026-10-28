@@ -144,7 +144,7 @@ slice_min(baseline, P.Value, n = 5) |>
 ## Slope sensitivity
 
 `02_quantify_run.R --sensitivity` also quantifies with the detection-curve (DPC) slope fitted to
-these data (0.488) instead of the preset 0.7. When that run exists, it gets the same detection
+these data (0.478) instead of the preset 0.7. When that run exists, it gets the same detection
 filter, normalisation and design, and its discovery counts are set beside the primary run's.
 
 ```{r slope-sensitivity}

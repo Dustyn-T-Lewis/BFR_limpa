@@ -63,7 +63,7 @@ labels <- set_tests |>
 ## Choose the pathways to draw
 
 The main sets `01` kept, one per cluster of overlapping sets, significant at FDR < 0.05 in either
-leg. GO:BP has 73 and Reactome 31, so each is cut to the 30 with the smallest adjusted p.
+leg. GO:BP has 77 and Reactome 37, so each is cut to the 30 with the smallest adjusted p.
 
 ```{r drawn}
 drawn <- set_tests |>

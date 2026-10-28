@@ -2211,6 +2211,7 @@ vertical-align: -.125em;
   <li><a href="#read-the-report" id="toc-read-the-report" class="nav-link" data-scroll-target="#read-the-report">Read the report</a></li>
   <li><a href="#prepare-gene-values" id="toc-prepare-gene-values" class="nav-link" data-scroll-target="#prepare-gene-values">Prepare gene values</a></li>
   <li><a href="#reshape-for-upload" id="toc-reshape-for-upload" class="nav-link" data-scroll-target="#reshape-for-upload">Reshape for upload</a></li>
+  <li><a href="#fill-the-crap-duplicated-genes" id="toc-fill-the-crap-duplicated-genes" class="nav-link" data-scroll-target="#fill-the-crap-duplicated-genes">Fill the cRAP-duplicated genes</a></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
   <li><a href="#save-results" id="toc-save-results" class="nav-link" data-scroll-target="#save-results">Save results</a></li>
   <li><a href="#session-information" id="toc-session-information" class="nav-link" data-scroll-target="#session-information">Session information</a></li>
@@ -2241,14 +2242,14 @@ vertical-align: -.125em;
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, readr)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, stringr, readr)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="read-the-report" class="level2">
 <h2 class="anchored" data-anchor-id="read-the-report">Read the report</h2>
-<p>FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) estimates the slow and fast fibre fractions of a biopsy by deconvolution: it treats each sample’s profile as a mix of reference profiles for pure slow and pure fast fibres and solves for the proportions. It asks for label-free quantification (LFQ) intensities, measured without a label or standard, and normalises them itself. Its authors found quantification from unique peptides the most accurate.</p>
-<p>The upload is DIA-NN’s <code>Genes.MaxLFQ.Unique</code>: MaxLFQ intensities from gene-specific peptides, as the app asks. MaxLFQ combines peptide ratios between runs into one abundance per gene and run. DIA-NN normalised these values across runs, and the app normalises again. Only the three columns needed are read from the parquet.</p>
+<p>FibeRtypeR (Van der Stede et al. 2026, J Physiol 604:2624) estimates the slow and fast fibre fractions of a biopsy by deconvolution: it treats each sample’s profile as a mix of reference profiles for pure slow and pure fast fibres and solves for the proportions. It asks for label-free quantification (LFQ) intensities and normalises them itself. Its authors found quantification from unique peptides the most accurate.</p>
+<p>The upload is DIA-NN’s <code>Genes.MaxLFQ.Unique</code>: MaxLFQ intensities from gene-specific peptides, as the app asks. MaxLFQ combines peptide ratios between runs into one abundance per gene and run. DIA-NN normalised these values across runs, and the app normalises again.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>report <span class="ot">&lt;-</span> nanoparquet<span class="sc">::</span><span class="fu">read_parquet</span>(</span>
@@ -2269,7 +2270,7 @@ vertical-align: -.125em;
 <section id="prepare-gene-values" class="level2">
 <h2 class="anchored" data-anchor-id="prepare-gene-values">Prepare gene values</h2>
 <p>The report has one row per precursor, and the gene value repeats on every precursor row of that gene, so <code>distinct()</code> keeps one copy. DIA-NN writes 0 on rows whose precursor is not unique to the gene, so 0 means not quantified and is dropped.</p>
-<p>The search FASTA lists 43 human proteins twice, because the appended cRAP database repeats them; MB, CKM, FABP3 and CYCS are among them. Their <code>Genes</code> reads like <code>MB;cRAP-MB</code>, and DIA-NN writes 0 in both of its MaxLFQ columns for them in every run, so this filter drops them and they are absent from the upload. <code>01_filter.qmd</code> repairs them at precursor level for the main analysis; this export reads DIA-NN’s gene values, which that repair does not reach.</p>
+<p>The search FASTA lists 43 human proteins twice, because the appended cRAP database repeats them; MB, CKM, FABP3 and CYCS are among them. Their <code>Genes</code> reads like <code>MB;cRAP-MB</code>, and DIA-NN writes 0 in both of its MaxLFQ columns for them in every run, so this filter drops them. <code>01_filter.qmd</code> repairs them at precursor level for the main analysis, and the next section fills them from those repaired estimates.</p>
 <p>Runs match <code>metadata$run</code> ignoring case, as in <code>01_filter.qmd</code>. That absorbs <code>Cl_MDR_7E-T2</code>, written <code>CL_MDR_7E-T2</code> in the sheet, and drops the discarded S08 injection, which has no <code>sample_id</code>. <code>stopifnot()</code> stops if any sample still holds two values for one gene.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>lfq <span class="ot">&lt;-</span> report <span class="sc">|&gt;</span></span>
@@ -2309,19 +2310,59 @@ vertical-align: -.125em;
 </div>
 </div>
 </section>
+<section id="fill-the-crap-duplicated-genes" class="level2">
+<h2 class="anchored" data-anchor-id="fill-the-crap-duplicated-genes">Fill the cRAP-duplicated genes</h2>
+<p>The genes DIA-NN zeroed come from limpa’s protein estimates instead, which the stage 01 repair covers. The two sit on different scales, so for each sample limpa’s log2 values are shifted by the median difference from DIA-NN’s log2 MaxLFQ over the genes both quantify, then back-transformed. A gene with several protein groups uses the one with the most observed precursors. A cell stays blank where limpa observed no precursor of that protein in that sample, matching how DIA-NN leaves unquantified cells.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>crap_genes <span class="ot">&lt;-</span> report <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">str_detect</span>(Genes, <span class="st">&quot;cRAP-&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(Genes) <span class="sc">|&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(Genes) <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_split</span>(<span class="st">&quot;;&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unlist</span>() <span class="sc">|&gt;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_subset</span>(<span class="st">&quot;^cRAP-&quot;</span>, <span class="at">negate =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setdiff</span>(upload<span class="sc">$</span>identifier)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>observed <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>representative <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">row =</span> <span class="fu">seq_along</span>(observed), <span class="at">gene =</span> proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes, observed) <span class="sc">|&gt;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(gene)) <span class="sc">|&gt;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(observed, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>, <span class="at">by =</span> gene)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>limpa_log2 <span class="ot">&lt;-</span> proteins<span class="sc">$</span>E[representative<span class="sc">$</span>row, metadata<span class="sc">$</span>sample_id]</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(limpa_log2) <span class="ot">&lt;-</span> representative<span class="sc">$</span>gene</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>shared <span class="ot">&lt;-</span> <span class="fu">intersect</span>(upload<span class="sc">$</span>identifier, representative<span class="sc">$</span>gene)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>dia_log2 <span class="ot">&lt;-</span> <span class="fu">log2</span>(<span class="fu">as.matrix</span>(upload[<span class="fu">match</span>(shared, upload<span class="sc">$</span>identifier), metadata<span class="sc">$</span>sample_id]))</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>offset <span class="ot">&lt;-</span> <span class="fu">apply</span>(dia_log2 <span class="sc">-</span> limpa_log2[shared, ], <span class="dv">2</span>, median, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>fill_genes <span class="ot">&lt;-</span> <span class="fu">intersect</span>(crap_genes, representative<span class="sc">$</span>gene)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>filled <span class="ot">&lt;-</span> <span class="dv">2</span><span class="sc">^</span><span class="fu">sweep</span>(limpa_log2[fill_genes, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="dv">2</span>, offset, <span class="st">&quot;+&quot;</span>)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>filled[proteins<span class="sc">$</span>other<span class="sc">$</span>n.observations[representative<span class="sc">$</span>row[<span class="fu">match</span>(fill_genes, representative<span class="sc">$</span>gene)],</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  metadata<span class="sc">$</span>sample_id] <span class="sc">==</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>upload <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(upload, <span class="fu">as_tibble</span>(filled, <span class="at">rownames =</span> <span class="st">&quot;identifier&quot;</span>))</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">filled_genes =</span> <span class="fu">length</span>(fill_genes), <span class="at">not_in_limpa =</span> <span class="fu">length</span>(<span class="fu">setdiff</span>(crap_genes, fill_genes)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>filled_genes not_in_limpa 
+          23           20 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fill_genes</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] &quot;CAT&quot;    &quot;MB&quot;     &quot;CA2&quot;    &quot;FABP3&quot;  &quot;PPIA&quot;   &quot;MAPT&quot;   &quot;HARS1&quot;  &quot;ANXA5&quot; 
+ [9] &quot;PRDX1&quot;  &quot;CYCS&quot;   &quot;GSTP1&quot;  &quot;GSN&quot;    &quot;CKM&quot;    &quot;CTSD&quot;   &quot;RPS27A&quot; &quot;TXN&quot;   
+[17] &quot;UBE2I&quot;  &quot;SOD1&quot;   &quot;NQO2&quot;   &quot;HRAS&quot;   &quot;NEDD8&quot;  &quot;CYB5A&quot;  &quot;B2M&quot;   </code></pre>
+</div>
+</div>
+</section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
 <p>Genes and samples in the file, the share of blank cells, and genes quantified in every biopsy.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(upload[<span class="sc">-</span><span class="dv">1</span>])</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">genes =</span> <span class="fu">nrow</span>(upload), <span class="at">samples =</span> <span class="fu">ncol</span>(values),</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_blank =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">is.na</span>(values)), <span class="dv">1</span>),</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">complete_genes =</span> <span class="fu">sum</span>(<span class="fu">rowSums</span>(<span class="fu">is.na</span>(values)) <span class="sc">==</span> <span class="dv">0</span>)</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(upload[<span class="sc">-</span><span class="dv">1</span>])</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">genes =</span> <span class="fu">nrow</span>(upload), <span class="at">samples =</span> <span class="fu">ncol</span>(values),</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_blank =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">is.na</span>(values)), <span class="dv">1</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">complete_genes =</span> <span class="fu">sum</span>(<span class="fu">rowSums</span>(<span class="fu">is.na</span>(values)) <span class="sc">==</span> <span class="dv">0</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>         genes        samples      pct_blank complete_genes 
-        4317.0          131.0           34.5         1176.0 </code></pre>
+        4340.0          131.0           34.3         1195.0 </code></pre>
 </div>
 </div>
 </section>
@@ -2329,16 +2370,16 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <p><code>fibertyper_input.csv</code> is the only CSV output, because the app reads nothing else. Missing values stay blank.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  upload, <span class="fu">here</span>(<span class="st">&quot;06_Composition&quot;</span>, <span class="st">&quot;01_fibre_type_export&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;fibertyper_input.csv&quot;</span>),</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">na =</span> <span class="st">&quot;&quot;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  upload, <span class="fu">here</span>(<span class="st">&quot;06_Composition&quot;</span>, <span class="st">&quot;01_fibre_type_export&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;fibertyper_input.csv&quot;</span>),</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">na =</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
@@ -2358,19 +2399,20 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] readr_2.2.0 tidyr_1.3.2 dplyr_1.2.1 here_1.0.2 
+[1] readr_2.2.0   stringr_1.6.0 tidyr_1.3.2   dplyr_1.2.1   here_1.0.2   
 
 loaded via a namespace (and not attached):
- [1] bit_4.6.0         jsonlite_2.0.0    compiler_4.6.0    crayon_1.5.3     
- [5] tidyselect_1.2.1  parallel_4.6.0    yaml_2.3.12       fastmap_1.2.0    
- [9] R6_2.6.1          generics_0.1.4    knitr_1.52        htmlwidgets_1.6.4
-[13] tibble_3.3.1      rprojroot_2.1.1   pillar_1.11.1     tzdb_0.5.0       
-[17] rlang_1.2.0       utf8_1.2.6        nanoparquet_0.5.1 xfun_0.57        
-[21] bit64_4.8.0       otel_0.2.0        cli_3.6.6         withr_3.0.2      
-[25] magrittr_2.0.5    digest_0.6.39     vroom_1.7.1       hms_1.1.4        
-[29] lifecycle_1.0.5   vctrs_0.7.3       evaluate_1.0.5    glue_1.8.1       
-[33] pacman_0.5.1      rmarkdown_2.32    purrr_1.2.2       tools_4.6.0      
-[37] pkgconfig_2.0.3   htmltools_0.5.9  </code></pre>
+ [1] bit_4.6.0         limma_3.68.1      jsonlite_2.0.0    compiler_4.6.0   
+ [5] crayon_1.5.3      tidyselect_1.2.1  parallel_4.6.0    statmod_1.5.1    
+ [9] yaml_2.3.12       fastmap_1.2.0     R6_2.6.1          generics_0.1.4   
+[13] knitr_1.52        htmlwidgets_1.6.4 tibble_3.3.1      rprojroot_2.1.1  
+[17] pillar_1.11.1     tzdb_0.5.0        rlang_1.2.0       utf8_1.2.6       
+[21] nanoparquet_0.5.1 stringi_1.8.7     xfun_0.57         bit64_4.8.0      
+[25] otel_0.2.0        cli_3.6.6         withr_3.0.2       magrittr_2.0.5   
+[29] digest_0.6.39     vroom_1.7.1       hms_1.1.4         lifecycle_1.0.5  
+[33] vctrs_0.7.3       evaluate_1.0.5    glue_1.8.1        pacman_0.5.1     
+[37] rmarkdown_2.32    purrr_1.2.2       tools_4.6.0       pkgconfig_2.0.3  
+[41] htmltools_0.5.9  </code></pre>
 </div>
 </div>
 </section>

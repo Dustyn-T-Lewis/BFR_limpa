@@ -24,6 +24,6 @@ Outputs:
   in. These leading edges can differ slightly from the shared proteins in S15 of 06_leading_edge.
 
 Each map shows the main sets 01 calls at FDR < 0.05 in either leg, at most 30 per collection: 6
-Hallmark, 5 GO Slim, 11 KEGG, 30 of Reactome's 31 and 30 of GO:BP's 73. Across all 3,980 set
+Hallmark, 9 GO Slim, 10 KEGG, 30 of Reactome's 37 and 30 of GO:BP's 77. Across all 3,980 set
 and contrast pairs, this run's NES agree with 01's at r ≥ 0.9998 in every collection; the largest
-difference is 0.094, in Reactome. No `c_data/`.
+difference is 0.088, in GO:BP. No `c_data/`.

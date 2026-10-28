@@ -2287,7 +2287,7 @@ treatment T1 T2
 </section>
 <section id="contrasts" class="level2">
 <h2 class="anchored" data-anchor-id="contrasts">Contrasts</h2>
-<p>A contrast is a difference between model coefficients; positive values follow the subtraction order below. <code>makeContrasts()</code> returns one column of coefficient weights per comparison.</p>
+<p>A contrast is a difference between model coefficients; positive values follow the subtraction order below.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>contrast_matrix <span class="ot">&lt;-</span> <span class="fu">makeContrasts</span>(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Post-Pre</span><span class="st">`</span> <span class="ot">=</span> BFR_T2 <span class="sc">-</span> BFR_T1,</span>
@@ -2365,7 +2365,7 @@ Levels    Modality_x_Time_Interaction
 </section>
 <section id="check-within-leg-correlation" class="level2">
 <h2 class="anchored" data-anchor-id="check-within-leg-correlation">Check within-leg correlation</h2>
-<p>Samples from the same leg may stay correlated after the participant term. <code>leg_id</code> marks each participant and leg; <code>duplicateCorrelation()</code> takes the protein matrix, the design and that block, and returns the average residual correlation within legs.</p>
+<p>Samples from the same leg may stay correlated after the participant term. <code>leg_id</code> marks each participant and leg; <code>duplicateCorrelation()</code> estimates the average residual correlation within legs.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>leg_id <span class="ot">&lt;-</span> <span class="fu">paste</span>(targets<span class="sc">$</span>participant, targets<span class="sc">$</span>leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2378,7 +2378,7 @@ Levels    Modality_x_Time_Interaction
 <pre><code>[1] 0.027</code></pre>
 </div>
 </div>
-<p>The estimate ignores the standard errors and sample weights the later fit uses. <code>02_Differential</code> fits without a leg block while this stays near zero. If it rose, the fix is <code>block = leg_id</code> there; <code>leg_id</code> is not saved, so read this value on every rerun.</p>
+<p>The estimate ignores the standard errors the later fit uses. <code>02_Differential</code> fits without a leg block while this stays near zero. If it rose, the fix is <code>block = leg_id</code> there; <code>leg_id</code> is not saved, so read this value on every rerun.</p>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
@@ -2389,15 +2389,17 @@ Levels    Modality_x_Time_Interaction
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">design =</span> design, <span class="at">contrasts =</span> contrast_matrix, <span class="at">baseline =</span> <span class="st">&quot;BFR_Pre-HLRT_Pre&quot;</span>),</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;design.rds&quot;</span>)</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>sheets <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">samples =</span> <span class="fu">as.data.frame</span>(targets),</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">design =</span> <span class="fu">data.frame</span>(<span class="at">sample_id =</span> <span class="fu">rownames</span>(design), design, <span class="at">check.names =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">contrasts =</span> <span class="fu">data.frame</span>(</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">coefficient =</span> <span class="fu">rownames</span>(contrast_matrix), contrast_matrix, <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">correlation_strata =</span> strata</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(sheets, <span class="fu">file.path</span>(out, <span class="st">&quot;01_design.xlsx&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="fu">as.data.frame</span>(targets),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> <span class="fu">data.frame</span>(<span class="at">sample_id =</span> <span class="fu">rownames</span>(design), design, <span class="at">check.names =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrasts =</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">coefficient =</span> <span class="fu">rownames</span>(contrast_matrix), contrast_matrix, <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">correlation_strata =</span> strata</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_design.xlsx&quot;</span>)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

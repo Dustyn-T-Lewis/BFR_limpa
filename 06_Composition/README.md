@@ -7,7 +7,7 @@ biopsy's slow and fast fibre fractions with FibeRtypeR (Van der Stede et al. 202
 and checks whether the stage 02 results hold once composition is in the model.
 
 Only the first step is built. [`01_fibre_type_export`](01_fibre_type_export/README.md) writes
-the upload file; its README covers the upload and the 43 cRAP-duplicated proteins, 22 of which it
+the upload file; its README covers the upload and the 43 cRAP-duplicated proteins, 23 of which it
 fills from limpa. Two steps wait on the app run: `02_fibre_type_import` will read the app's
 fractions per biopsy, and a third will refit the stage 02 model with the slow fraction as a
 covariate and compare the results.
