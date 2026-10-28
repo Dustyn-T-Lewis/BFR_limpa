@@ -16,8 +16,8 @@ quarto render 02_Differential_Expression/02_Differential/a_script/02_differentia
 Outputs:
 
 - `b_reports/02_differential.html`: the walkthrough, with diagnostic plots.
-- `c_data/fit.rds`: the fitted contrasts, read by `03_Pathway_Enrichment/01_run_fgsea_and_fry`
-  and `05_Mitochondria/02_test_mito`.
+- `c_data/fit.rds`: the fitted contrasts, read by `03_Pathway_Enrichment/01_run_fgsea_and_fry`,
+  `04_Network/02_module_traits` and `05_Mitochondria/02_test_mito`.
 - `c_data/02_differential.xlsx`:
   - `DEP_matrix`: one row per protein, with log2 fold change, p and BH-adjusted p per contrast;
   - `contrast_summary`: discoveries per contrast at FDR 0.05 and 0.10;
