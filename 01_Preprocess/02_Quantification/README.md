@@ -18,6 +18,8 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 Outputs:
 
 - `b_reports/02_quantify.html`: the walkthrough, with diagnostic plots.
+- `b_reports/02_quantify_mds.pdf`: one page, the MDS plot of samples (limma `plotMDSUsingSEs()`)
+  coloured by treatment with open T1 and filled T2 points, and again labelled by participant.
 - `c_data/proteins.rds`: abundance, standard errors and annotations, read by stages 02 to 06.
 - `c_data/02_quantify.xlsx`:
   - `samples`: sample identifiers and study metadata;
