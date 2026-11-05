@@ -2263,10 +2263,10 @@ treatment T1 T2
 </section>
 <section id="design" class="level2">
 <h2 class="anchored" data-anchor-id="design">Design</h2>
-<p>A design matrix has one row per sample and one column per model coefficient, marking which group and participant each sample belongs to. <code>~ 0 + group + participant</code> gives one mean per treatment-by-timepoint group, no separate intercept, and a fixed effect per participant. Participant is fixed rather than random because every contrast sits within one person (limma User’s Guide §9.4.2), which makes pre-to-post comparisons paired. A participant-level variable such as sex is constant within person and cannot be estimated here.</p>
+<p>A design matrix has one row per sample and one column per model coefficient, marking which group and participant each sample belongs to. <code>~ 0 + group + participant + blood</code> gives one mean per treatment-by-timepoint group, no separate intercept, and a fixed effect per participant. Participant is fixed rather than random because every contrast sits within one person (limma User’s Guide §9.4.2), which makes pre-to-post comparisons paired. A participant-level variable such as sex is constant within person and cannot be estimated here. <code>blood</code>, the haemoglobin index from <code>02_Quantification</code>, is a covariate: each protein gets a slope on how much blood its sample holds, so blood no longer adds to the residual variance. <code>02_Quantification</code> gives its median per group.</p>
 <p><code>makeContrasts()</code> reads its arguments as R code, so a column named <code>groupBFR_T1</code> must become <code>BFR_T1</code> and every name must be syntactic. <code>is.fullrank()</code> checks that the columns are linearly independent; a rank-deficient design would leave contrasts inestimable.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group <span class="sc">+</span> participant, <span class="at">data =</span> targets)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group <span class="sc">+</span> participant <span class="sc">+</span> blood, <span class="at">data =</span> targets)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(design) <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">&quot;^group&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="fu">colnames</span>(design))</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(design) <span class="ot">&lt;-</span> targets<span class="sc">$</span>sample_id</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
@@ -2281,7 +2281,7 @@ treatment T1 T2
 <span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     samples coefficients  residual_df 
-         131           36           95 </code></pre>
+         131           37           94 </code></pre>
 </div>
 </div>
 </section>
@@ -2375,7 +2375,7 @@ Levels    Modality_x_Time_Interaction
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(strata<span class="sc">$</span>correlation, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.027</code></pre>
+<pre><code>[1] 0.015</code></pre>
 </div>
 </div>
 <p>The estimate ignores the standard errors the later fit uses. <code>02_Differential</code> fits without a leg block while this stays near zero. If it rose, the fix is <code>block = leg_id</code> there; <code>leg_id</code> is not saved, so read this value on every rerun.</p>
@@ -2409,7 +2409,7 @@ Levels    Modality_x_Time_Interaction
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 

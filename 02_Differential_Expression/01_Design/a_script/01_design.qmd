@@ -31,18 +31,20 @@ with(targets, table(treatment, timepoint))
 ## Design
 
 A design matrix has one row per sample and one column per model coefficient, marking which group
-and participant each sample belongs to. `~ 0 + group + participant` gives one mean per
+and participant each sample belongs to. `~ 0 + group + participant + blood` gives one mean per
 treatment-by-timepoint group, no separate intercept, and a fixed effect per participant. Participant
 is fixed rather than random because every contrast sits within one person (limma User's Guide
 §9.4.2), which makes pre-to-post comparisons paired. A participant-level variable such as sex is
-constant within person and cannot be estimated here.
+constant within person and cannot be estimated here. `blood`, the haemoglobin index from
+`02_Quantification`, is a covariate: each protein gets a slope on how much blood its sample holds,
+so blood no longer adds to the residual variance. `02_Quantification` gives its median per group.
 
 `makeContrasts()` reads its arguments as R code, so a column named `groupBFR_T1` must become
 `BFR_T1` and every name must be syntactic. `is.fullrank()` checks that the columns are linearly
 independent; a rank-deficient design would leave contrasts inestimable.
 
 ```{r design}
-design <- model.matrix(~ 0 + group + participant, data = targets)
+design <- model.matrix(~ 0 + group + participant + blood, data = targets)
 colnames(design) <- sub("^group", "", colnames(design))
 rownames(design) <- targets$sample_id
 
