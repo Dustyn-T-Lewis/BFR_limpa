@@ -29,12 +29,13 @@ proteins into modules by correlation and summarises each module by its eigengene
 principal component of its members. Associations with muscle size and echo intensity are in
 `02_module_traits`.
 
-Inputs: the protein estimates, the stage 02 design and contrasts, and the gene sets and
+Inputs: the protein estimates with the blood index's effect removed (`proteins_adjusted.rds`),
+the stage 02 design and contrasts, and the gene sets and
 protein-to-gene map from `00_build_gene_sets`.
 
 ```{r read}
 stage <- here("04_Network", "01_modules")
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
 sets_dir <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 sets <- readRDS(file.path(sets_dir, "gene_sets.rds"))

@@ -45,7 +45,8 @@ Outputs:
   - `preservation`: one row per pre-network module: size, Zsummary (above 10 strong, 2 to 10
     moderate) and median rank in the post-training samples.
 
-On current data the networks hold 40 to 50 modules each. Training moves 10 main-network modules in
-BFR and 11 in HLRT; two change-network modules, the TCA cycle (M4, hub TUFM) and oxidative
-phosphorylation (M10, hub DLAT), rise in both arms. No module differs between the arms. 38 of 40
-pre-network modules are at least moderately preserved after training.
+On current data the networks hold 32 to 46 modules each. Training moves 7 main-network modules in
+BFR and 10 in HLRT; three change-network modules rise in BFR and none in HLRT: the TCA cycle (M3,
+hub IDH3B), oxidative phosphorylation (M9, hub DLAT) and M22 (no set, hub ATP5MD). No module
+differs between the arms. All 32 pre-network modules are at least moderately preserved after
+training.

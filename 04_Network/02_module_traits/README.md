@@ -37,9 +37,10 @@ Outputs:
     q;
   - `module_nes`: one row per main-network module: size, and NES and BH q in each arm's training.
 
-On current data, 7 associations pass BH, all with post-training echo intensity: in the main network
-M5 (hub NDUFB9, a complex I subunit), M17 (TOLLIP) and M34 (SDHB) with RF echo; in the post network M24
-(adipogenesis, hub AOC3) with VL echo, r = 0.49, M34 (glycogen metabolism) with VL echo, and M3
-(complex I biogenesis) and M38 (oxidative phosphorylation) with RF echo. None involve CSA or change.
+On current data, 8 associations pass BH, all in the post network: M25 (hub AOC3) with VL echo,
+r = 0.47; M7 (proton-motive-force ATP synthesis, hub NDUFA10), M23 (glycogen metabolism), M33
+(PSMD12), M35 (ATP5PF), M41 (oxidative phosphorylation, hub SDHB) and M42 (ATP5MG) with RF echo;
+and M22 (RNF123) with VL CSA, r = −0.41. One involves CSA, as a post-training level; none involve
+change.
 Nominal hits run at or below chance in the main and change networks and about twice chance in the
 pre and post networks.

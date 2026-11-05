@@ -2254,10 +2254,10 @@ vertical-align: -.125em;
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
 <p>The question: which proteins move together across samples, whether or not a curated set groups them, and do those groups respond to training or differ between the arms? WGCNA (weighted gene co-expression network analysis; Langfelder and Horvath 2008, doi:10.1186/1471-2105-9-559) groups proteins into modules by correlation and summarises each module by its eigengene, the first principal component of its members. Associations with muscle size and echo intensity are in <code>02_module_traits</code>.</p>
-<p>Inputs: the protein estimates, the stage 02 design and contrasts, and the gene sets and protein-to-gene map from <code>00_build_gene_sets</code>.</p>
+<p>Inputs: the protein estimates with the blood index’s effect removed (<code>proteins_adjusted.rds</code>), the stage 02 design and contrasts, and the gene sets and protein-to-gene map from <code>00_build_gene_sets</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;01_modules&quot;</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;design.rds&quot;</span>))</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>sets_dir <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(sets_dir, <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
@@ -2357,10 +2357,10 @@ vertical-align: -.125em;
 <pre><code># A tibble: 4 × 6
   network samples power modules unassigned median_kme
   &lt;chr&gt;     &lt;int&gt; &lt;dbl&gt;   &lt;int&gt;      &lt;dbl&gt;      &lt;dbl&gt;
-1 main        131     4      50      0.272      0.496
-2 change       65     5      43      0.314      0.490
-3 pre          66     6      40      0.249      0.512
-4 post         65     5      45      0.268      0.519</code></pre>
+1 main        131     4      42      0.287      0.489
+2 change       65     5      44      0.316      0.486
+3 pre          66     6      32      0.248      0.507
+4 post         65     5      46      0.261      0.523</code></pre>
 </div>
 </div>
 </section>
@@ -2395,14 +2395,14 @@ vertical-align: -.125em;
 <pre><code># A tibble: 8 × 3
   network named     n
   &lt;chr&gt;   &lt;lgl&gt; &lt;int&gt;
-1 change  FALSE    33
-2 change  TRUE     10
-3 main    FALSE    36
-4 main    TRUE     14
-5 post    FALSE    28
-6 post    TRUE     17
-7 pre     FALSE    28
-8 pre     TRUE     12</code></pre>
+1 change  FALSE    31
+2 change  TRUE     13
+3 main    FALSE    26
+4 main    TRUE     16
+5 post    FALSE    31
+6 post    TRUE     15
+7 pre     FALSE    17
+8 pre     TRUE     15</code></pre>
 </div>
 </div>
 </section>
@@ -2432,20 +2432,26 @@ vertical-align: -.125em;
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>)</span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(eigengene_tests, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 21 × 10
-   contrast     module estimate     se    df     t          p conf.low conf.high
-   &lt;chr&gt;        &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
- 1 BFR_Post-Pre M43      0.0641 0.0242    95  2.65    9.50e-3   0.0160    0.112 
- 2 BFR_Post-Pre M8      -0.0873 0.0210    95 -4.16    6.97e-5  -0.129    -0.0456
- 3 BFR_Post-Pre M20     -0.0778 0.0224    95 -3.48    7.60e-4  -0.122    -0.0334
- 4 BFR_Post-Pre M26     -0.0772 0.0237    95 -3.26    1.55e-3  -0.124    -0.0302
- 5 BFR_Post-Pre M42     -0.0655 0.0223    95 -2.93    4.22e-3  -0.110    -0.0211
- 6 BFR_Post-Pre M6      -0.0860 0.0211    95 -4.08    9.50e-5  -0.128    -0.0441
- 7 BFR_Post-Pre M7      -0.0728 0.0222    95 -3.28    1.46e-3  -0.117    -0.0287
- 8 BFR_Post-Pre M2       0.114  0.0194    95  5.91    5.42e-8   0.0759    0.153 
- 9 BFR_Post-Pre M14      0.0672 0.0238    95  2.83    5.75e-3   0.0200    0.114 
-10 BFR_Post-Pre M10      0.0655 0.0237    95  2.76    6.90e-3   0.0184    0.113 
-# ℹ 11 more rows
+<pre><code># A tibble: 17 × 10
+   contrast      module estimate     se    df     t        p conf.low conf.high
+   &lt;chr&gt;         &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+ 1 BFR_Post-Pre  M3       0.113  0.0201    94  5.64 1.77e- 7   0.0733    0.153 
+ 2 BFR_Post-Pre  M9       0.0906 0.0224    94  4.05 1.04e- 4   0.0462    0.135 
+ 3 BFR_Post-Pre  M7      -0.0670 0.0231    94 -2.90 4.65e- 3  -0.113    -0.0211
+ 4 BFR_Post-Pre  M8      -0.0748 0.0209    94 -3.57 5.57e- 4  -0.116    -0.0333
+ 5 BFR_Post-Pre  M6      -0.104  0.0184    94 -5.64 1.79e- 7  -0.140    -0.0671
+ 6 BFR_Post-Pre  M11     -0.0885 0.0229    94 -3.86 2.07e- 4  -0.134    -0.0430
+ 7 BFR_Post-Pre  M16     -0.0796 0.0221    94 -3.61 4.96e- 4  -0.123    -0.0358
+ 8 HLRT_Post-Pre M3       0.0990 0.0200    94  4.95 3.26e- 6   0.0593    0.139 
+ 9 HLRT_Post-Pre M9       0.0804 0.0223    94  3.60 5.03e- 4   0.0361    0.125 
+10 HLRT_Post-Pre M4       0.0633 0.0239    94  2.65 9.32e- 3   0.0160    0.111 
+11 HLRT_Post-Pre M7      -0.0841 0.0230    94 -3.65 4.31e- 4  -0.130    -0.0383
+12 HLRT_Post-Pre M8      -0.116  0.0209    94 -5.54 2.74e- 7  -0.157    -0.0742
+13 HLRT_Post-Pre M19     -0.0849 0.0238    94 -3.57 5.60e- 4  -0.132    -0.0377
+14 HLRT_Post-Pre M6      -0.133  0.0183    94 -7.28 1.02e-10  -0.170    -0.0969
+15 HLRT_Post-Pre M22     -0.111  0.0223    94 -4.97 2.96e- 6  -0.155    -0.0666
+16 HLRT_Post-Pre M11     -0.0633 0.0229    94 -2.77 6.81e- 3  -0.109    -0.0179
+17 HLRT_Post-Pre M16     -0.0974 0.0220    94 -4.43 2.59e- 5  -0.141    -0.0537
 # ℹ 1 more variable: fdr &lt;dbl&gt;</code></pre>
 </div>
 </div>
@@ -2467,13 +2473,12 @@ vertical-align: -.125em;
 <span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(change_tests, fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 4 × 10
-  test     module estimate     se    df     t       p conf.low conf.high     fdr
-  &lt;chr&gt;    &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
-1 BFR tra… M10       0.206 0.0572    63  3.60 6.27e-4   0.0917     0.320 0.0135 
-2 BFR tra… M4        0.215 0.0516    63  4.17 9.58e-5   0.112      0.318 0.00412
-3 HLRT tr… M10       0.196 0.0564    63  3.48 9.06e-4   0.0837     0.309 0.0195 
-4 HLRT tr… M4        0.195 0.0508    63  3.85 2.81e-4   0.0939     0.297 0.0121 </code></pre>
+<pre><code># A tibble: 3 × 10
+  test      module estimate     se    df     t       p conf.low conf.high    fdr
+  &lt;chr&gt;     &lt;chr&gt;     &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt;
+1 BFR trai… M22       0.250 0.0802    63  3.12 2.71e-3   0.0901     0.411 0.0398
+2 BFR trai… M3        0.190 0.0495    63  3.85 2.80e-4   0.0916     0.289 0.0123
+3 BFR trai… M9        0.164 0.0501    63  3.28 1.71e-3   0.0641     0.264 0.0377</code></pre>
 </div>
 </div>
 </section>
@@ -2497,12 +2502,11 @@ vertical-align: -.125em;
 <span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(z_summary))</span>
 <span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(preservation, <span class="at">evidence =</span> <span class="fu">cut</span>(z_summary, <span class="fu">c</span>(<span class="sc">-</span><span class="cn">Inf</span>, <span class="dv">2</span>, <span class="dv">10</span>, <span class="cn">Inf</span>), <span class="fu">c</span>(<span class="st">&quot;none&quot;</span>, <span class="st">&quot;moderate&quot;</span>, <span class="st">&quot;strong&quot;</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 3 × 2
+<pre><code># A tibble: 2 × 2
   evidence     n
   &lt;fct&gt;    &lt;int&gt;
-1 none         2
-2 moderate    30
-3 strong       8</code></pre>
+1 moderate    22
+2 strong      10</code></pre>
 </div>
 </div>
 </section>
@@ -2554,7 +2558,7 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 

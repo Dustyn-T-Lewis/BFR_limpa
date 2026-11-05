@@ -2251,7 +2251,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>The module-trait view of the YvO Figure 5 for each of the four networks from <code>01_modules</code>: the training and between-leg contrasts, and the association of each module with muscle size and echo intensity before training, after training and in change. Inputs: the membership, module names and eigengene tests from <code>01_modules</code>, the protein estimates, the stage 02 fit and the phenotype table.</p>
+<p>The module-trait view of the YvO Figure 5 for each of the four networks from <code>01_modules</code>: the training and between-leg contrasts, and the association of each module with muscle size and echo intensity before training, after training and in change. Inputs: the membership, module names and eigengene tests from <code>01_modules</code>, the blood-adjusted protein estimates (<code>proteins_adjusted.rds</code>), the stage 02 fit and the phenotype table.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;02_module_traits&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>modules_book <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;01_modules&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_modules.xlsx&quot;</span>)</span>
@@ -2259,7 +2259,7 @@ vertical-align: -.125em;
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>module_info <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(modules_book, <span class="st">&quot;modules&quot;</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>eigengene_tests <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(modules_book, <span class="st">&quot;eigengene_tests&quot;</span>)</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>change_tests <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(modules_book, <span class="st">&quot;change_tests&quot;</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;fit.rds&quot;</span>))</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
@@ -2268,10 +2268,10 @@ vertical-align: -.125em;
 <pre><code># A tibble: 4 × 2
   network     n
   &lt;chr&gt;   &lt;int&gt;
-1 change     43
-2 main       50
-3 post       45
-4 pre        40</code></pre>
+1 change     44
+2 main       42
+3 post       46
+4 pre        32</code></pre>
 </div>
 </div>
 </section>
@@ -2369,27 +2369,28 @@ vertical-align: -.125em;
 <pre><code># A tibble: 8 × 6
   network block                     tests nominal expected    bh
   &lt;chr&gt;   &lt;chr&gt;                     &lt;int&gt;   &lt;int&gt;    &lt;dbl&gt; &lt;int&gt;
-1 main    Pre                         200      12     10       0
-2 main    Post                        200      13     10       3
-3 main    Change                      200       5     10       0
-4 main    Change within participant   200       1     10       0
-5 change  Change                      172       5      8.6     0
-6 change  Change within participant   172       2      8.6     0
-7 pre     Pre                         160      17      8       0
-8 post    Post                        180      16      9       4</code></pre>
+1 main    Pre                         168      10      8.4     0
+2 main    Post                        168       8      8.4     0
+3 main    Change                      168       4      8.4     0
+4 main    Change within participant   168       4      8.4     0
+5 change  Change                      176       6      8.8     0
+6 change  Change within participant   176       5      8.8     0
+7 pre     Pre                         128      13      6.4     0
+8 post    Post                        184      19      9.2     8</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(phenotype_tests, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(network, padj)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 7 × 10
+<pre><code># A tibble: 8 × 10
   network outcome module     n     t    df         p block      r    padj
   &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;int&gt;     &lt;dbl&gt; &lt;chr&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-1 main    rf_echo M17       65 -3.25    62 0.00188   Post  -0.381 0.0350 
-2 main    rf_echo M34       65  3.21    62 0.00210   Post   0.378 0.0350 
-3 main    rf_echo M5        65  3.43    62 0.00107   Post   0.400 0.0350 
-4 post    vl_echo M24       65  4.42    62 0.0000406 Post   0.489 0.00183
-5 post    rf_echo M3        65  3.80    62 0.000331  Post   0.435 0.00745
-6 post    rf_echo M38       65  3.82    62 0.000314  Post   0.436 0.00745
-7 post    vl_echo M34       65 -3.48    62 0.000920  Post  -0.404 0.0207 </code></pre>
+1 post    vl_echo M25       65  4.24    62 0.0000756 Post   0.474 0.00348
+2 post    rf_echo M35       65  3.22    62 0.00203   Post   0.379 0.0234 
+3 post    rf_echo M41       65  3.61    62 0.000608  Post   0.417 0.0234 
+4 post    rf_echo M42       65  3.43    62 0.00108   Post   0.399 0.0234 
+5 post    rf_echo M7        65  3.29    62 0.00167   Post   0.385 0.0234 
+6 post    rf_echo M23       65 -3.10    62 0.00290   Post  -0.366 0.0267 
+7 post    rf_echo M33       65 -2.97    62 0.00420   Post  -0.353 0.0322 
+8 post    vl_csa  M22       65 -3.54    62 0.000773  Post  -0.410 0.0356 </code></pre>
 </div>
 </div>
 </section>
@@ -2569,7 +2570,7 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 
