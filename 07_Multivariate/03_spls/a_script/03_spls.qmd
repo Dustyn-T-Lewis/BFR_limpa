@@ -1,0 +1,253 @@
+---
+title: "03 · sPLS regression on muscle growth"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, mixOmics, dplyr, tidyr, tibble, purrr, ggplot2, patchwork, readr, writexl)
+here::i_am("07_Multivariate/03_spls/a_script/03_spls.qmd")
+```
+
+## Read proteins and phenotype
+
+`phenotype.csv` holds one row per leg with vastus lateralis (`vl_`) and rectus femoris (`rf_`)
+cross-sectional area (CSA) and echo intensity before and after training.
+
+```{r read}
+stage <- here("07_Multivariate", "03_spls")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
+gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
+```
+
+## Changes per leg
+
+Protein change is each leg's T2 minus T1 on the log2 scale; outcome change is post minus pre, as
+in `03_Protein_Association`. Treatment comes from the sample table.
+
+```{r changes}
+outcomes <- c(
+  vl_csa = "VL CSA change (cm²)", rf_csa = "RF CSA change (cm²)",
+  vl_echo = "VL echo change (a.u.)", rf_echo = "RF echo change (a.u.)"
+)
+legs <- proteins$targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
+  select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = timepoint, values_from = sample_id) |>
+  drop_na(T1, T2) |>
+  left_join(select(phenotype, -treatment), by = c("participant", "leg"),
+    relationship = "one-to-one") |>
+  mutate(
+    vl_csa = vl_csa_post_cm2 - vl_csa_pre_cm2,
+    rf_csa = rf_csa_post_cm2 - rf_csa_pre_cm2,
+    vl_echo = vl_echo_post_au - vl_echo_pre_au,
+    rf_echo = rf_echo_post_au - rf_echo_pre_au
+  )
+change <- t(proteins$E[, legs$T2] - proteins$E[, legs$T1])
+rownames(change) <- legs$leg_id
+count(legs, treatment)
+```
+
+## Fits
+
+Sparse PLS regression with one outcome (sPLS1) builds a score from a weighted sum of a few
+proteins' changes, chosen to predict the outcome change. Each outcome gets three fits:
+
+- BFR legs alone and HLRT legs alone, one leg per participant, so cross-validation folds are folds
+  of people;
+- both arms pooled, a sensitivity run with twice the legs. A participant's two legs grow together
+  (r = 0.57 for VL CSA), so `perf()` here holds out each participant's two legs together.
+  `tune.spls()` takes only a number of folds, so the pooled panel size is chosen on folds that can
+  split a participant; that choice may lean optimistic.
+
+```{r fits}
+fits_to_run <- expand_grid(outcome = names(outcomes), fit = c("BFR", "HLRT", "pooled")) |>
+  mutate(rows = map(fit, function(f) {
+    if (f == "pooled") seq_len(nrow(legs)) else which(legs$treatment == f)
+  }))
+fits_to_run |> mutate(n_legs = lengths(rows)) |> select(-rows)
+```
+
+## Tune, fit and cross-validate
+
+`tune.spls()` tries panels of 5 to 1,000 proteins on each of two components and keeps the size
+with the lowest mean absolute error (MAE). mixOmics divides each absolute miss by the outcome's
+variance, so this MAE compares panel sizes within an outcome but is not in the outcome's units.
+Cross-validation is 5-fold, repeated 50 times. `spls()` fits the chosen panel on all legs of the
+fit, and `perf()` reruns cross-validation for the mean squared error of prediction (MSEP, also
+relative to the outcome's variance, so 1 means no better than predicting the mean), R² and Q².
+Q² is 1 minus the prediction error over the outcome's variance: above 0.0975 a component predicts
+better than chance by the package's rule, and below 0 it predicts worse than the mean. The pooled
+fits' `perf()` uses one fold per participant. The panel size was chosen on the same data, so the
+errors are somewhat optimistic; there is no permutation reference.
+
+```{r fit}
+keep_grid <- c(5, 10, 20, 50, 100, 200, 500, 1000)
+fit_spls <- function(outcome, fit, rows) {
+  x <- change[rows, ]
+  y <- legs[[outcome]][rows]
+  tuned <- tune.spls(x, y, ncomp = 2, test.keepX = keep_grid, validation = "Mfold", folds = 5,
+    nrepeat = 50, measure = "MAE", seed = 2026)
+  model <- spls(x, y, ncomp = 2, keepX = tuned$choice.keepX)
+  performance <- if (fit == "pooled") {
+    perf(model, validation = "Mfold", folds = split(seq_along(rows), legs$participant[rows]))
+  } else {
+    perf(model, validation = "Mfold", folds = 5, nrepeat = 50, seed = 2026)
+  }
+  list(tuned = tuned, model = model, performance = performance)
+}
+fits <- pmap(fits_to_run, fit_spls)
+names(fits) <- paste(fits_to_run$outcome, fits_to_run$fit, sep = "_")
+```
+
+## Prediction error
+
+One row per outcome, fit and component.
+
+```{r models}
+measure <- function(performance, name) performance$measures[[name]]$summary$mean
+model_summary <- pmap(fits_to_run, function(outcome, fit, rows) {
+  result <- fits[[paste(outcome, fit, sep = "_")]]
+  tibble(
+    outcome = outcome, fit = fit, n_legs = length(rows), component = 1:2,
+    keep_x = unname(result$tuned$choice.keepX),
+    tune_mae = map2_dbl(keep_x, component,
+      \(k, h) result$tuned$error.rate[as.character(k), h]),
+    msep = measure(result$performance, "MSEP"),
+    rmsep = measure(result$performance, "RMSEP"),
+    r2 = measure(result$performance, "R2"),
+    q2 = measure(result$performance, "Q2"),
+    q2_total = measure(result$performance, "Q2.total")
+  )
+}) |>
+  list_rbind()
+model_summary |> mutate(across(where(is.double), \(x) signif(x, 3)))
+```
+
+## Panels
+
+Every selected protein, with its loading and its stability across the cross-validation refits.
+
+```{r panels}
+panels <- imap(fits, function(result, name) {
+  map(1:2, function(h) {
+    loading <- result$model$loadings$X[, h]
+    stable <- result$performance$features$stability.X[[h]]
+    tibble(protein = names(loading), loading = unname(loading)) |>
+      filter(loading != 0) |>
+      mutate(
+        outcome = sub("_(BFR|HLRT|pooled)$", "", name), fit = sub(".*_", "", name),
+        component = h, gene = gene_of[protein], stability = unname(stable[protein]),
+        .before = protein
+      ) |>
+      arrange(desc(abs(loading)))
+  }) |>
+    list_rbind()
+}) |>
+  list_rbind()
+panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
+  .by = c(outcome, fit, component))
+```
+
+## Held-out predictions
+
+`perf()` does not return its predictions, so the figure's predicted values come from one
+cross-validation pass written with `spls()` and `predict()`: component 1 at the tuned panel size,
+the same folds as `perf()` (5 folds in a single arm, one participant per fold when pooled).
+
+```{r predictions}
+set.seed(2026)
+held_out <- pmap(fits_to_run, function(outcome, fit, rows) {
+  x <- change[rows, ]
+  y <- legs[[outcome]][rows]
+  keep_x <- fits[[paste(outcome, fit, sep = "_")]]$tuned$choice.keepX[[1]]
+  folds <- if (fit == "pooled") {
+    split(seq_along(rows), legs$participant[rows])
+  } else {
+    split(sample(seq_along(rows)), rep(1:5, length.out = length(rows)))
+  }
+  predicted <- numeric(length(rows))
+  for (test in folds) {
+    model <- spls(x[-test, ], y[-test], ncomp = 1, keepX = keep_x)
+    predicted[test] <- predict(model, x[test, , drop = FALSE])$predict[, 1, 1]
+  }
+  tibble(outcome = outcome, fit = fit, leg_id = legs$leg_id[rows],
+    treatment = legs$treatment[rows], observed = y, predicted = predicted)
+}) |>
+  list_rbind()
+held_out |> summarise(r = cor(observed, predicted), .by = c(outcome, fit))
+```
+
+## Figures
+
+One page per outcome: held-out predicted against observed change for each fit, with the
+correlation and component 1's Q²; below, the 20 largest component 1 loadings of each fit, shaded
+by stability.
+
+```{r figures}
+#| fig-height: 10
+arm_colours <- c(BFR = "#D55E00", HLRT = "#0072B2")
+
+prediction_plot <- function(this_outcome, this_fit) {
+  rows <- filter(held_out, outcome == this_outcome, fit == this_fit)
+  q2 <- filter(model_summary, outcome == this_outcome, fit == this_fit, component == 1)$q2
+  ggplot(rows, aes(observed, predicted, colour = treatment)) +
+    geom_abline(linetype = "dashed", colour = "grey70") +
+    geom_point(size = 1.4, show.legend = TRUE) +
+    scale_colour_manual(values = arm_colours, limits = names(arm_colours)) +
+    labs(
+      title = this_fit, x = "Observed", y = "Held-out predicted", colour = NULL,
+      subtitle = sprintf("r = %.2f, Q² = %.2f", cor(rows$observed, rows$predicted), q2)
+    ) +
+    theme_bw(base_size = 7)
+}
+
+loading_plot <- function(this_outcome, this_fit) {
+  panels |>
+    filter(outcome == this_outcome, fit == this_fit, component == 1) |>
+    slice_max(abs(loading), n = 20, with_ties = FALSE) |>
+    ggplot(aes(loading, reorder(gene, loading), fill = stability)) +
+    geom_col(width = 0.7) +
+    scale_fill_gradient(low = "grey85", high = "grey15", limits = c(0, 1)) +
+    labs(x = "Component 1 loading", y = NULL, fill = "Stability") +
+    theme_bw(base_size = 6)
+}
+
+pages <- map(names(outcomes), function(name) {
+  fit_names <- c("BFR", "HLRT", "pooled")
+  wrap_plots(map(fit_names, \(f) prediction_plot(name, f)), nrow = 1) /
+    wrap_plots(map(fit_names, \(f) loading_plot(name, f)), nrow = 1) +
+    plot_layout(heights = c(1, 1.6), guides = "collect") +
+    plot_annotation(title = outcomes[[name]])
+})
+pages[[1]]
+
+pdf(file.path(stage, "b_reports", "03_spls.pdf"), width = 8.27, height = 11.69)
+walk(pages, print)
+invisible(dev.off())
+```
+
+## Save results
+
+```{r write}
+write_xlsx(
+  list(models = model_summary, panels = panels, predictions = held_out),
+  file.path(stage, "c_data", "03_spls.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```
