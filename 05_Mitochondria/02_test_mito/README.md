@@ -37,13 +37,14 @@ Outputs:
 
 | Contrast | log2 MPE change | 95% CI | p |
 |---|---:|---|---:|
-| BFR post − pre | 0.151 | 0.066 to 0.237 | 0.0007 |
-| HLRT post − pre | 0.155 | 0.070 to 0.240 | 0.0005 |
-| BFR − HLRT, baseline | 0.031 | −0.054 to 0.115 | 0.48 |
-| BFR − HLRT, post | 0.027 | −0.059 to 0.113 | 0.53 |
-| interaction | −0.004 | −0.124 to 0.117 | 0.95 |
+| BFR post − pre | 0.155 | 0.073 to 0.237 | 0.0003 |
+| HLRT post − pre | 0.138 | 0.056 to 0.220 | 0.0011 |
+| BFR − HLRT, baseline | 0.017 | −0.064 to 0.099 | 0.68 |
+| BFR − HLRT, post | 0.034 | −0.048 to 0.116 | 0.41 |
+| interaction | 0.017 | −0.099 to 0.133 | 0.77 |
 
-After mitochondrial normalisation, 24 proteins reach BH 0.05 in BFR and 42 in HLRT, none between
-legs or at baseline. No complex reaches fry FDR 0.05 on the normalised fit. fry calls 13
-MitoPathways in BFR, 17 in HLRT and none between legs; fgsea's between-leg calls (3 at baseline,
-11 after training, 1 in the interaction) are leads, since it treats correlated proteins as independent.
+After mitochondrial normalisation, 26 proteins reach BH 0.05 in BFR and 46 in HLRT, none between
+legs or at baseline. No complex reaches fry FDR 0.05 on the normalised fit. fry calls 9
+MitoPathways in BFR, 16 in HLRT and none between legs; fgsea's between-leg calls (4 at baseline,
+10 after training, 4 in the interaction) are leads, since it treats correlated proteins as
+independent.

@@ -2296,9 +2296,9 @@ vertical-align: -.125em;
 <pre><code># A tibble: 3 × 10
   complex role    gene  protein BFR_logFC BFR_fdr HLRT_logFC HLRT_fdr difference
   &lt;fct&gt;   &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt;       &lt;dbl&gt;   &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;      &lt;dbl&gt;
-1 CI      assemb… TMEM… Q9BUB7      0.459   0.161     0.211     0.544      0.248
-2 CI      assemb… NDUF… Q9P032      0.469   0.122     0.293     0.334      0.175
-3 CI      assemb… DMAC1 Q96GE9      0.166   0.577     0.0503    0.874      0.116
+1 CI      assemb… TMEM… Q9BUB7      0.476   0.124     0.165     0.653      0.311
+2 CI      assemb… NDUF… Q9P032      0.468   0.112     0.289     0.327      0.179
+3 CI      assemb… DMAC1 Q96GE9      0.164   0.569     0.0599    0.841      0.104
 # ℹ 1 more variable: difference_fdr &lt;dbl&gt;</code></pre>
 </div>
 </div>
@@ -2315,11 +2315,11 @@ vertical-align: -.125em;
 <pre><code># A tibble: 5 × 2
   complex fry_fdr
   &lt;chr&gt;     &lt;dbl&gt;
-1 CI        0.931
-2 CII       0.931
-3 CIII      0.931
-4 CIV       0.931
-5 CV        0.931</code></pre>
+1 CI        0.734
+2 CII       0.734
+3 CIII      0.734
+4 CIV       0.734
+5 CV        0.734</code></pre>
 </div>
 </div>
 </section>
@@ -2423,7 +2423,7 @@ vertical-align: -.125em;
    role             complex proteins bfr_fdr_05 hlrt_fdr_05 interaction_fdr_05
    &lt;chr&gt;            &lt;fct&gt;      &lt;int&gt;      &lt;int&gt;       &lt;int&gt;              &lt;int&gt;
  1 assembly factors CI            14          0           1                  0
- 2 subunits         CI            41          0           0                  0
+ 2 subunits         CI            41          0           1                  0
  3 assembly factors CII            2          0           0                  0
  4 subunits         CII            4          0           0                  0
  5 assembly factors CIII           5          1           0                  0
@@ -2450,7 +2450,7 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 
