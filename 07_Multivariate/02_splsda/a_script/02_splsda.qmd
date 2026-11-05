@@ -22,9 +22,11 @@ here::i_am("07_Multivariate/02_splsda/a_script/02_splsda.qmd")
 
 ## Read proteins
 
+The normalised log2 abundances with the blood index's effect removed (`proteins_adjusted.rds`).
+
 ```{r read}
 stage <- here("07_Multivariate", "02_splsda")
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 targets <- proteins$targets
 gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
 dim(proteins$E)

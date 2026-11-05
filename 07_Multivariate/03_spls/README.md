@@ -37,7 +37,8 @@ Outputs:
     change from component 1.
 
 On current data no fit predicts growth: component 1 Q² is below the package's 0.0975 threshold
-in all 12 fits and below 0 in 9 of them. The highest are 0.04 (HLRT, VL echo) and 0.03 (pooled,
-RF CSA). In the BFR fits held-out predictions correlate negatively with observed change (r −0.41
-to −0.48 for VL CSA and both echo outcomes), the pattern of a model fitting noise. This matches
-the absence of CSA and change associations in stages 02 to 04.
+in all 12 fits and below 0 in 10 of them. The highest are 0.09 (HLRT, VL echo) and 0.00 (HLRT,
+VL CSA). In the BFR fits held-out predictions correlate negatively with observed change for both
+echo outcomes (r −0.46 RF, −0.28 VL), the pattern of a model fitting noise. This matches the
+absence of change associations in stages 02 to 04, where the only CSA association is one
+post-training level in `04_Network`.

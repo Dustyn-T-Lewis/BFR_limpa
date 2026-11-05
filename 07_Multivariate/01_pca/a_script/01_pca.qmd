@@ -20,12 +20,12 @@ here::i_am("07_Multivariate/01_pca/a_script/01_pca.qmd")
 
 ## Read proteins
 
-`proteins` holds the normalised log2 abundances of 3,042 proteins in 131 samples and the sample
-table.
+`proteins` holds the normalised log2 abundances of 3,042 proteins in 131 samples, with the blood
+index's effect removed (`proteins_adjusted.rds`), and the sample table.
 
 ```{r read}
 stage <- here("07_Multivariate", "01_pca")
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 targets <- proteins$targets
 dim(proteins$E)
 ```

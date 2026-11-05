@@ -36,8 +36,8 @@ Outputs:
     cross-validation refits that selected it);
   - `scores`: one row per sample and comparison: participant, group and the two component scores.
 
-On current data training separates clearly: component 1 BER 0.014 and AUC 0.999 in the HLRT leg
-(20 proteins), 0.18 and 0.87 in the BFR leg (1,000 proteins). The arm comparisons sit at chance:
-BER 0.52 and AUC 0.48 on change, 0.46 and 0.58 after training. Choosing the panel size on the same
+On current data training separates clearly: component 1 BER 0.006 and AUC 1.000 in the HLRT leg
+(20 proteins), 0.18 and 0.88 in the BFR leg (1,000 proteins). The arm comparisons sit at chance:
+BER 0.46 and AUC 0.57 on change, 0.44 and 0.60 after training. Choosing the panel size on the same
 data pulls a tuned BER below 0.5 even without signal, so neither result shows a protein combination
 that separates BFR from HLRT, consistent with stage 02.

@@ -22,7 +22,7 @@ Outputs:
   - `scores`: one row per sample, its metadata and PC1 to PC5 scores;
   - `loadings`: one row per protein, gene and loadings on PC1 to PC5.
 
-On current data PC1 (13.5%) carries sarcomere and fibre-type proteins (ACTN2, ACTN3, TTN, MYOZ1,
-MYH7, TNNT1) and PC2 (9.6%) extracellular matrix (COL14A1, FMOD, MYOC, collagen VI). Timepoint
-explains at most 5% of any of the first four components, so within a person the samples differ
-more by fibre and matrix content than by training.
+On current data PC1 (13.5%) carries sarcomere and Z-disc proteins (ACTN2, ACTN3, MYOZ1, MYOZ2, TTN,
+NEB, DES) and PC2 (9.0%) extracellular matrix and fat (COL14A1, MYOC, FMOD, THBS4, PLIN1, FASN).
+Timepoint explains at most 5% of each of the first three components and 11% of PC4, so within a
+person the samples differ more by fibre and matrix content than by training.
