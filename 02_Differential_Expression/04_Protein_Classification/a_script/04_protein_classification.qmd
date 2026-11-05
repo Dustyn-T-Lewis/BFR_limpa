@@ -29,7 +29,7 @@ are only used for the candidate list at the end.
 
 ```{r read}
 stage <- here("02_Differential_Expression", "04_Protein_Classification")
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 targets <- proteins$targets
 values <- proteins$E
 genes <- set_names(coalesce(proteins$genes$Genes, rownames(proteins)), rownames(proteins))
