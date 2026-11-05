@@ -19,6 +19,7 @@ proteome differently than heavy load.
 | `04_Network/` | protein co-expression modules (WGCNA) and their phenotype associations | ready |
 | `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
 | `06_Composition/` | fibre type, and DE adjusted for composition | export only |
+| `07_Multivariate/` | multilevel PCA, sPLS-DA and sPLS regression (mixOmics) | ready |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
 Each sub-stage holds `README.md`, `a_script/` (a Quarto notebook), `b_reports/` (the rendered HTML
@@ -58,11 +59,15 @@ for s in 01_build_mito_sets 02_test_mito 03_complex_subunits; do
 done
 
 quarto render 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd --output-dir ../b_reports
+
+for s in 01_pca 02_splsda 03_spls; do
+  quarto render 07_Multivariate/$s/a_script/$s.qmd --output-dir ../b_reports
+done
 ```
 
-The block takes about fifteen minutes. `dpcQuant()` takes about 100 minutes, so it runs separately from
-`01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
-only when the precursor matrix changes.
+The block takes about twenty minutes, five of them in `07_Multivariate`. `dpcQuant()` takes about
+100 minutes, so it runs separately from `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`;
+its output is committed, so rerun it only when the precursor matrix changes.
 
 ## Approach
 
@@ -85,3 +90,4 @@ notebook only calls as `pkg::fun()` are not attached, so install them once befor
   (GitHub, `Dustyn-T-Lewis/enrichVolcano`, not on CRAN).
 - Stage 04 adds `WGCNA` and `ggrepel`, and calls `ggnewscale`.
 - Stages 05 and 06 need nothing new.
+- Stage 07 adds `mixOmics` (Bioconductor) and calls `pROC`.
