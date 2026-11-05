@@ -34,11 +34,12 @@ Nominal hits as a multiple of chance (5% of the sets tested):
 
 | Task | Hallmark | KEGG | Reactome | GO:BP | GO Slim |
 |---|---:|---:|---:|---:|---:|
-| pre vs post, BFR | 1.46 | 3.83 | 3.49 | 4.01 | 7.46 |
-| pre vs post, HLRT | 4.88 | 4.04 | 4.33 | 3.69 | 4.75 |
-| post, BFR vs HLRT | 0.98 | 0.64 | 0.37 | 1.19 | 1.02 |
-| change, BFR vs HLRT | 0.98 | 0.00 | 0.14 | 0.54 | 0.68 |
-| baseline | 0.98 | 0.43 | 0.47 | 0.48 | 0.00 |
+| pre vs post, BFR | 2.44 | 3.40 | 3.72 | 4.07 | 7.46 |
+| pre vs post, HLRT | 4.39 | 4.47 | 5.21 | 4.10 | 4.75 |
+| post, BFR vs HLRT | 0.98 | 0.85 | 0.33 | 1.04 | 0.68 |
+| change, BFR vs HLRT | 1.95 | 0.64 | 0.28 | 0.82 | 1.69 |
+| baseline | 1.46 | 1.06 | 0.51 | 1.26 | 0.68 |
 
-After BH, 8 sets survive on BFR training, 50 on HLRT and none elsewhere. Protein-level
-classification is `02_Differential_Expression/04_Protein_Classification`.
+After BH, 30 sets survive on BFR training and 112 on HLRT. Between the arms one set survives,
+HALLMARK_SPERMATOGENESIS on change (AUC 0.68, q 0.018), a single hit among the many sets tested.
+Protein-level classification is `02_Differential_Expression/04_Protein_Classification`.

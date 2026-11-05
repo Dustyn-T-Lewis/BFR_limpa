@@ -24,5 +24,5 @@ Outputs:
   - `structure_check`: one row per principal component: variance explained, participant share.
   - `set_scores`: the set-by-sample score matrix for reading, one row per set.
 
-Participant dominates the raw scores (PC1 explains 33.6% of variance, participant 0.64 of PC1),
+Participant dominates the raw scores (PC1 explains 34.0% of variance, participant 0.64 of PC1),
 so later steps use within-leg change.

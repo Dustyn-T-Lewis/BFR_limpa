@@ -32,12 +32,15 @@ Significant sets at an adjusted p below 0.05, BH over all 1,990 sets in the cont
 
 | Contrast | fgsea | after collapse | fry |
 |---|---:|---:|---:|
-| BFR_Post-Pre | 460 | 102 | 604 |
-| HLRT_Post-Pre | 298 | 66 | 401 |
-| BFR_Post-HLRT_Post | 155 | 50 | 0 |
-| Modality_x_Time_Interaction | 3 | 3 | 0 |
-| BFR_Pre-HLRT_Pre *(baseline)* | 34 | 14 | 0 |
+| BFR_Post-Pre | 433 | 102 | 635 |
+| HLRT_Post-Pre | 279 | 62 | 410 |
+| BFR_Post-HLRT_Post | 154 | 53 | 0 |
+| Modality_x_Time_Interaction | 38 | 25 | 0 |
+| BFR_Pre-HLRT_Pre *(baseline)* | 70 | 29 | 0 |
 
 fry finds no set on any between-leg contrast, so their fgsea counts are leads only. The baseline
-contrast compares the legs before training, when no difference is expected: fgsea calls 34 sets,
-mostly muscle contraction and sarcomere sets ranked lower in the BFR leg, and fry confirms none.
+contrast compares the legs before training, when no difference is expected: fgsea calls 70 sets,
+led by muscle contraction and sarcomere sets ranked lower in the BFR leg, and fry confirms none.
+Without the blood covariate fgsea called 34. Before training the HLRT legs held slightly more
+blood (0.35 log2, p 0.36); removing it shifts the 951 blood-sensitive proteins together, and fgsea,
+which treats proteins as independent, reads one shared shift as many sets.

@@ -23,7 +23,7 @@ Outputs:
   strongest pathways and their leading-edge proteins, pies showing which leg each protein leads
   in. These leading edges can differ slightly from the shared proteins in S15 of 06_leading_edge.
 
-Each map shows the main sets 01 calls at FDR < 0.05 in either leg, at most 30 per collection: 6
-Hallmark, 9 GO Slim, 10 KEGG, 30 of Reactome's 37 and 30 of GO:BP's 77. Across all 3,980 set
+Each map shows the main sets 01 calls at FDR < 0.05 in either leg, at most 30 per collection: 5
+Hallmark, 13 GO Slim, 12 KEGG, 30 of Reactome's 31 and 30 of GO:BP's 79. Across all 3,980 set
 and contrast pairs, this run's NES agree with 01's at r ≥ 0.9998 in every collection; the largest
-difference is 0.088, in GO:BP. No `c_data/`.
+difference is 0.088, in Reactome. No `c_data/`.
