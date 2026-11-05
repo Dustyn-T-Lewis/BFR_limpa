@@ -24,8 +24,9 @@ here::i_am(
 
 `proteins` holds the normalised log2 abundances (`E`), the sample table (`targets`) and the gene
 annotation; the models read it and carry the blood index as a covariate. `values`, used for the
-paired changes and figures, comes from `proteins_adjusted.rds`, with the blood effect removed. `phenotype.csv` holds one row per leg with muscle size (cross-sectional area, CSA) and
-echo intensity, before and after training, for vastus lateralis (`vl_`) and rectus femoris (`rf_`).
+paired changes and figures, comes from `proteins_adjusted.rds`, with the blood effect removed.
+`phenotype.csv` holds one row per leg with muscle size (cross-sectional area, CSA) and echo
+intensity, before and after training, for vastus lateralis (`vl_`) and rectus femoris (`rf_`).
 
 ```{r read}
 stage <- here("02_Differential_Expression", "03_Protein_Association")
@@ -122,8 +123,9 @@ y(g, l, s) = a(g, l) + s × [b(g, arm) + c(g) × x(l)] + d(g) × blood(l, s)
 
 `a` is each leg's own baseline, so only change within a leg counts; `b` is the mean training change
 in each arm, so an arm difference cannot pose as association; `x` is the leg's outcome change,
-centred on the mean leg; `d` is the protein's blood slope, as in `02_Differential`. `c(g)` is the extra protein change per unit of extra outcome change, and
-its moderated t ranks proteins for gene set tests. Two versions per outcome:
+centred on the mean leg; `d` is the protein's blood slope, as in `02_Differential`. `c(g)` is the
+extra protein change per unit of extra outcome change, and its moderated t ranks proteins for gene
+set tests. Two versions per outcome:
 
 - pooled: the model above, over every leg of both arms;
 - differential: one time effect per participant replaces the two arm terms (plus one for BFR), so

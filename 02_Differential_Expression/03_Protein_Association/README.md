@@ -43,4 +43,4 @@ Outputs:
 
 Chance is 152 nominal hits from 3,042 proteins, but proteins move together, so one analysis swings
 widely around it: shuffling vl_csa across legs within arm gave 63 to 308 nominal hits (middle 90%
-of 40 shuffles). Nothing survives BH.
+of 40 shuffles; before the blood covariate). Nothing survives BH.
