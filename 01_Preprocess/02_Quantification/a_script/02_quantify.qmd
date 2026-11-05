@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, limpa, limma, tibble, writexl)
+pacman::p_load(here, limpa, limma, tibble, readxl, writexl)
 here::i_am("01_Preprocess/02_Quantification/a_script/02_quantify.qmd")
 ```
 
@@ -134,6 +134,64 @@ plotMD(proteins$E, column = worst, main = paste(colnames(proteins$E)[worst], "af
 Only `proteins$E` changes. Cyclic loess subtracts an abundance-dependent offset from each value
 without rescaling it, so the standard errors still apply; the fitted offset is treated as known.
 
+## Blood index
+
+Each biopsy carries some blood. Haemoglobin β and α (HBB, HBA1), set aside in `01_Filtering`
+before the contaminant filter, measure how much: `dpcQuant()` estimates both from their precursors
+with the same detection curve as every other protein, and the blood index is the mean of the two
+log2 estimates, centred on the mean sample. The contamination load from `01_Filtering`, the share
+of a sample's signal the contaminant filter removed, is about 95% haemoglobin and albumin and is
+kept beside it for comparison. Both join the sample table for later stages.
+
+```{r blood}
+haemoglobin <- readRDS(
+  here("01_Preprocess", "01_Filtering", "c_data", "haemoglobin_precursors.rds")
+)
+stopifnot(identical(colnames(haemoglobin), colnames(proteins)))
+haemoglobin_estimates <- dpcQuant(haemoglobin, "Protein.Group", dpc = proteins$dpc,
+  verbose = FALSE)
+blood <- colMeans(haemoglobin_estimates$E)
+proteins$targets$blood <- blood - mean(blood)
+
+contamination <- read_xlsx(
+  here("01_Preprocess", "01_Filtering", "c_data", "01_filter.xlsx"), "sample_contamination"
+)
+proteins$targets$contamination <- contamination$pct_signal_removed[
+  match(proteins$targets$sample_id, contamination$sample_id)
+]
+stopifnot(!anyNA(proteins$targets$contamination))
+```
+
+The fibre-type score is the mean log2 abundance of the 21 slow markers minus that of the 18 fast
+markers that FibeRtypeR's Table S1 lists as shared between transcriptome and proteome (Van der
+Stede et al. 2026, doi:10.1113/JP290082), centred. It is stored for the composition sensitivity in
+`06_Composition` and enters no model here.
+
+```{r fibre}
+slow_markers <- c(
+  "ATP1B4", "ATP2A2", "CASQ2", "CKB", "CYB5R1", "DPYSL3", "IDI2", "LDHB", "MYH7", "MYL2", "MYL3",
+  "MYL6B", "MYOM3", "MYOZ2", "PDLIM1", "PLIN5", "SMTNL1", "TNNC1", "TNNI1", "TNNT1", "TPM3"
+)
+fast_markers <- c(
+  "ACTN3", "AK1", "ATP2A1", "ATP2B2", "ENO3", "FBP2", "GPD1", "LDHA", "MYBPC2", "MYH1", "MYH2",
+  "MYL1", "PFKM", "PGK1", "PPP1R14C", "TNNC2", "TNNI2", "TNNT3"
+)
+fibre <- colMeans(proteins$E[proteins$genes$Genes %in% slow_markers, ]) -
+  colMeans(proteins$E[proteins$genes$Genes %in% fast_markers, ])
+proteins$targets$fibre <- fibre - mean(fibre)
+c(slow = sum(proteins$genes$Genes %in% slow_markers),
+  fast = sum(proteins$genes$Genes %in% fast_markers))
+```
+
+Correlation of the two haemoglobins, of the blood index with the contamination load, and the median
+blood index per group:
+
+```{r blood-checks}
+round(cor(haemoglobin_estimates$E[1, ], haemoglobin_estimates$E[2, ]), 3)
+round(cor(proteins$targets$blood, proteins$targets$contamination, method = "spearman"), 3)
+round(tapply(proteins$targets$blood, proteins$targets$group, median), 3)
+```
+
 ## Check protein estimates
 
 Per protein: precursor count (`NPrec`, which `dpcQuant()` writes although its help page says
@@ -201,12 +259,21 @@ Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
 ## Save results
 
 `proteins.rds` keeps abundance, standard errors, annotations and sample metadata together for every
-later stage. `02_quantify.xlsx` holds the samples, the diagnostic curve fit, detection counts and
-per-protein quality.
+later stage; models that take a design (`dpcDE()`, fry) read it and carry the blood index as a
+covariate. `proteins_adjusted.rds` is the same object with the blood index's effect removed by
+`removeBatchEffect()`, the treatment-by-time group and participant protected, for the steps that
+take no design (classification, singscore, WGCNA, mixOmics). `02_quantify.xlsx` holds the samples,
+the diagnostic curve fit, detection counts and per-protein quality.
 
 ```{r write}
 out <- here("01_Preprocess", "02_Quantification", "c_data")
 saveRDS(proteins, file.path(out, "proteins.rds"))
+adjusted <- proteins
+adjusted$E <- removeBatchEffect(
+  proteins$E, covariates = proteins$targets$blood,
+  design = model.matrix(~ 0 + group + participant, proteins$targets)
+)
+saveRDS(adjusted, file.path(out, "proteins_adjusted.rds"))
 write_xlsx(
   list(
     samples = as.data.frame(proteins$targets),
