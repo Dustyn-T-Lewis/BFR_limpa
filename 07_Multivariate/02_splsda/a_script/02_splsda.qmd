@@ -13,10 +13,10 @@ knitr:
 
 ## Load packages
 
-`pROC` is called with `::`.
+`pROC` and `fgsea` are called with `::`.
 
 ```{r setup}
-pacman::p_load(here, mixOmics, dplyr, tidyr, tibble, purrr, ggplot2, patchwork, writexl)
+pacman::p_load(here, mixOmics, dplyr, tidyr, tibble, purrr, readxl, ggplot2, patchwork, writexl)
 here::i_am("07_Multivariate/02_splsda/a_script/02_splsda.qmd")
 ```
 
@@ -32,7 +32,7 @@ gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
 dim(proteins$E)
 ```
 
-## Build the four comparisons
+## Build the five comparisons
 
 Sparse PLS-DA (Lê Cao et al. 2011, doi:10.1186/1471-2105-12-253) builds a score from a weighted
 sum of a few proteins, chosen to separate two groups. Each comparison here takes two samples per
@@ -40,8 +40,9 @@ participant, and `multilevel = participant` subtracts each participant's mean fi
 al. 2012), so the score compares a person's two samples with each other:
 
 - training in each arm: a leg's sample before training (T1) against after (T2);
-- BFR against HLRT on change: each leg's T2 minus T1, one leg against the other;
-- BFR against HLRT after training: the two legs' T2 samples.
+- BFR against HLRT before training: the two legs' T1 samples;
+- BFR against HLRT after training: the two legs' T2 samples;
+- BFR against HLRT on change: each leg's T2 minus T1, one leg against the other.
 
 Participants without both samples a comparison needs drop out of that comparison. A two-factor
 multilevel design on all four samples is not used: with one sample per participant, leg and time,
@@ -66,25 +67,30 @@ training <- function(arm) {
 paired_legs <- legs |> filter(n() == 2, .by = participant)
 change <- t(proteins$E[, paired_legs$T2] - proteins$E[, paired_legs$T1])
 rownames(change) <- paired_legs$leg_id
-post <- targets |> filter(timepoint == "T2") |> filter(n() == 2, .by = participant)
+arms_at <- function(time) {
+  samples <- targets |> filter(timepoint == time) |> filter(n() == 2, .by = participant)
+  list(
+    x = t(proteins$E[, samples$sample_id]), y = factor(samples$treatment, c("HLRT", "BFR")),
+    participant = samples$participant
+  )
+}
 
 comparisons <- list(
   training_bfr = training("BFR"),
   training_hlrt = training("HLRT"),
+  arms_pre = arms_at("T1"),
+  arms_post = arms_at("T2"),
   arms_change = list(
     x = change, y = factor(paired_legs$treatment, c("HLRT", "BFR")),
     participant = paired_legs$participant
-  ),
-  arms_post = list(
-    x = t(proteins$E[, post$sample_id]), y = factor(post$treatment, c("HLRT", "BFR")),
-    participant = post$participant
   )
 )
 comparison_labels <- c(
   training_bfr = "Training, BFR leg: T1 vs T2",
   training_hlrt = "Training, HLRT leg: T1 vs T2",
-  arms_change = "BFR vs HLRT, training change",
-  arms_post = "BFR vs HLRT, after training"
+  arms_pre = "BFR vs HLRT, before training",
+  arms_post = "BFR vs HLRT, after training",
+  arms_change = "BFR vs HLRT, training change"
 )
 map(comparisons, \(cmp) table(cmp$y))
 ```
@@ -171,6 +177,70 @@ panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
   .by = c(comparison, component))
 ```
 
+## Transfer between arms
+
+Each arm's training panel scores the other arm's legs: the HLRT model classifies BFR legs as before
+or after training, and the BFR model HLRT legs, with `predict(multilevel = participant)` applying
+the same within-person centring. An AUC near the scored arm's own cross-validated AUC means the
+two arms share the training signature. The scored legs belong to the same participants as the
+model's training legs, so this measures transfer between legs, not to new people.
+
+```{r transfer}
+transfer <- tibble(model_arm = c("HLRT", "BFR"), scored_arm = c("BFR", "HLRT")) |>
+  mutate(
+    transfer_auc = map2_dbl(model_arm, scored_arm, function(model_arm, scored_arm) {
+      target <- comparisons[[paste0("training_", tolower(scored_arm))]]
+      model <- fits[[paste0("training_", tolower(model_arm))]]$model
+      score <- predict(model, target$x, multilevel = target$participant)$predict[, "T2", 1]
+      as.numeric(pROC::auc(pROC::roc(target$y, score, levels = c("T1", "T2"), direction = "<",
+        quiet = TRUE)))
+    }),
+    own_cv_auc = map_dbl(scored_arm, function(arm) {
+      filter(model_summary, comparison == paste0("training_", tolower(arm)), component == 1)$auc
+    })
+  )
+transfer
+```
+
+## Annotate the training panels
+
+What the two training panels are made of: each panel protein's WGCNA module in the main network of
+`04_Network` (with the module's BH top set), and the gene sets over-represented among component 1's
+proteins, by `fgsea::fora()` against every measured gene with the set list and size limits of
+`04_Network`. Only the training panels are annotated; the arm panels predict at chance, and
+annotating them would describe noise.
+
+```{r annotate}
+network_book <- here("04_Network", "01_modules", "c_data", "01_modules.xlsx")
+module_of <- read_excel(network_book, "membership") |>
+  filter(network == "main") |>
+  select(protein, module) |>
+  left_join(
+    read_excel(network_book, "modules") |> filter(network == "main") |> select(module, top_set),
+    by = "module"
+  )
+panels <- left_join(panels, module_of, by = "protein")
+sets <- readRDS(here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "gene_sets.rds"))
+universe <- unique(na.omit(proteins$genes$Genes))
+panel_pathways <- panels |>
+  filter(startsWith(comparison, "training"), component == 1) |>
+  summarise(genes = list(unique(na.omit(gene))), .by = comparison) |>
+  mutate(result = map(genes, function(genes) {
+    as_tibble(fgsea::fora(sets, genes, universe = universe, minSize = 15, maxSize = 500))
+  })) |>
+  select(comparison, result) |>
+  unnest(result) |>
+  filter(pval < 0.05) |>
+  mutate(overlapGenes = map_chr(overlapGenes, paste, collapse = ";")) |>
+  arrange(comparison, pval)
+panels |>
+  filter(startsWith(comparison, "training"), component == 1, module != "M0") |>
+  count(comparison, module, top_set, sort = TRUE) |>
+  slice_max(n, n = 5, by = comparison)
+slice_min(panel_pathways, pval, n = 5, by = comparison) |>
+  select(comparison, pathway, overlap, size, padj)
+```
+
 ## Figures
 
 One page per comparison:
@@ -238,8 +308,25 @@ pages <- imap(fits, function(fit, name) {
 })
 pages[[1]]
 
+module_page <- panels |>
+  filter(startsWith(comparison, "training"), component == 1) |>
+  mutate(
+    module = if_else(module == "M0", "unassigned", paste(module, coalesce(top_set, "no set"))),
+    comparison = comparison_labels[comparison]
+  ) |>
+  count(comparison, module) |>
+  slice_max(n, n = 10, by = comparison, with_ties = FALSE) |>
+  ggplot(aes(n, reorder(module, n))) +
+  geom_col(width = 0.7, fill = "grey40") +
+  facet_wrap(~comparison, scales = "free", ncol = 1) +
+  labs(x = "Panel proteins (component 1)", y = NULL,
+    title = "Training panels by WGCNA module (main network)") +
+  theme_bw(base_size = 7)
+module_page
+
 pdf(file.path(stage, "b_reports", "02_splsda.pdf"), width = 8.27, height = 11.69)
 walk(pages, print)
+print(module_page)
 invisible(dev.off())
 ```
 
@@ -250,6 +337,8 @@ write_xlsx(
   list(
     models = model_summary,
     panels = panels,
+    transfer = transfer,
+    panel_pathways = panel_pathways,
     scores = imap(fits, function(fit, name) {
       as_tibble(fit$model$variates$X, rownames = "sample") |>
         mutate(comparison = name, participant = comparisons[[name]]$participant,
