@@ -23,7 +23,8 @@ Changes come from `proteins_adjusted.rds` (blood effect removed); fry uses `prot
 stage 02 design.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` and `proteins_adjusted.rds`,
-`01_Design/c_data/design.rds`, the `contrast_summary` sheet of `02_Differential/c_data/02_differential.xlsx`.
+`01_Design/c_data/design.rds`, the `contrast_summary` sheet of
+`02_Differential/c_data/02_differential.xlsx`.
 
 ```sh
 quarto render 02_Differential_Expression/05_Response_Magnitude/a_script/05_response_magnitude.qmd --output-dir ../b_reports
@@ -42,11 +43,10 @@ Outputs:
   - `tests`: the signature test (proteins, mean scores, ratio, paired p, swap p) and the two fry
     tests (proteins, median average training change, median interaction, direction, p).
 
-On current data every test points the same way. Cross-fitted, BFR's median change is 0.75 to 0.94
-of HLRT's across sets and both choosing arms (swap p 0.23 to 0.34), and HLRT changes more even
-when BFR chooses the proteins. The signature score puts BFR at 0.77 of HLRT (paired p 0.031, swap
-p 0.035). fry leans the same way without passing: the rising set's interaction is −0.04 against
-an average rise of 0.27 (p 0.36), the falling set's +0.05 against an average fall of 0.23
-(p 0.13). Read together: BFR's training response has the same direction as HLRT's and is about a
-quarter smaller, an aggregate difference that single-protein tests cannot resolve; one of three
-tests passes 0.05.
+BFR training moves the proteome in the same direction as HLRT training and about a quarter less
+far. The signature score puts BFR at 0.77 of HLRT (paired p 0.031, swap p 0.035). Cross-fitted,
+BFR's median change is 0.75 to 0.94 of HLRT's across sets and both choosing arms, and HLRT changes
+more even when BFR chooses the proteins. fry leans the same way: the rising set's interaction is
+−0.04 against an average rise of 0.27 (p 0.36), the falling set's +0.05 against an average fall of
+0.23 (p 0.13). This is an aggregate difference that single-protein tests cannot resolve, and only
+the signature score passes 0.05; the cross-fitted ratios (swap p 0.23 to 0.34) and fry do not.

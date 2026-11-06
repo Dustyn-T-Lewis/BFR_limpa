@@ -43,8 +43,14 @@ Outputs:
 | BFR − HLRT, post | 0.034 | −0.048 to 0.116 | 0.41 |
 | interaction | 0.017 | −0.099 to 0.133 | 0.77 |
 
-After mitochondrial normalisation, 26 proteins reach BH 0.05 in BFR and 46 in HLRT, none between
-legs or at baseline. No complex reaches fry FDR 0.05 on the normalised fit. fry calls 9
-MitoPathways in BFR, 16 in HLRT and none between legs; fgsea's between-leg calls (4 at baseline,
-10 after training, 4 in the interaction) are leads, since it treats correlated proteins as
-independent.
+MPE rises with training by a similar amount in both legs. In the standard fit complexes II to V
+rise with BFR and I and III to V with HLRT (fry FDR 0.005 to 0.031); once total mitochondrial
+content is set aside, no complex moves at fry FDR 0.05. What shifts within the mitochondrion is the
+same in both legs: mitophagy, autophagy, selenoproteins and ROS and glutathione metabolism fall
+relative to content (fry, 9 MitoPathways with BFR and 16 with HLRT), and HLRT also raises the
+mitochondrial ribosome, translation and the TCA cycle. After normalisation 26 proteins reach BH
+0.05 with BFR and 46 with HLRT, ALDH6A1 and PRKN falling in both, none between legs or at
+baseline. Between legs, fgsea leads put complex I lower in BFR relative to content after training
+(CI subunits NES −2.85; fry FDR 0.055) and in the interaction (NES −1.84), with 10 between-leg
+MitoPathways after training and 4 in the interaction. These are leads: fry confirms no between-leg
+MitoPathway, and the baseline contrast also gives fgsea 4, CI subunits among them (NES −2.04).

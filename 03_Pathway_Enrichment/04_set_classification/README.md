@@ -40,6 +40,13 @@ Nominal hits as a multiple of chance (5% of the sets tested):
 | change, BFR vs HLRT | 1.95 | 0.64 | 0.28 | 0.82 | 1.69 |
 | baseline | 1.46 | 1.06 | 0.51 | 1.26 | 0.68 |
 
-After BH, 30 sets survive on BFR training and 112 on HLRT. Between the arms one set survives,
-HALLMARK_SPERMATOGENESIS on change (AUC 0.68, q 0.018), a single hit among the many sets tested.
-Protein-level classification is `02_Differential_Expression/04_Protein_Classification`.
+Set scores separate pre from post training in both arms: 30 sets pass BH with BFR and 112 with
+HLRT. With HLRT the strongest sets are rises in tRNA aminoacylation, mitochondrial protein
+degradation and mitochondrial RNA metabolism (AUC 0.69 to 0.71). With BFR mitochondrial protein
+degradation also rises (AUC 0.74), while growth factor response and NF-κB signalling sets fall
+(AUC 0.22 to 0.29). Between the arms one set passes BH, HALLMARK_SPERMATOGENESIS on change (AUC
+0.68, q 0.018). The nominal leads on change are NF-κB signalling and programmed cell death, both
+lower in BFR's change (AUC 0.27), and after training tRNA processing sits higher in BFR (AUC 0.67,
+q 0.14). The between-arm rows of the table sit near chance, so the single BH hit among the many
+sets tested and these leads need confirmation. Protein-level classification is
+`02_Differential_Expression/04_Protein_Classification`.

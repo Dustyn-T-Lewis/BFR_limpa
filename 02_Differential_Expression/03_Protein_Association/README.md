@@ -42,6 +42,10 @@ Outputs:
 | differential | rf_csa | 129 | 0.85 | 0 |
 | differential | rf_echo | 116 | 0.76 | 0 |
 
-Chance is 152 nominal hits from 3,042 proteins, but proteins move together, so one analysis swings
-widely around it: shuffling vl_csa across legs within arm gave 63 to 308 nominal hits (middle 90%
-of 40 shuffles; before the blood covariate). Nothing survives BH.
+The closest lead is AGMAT, which rises more in legs whose RF CSA grew more (pooled, t 4.5,
+q 0.090). SMTNL1, which falls with training in both arms, falls further in legs that grew more in
+RF CSA, both pooled (t −3.4) and within participant (t −4.3, q 0.40). TJP1 runs against both VL
+and RF CSA in the pooled model (t −3.7). Nothing survives BH, and nominal counts sit near or below
+the 152 expected by chance from 3,042 proteins, a count that swings widely because proteins move
+together: shuffling vl_csa across legs within arm gave 63 to 308 nominal hits (middle 90% of 40
+shuffles; before the blood covariate).

@@ -37,10 +37,11 @@ Outputs:
     q;
   - `module_nes`: one row per main-network module: size, and NES and BH q in each arm's training.
 
-On current data, 8 associations pass BH, all in the post network: M25 (hub AOC3) with VL echo,
-r = 0.47; M7 (proton-motive-force ATP synthesis, hub NDUFA10), M23 (glycogen metabolism), M33
-(PSMD12), M35 (ATP5PF), M41 (oxidative phosphorylation, hub SDHB) and M42 (ATP5MG) with RF echo;
-and M22 (RNF123) with VL CSA, r = −0.41. One involves CSA, as a post-training level; none involve
-change.
-Nominal hits run at or below chance in the main and change networks and about twice chance in the
-pre and post networks.
+After training, 8 module levels track the phenotype at BH, all in the post network. Mitochondrial
+modules track RF echo: M7 (proton-motive-force ATP synthesis, hub NDUFA10), M41 (oxidative
+phosphorylation, hub SDHB), M35 (ATP5PF) and M42 (ATP5MG) are higher where echo is higher (r 0.38
+to 0.42), and M23 (glycogen metabolism) and M33 (PSMD12) lower (r −0.37 and −0.35). M25 (hub
+AOC3) tracks VL echo (r = 0.47), and M22 (RNF123) runs against VL CSA (r = −0.41), the only CSA
+association. These are post-training levels, not responses: no module's change tracks the
+phenotype, and nominal hits run at or below chance in the main and change networks and about twice
+chance in the pre and post networks.

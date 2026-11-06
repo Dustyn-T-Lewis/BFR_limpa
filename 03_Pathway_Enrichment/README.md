@@ -27,10 +27,10 @@ READMEs describe the encodings and findings.
 
 | Step | Question | Answer |
 |---|---|---|
-| `01_run_fgsea_and_fry` | Which sets move with training? | fgsea 433 BFR and 279 HLRT sets (102 and 62 after collapse); fry 635 and 410. On the between-leg contrasts fry finds none, so fgsea's between-leg sets are leads only. |
-| `04_set_classification` | Does a set's score separate the groups? | 30 sets on BFR training and 112 on HLRT after BH; between the arms one set passes, HALLMARK_SPERMATOGENESIS on change (q 0.018), a single hit among many tested. |
-| `05_set_association` | Does a set's score change track the phenotype? | No set survives BH. |
-| `06_leading_edge` | Do both legs move the same sets, through the same proteins? | Across all 1,990 sets the two legs' NES correlate (Spearman rho 0.76). Leading-edge overlap, untested: across the 71 pathways both legs move, the median Jaccard index is 0.55 (0.32 to 0.94). |
+| `01_run_fgsea_and_fry` | Which sets move with training? | Mitochondrial respiration, oxidative phosphorylation and mitochondrial gene expression rise in both legs: fgsea 433 BFR and 279 HLRT sets (102 and 62 after collapse), fry 635 and 410. Between the arms, fgsea leads put cell motility, adhesion and cytoskeleton sets lower in BFR; fry confirms none. |
+| `04_set_classification` | Does a set's score separate the groups? | Scores separate pre from post in 30 sets with BFR and 112 with HLRT after BH, mitochondrial protein degradation among the strongest. Between the arms one set passes, HALLMARK_SPERMATOGENESIS on change (q 0.018), a single hit among many tested. |
+| `05_set_association` | Does a set's score change track the phenotype? | Legs whose RF CSA grew more show larger rises in mitochondrial translation and respiration (fgsea leads on the protein slope); no set survives BH or fry. |
+| `06_leading_edge` | Do both legs move the same sets, through the same proteins? | Largely yes. Across all 1,990 sets the two legs' NES correlate (Spearman rho 0.76), and across the 71 pathways both legs move the leading edges overlap with median Jaccard index 0.55 (0.32 to 0.94; untested). |
 | `07_pathway_maps` | How do the pathways each leg moves cluster, and which proteins link them? | Figures only; the main sets of `01_` drawn as maps per collection. |
 
 ## Methods

@@ -38,9 +38,14 @@ Significant sets at an adjusted p below 0.05, BH over all 1,990 sets in the cont
 | Modality_x_Time_Interaction | 38 | 25 | 0 |
 | BFR_Pre-HLRT_Pre *(baseline)* | 70 | 29 | 0 |
 
-fry finds no set on any between-leg contrast, so their fgsea counts are leads only. The baseline
-contrast compares the legs before training, when no difference is expected: fgsea calls 70 sets,
-led by muscle contraction and sarcomere sets ranked lower in the BFR leg, and fry confirms none.
-Without the blood covariate fgsea called 34. Before training the HLRT legs held slightly more
-blood (0.35 log2, p 0.36); removing it shifts the 951 blood-sensitive proteins together, and fgsea,
-which treats proteins as independent, reads one shared shift as many sets.
+Training raises mitochondrial pathways in both legs. The top sets are the same in each arm: aerobic
+respiration and electron transport (NES 3.2 with BFR, 2.8 with HLRT), oxidative phosphorylation,
+mitochondrial gene expression and mitochondrial protein degradation, all with BH q below 10⁻⁹. The
+BFR response in these sets is as strong as the HLRT one.
+
+Between the arms, the interaction points to structural remodelling that HLRT training drives and
+BFR training does not. The sets lower in BFR than in HLRT are cell motility, cell adhesion,
+cytoskeleton organisation, wound healing, epithelial–mesenchymal transition and Rho GTPase effectors
+(fgsea q 0.0008 to 0.015). These are exploratory leads: fry does not confirm any between-leg set,
+and the baseline contrast, where no difference is expected, also gives fgsea 70 sets, so fgsea calls
+between legs run high in these data.

@@ -42,6 +42,13 @@ Outputs:
   - `unique_children`: one row per parent and child: BFR-only and HLRT-only proteins in the child,
     Fisher p and q, the parent's divergence and its shuffle p and q, and `edge_pct` per leg.
 
-The overlap measures, Venn statistics and child tests are descriptive: leading edges move with
-small ranking changes, children overlap, and the Fisher and shuffle tests treat proteins as
-exchangeable.
+Both legs move the same pathways the same way, mostly through the same proteins. Across all 1,990
+sets the two legs' NES correlate (Spearman rho 0.76), and all 71 pathways that both legs move go
+in the same direction in each: 30 rise, mitochondrial respiration, translation, protein import and
+the TCA cycle among them, and 41 fall, muscle contraction, myogenesis and proteasome sets among
+them. Their leading edges overlap with median Jaccard index 0.55 (0.32 to 0.94). The closest
+overlap is in falling muscle sets (dystrophin glycoprotein complex 0.94, striated muscle
+contraction 0.86); in aerobic respiration and electron transport the BFR leading edge holds more
+proteins of its own (79 shared, 47 BFR only, 26 HLRT only). The overlap measures, Venn statistics
+and child tests are descriptive: leading edges move with small ranking changes, children overlap,
+and the Fisher and shuffle tests treat proteins as exchangeable.

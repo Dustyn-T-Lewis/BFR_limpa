@@ -26,4 +26,9 @@ Outputs:
     leg and for the interaction (BFR minus HLRT) from the stage 02 fit: subunits, assembly factors
     and the "Other" proteins. TMEM70 is listed under both CI and CV.
 
-No protein's interaction reaches FDR 0.05, and fry's interaction FDR is 0.73 for every complex.
+The subunits of every complex rise on average in both legs, by 0.10 to 0.27 log2 with BFR and 0.12
+to 0.19 with HLRT. Complex I rises a little less with BFR (0.10 against 0.15) and complex II more
+(0.27 against 0.12). The largest single differences are in assembly factors and a few subunits:
+CMC1 (BFR +0.70, HLRT −0.02), ATPAF2 and MT-CO1 rise more with BFR, while TMEM126A (−0.03, +0.40),
+NDUFAF5 and COX8A rise more with HLRT. These are descriptive: no protein's interaction reaches FDR
+0.05, and fry's interaction FDR is 0.73 for every complex.

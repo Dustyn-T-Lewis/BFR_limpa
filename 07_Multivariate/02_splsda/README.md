@@ -45,14 +45,18 @@ Outputs:
     hypergeometric p and BH q (`fgsea::fora()` against every measured gene);
   - `scores`: one row per sample and comparison: participant, group and the two component scores.
 
-On current data training separates clearly: component 1 BER 0.006 and AUC 1.000 in the HLRT leg
-(20 proteins), 0.18 and 0.88 in the BFR leg (1,000 proteins). The arm comparisons sit near chance:
-BER 0.39 and AUC 0.67 before training (5 proteins), 0.44 and 0.60 after training, 0.46 and 0.57 on
-change. Choosing the panel size on the same data pulls a tuned BER below 0.5 even without signal,
-so none shows a protein combination that separates BFR from HLRT; the pre-training value, the
-lowest, sits on the baseline contrast that has no stage 02 hit. The training signature transfers:
+Training separates clearly: component 1 BER 0.006 and AUC 1.000 in the HLRT leg (20 proteins),
+0.18 and 0.88 in the BFR leg (1,000 proteins). The training signature is shared between the arms:
 the HLRT panel scores BFR legs at AUC 0.91 (BFR's own 0.88), the BFR panel HLRT legs at 0.98
 (HLRT's own 1.00). The BFR panel draws most from the aerobic-respiration module M3 (182 proteins)
 and the muscle module M1 (124) and is enriched for oxidative phosphorylation, mitochondrial protein
 degradation and the TCA cycle (BH q < 0.001); the 20-protein HLRT panel draws 7 proteins from M3,
 and its top set, arginine and proline metabolism, misses BH (q 0.058).
+
+The arm comparisons sit near chance: BER 0.39 and AUC 0.67 before training (5 proteins), 0.44 and
+0.60 after training, 0.46 and 0.57 on change. Their panels pick the proteins that lead the
+per-protein tests of stage 02: PCYT1A, GPD2, EIF2S1, FAHD2A and ARL8A on change, DDB1, PNPO,
+MUSTN1 and GDI1 after training, RPN2 before training. Choosing the panel size on the same data
+pulls a tuned BER below 0.5 even without signal, and the lowest BER falls before training, on the
+baseline contrast that has no stage 02 hit, so none shows a protein combination that separates
+BFR from HLRT.

@@ -46,11 +46,16 @@ Outputs:
   - `preservation`: one row per pre-network module: size, Zsummary (above 10 strong, 2 to 10
     moderate) and median rank in the post-training samples.
 
-On current data the networks hold 32 to 46 modules each. Training moves 7 main-network modules in
-BFR and 10 in HLRT; three change-network modules rise in BFR and none in HLRT: the TCA cycle (M3,
-hub IDH3B), oxidative phosphorylation (M9, hub DLAT) and M22 (no set, hub ATP5MD). No module
-differs between the arms. All 32 pre-network modules are at least moderately preserved after
-training.
+Training moves the same modules in both arms: 7 main-network modules with BFR and 10 with HLRT.
+Aerobic respiration (M3, hub SUCLA2) and mitochondrial gene expression (M9, hub OGDH) rise in both,
+and calcium ion transport (M8, hub TXLNB), M6 (hub CMBL) and M16 (hub PLEKHF1) fall in both; HLRT
+also raises ATP synthesis (M4, hub NDUFA10). In the change network the TCA cycle (M3, hub IDH3B),
+oxidative phosphorylation (M9, hub DLAT) and M22 (no set, hub ATP5MD) rise with BFR at BH; the
+same three rise with HLRT by a little less (M3 0.15 against 0.19 log2) and miss BH (q 0.058 to
+0.19). The one between-arm lead is main-network M22 (no set, hub RBKS), which falls with HLRT
+(q 3.4 × 10⁻⁵) but not with BFR, and sits higher in BFR after training (p 0.0069, q 0.29). No
+module differs between the arms at BH. The networks hold 32 to 46 modules each, and all 32
+pre-network modules are at least moderately preserved after training.
 
 At power 12, the FAQ's table value, the networks thin: 36% to 58% of proteins go unassigned and
 15 to 23 modules form. The large main-network modules re-form (M1, M2, M3, M4, M5 and M13, Jaccard
