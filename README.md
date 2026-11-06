@@ -18,7 +18,7 @@ proteome differently than heavy load.
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | protein co-expression modules (WGCNA) and their phenotype associations | ready |
 | `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
-| `06_Composition/` | fibre type, and DE adjusted for composition | export only |
+| `06_Composition/` | fibre type per biopsy (FibeRtypeR method) and its training response | ready |
 | `07_Multivariate/` | multilevel PCA, sPLS-DA and sPLS regression (mixOmics) | ready |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
@@ -26,8 +26,7 @@ Each sub-stage holds `README.md`, `a_script/` (a Quarto notebook), `b_reports/` 
 report, beside any figure PDFs) and, where the step writes tables, `c_data/` (one workbook, plus an
 `.rds` where a later step needs the R object). Each step's README lists its workbook sheets. Data
 passes through disk, so any sub-stage reruns from a fresh session, and no notebook caches.
-"Planned" means only a README exists; "export only" means only the step before the FibeRtypeR web
-app exists.
+"Planned" means only a README exists.
 
 ## Running the pipeline
 
@@ -58,7 +57,9 @@ for s in 01_build_mito_sets 02_test_mito 03_complex_subunits; do
   quarto render 05_Mitochondria/$s/a_script/$s.qmd --output-dir ../b_reports
 done
 
-quarto render 06_Composition/01_fibre_type_export/a_script/01_fibre_type_export.qmd --output-dir ../b_reports
+for s in 01_fibre_type_export 02_fibre_type; do
+  quarto render 06_Composition/$s/a_script/$s.qmd --output-dir ../b_reports
+done
 
 for s in 01_pca 02_splsda 03_spls; do
   quarto render 07_Multivariate/$s/a_script/$s.qmd --output-dir ../b_reports

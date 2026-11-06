@@ -2,15 +2,14 @@
 
 A biopsy mixes slow (type I) and fast (type II) fibres, and type I fibres hold more mitochondria, so
 a shift in fibre mix between biopsies could pass for a training effect. This stage estimates each
-biopsy's slow and fast fibre fractions with FibeRtypeR (Van der Stede et al. 2026, J Physiol
-604:2624), a web app that reads each sample as a mix of pure slow and pure fast reference profiles,
-and checks whether the stage 02 results hold once composition is in the model.
+biopsy's slow fibre fraction with the FibeRtypeR method (Van der Stede et al. 2026, J Physiol
+604:2624) and asks whether training or arm moved it.
 
-Only the first step is built. [`01_fibre_type_export`](01_fibre_type_export/README.md) writes
-the upload file; its README covers the upload and the 43 cRAP-duplicated proteins, 23 of which it
-fills from limpa. Two steps wait on the app run: `02_fibre_type_import` will read the app's
-fractions per biopsy, and a third will refit the stage 02 model with the slow fraction as a
-covariate and compare the results.
+[`01_fibre_type_export`](01_fibre_type_export/README.md) writes the upload file for the FibeRtypeR
+web app; its README covers the 43 cRAP-duplicated proteins, 23 of which it fills from limpa.
 
-The covariate is the FibeRtypeR slow fraction alone; the app returns slow and fast fractions only.
+[`02_fibre_type`](02_fibre_type/README.md) rebuilds the method in R from the paper's markers and
+reference and tests the slow fraction with the stage 02 design. Fibre type did not change with
+training in either arm, so it enters no model; participant already absorbs most of it.
+
 MPE from `05_Mitochondria` is never a covariate: it is a training outcome.

@@ -1,0 +1,152 @@
+---
+title: "02 · Fibre type"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, limma, dplyr, tidyr, tibble, readr, ggplot2, writexl)
+here::i_am("06_Composition/02_fibre_type/a_script/02_fibre_type.qmd")
+```
+
+## Read proteins and reference
+
+FibeRtypeR (Van der Stede et al. 2026, doi:10.1113/JP290082) reads each biopsy as a mix of a pure
+slow (type I) and a pure fast (type II) fibre profile. Its proteomics markers are the 77 slow and
+68 fast proteins of its Table S1 (Shared and Proteome columns). The reference profile of each
+marker is its mean log2 abundance in the 24 slow and 24 fast pre-training fibre pools of Moesgaard
+et al. 2026 (doi:10.1038/s41467-026-77275-9, PRIDE PXD056664), the data FibeRtypeR's proteomics
+reference was built from; `references/fibertyper_reference.csv` holds both. The bulk input is the
+limpa matrix rather than DIA-NN's MaxLFQ, because limpa's complete matrix measures more markers in
+every sample.
+
+```{r read}
+stage <- here("06_Composition", "02_fibre_type")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+reference <- read_csv(file.path(stage, "references", "fibertyper_reference.csv"),
+  show_col_types = FALSE)
+targets <- proteins$targets
+stopifnot(identical(rownames(d$design), targets$sample_id))
+count(reference, marker_type)
+```
+
+## Estimate the slow fraction
+
+Markers are matched to the matrix by gene symbol, one row per symbol. Each sample is shifted so its
+median over the markers equals the reference's, a project choice where the paper says only
+"log2-normalized". For two fractions that are non-negative and sum to one, the least-squares fit
+FibeRtypeR runs (DeconRNASeq, equivalently `limSolve::lsei()`) has a closed form: the projection of
+the sample onto the line from the fast to the slow profile, clipped to [0, 1].
+
+```{r deconvolve}
+genes <- proteins$genes$Genes
+rows <- which(genes %in% reference$gene & !duplicated(genes))
+bulk <- proteins$E[rows, ]
+profile <- reference[match(genes[rows], reference$gene), ]
+bulk <- sweep(bulk, 2, apply(bulk, 2, median) - median(c(profile$slow_log2, profile$fast_log2)))
+direction <- profile$slow_log2 - profile$fast_log2
+slow <- colSums((bulk - profile$fast_log2) * direction) / sum(direction^2)
+targets$slow <- pmin(pmax(slow, 0), 1)[targets$sample_id]
+count(profile, marker_type)
+summary(targets$slow)
+```
+
+## Checks without histology
+
+No histology exists for these biopsies, so the level is unvalidated; the checks ask whether the
+ranking behaves like fibre type: a person's two legs should agree, as should one leg's two biopsies,
+most variation should sit between people, and women's muscle is usually slower than men's.
+
+```{r checks}
+wide <- targets |>
+  select(participant, leg, timepoint, slow) |>
+  pivot_wider(names_from = c(leg, timepoint), values_from = slow)
+checks <- tibble(
+  check = c(
+    "left vs right leg at T1 (r)", "same leg, T1 vs T2 (r)",
+    "variance between participants (R2)", "women minus men (points)"
+  ),
+  value = c(
+    cor(wide$L_T1, wide$R_T1, use = "complete.obs"),
+    cor(c(wide$L_T1, wide$R_T1), c(wide$L_T2, wide$R_T2), use = "complete.obs"),
+    summary(lm(slow ~ participant, targets))$r.squared,
+    100 * (mean(targets$slow[targets$sex == "F"]) - mean(targets$slow[targets$sex == "M"]))
+  )
+)
+mutate(checks, value = round(value, 2))
+```
+
+## Did training or arm shift fibre type?
+
+The slow fraction goes through the stage 02 design (group, participant, blood index) and its five
+contrasts as a single outcome row, so the test is the plain least-squares t, as for MPE in
+`05_Mitochondria`. Estimates are in percentage points.
+
+```{r contrasts}
+fit <- contrasts.fit(lmFit(rbind(slow = 100 * targets$slow), d$design), d$contrasts)
+contrasts <- tibble(
+  contrast = colnames(d$contrasts), points = fit$coefficients[1, ],
+  se = fit$stdev.unscaled[1, ] * fit$sigma, df = fit$df.residual
+) |>
+  mutate(
+    p = 2 * pt(-abs(points / se), df),
+    conf.low = points - qt(0.975, df) * se, conf.high = points + qt(0.975, df) * se
+  )
+group_summary <- targets |>
+  summarise(mean = 100 * mean(slow), sd = 100 * sd(slow), n = n(), .by = c(treatment, timepoint))
+group_summary
+mutate(contrasts, across(where(is.double), function(x) signif(x, 3)))
+```
+
+## Figure
+
+Each leg's slow fraction before and after training, one line per leg, by arm.
+
+```{r figure}
+figure <- targets |>
+  mutate(leg_id = paste(participant, leg)) |>
+  ggplot(aes(timepoint, 100 * slow, group = leg_id)) +
+  geom_line(colour = "grey70", linewidth = 0.3) +
+  geom_point(aes(colour = treatment), size = 1.4, show.legend = FALSE) +
+  stat_summary(aes(group = 1), fun = mean, geom = "line", linewidth = 1) +
+  facet_wrap(~treatment) +
+  scale_colour_manual(values = c(BFR = "#D55E00", HLRT = "#0072B2")) +
+  labs(x = NULL, y = "Slow (type I) fibre fraction, %",
+    title = "Fibre type before and after training") +
+  theme_bw(base_size = 9)
+figure
+
+pdf(file.path(stage, "b_reports", "02_fibre_type.pdf"), width = 8.27, height = 5)
+print(figure)
+invisible(dev.off())
+```
+
+## Save results
+
+```{r write}
+write_xlsx(
+  list(
+    slow_fraction = select(targets, sample_id, participant, leg, treatment, timepoint, sex, slow),
+    contrasts = contrasts,
+    group_summary = group_summary,
+    checks = checks
+  ),
+  file.path(stage, "c_data", "02_fibre_type.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```
