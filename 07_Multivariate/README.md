@@ -10,7 +10,8 @@ proteins separates the groups or predicts growth.
 removed.
 
 [`02_splsda`](02_splsda/README.md) classifies T1 against T2 in each arm (the positive control) and
-BFR against HLRT on change and after training, with multilevel sparse PLS-DA.
+BFR against HLRT before training, after training and on change, with multilevel sparse PLS-DA;
+it also transfers each arm's training panel to the other arm and annotates the training panels.
 
 [`03_spls`](03_spls/README.md) predicts each leg's CSA and echo change from its protein change with
 sparse PLS regression, per arm and pooled.
