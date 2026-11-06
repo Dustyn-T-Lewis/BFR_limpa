@@ -5,7 +5,7 @@ after training and in change (AUC from `pROC` with `direction = "<"`, p from the
 signed-rank test, BH within task). Pre-to-post within an arm is tested in `02_Differential`, and
 for sets in `03_Pathway_Enrichment/04_set_classification`.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`,
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`,
 `02_Differential/c_data/02_differential.xlsx`,
 `03_Protein_Association/c_data/03_protein_association.xlsx`.
 

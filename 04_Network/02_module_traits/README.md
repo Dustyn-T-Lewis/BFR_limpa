@@ -13,7 +13,7 @@ Main-network eigengenes are recomputed on raw abundance so levels keep between-p
 Least-squares t, BH within each network, block and outcome across modules.
 
 Inputs: the `membership`, `modules`, `eigengene_tests` and `change_tests` sheets of
-`01_modules.xlsx`, `01_Preprocess/02_Quantification/c_data/proteins.rds`,
+`01_modules.xlsx`, `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`,
 `02_Differential_Expression/02_Differential/c_data/fit.rds` and `00_Input/phenotype.csv`.
 
 ```sh

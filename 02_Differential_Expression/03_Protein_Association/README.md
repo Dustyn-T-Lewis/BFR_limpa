@@ -5,7 +5,8 @@ echo intensity. The association is a slope in the limpa model (`dpcDE()`, leg an
 `eBayes(robust = TRUE)`), fitted over all legs (pooled) and within participant (differential), with
 BH within analysis and outcome. Its moderated t ranks proteins for gene set tests.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`, `00_Input/phenotype.csv`.
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` (models) and `proteins_adjusted.rds`
+(paired changes and figures), `00_Input/phenotype.csv`.
 
 ```sh
 quarto render 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd --output-dir ../b_reports

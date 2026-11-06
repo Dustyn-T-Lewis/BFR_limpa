@@ -15,7 +15,7 @@ against zero, and BFR minus HLRT within participant. Least-squares t throughout,
 contrast or test across modules. Preservation of the pre-network modules in the post-training
 samples is checked with `modulePreservation()`.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`,
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`,
 `02_Differential_Expression/01_Design/c_data/design.rds`, and `gene_sets.rds` and the
 `protein_gene_map` sheet from `03_Pathway_Enrichment/00_build_gene_sets/`.
 

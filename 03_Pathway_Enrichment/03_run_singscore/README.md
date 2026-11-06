@@ -4,7 +4,7 @@ Scores every sample on every tested set with singscore, which ranks within each 
 score has no p-value and never sees a contrast.
 
 Inputs: `00_build_gene_sets/c_data/gene_sets.rds`, the catalogue and protein map in
-`00_build_gene_sets.xlsx`, `01_Preprocess/02_Quantification/c_data/proteins.rds`.
+`00_build_gene_sets.xlsx`, `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`.
 
 ```sh
 quarto render 03_Pathway_Enrichment/03_run_singscore/a_script/03_run_singscore.qmd --output-dir ../b_reports

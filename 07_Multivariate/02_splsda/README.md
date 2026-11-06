@@ -14,7 +14,7 @@ size is chosen on the same data, so the reported errors are somewhat optimistic;
 permutation reference. A two-factor multilevel design on all four samples is not used: with one
 sample per participant, leg and time, mixOmics computes its decomposition from the class labels.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`.
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`.
 
 ```sh
 quarto render 07_Multivariate/02_splsda/a_script/02_splsda.qmd --output-dir ../b_reports

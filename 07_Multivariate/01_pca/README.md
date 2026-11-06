@@ -4,7 +4,7 @@ Principal component analysis of all 131 samples after removing each participant'
 (mixOmics `pca(multilevel = participant)`), so the picture shows how a person's four samples differ
 rather than how people differ. Proteins are unscaled, as in the `02_Quantification` MDS plot.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`.
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`.
 
 ```sh
 quarto render 07_Multivariate/01_pca/a_script/01_pca.qmd --output-dir ../b_reports

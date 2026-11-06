@@ -15,7 +15,7 @@ The panel size is chosen on the same data in every fit, so errors are somewhat o
 is no permutation reference. `perf()` does not return its predictions, so the figure's held-out
 predictions come from one cross-validation pass of `spls()` and `predict()` on the same folds.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` and `00_Input/phenotype.csv`.
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds` and `00_Input/phenotype.csv`.
 
 ```sh
 quarto render 07_Multivariate/03_spls/a_script/03_spls.qmd --output-dir ../b_reports
