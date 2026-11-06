@@ -32,10 +32,11 @@ Outputs:
   - `networks`: one row per network: samples, soft power, modules, share of proteins unassigned
     and median kME of assigned proteins;
   - `soft_threshold`: one row per network and power: signed scale-free R² and mean connectivity;
-  - `membership`: one row per network and protein: module (M0 is unassigned) and kME with its own
-    module;
-  - `modules`: one row per network and module: size, hub protein, and top set and its BH q where
-    one passes;
+  - `membership`: one row per network and protein: module (M0 is unassigned), its module at
+    power 12, and kME with its own module;
+  - `modules`: one row per network and module: size, hub protein (highest kME), WGCNA's
+    connectivity hub (`chooseTopHubInEachModule()`), best Jaccard overlap with a module of the
+    same network rebuilt at power 12, and top set and its BH q where one passes;
   - `enrichment`: one row per network, module and set with nominal p < 0.05: overlap and
     hypergeometric p and q (BH over every set tested for the module);
   - `eigengene_tests`: one row per main-network module and contrast: estimate, t, p, 95% interval
@@ -50,3 +51,9 @@ BFR and 10 in HLRT; three change-network modules rise in BFR and none in HLRT: t
 hub IDH3B), oxidative phosphorylation (M9, hub DLAT) and M22 (no set, hub ATP5MD). No module
 differs between the arms. All 32 pre-network modules are at least moderately preserved after
 training.
+
+At power 12, the FAQ's table value, the networks thin: 36% to 58% of proteins go unassigned and
+15 to 23 modules form. The large main-network modules re-form (M1, M2, M3, M4, M5 and M13, Jaccard
+0.62 to 0.73); most small ones do not (median best Jaccard 0.05 to 0.13 per network), so the small
+modules of the fine split depend on the chosen power. The highest-kME hub matches the connectivity
+hub in 61% to 79% of modules.
