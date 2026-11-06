@@ -14,7 +14,7 @@ proteome differently than heavy load.
 |---|---|---|
 | `00_Input/` | study data, no code | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
-| `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification | ready |
+| `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification, response magnitude | ready |
 | `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
 | `04_Network/` | protein co-expression modules (WGCNA) and their phenotype associations | ready |
 | `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
@@ -43,6 +43,7 @@ quarto render 02_Differential_Expression/01_Design/a_script/01_design.qmd       
 quarto render 02_Differential_Expression/02_Differential/a_script/02_differential.qmd --output-dir ../b_reports
 quarto render 02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd       --output-dir ../b_reports
 quarto render 02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.qmd --output-dir ../b_reports
+quarto render 02_Differential_Expression/05_Response_Magnitude/a_script/05_response_magnitude.qmd     --output-dir ../b_reports
 
 for s in 00_build_gene_sets 01_run_fgsea_and_fry 02_enrich_volcano_fgsea 03_run_singscore \
          04_set_classification 05_set_association 06_leading_edge 07_pathway_maps; do
