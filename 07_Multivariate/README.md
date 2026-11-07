@@ -16,6 +16,8 @@ it also transfers each arm's training panel to the other arm and annotates the t
 [`03_spls`](03_spls/README.md) predicts each leg's CSA and echo change from its protein change with
 sparse PLS regression, per arm and pooled.
 
-Every model uses 5-fold cross-validation repeated 50 times, with folds of whole participants. Panel
-sizes are tuned on the same data and there is no permutation reference, so error rates lean
-optimistic. Two-factor multilevel designs are not used: on this crossover they leak the labels.
+Every classifier and per-arm regression uses 5-fold cross-validation repeated 50 times, with folds
+of whole participants; the pooled regressions hold out one participant per fold in a single pass.
+The PCA is descriptive and has no cross-validation. Panel sizes are tuned on the same data and there
+is no permutation reference, so error rates lean optimistic. Two-factor multilevel designs are not
+used: on this crossover they leak the labels.

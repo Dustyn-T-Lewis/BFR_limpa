@@ -16,7 +16,7 @@ knitr:
 `pROC` and `fgsea` are called with `::`.
 
 ```{r setup}
-pacman::p_load(here, mixOmics, dplyr, tidyr, tibble, purrr, readxl, ggplot2, patchwork, writexl)
+pacman::p_load(here, mixOmics, dplyr, tidyr, purrr, readxl, ggplot2, patchwork, writexl)
 here::i_am("07_Multivariate/02_splsda/a_script/02_splsda.qmd")
 ```
 
@@ -181,9 +181,10 @@ panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
 
 Each arm's training panel scores the other arm's legs: the HLRT model classifies BFR legs as before
 or after training, and the BFR model HLRT legs, with `predict(multilevel = participant)` applying
-the same within-person centring. An AUC near the scored arm's own cross-validated AUC means the
-two arms share the training signature. The scored legs belong to the same participants as the
-model's training legs, so this measures transfer between legs, not to new people.
+the same within-person centring. The scored legs belong to the same participants the model was
+fitted on, so the transfer AUC is not out-of-person like the cross-validated AUC and the two are
+not directly comparable. A high transfer AUC says the signature is shared between a person's two
+legs.
 
 ```{r transfer}
 transfer <- tibble(model_arm = c("HLRT", "BFR"), scored_arm = c("BFR", "HLRT")) |>
@@ -280,7 +281,7 @@ roc_plot <- function(fit, cmp) {
     annotate("text", x = 0.62, y = 0.08, size = 2.8,
       label = sprintf("CV AUC %.2f ± %.2f", auc[["AUC.mean"]], auc[["AUC.sd"]])) +
     coord_equal() +
-    labs(x = "1 − specificity", y = "Sensitivity") +
+    labs(x = "1 - specificity", y = "Sensitivity") +
     theme_bw(base_size = 8)
 }
 

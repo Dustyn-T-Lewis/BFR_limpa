@@ -2245,7 +2245,7 @@ vertical-align: -.125em;
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, mixOmics, dplyr, tidyr, tibble, purrr, ggplot2, patchwork, readr, writexl)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, mixOmics, dplyr, tidyr, purrr, ggplot2, patchwork, readr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;07_Multivariate/03_spls/a_script/03_spls.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
@@ -2428,7 +2428,7 @@ vertical-align: -.125em;
 </section>
 <section id="held-out-predictions" class="level2">
 <h2 class="anchored" data-anchor-id="held-out-predictions">Held-out predictions</h2>
-<p><code>perf()</code> does not return its predictions, so the figure’s predicted values come from one cross-validation pass written with <code>spls()</code> and <code>predict()</code>: component 1 at the tuned panel size, the same folds as <code>perf()</code> (5 folds in a single arm, one participant per fold when pooled).</p>
+<p><code>perf()</code> does not return its predictions, so the figure’s predicted values come from one cross-validation pass written with <code>spls()</code> and <code>predict()</code>: component 1 at the tuned panel size, on the same fold scheme as <code>perf()</code>. In a single arm that is one random draw of 5 folds, not <code>perf()</code>’s 50 repeats; pooled it is one participant per fold, the same folds <code>perf()</code> uses.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2026</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>held_out <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits_to_run, <span class="cf">function</span>(outcome, fit, rows) {</span>
@@ -2471,7 +2471,7 @@ vertical-align: -.125em;
 </section>
 <section id="figures" class="level2">
 <h2 class="anchored" data-anchor-id="figures">Figures</h2>
-<p>One page per outcome: held-out predicted against observed change for each fit, with the correlation and component 1’s Q²; below, the 20 largest component 1 loadings of each fit, shaded by stability.</p>
+<p>One page per outcome: held-out predicted against observed change for each fit, with the correlation from that single pass and component 1’s Q² from <code>perf()</code>; below, the 20 largest component 1 loadings of each fit, shaded by stability.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>arm_colours <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#D55E00&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#0072B2&quot;</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2553,8 +2553,8 @@ attached base packages:
 
 other attached packages:
  [1] writexl_1.5.4   readr_2.2.0     patchwork_1.3.2 purrr_1.2.2    
- [5] tibble_3.3.1    tidyr_1.3.2     dplyr_1.2.1     mixOmics_6.36.0
- [9] ggplot2_4.0.3   lattice_0.22-9  MASS_7.3-65     here_1.0.2     
+ [5] tidyr_1.3.2     dplyr_1.2.1     mixOmics_6.36.0 ggplot2_4.0.3  
+ [9] lattice_0.22-9  MASS_7.3-65     here_1.0.2     
 
 loaded via a namespace (and not attached):
  [1] utf8_1.2.6          generics_0.1.4      stringi_1.8.7      
@@ -2574,9 +2574,10 @@ loaded via a namespace (and not attached):
 [43] vroom_1.7.1         pkgconfig_2.0.3     pillar_1.11.1      
 [46] gtable_0.3.6        glue_1.8.1          rARPACK_0.11-0     
 [49] Rcpp_1.1.2          statmod_1.5.1       xfun_0.57          
-[52] tidyselect_1.2.1    knitr_1.52          farver_2.1.2       
-[55] htmltools_0.5.9     igraph_2.3.1        labeling_0.4.3     
-[58] rmarkdown_2.32      compiler_4.6.0      S7_0.2.2           </code></pre>
+[52] tibble_3.3.1        tidyselect_1.2.1    knitr_1.52         
+[55] farver_2.1.2        htmltools_0.5.9     igraph_2.3.1       
+[58] labeling_0.4.3      rmarkdown_2.32      compiler_4.6.0     
+[61] S7_0.2.2           </code></pre>
 </div>
 </div>
 </section>

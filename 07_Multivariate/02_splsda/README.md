@@ -45,13 +45,15 @@ Outputs:
     hypergeometric p and BH q (`fgsea::fora()` against every measured gene);
   - `scores`: one row per sample and comparison: participant, group and the two component scores.
 
-Training separates clearly: component 1 BER 0.006 and AUC 1.000 in the HLRT leg (20 proteins),
-0.18 and 0.88 in the BFR leg (1,000 proteins). The training signature is shared between the arms:
-the HLRT panel scores BFR legs at AUC 0.91 (BFR's own 0.88), the BFR panel HLRT legs at 0.98
-(HLRT's own 1.00). The BFR panel draws most from the aerobic-respiration module M3 (182 proteins)
-and the muscle module M1 (124) and is enriched for oxidative phosphorylation, mitochondrial protein
-degradation and the TCA cycle (BH q < 0.001); the 20-protein HLRT panel draws 7 proteins from M3,
-and its top set, arginine and proline metabolism, misses BH (q 0.058).
+Training separates clearly: component 1 BER 0.006 and AUC 1.000 in the HLRT leg (20 proteins), 0.18
+and 0.88 in the BFR leg (1,000 proteins). The training signature is shared between a person's two
+legs: the HLRT panel scores BFR legs at AUC 0.91, the BFR panel HLRT legs at 0.98. The scored legs
+belong to participants the panel was fitted on, so these AUCs are not out-of-person and not directly
+comparable with the cross-validated ones (BFR 0.88, HLRT 1.00). The BFR panel draws most from the
+aerobic-respiration module M3 (182 proteins) and the muscle module M1 (124) and is enriched for
+oxidative phosphorylation, mitochondrial protein degradation and the TCA cycle (BH q < 0.001); the
+20-protein HLRT panel draws 7 proteins from M3, and its top set, arginine and proline metabolism,
+misses BH (q 0.058).
 
 The arm comparisons sit near chance: BER 0.39 and AUC 0.67 before training (5 proteins), 0.44 and
 0.60 after training, 0.46 and 0.57 on change. Their panels pick the proteins that lead the

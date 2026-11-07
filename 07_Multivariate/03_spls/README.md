@@ -8,12 +8,15 @@ are folds of people), and both arms pooled as a sensitivity run.
 
 `tune.spls()` picks a panel of 5 to 1,000 proteins per component by mean absolute error (mixOmics
 divides each miss by the outcome's variance, so the value compares sizes within an outcome only),
-`spls()` fits it and `perf()` cross-validates it, 5-fold repeated 50 times and seeded. A
-participant's two legs grow together (r = 0.57 for VL CSA), so the pooled `perf()` holds out each
-participant's legs together; `tune.spls()` cannot, so the pooled panel size may lean optimistic.
-The panel size is chosen on the same data in every fit, so errors are somewhat optimistic; there
-is no permutation reference. `perf()` does not return its predictions, so the figure's held-out
-predictions come from one cross-validation pass of `spls()` and `predict()` on the same folds.
+`spls()` fits it and `perf()` cross-validates it: in a single arm 5-fold repeated 50 times and
+seeded, pooled one participant per fold in a single pass. A participant's two legs grow together
+(r = 0.57 for VL CSA), so the pooled `perf()` holds out each participant's legs together;
+`tune.spls()` cannot, so the pooled panel size may lean optimistic. The panel size is chosen on the
+same data in every fit, so errors are somewhat optimistic; there is no permutation reference.
+`perf()` does not return its predictions, so the figure's held-out predictions come from one
+cross-validation pass of `spls()` and `predict()` on the same fold scheme: one random draw of 5
+folds in a single arm, one participant per fold pooled. The figure's r comes from that pass and its
+Q² from `perf()`.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds` and `00_Input/phenotype.csv`.
 
@@ -25,7 +28,8 @@ Outputs:
 
 - `b_reports/03_spls.html`: the walkthrough.
 - `b_reports/03_spls.pdf`, one A4 page per outcome: held-out predicted against observed change for
-  the BFR, HLRT and pooled fits with the correlation and component 1's Q²; below, the 20 largest
+  the BFR, HLRT and pooled fits with the correlation (single pass) and component 1's Q² (`perf()`);
+  below, the 20 largest
   component 1 loadings of each fit, shaded by stability.
 - `c_data/03_spls.xlsx`:
   - `models`: one row per outcome, fit and component: legs, panel size, tuning MAE, and from

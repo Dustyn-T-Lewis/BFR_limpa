@@ -2241,7 +2241,7 @@ vertical-align: -.125em;
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, mixOmics, dplyr, tidyr, tibble, purrr, ggplot2, patchwork, writexl)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, mixOmics, dplyr, tidyr, purrr, ggplot2, patchwork, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;07_Multivariate/01_pca/a_script/01_pca.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
@@ -2252,7 +2252,8 @@ vertical-align: -.125em;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;07_Multivariate&quot;</span>, <span class="st">&quot;01_pca&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>gene_of <span class="ot">&lt;-</span> <span class="fu">set_names</span>(proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes, <span class="fu">rownames</span>(proteins))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 3042  131</code></pre>
 </div>
@@ -2328,7 +2329,7 @@ vertical-align: -.125em;
 <span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">9</span>)</span>
 <span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>pc_loadings <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(components<span class="sc">$</span>loadings<span class="sc">$</span>X[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>], <span class="at">rownames =</span> <span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">gene =</span> proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes[<span class="fu">match</span>(protein, <span class="fu">rownames</span>(proteins))])</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">gene =</span> gene_of[protein])</span>
 <span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>loading_plot <span class="ot">&lt;-</span> <span class="cf">function</span>(pc) {</span>
 <span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  pc_loadings <span class="sc">|&gt;</span></span>
@@ -2365,7 +2366,7 @@ vertical-align: -.125em;
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">structure =</span> pc_structure,</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">scores =</span> <span class="fu">select</span>(scores, sample_id, participant, leg, treatment, timepoint, PC1<span class="sc">:</span>PC5),</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">loadings =</span> <span class="fu">as_tibble</span>(components<span class="sc">$</span>loadings<span class="sc">$</span>X[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="at">rownames =</span> <span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">gene =</span> proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes[<span class="fu">match</span>(protein, <span class="fu">rownames</span>(proteins))], <span class="at">.after =</span> protein)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">gene =</span> gene_of[protein], <span class="at">.after =</span> protein)</span>
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  ),</span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_pca.xlsx&quot;</span>)</span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2394,9 +2395,9 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] writexl_1.5.4   patchwork_1.3.2 purrr_1.2.2     tibble_3.3.1   
- [5] tidyr_1.3.2     dplyr_1.2.1     mixOmics_6.36.0 ggplot2_4.0.3  
- [9] lattice_0.22-9  MASS_7.3-65     here_1.0.2     
+ [1] writexl_1.5.4   patchwork_1.3.2 purrr_1.2.2     tidyr_1.3.2    
+ [5] dplyr_1.2.1     mixOmics_6.36.0 ggplot2_4.0.3   lattice_0.22-9 
+ [9] MASS_7.3-65     here_1.0.2     
 
 loaded via a namespace (and not attached):
  [1] utf8_1.2.6          generics_0.1.4      stringi_1.8.7      
@@ -2414,9 +2415,10 @@ loaded via a namespace (and not attached):
 [37] htmlwidgets_1.6.4   pkgconfig_2.0.3     pillar_1.11.1      
 [40] gtable_0.3.6        glue_1.8.1          rARPACK_0.11-0     
 [43] Rcpp_1.1.2          statmod_1.5.1       xfun_0.57          
-[46] tidyselect_1.2.1    knitr_1.52          farver_2.1.2       
-[49] htmltools_0.5.9     igraph_2.3.1        labeling_0.4.3     
-[52] rmarkdown_2.32      compiler_4.6.0      S7_0.2.2           </code></pre>
+[46] tibble_3.3.1        tidyselect_1.2.1    knitr_1.52         
+[49] farver_2.1.2        htmltools_0.5.9     igraph_2.3.1       
+[52] labeling_0.4.3      rmarkdown_2.32      compiler_4.6.0     
+[55] S7_0.2.2           </code></pre>
 </div>
 </div>
 </section>

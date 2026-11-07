@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, mixOmics, dplyr, tidyr, tibble, purrr, ggplot2, patchwork, readr, writexl)
+pacman::p_load(here, mixOmics, dplyr, tidyr, purrr, ggplot2, patchwork, readr, writexl)
 here::i_am("07_Multivariate/03_spls/a_script/03_spls.qmd")
 ```
 
@@ -164,7 +164,8 @@ panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
 
 `perf()` does not return its predictions, so the figure's predicted values come from one
 cross-validation pass written with `spls()` and `predict()`: component 1 at the tuned panel size,
-the same folds as `perf()` (5 folds in a single arm, one participant per fold when pooled).
+on the same fold scheme as `perf()`. In a single arm that is one random draw of 5 folds, not
+`perf()`'s 50 repeats; pooled it is one participant per fold, the same folds `perf()` uses.
 
 ```{r predictions}
 set.seed(2026)
@@ -191,9 +192,9 @@ held_out |> summarise(r = cor(observed, predicted), .by = c(outcome, fit))
 
 ## Figures
 
-One page per outcome: held-out predicted against observed change for each fit, with the
-correlation and component 1's Q²; below, the 20 largest component 1 loadings of each fit, shaded
-by stability.
+One page per outcome: held-out predicted against observed change for each fit, with the correlation
+from that single pass and component 1's Q² from `perf()`; below, the 20 largest component 1 loadings
+of each fit, shaded by stability.
 
 ```{r figures}
 #| fig-height: 10

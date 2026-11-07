@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, mixOmics, dplyr, tidyr, tibble, purrr, ggplot2, patchwork, writexl)
+pacman::p_load(here, mixOmics, dplyr, tidyr, purrr, ggplot2, patchwork, writexl)
 here::i_am("07_Multivariate/01_pca/a_script/01_pca.qmd")
 ```
 
@@ -27,6 +27,7 @@ index's effect removed (`proteins_adjusted.rds`), and the sample table.
 stage <- here("07_Multivariate", "01_pca")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 targets <- proteins$targets
+gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
 dim(proteins$E)
 ```
 
@@ -88,7 +89,7 @@ score_plot <- scores |>
   theme_bw(base_size = 9)
 
 pc_loadings <- as_tibble(components$loadings$X[, 1:2], rownames = "protein") |>
-  mutate(gene = proteins$genes$Genes[match(protein, rownames(proteins))])
+  mutate(gene = gene_of[protein])
 
 loading_plot <- function(pc) {
   pc_loadings |>
@@ -119,7 +120,7 @@ write_xlsx(
     structure = pc_structure,
     scores = select(scores, sample_id, participant, leg, treatment, timepoint, PC1:PC5),
     loadings = as_tibble(components$loadings$X[, 1:5], rownames = "protein") |>
-      mutate(gene = proteins$genes$Genes[match(protein, rownames(proteins))], .after = protein)
+      mutate(gene = gene_of[protein], .after = protein)
   ),
   file.path(stage, "c_data", "01_pca.xlsx")
 )
