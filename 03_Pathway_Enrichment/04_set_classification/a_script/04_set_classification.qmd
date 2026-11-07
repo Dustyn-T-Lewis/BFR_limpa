@@ -39,16 +39,14 @@ head(targets[c("sample_id", "participant", "leg", "treatment", "timepoint")], 6)
 ## Select sets
 
 Only sets the catalogue marks as `qualifies` are tested. `values` holds their scores in catalogue
-order, and `collection_sizes` counts sets per collection; that count is the denominator for the
-chance comparison further down.
+order.
 
 ```{r select-sets}
 catalog <- set_catalog |>
   filter(qualifies) |>
-  select(set_id, database, pathway, measured_size)
+  select(set_id, database, pathway)
 values <- set_score[catalog$set_id, ]
-collection_sizes <- count(catalog, database)
-collection_sizes
+table(catalog$database)
 ```
 
 ## Pair the samples
@@ -333,15 +331,13 @@ chance_plot
 ## Save results
 
 `04_set_classification.xlsx` holds `chance_expectation` (nominal hits against chance per task and
-collection), `set_auc` (AUC, paired p and BH q per set and task, smallest p first) and
-`set_catalog` (every tested set).
+collection) and `set_auc` (AUC, paired p and BH q per set and task, smallest p first).
 
 ```{r write}
 write_xlsx(
   list(
     chance_expectation = chance_expectation,
-    set_auc = arrange(set_auc, p_paired),
-    set_catalog = catalog
+    set_auc = arrange(set_auc, p_paired)
   ),
   file.path(stage, "c_data", "04_set_classification.xlsx")
 )

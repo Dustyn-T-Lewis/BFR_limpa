@@ -2279,23 +2279,17 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="select-sets" class="level2">
 <h2 class="anchored" data-anchor-id="select-sets">Select sets</h2>
-<p>Only sets the catalogue marks as <code>qualifies</code> are tested. <code>values</code> holds their scores in catalogue order, and <code>collection_sizes</code> counts sets per collection; that count is the denominator for the chance comparison further down.</p>
+<p>Only sets the catalogue marks as <code>qualifies</code> are tested. <code>values</code> holds their scores in catalogue order.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>catalog <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway, measured_size)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway)</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> set_score[catalog<span class="sc">$</span>set_id, ]</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>collection_sizes <span class="ot">&lt;-</span> <span class="fu">count</span>(catalog, database)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>collection_sizes</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(catalog<span class="sc">$</span>database)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 2
-  database        n
-  &lt;chr&gt;       &lt;int&gt;
-1 GOBP         1366
-2 GO_Slim        59
-3 Hallmark       41
-4 KEGG_Legacy    94
-5 Reactome      430</code></pre>
+<pre><code>
+    GO_Slim        GOBP    Hallmark KEGG_Legacy    Reactome 
+         59        1366          41          94         430 </code></pre>
 </div>
 </div>
 </section>
@@ -2613,16 +2607,15 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>04_set_classification.xlsx</code> holds <code>chance_expectation</code> (nominal hits against chance per task and collection), <code>set_auc</code> (AUC, paired p and BH q per set and task, smallest p first) and <code>set_catalog</code> (every tested set).</p>
+<p><code>04_set_classification.xlsx</code> holds <code>chance_expectation</code> (nominal hits against chance per task and collection) and <code>set_auc</code> (AUC, paired p and BH q per set and task, smallest p first).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">chance_expectation =</span> chance_expectation,</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_auc =</span> <span class="fu">arrange</span>(set_auc, p_paired),</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_catalog =</span> catalog</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;04_set_classification.xlsx&quot;</span>)</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_auc =</span> <span class="fu">arrange</span>(set_auc, p_paired)</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;04_set_classification.xlsx&quot;</span>)</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

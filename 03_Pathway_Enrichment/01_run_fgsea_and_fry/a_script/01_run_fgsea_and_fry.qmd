@@ -58,7 +58,8 @@ contrast_names <- colnames(d$contrasts)
 stopifnot(
   identical(rownames(fit$coefficients), protein_map$protein),
   identical(colnames(fit$coefficients), contrast_names),
-  identical(rownames(proteins$E), protein_map$protein)
+  identical(rownames(proteins$E), protein_map$protein),
+  identical(rownames(d$design), colnames(proteins$E))
 )
 contrast_names
 ```
@@ -125,8 +126,9 @@ fgsea_raw <- map(ranked, function(stats) fgsea::fgsea(sets, stats, minSize = 15,
 
 fry reads rows of `proteins$E`, so each set's gene symbols are turned into row numbers through each
 symbol's representative protein. It reads limpa's precision weights through `proteins$weights`, with
-robust empirical Bayes as in the protein fit. No `block`: participant is a fixed term in the design,
-and the residual within-leg correlation is 0.027.
+robust empirical Bayes as in the protein fit. The design is the protein fit's, with the blood index
+as a covariate. No `block`: participant is a fixed term in the design, which leaves little residual
+within-leg correlation (the `correlation_strata` sheet of `01_Design`).
 
 ```{r fry-index}
 selected_rows <- which(protein_map$selected)

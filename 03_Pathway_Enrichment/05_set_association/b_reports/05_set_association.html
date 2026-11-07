@@ -2255,7 +2255,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>Four inputs: the set catalogue from <code>00_build_gene_sets</code>, the singscore matrix from <code>03_run_singscore</code> (one row per set, one column per sample), the sample targets stored with the protein estimates and the per-leg phenotype measurements.</p>
+<p>Four inputs here: the set catalogue from <code>00_build_gene_sets</code>, the singscore matrix from <code>03_run_singscore</code> (one row per set, one column per sample), the protein estimates with their sample targets and the per-leg phenotype measurements. The protein-association inputs (the gene sets, the protein to gene map and the saved t values and designs) are read in their own section.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;05_set_association&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
@@ -2282,23 +2282,17 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="select-sets" class="level2">
 <h2 class="anchored" data-anchor-id="select-sets">Select sets</h2>
-<p>Only sets the catalogue marks as <code>qualifies</code> are tested. <code>values</code> holds their scores in catalogue order, and <code>collection_sizes</code> counts sets per collection; that count is the denominator for the chance comparison further down.</p>
+<p>Only sets the catalogue marks as <code>qualifies</code> are tested. <code>values</code> holds their scores in catalogue order.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>catalog <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway, measured_size)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway)</span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> set_score[catalog<span class="sc">$</span>set_id, ]</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>collection_sizes <span class="ot">&lt;-</span> <span class="fu">count</span>(catalog, database)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>collection_sizes</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(catalog<span class="sc">$</span>database)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 2
-  database        n
-  &lt;chr&gt;       &lt;int&gt;
-1 GOBP         1366
-2 GO_Slim        59
-3 Hallmark       41
-4 KEGG_Legacy    94
-5 Reactome      430</code></pre>
+<pre><code>
+    GO_Slim        GOBP    Hallmark KEGG_Legacy    Reactome 
+         59        1366          41          94         430 </code></pre>
 </div>
 </div>
 </section>
@@ -2559,18 +2553,19 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 <span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">match</span>(gene_of<span class="sc">$</span>protein[<span class="fu">match</span>(genes, gene_of<span class="sc">$</span>gene)], <span class="fu">rownames</span>(proteins))</span>
 <span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>})</span>
 <span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>association_fry <span class="ot">&lt;-</span> <span class="fu">imap</span>(association_designs, <span class="cf">function</span>(design, ranking) {</span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>weights <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, design, <span class="at">plot =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(proteins, set_rows, design, <span class="at">contrast =</span> <span class="st">&quot;post:x&quot;</span>, <span class="at">robust =</span> <span class="cn">TRUE</span>, <span class="at">sort =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(ranking, set_id, <span class="at">fry_direction =</span> Direction, <span class="at">fry_p =</span> PValue, <span class="at">fry_fdr =</span> FDR)</span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;analysis&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>)</span>
-<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>association_sets <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
-<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>  association_fgsea, association_fry, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;analysis&quot;</span>, <span class="st">&quot;outcome&quot;</span>, <span class="st">&quot;set_id&quot;</span>)</span>
-<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>association_sets <span class="sc">|&gt;</span></span>
-<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">fgsea =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">fry =</span> <span class="fu">sum</span>(fry_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> <span class="fu">c</span>(analysis, outcome))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">nrow</span>(design) <span class="sc">==</span> <span class="fu">ncol</span>(proteins))</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>weights <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, design, <span class="at">plot =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(proteins, set_rows, design, <span class="at">contrast =</span> <span class="st">&quot;post:x&quot;</span>, <span class="at">robust =</span> <span class="cn">TRUE</span>, <span class="at">sort =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(ranking, set_id, <span class="at">fry_direction =</span> Direction, <span class="at">fry_p =</span> PValue, <span class="at">fry_fdr =</span> FDR)</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;analysis&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>)</span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>association_sets <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>  association_fgsea, association_fry, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;analysis&quot;</span>, <span class="st">&quot;outcome&quot;</span>, <span class="st">&quot;set_id&quot;</span>)</span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>association_sets <span class="sc">|&gt;</span></span>
+<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">fgsea =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">fry =</span> <span class="fu">sum</span>(fry_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> <span class="fu">c</span>(analysis, outcome))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 4
   analysis     outcome fgsea   fry
@@ -2716,18 +2711,17 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>05_set_association.xlsx</code> holds <code>chance_expectation</code> (nominal hits against chance), <code>set_association</code> (r, p and BH q per set, analysis and outcome, smallest p first), <code>set_by_arm</code> (the within-arm correlations), <code>association_sets</code> (fgsea and fry on the protein association) and <code>set_catalog</code> (every tested set).</p>
+<p><code>05_set_association.xlsx</code> holds <code>chance_expectation</code> (nominal hits against chance), <code>set_association</code> (r, p and BH q per set, analysis and outcome, smallest p first), <code>set_by_arm</code> (the within-arm correlations) and <code>association_sets</code> (fgsea and fry on the protein association).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">chance_expectation =</span> chance_expectation,</span>
 <span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_association =</span> <span class="fu">arrange</span>(set_association, p),</span>
 <span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_by_arm =</span> by_arm,</span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">association_sets =</span> <span class="fu">arrange</span>(association_sets, pval),</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_catalog =</span> catalog</span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;05_set_association.xlsx&quot;</span>)</span>
-<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">association_sets =</span> <span class="fu">arrange</span>(association_sets, pval)</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;05_set_association.xlsx&quot;</span>)</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

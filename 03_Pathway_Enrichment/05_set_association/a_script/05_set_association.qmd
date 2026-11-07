@@ -22,9 +22,10 @@ here::i_am("03_Pathway_Enrichment/05_set_association/a_script/05_set_association
 
 ## Read inputs
 
-Four inputs: the set catalogue from `00_build_gene_sets`, the singscore matrix from
-`03_run_singscore` (one row per set, one column per sample), the sample targets stored with the
-protein estimates and the per-leg phenotype measurements.
+Four inputs here: the set catalogue from `00_build_gene_sets`, the singscore matrix from
+`03_run_singscore` (one row per set, one column per sample), the protein estimates with their
+sample targets and the per-leg phenotype measurements. The protein-association inputs (the gene
+sets, the protein to gene map and the saved t values and designs) are read in their own section.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "05_set_association")
@@ -41,16 +42,14 @@ head(targets[c("sample_id", "participant", "leg", "treatment", "timepoint")], 6)
 ## Select sets
 
 Only sets the catalogue marks as `qualifies` are tested. `values` holds their scores in catalogue
-order, and `collection_sizes` counts sets per collection; that count is the denominator for the
-chance comparison further down.
+order.
 
 ```{r select-sets}
 catalog <- set_catalog |>
   filter(qualifies) |>
-  select(set_id, database, pathway, measured_size)
+  select(set_id, database, pathway)
 values <- set_score[catalog$set_id, ]
-collection_sizes <- count(catalog, database)
-collection_sizes
+table(catalog$database)
 ```
 
 ## Pair the samples
@@ -276,6 +275,7 @@ set_rows <- map(sets, function(genes) {
   match(gene_of$protein[match(genes, gene_of$gene)], rownames(proteins))
 })
 association_fry <- imap(association_designs, function(design, ranking) {
+  stopifnot(nrow(design) == ncol(proteins))
   proteins$weights <- dpcDE(proteins, design, plot = FALSE)$EList$weights
   fry(proteins, set_rows, design, contrast = "post:x", robust = TRUE, sort = "none") |>
     rownames_to_column("set_id") |>
@@ -430,8 +430,7 @@ chance_plot
 
 `05_set_association.xlsx` holds `chance_expectation` (nominal hits against chance),
 `set_association` (r, p and BH q per set, analysis and outcome, smallest p first), `set_by_arm`
-(the within-arm correlations), `association_sets` (fgsea and fry on the protein association)
-and `set_catalog` (every tested set).
+(the within-arm correlations) and `association_sets` (fgsea and fry on the protein association).
 
 ```{r write}
 write_xlsx(
@@ -439,8 +438,7 @@ write_xlsx(
     chance_expectation = chance_expectation,
     set_association = arrange(set_association, p),
     set_by_arm = by_arm,
-    association_sets = arrange(association_sets, pval),
-    set_catalog = catalog
+    association_sets = arrange(association_sets, pval)
   ),
   file.path(stage, "c_data", "05_set_association.xlsx")
 )

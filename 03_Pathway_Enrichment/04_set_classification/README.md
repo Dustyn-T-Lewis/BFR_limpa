@@ -28,7 +28,6 @@ Outputs:
   - `chance_expectation`: one row per task and collection, with nominal hits against chance and BH
     hits.
   - `set_auc`: one row per set and task, with AUC, paired Wilcoxon p and BH q, smallest p first.
-  - `set_catalog`: one row per tested set, with its collection and measured size.
 
 Nominal hits as a multiple of chance (5% of the sets tested):
 

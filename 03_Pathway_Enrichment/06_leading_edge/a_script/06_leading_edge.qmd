@@ -60,11 +60,11 @@ direction and strength of the enrichment), and when it is a main set after `coll
 at least one leg, so one representative stands for each cluster of overlapping sets.
 
 ```{r shared-sets}
-fgsea <- set_tests |>
+fgsea_results <- set_tests |>
   filter(method == "fgsea", contrast %in% arms) |>
   mutate(arm = names(arms)[match(contrast, arms)]) |>
   select(set_id, database, pathway, n, arm, NES, padj, main, leadingEdge)
-shared_sets <- fgsea |>
+shared_sets <- fgsea_results |>
   summarise(
     keep = all(padj < 0.05) && n_distinct(sign(NES)) == 1 && any(main), .by = set_id
   ) |>
@@ -79,7 +79,7 @@ Split each kept pathway's leading edges into one row per protein, then record wh
 that protein: BFR only, HLRT only or both.
 
 ```{r proteins}
-proteins <- fgsea |>
+proteins <- fgsea_results |>
   filter(set_id %in% shared_sets) |>
   separate_longer_delim(leadingEdge, ";") |>
   rename(gene = leadingEdge) |>
@@ -106,7 +106,7 @@ leading_edge <- proteins |>
   count(set_id, database, pathway, in_arm) |>
   pivot_wider(names_from = in_arm, values_from = n, values_fill = 0) |>
   left_join(
-    fgsea |>
+    fgsea_results |>
       select(set_id, n, arm, NES, padj) |>
       pivot_wider(names_from = arm, values_from = c(NES, padj)),
     by = "set_id"
@@ -153,14 +153,12 @@ go_children <- parents |>
 c(parents = nrow(parents), children = nrow(go_children))
 ```
 
-`edge()` returns a parent's leading-edge proteins in one leg, inside the parent's measured
-members.
+`edge()` returns a parent's leading-edge proteins in one leg. Every leading-edge protein is already
+a measured member of its set.
 
 ```{r edge}
 edge <- function(id, which_arm) {
-  intersect(
-    filter(proteins, set_id == id, in_arm %in% c(which_arm, "both"))$gene, go_sets[[id]]
-  )
+  filter(proteins, set_id == id, in_arm %in% c(which_arm, "both"))$gene
 }
 ```
 
@@ -195,7 +193,7 @@ in the same leg). A low share means the parent carries signal no more specific t
 
 ```{r coverage}
 offspring_of <- AnnotationDbi::mget(parents$source_id, GO.db::GOBPOFFSPRING, ifnotfound = NA)
-significant <- fgsea |>
+significant <- fgsea_results |>
   filter(database == "GOBP", padj < 0.05) |>
   inner_join(go_ids, by = "set_id")
 go_coverage <- parents |>
@@ -240,7 +238,7 @@ set.seed(1)
 unique_children <- parents |>
   pmap(function(set_id, label, NES_BFR, NES_HLRT, ...) {
     only <- map(set_names(names(arms)), function(a) {
-      intersect(filter(proteins, set_id == !!set_id, in_arm == a)$gene, go_sets[[set_id]])
+      filter(proteins, set_id == !!set_id, in_arm == a)$gene
     })
     kids <- filter(go_children, parent_id == set_id)
     if (min(lengths(only)) < 3 || nrow(kids) == 0) {
@@ -337,7 +335,7 @@ S16 is the NES scatter: every pathway tested in both legs, coloured by collectio
 where fgsea calls it at FDR < 0.05, with the count and share of pathways in each quadrant.
 
 ```{r nes-scatter}
-nes <- fgsea |>
+nes <- fgsea_results |>
   select(set_id, database, arm, NES, padj) |>
   pivot_wider(names_from = arm, values_from = c(NES, padj)) |>
   mutate(called = case_when(
@@ -458,10 +456,10 @@ unique_pages <- map(unique_ids, function(id) {
 All pages go to one A4 PDF, S14 first; `pair_up()` stacks the S17 and S18 panels two to a page.
 
 ```{r write-figures}
-pdf(file.path(stage, "b_reports", "06_leading_edge.pdf"), width = 8.27, height = 11.69)
 pair_up <- function(panels) {
   map(split(panels, ceiling(seq_along(panels) / 2)), wrap_plots, ncol = 1, nrow = 2)
 }
+pdf(file.path(stage, "b_reports", "06_leading_edge.pdf"), width = 8.27, height = 11.69)
 pages <- c(
   list(overlap_page), venn_pages, list(nes_page), pair_up(child_pages), pair_up(unique_pages)
 )

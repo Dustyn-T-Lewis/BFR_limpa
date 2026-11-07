@@ -52,10 +52,10 @@ lengths(ranked)
 map(ranked, function(x) head(x, 3))
 ```
 
-`labels` gives every set a readable name for the figures.
+`set_labels` gives every set a readable name for the figures.
 
 ```{r labels}
-labels <- set_tests |>
+set_labels <- set_tests |>
   distinct(set_id, database, pathway) |>
   mutate(label = enrichVolcano::clean_label(pathway, width = 1000))
 ```
@@ -63,14 +63,14 @@ labels <- set_tests |>
 ## Choose the pathways to draw
 
 The main sets `01` kept, one per cluster of overlapping sets, significant at FDR < 0.05 in either
-leg. GO:BP has 79 and Reactome 31, so each is cut to the 30 with the smallest adjusted p.
+leg. A collection with more than 30 is cut to the 30 with the smallest adjusted p.
 
 ```{r drawn}
 drawn <- set_tests |>
   filter(method == "fgsea", contrast %in% arms, padj < 0.05, main) |>
   summarise(padj = min(padj), .by = c(set_id, database)) |>
   slice_min(padj, n = 30, by = database, with_ties = FALSE) |>
-  left_join(select(labels, set_id, label), by = "set_id")
+  left_join(select(set_labels, set_id, label), by = "set_id")
 count(drawn, database)
 ```
 
@@ -87,7 +87,7 @@ right before each call, so the permutations are the same on every run.
 run_gsea <- function(db) {
   members <- sets[startsWith(names(sets), paste0(db, "|"))]
   term_gene <- stack(members)[, c("ind", "values")]
-  term_name <- select(filter(labels, database == db), set_id, label)
+  term_name <- select(filter(set_labels, database == db), set_id, label)
   set.seed(1)
   # GSEA() drops `...`, so eps never reaches enrichit and p below 1e-10 is floored with a warning.
   # The floored p reach no figure: the pathways come from 01, and colour is NES.
@@ -97,7 +97,7 @@ run_gsea <- function(db) {
     minGSSize = 15, maxGSSize = 500, pvalueCutoff = 1, verbose = FALSE
   ))
 }
-compared <- map(set_names(unique(labels$database)), run_gsea)
+compared <- map(set_names(unique(set_labels$database)), run_gsea)
 ```
 
 ## Check against 01

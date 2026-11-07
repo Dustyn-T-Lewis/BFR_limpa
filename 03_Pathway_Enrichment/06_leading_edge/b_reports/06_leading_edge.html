@@ -2279,11 +2279,11 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="select-the-shared-pathways">Select the shared pathways</h2>
 <p>Keep the fgsea rows for the two training contrasts, one per leg. A pathway is kept when fgsea calls it at FDR &lt; 0.05 in both legs, with the same sign of NES (normalised enrichment score, the direction and strength of the enrichment), and when it is a main set after <code>collapsePathways</code> in at least one leg, so one representative stands for each cluster of overlapping sets.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fgsea <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fgsea_results <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">==</span> <span class="st">&quot;fgsea&quot;</span>, contrast <span class="sc">%in%</span> arms) <span class="sc">|&gt;</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">arm =</span> <span class="fu">names</span>(arms)[<span class="fu">match</span>(contrast, arms)]) <span class="sc">|&gt;</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway, n, arm, NES, padj, main, leadingEdge)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>shared_sets <span class="ot">&lt;-</span> fgsea <span class="sc">|&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>shared_sets <span class="ot">&lt;-</span> fgsea_results <span class="sc">|&gt;</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">keep =</span> <span class="fu">all</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">&amp;&amp;</span> <span class="fu">n_distinct</span>(<span class="fu">sign</span>(NES)) <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;&amp;</span> <span class="fu">any</span>(main), <span class="at">.by =</span> set_id</span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
@@ -2299,7 +2299,7 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="compare-the-leading-edges">Compare the leading edges</h2>
 <p>Split each kept pathway’s leading edges into one row per protein, then record which legs list that protein: BFR only, HLRT only or both.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> fgsea <span class="sc">|&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> fgsea_results <span class="sc">|&gt;</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(set_id <span class="sc">%in%</span> shared_sets) <span class="sc">|&gt;</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_longer_delim</span>(leadingEdge, <span class="st">&quot;;&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">gene =</span> leadingEdge) <span class="sc">|&gt;</span></span>
@@ -2330,7 +2330,7 @@ vertical-align: -.125em;
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(set_id, database, pathway, in_arm) <span class="sc">|&gt;</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> in_arm, <span class="at">values_from =</span> n, <span class="at">values_fill =</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    fgsea <span class="sc">|&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    fgsea_results <span class="sc">|&gt;</span></span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(set_id, n, arm, NES, padj) <span class="sc">|&gt;</span></span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> arm, <span class="at">values_from =</span> <span class="fu">c</span>(NES, padj)),</span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span></span>
@@ -2385,13 +2385,11 @@ vertical-align: -.125em;
       38      126 </code></pre>
 </div>
 </div>
-<p><code>edge()</code> returns a parent’s leading-edge proteins in one leg, inside the parent’s measured members.</p>
+<p><code>edge()</code> returns a parent’s leading-edge proteins in one leg. Every leading-edge protein is already a measured member of its set.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>edge <span class="ot">&lt;-</span> <span class="cf">function</span>(id, which_arm) {</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">intersect</span>(</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(proteins, set_id <span class="sc">==</span> id, in_arm <span class="sc">%in%</span> <span class="fu">c</span>(which_arm, <span class="st">&quot;both&quot;</span>))<span class="sc">$</span>gene, go_sets[[id]]</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(proteins, set_id <span class="sc">==</span> id, in_arm <span class="sc">%in%</span> <span class="fu">c</span>(which_arm, <span class="st">&quot;both&quot;</span>))<span class="sc">$</span>gene</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>For every parent, child and leg, the decomposition counts the parent’s leading-edge proteins in the child, as a share of the leading edge and as a fold over the child’s share of the universe, with a one-sided hypergeometric p for concentration in that child, BH within parent and leg. Children overlap and the tests are nested on small sets, so the p values are descriptive.</p>
 <div class="cell">
@@ -2426,7 +2424,7 @@ vertical-align: -.125em;
 <p>The coverage check asks the reverse: what share of a parent’s leading edge already sits in the leading edges of its significant descendants (any depth, <code>GOBPOFFSPRING</code>, tested sets at FDR &lt; 0.05 in the same leg). A low share means the parent carries signal no more specific term captures; <code>unexplained</code> lists those proteins.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>offspring_of <span class="ot">&lt;-</span> AnnotationDbi<span class="sc">::</span><span class="fu">mget</span>(parents<span class="sc">$</span>source_id, GO.db<span class="sc">::</span>GOBPOFFSPRING, <span class="at">ifnotfound =</span> <span class="cn">NA</span>)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>significant <span class="ot">&lt;-</span> fgsea <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>significant <span class="ot">&lt;-</span> fgsea_results <span class="sc">|&gt;</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(database <span class="sc">==</span> <span class="st">&quot;GOBP&quot;</span>, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(go_ids, <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>)</span>
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>go_coverage <span class="ot">&lt;-</span> parents <span class="sc">|&gt;</span></span>
@@ -2466,7 +2464,7 @@ vertical-align: -.125em;
 <span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>unique_children <span class="ot">&lt;-</span> parents <span class="sc">|&gt;</span></span>
 <span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pmap</span>(<span class="cf">function</span>(set_id, label, NES_BFR, NES_HLRT, ...) {</span>
 <span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    only <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">names</span>(arms)), <span class="cf">function</span>(a) {</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">intersect</span>(<span class="fu">filter</span>(proteins, set_id <span class="sc">==</span> <span class="sc">!!</span>set_id, in_arm <span class="sc">==</span> a)<span class="sc">$</span>gene, go_sets[[set_id]])</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(proteins, set_id <span class="sc">==</span> <span class="sc">!!</span>set_id, in_arm <span class="sc">==</span> a)<span class="sc">$</span>gene</span>
 <span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    })</span>
 <span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    kids <span class="ot">&lt;-</span> <span class="fu">filter</span>(go_children, parent_id <span class="sc">==</span> set_id)</span>
 <span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">min</span>(<span class="fu">lengths</span>(only)) <span class="sc">&lt;</span> <span class="dv">3</span> <span class="sc">||</span> <span class="fu">nrow</span>(kids) <span class="sc">==</span> <span class="dv">0</span>) {</span>
@@ -2566,7 +2564,7 @@ vertical-align: -.125em;
 </div>
 <p>S16 is the NES scatter: every pathway tested in both legs, coloured by collection and shaped by where fgsea calls it at FDR &lt; 0.05, with the count and share of pathways in each quadrant.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>nes <span class="ot">&lt;-</span> fgsea <span class="sc">|&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>nes <span class="ot">&lt;-</span> fgsea_results <span class="sc">|&gt;</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, arm, NES, padj) <span class="sc">|&gt;</span></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> arm, <span class="at">values_from =</span> <span class="fu">c</span>(NES, padj)) <span class="sc">|&gt;</span></span>
 <span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">called =</span> <span class="fu">case_when</span>(</span>
@@ -2675,10 +2673,10 @@ vertical-align: -.125em;
 </div>
 <p>All pages go to one A4 PDF, S14 first; <code>pair_up()</code> stacks the S17 and S18 panels two to a page.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;06_leading_edge.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>pair_up <span class="ot">&lt;-</span> <span class="cf">function</span>(panels) {</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">split</span>(panels, <span class="fu">ceiling</span>(<span class="fu">seq_along</span>(panels) <span class="sc">/</span> <span class="dv">2</span>)), wrap_plots, <span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>pair_up <span class="ot">&lt;-</span> <span class="cf">function</span>(panels) {</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">split</span>(panels, <span class="fu">ceiling</span>(<span class="fu">seq_along</span>(panels) <span class="sc">/</span> <span class="dv">2</span>)), wrap_plots, <span class="at">ncol =</span> <span class="dv">1</span>, <span class="at">nrow =</span> <span class="dv">2</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;06_leading_edge.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
 <span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>pages <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(overlap_page), venn_pages, <span class="fu">list</span>(nes_page), <span class="fu">pair_up</span>(child_pages), <span class="fu">pair_up</span>(unique_pages)</span>
 <span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>)</span>

@@ -41,7 +41,6 @@ Outputs:
   - `association_sets`: one row per set, analysis and outcome; fgsea NES, p, BH q and leading edge,
     and fry direction, p and FDR. fgsea treats proteins as independent, so a set counts when fry
     confirms it.
-  - `set_catalog`: one row per tested set, with its collection and measured size.
 
 On the protein association ranking, legs whose RF CSA grew more show larger rises in mitochondrial
 gene expression, mitochondrial translation, aerobic respiration and oxidative phosphorylation

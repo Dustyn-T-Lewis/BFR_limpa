@@ -1,7 +1,8 @@
 # 01 · Run fgsea and fry
 
 Tests every gene set on every contrast with fgsea and fry, and marks the significant fgsea sets
-that are not redundant with a stronger one.
+that are not redundant with a stronger one. fry uses the stage 02 design, which carries the blood
+index as a covariate.
 
 Inputs: `00_build_gene_sets/c_data/gene_sets.rds` and `00_build_gene_sets.xlsx`,
 `02_Differential_Expression/02_Differential/c_data/fit.rds`,

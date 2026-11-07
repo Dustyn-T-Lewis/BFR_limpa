@@ -2280,9 +2280,10 @@ vertical-align: -.125em;
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), protein_map<span class="sc">$</span>protein),</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">colnames</span>(fit<span class="sc">$</span>coefficients), contrast_names),</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(proteins<span class="sc">$</span>E), protein_map<span class="sc">$</span>protein)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>contrast_names</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(proteins<span class="sc">$</span>E), protein_map<span class="sc">$</span>protein),</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>contrast_names</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;BFR_Post-Pre&quot;                &quot;HLRT_Post-Pre&quot;              
 [3] &quot;BFR_Pre-HLRT_Pre&quot;            &quot;BFR_Post-HLRT_Post&quot;         
@@ -2357,7 +2358,7 @@ Modality_x_Time_Interaction
 </section>
 <section id="run-fry" class="level2">
 <h2 class="anchored" data-anchor-id="run-fry">Run fry</h2>
-<p>fry reads rows of <code>proteins$E</code>, so each set’s gene symbols are turned into row numbers through each symbol’s representative protein. It reads limpa’s precision weights through <code>proteins$weights</code>, with robust empirical Bayes as in the protein fit. No <code>block</code>: participant is a fixed term in the design, and the residual within-leg correlation is 0.027.</p>
+<p>fry reads rows of <code>proteins$E</code>, so each set’s gene symbols are turned into row numbers through each symbol’s representative protein. It reads limpa’s precision weights through <code>proteins$weights</code>, with robust empirical Bayes as in the protein fit. The design is the protein fit’s, with the blood index as a covariate. No <code>block</code>: participant is a fixed term in the design, which leaves little residual within-leg correlation (the <code>correlation_strata</code> sheet of <code>01_Design</code>).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>selected_rows <span class="ot">&lt;-</span> <span class="fu">which</span>(protein_map<span class="sc">$</span>selected)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>set_rows <span class="ot">&lt;-</span> <span class="fu">map</span>(sets, <span class="cf">function</span>(genes) {</span>
