@@ -24,8 +24,9 @@ here::i_am("04_Network/02_module_traits/a_script/02_module_traits.qmd")
 The module-trait view of the YvO Figure 5 for each of the four networks from `01_modules`: the
 training and between-leg contrasts, and the association of each module with muscle size and echo
 intensity before training, after training and in change. Inputs: the membership, module names and
-eigengene tests from `01_modules`, the blood-adjusted protein estimates (`proteins_adjusted.rds`),
-the stage 02 fit and the phenotype table.
+eigengene tests from `01_modules`, the blood-adjusted protein estimates (`proteins_adjusted.rds`)
+for levels, the unadjusted ones (`proteins.rds`) for changes, the stage 02 fit and the phenotype
+table.
 
 ```{r read}
 stage <- here("04_Network", "02_module_traits")
@@ -35,6 +36,8 @@ module_info <- read_excel(modules_book, "modules")
 eigengene_tests <- read_excel(modules_book, "eigengene_tests")
 change_tests <- read_excel(modules_book, "change_tests")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
+unadjusted <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+stopifnot(identical(dimnames(unadjusted$E), dimnames(proteins$E)))
 fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
 phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 targets <- proteins$targets
@@ -44,9 +47,11 @@ count(module_info, network)
 ## Recompute the eigengenes
 
 The main network removes each participant's mean, which a change keeps intact but a level loses,
-so its eigengenes are recomputed on the raw abundance with the network's memberships and
-between-person differences in module level stay in. The pre and post networks use their own
-timepoint's samples and the change network each leg's post minus pre change, as in `01_modules`.
+so its eigengenes are recomputed with the network's memberships on the blood-adjusted abundance,
+participant kept, and between-person differences in module level stay in. The pre and post
+networks use their own timepoint's samples, as in `01_modules`. Changes, each leg's post minus pre,
+come from the unadjusted abundance instead, and each leg's blood change enters their designs below,
+as stage 02 does; the main network's change is the change in eigengenes recomputed on it.
 
 ```{r eigengenes}
 legs <- targets |>
@@ -54,20 +59,23 @@ legs <- targets |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = timepoint, values_from = sample_id) |>
   drop_na(T1, T2)
-change <- t(proteins$E[, legs$T2] - proteins$E[, legs$T1])
+blood <- set_names(targets$blood, targets$sample_id)
+legs$blood_change <- blood[legs$T2] - blood[legs$T1]
+change <- t(unadjusted$E[, legs$T2] - unadjusted$E[, legs$T1])
 rownames(change) <- legs$leg_id
 pre <- targets$timepoint == "T1"
 inputs <- list(
-  main = t(proteins$E), change = change, pre = t(proteins$E[, pre]), post = t(proteins$E[, !pre])
+  main = t(proteins$E), main_unadjusted = t(unadjusted$E), change = change,
+  pre = t(proteins$E[, pre]), post = t(proteins$E[, !pre])
 )
 eigengenes <- imap(inputs, function(x, name) {
-  labels <- filter(membership, network == name)
+  labels <- filter(membership, network == sub("_unadjusted", "", name))
   me <- WGCNA::moduleEigengenes(x, labels$module[match(colnames(x), labels$protein)])$eigengenes
   me <- as.matrix(select(me, -MEM0))
   dimnames(me) <- list(rownames(x), sub("^ME", "", colnames(me)))
   me
 })
-main_change <- eigengenes$main[legs$T2, ] - eigengenes$main[legs$T1, ]
+main_change <- eigengenes$main_unadjusted[legs$T2, ] - eigengenes$main_unadjusted[legs$T1, ]
 rownames(main_change) <- legs$leg_id
 ```
 
@@ -77,9 +85,10 @@ Each module gets one test per outcome, using both arms. Levels are regressed on 
 arm as a covariate, and participant enters as a block: each person gave two legs, and
 `duplicateCorrelation()` estimates how alike those two legs are so that the second counts for
 less than an independent leg. Changes use the two analyses of `03_Protein_Association`, on each
-leg's eigengene change against its outcome change: pooled, with one intercept per arm, and within
-participant, with one intercept per participant. On per-leg changes these reproduce the slope t
-of that step's sample-level designs exactly.
+leg's eigengene change against its outcome change with the leg's blood change as a covariate:
+pooled, with one intercept per arm, and within participant, with one intercept per participant.
+Applied to one protein's unadjusted change, these designs give the same slope t as that step's
+sample-level designs.
 
 The test is the least-squares t on the outcome coefficient, shown as an r-equivalent,
 sign(t) × √(t² / (t² + df)): the partial correlation of module and outcome given the other terms,
@@ -125,9 +134,11 @@ change_slopes <- function(me) {
   map(set_names(names(outcomes)), function(o) {
     data <- inner_join(legs, filter(measured_change, outcome == o), by = c("participant", "leg"))
     bind_rows(
-      Change = slope_t(t(me[data$leg_id, ]), model.matrix(~ treatment + value, data)),
+      Change = slope_t(
+        t(me[data$leg_id, ]), model.matrix(~ treatment + blood_change + value, data)
+      ),
       "Change within participant" = slope_t(
-        t(me[data$leg_id, ]), model.matrix(~ participant + treatment + value, data)
+        t(me[data$leg_id, ]), model.matrix(~ participant + treatment + blood_change + value, data)
       ),
       .id = "block"
     )
