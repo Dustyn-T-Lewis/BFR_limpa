@@ -15,10 +15,10 @@ proteome differently than heavy load.
 | `00_Input/` | study data, no code | ready |
 | `01_Preprocess/` | search output to a normalised protein table | ready |
 | `02_Differential_Expression/` | model fitting, five contrasts, protein association and classification, response magnitude | ready |
-| `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association | ready |
+| `03_Pathway_Enrichment/` | gene set tests, per-sample set scores, set classification and phenotype association, leading edges and pathway maps | ready |
 | `04_Network/` | protein co-expression modules (WGCNA) and their phenotype associations | ready |
 | `05_Mitochondria/` | mitochondrial content, complexes and pathways | ready |
-| `06_Composition/` | fibre type per biopsy (FibeRtypeR method) and its training response | ready |
+| `06_Composition/` | slow fibre fraction per biopsy (FibeRtypeR method, rebuilt in R) and its training response | ready |
 | `07_Multivariate/` | multilevel PCA, sPLS-DA and sPLS regression (mixOmics) | ready |
 | `0X_Figures/` | manuscript panels, built last | planned |
 
@@ -58,18 +58,16 @@ for s in 01_build_mito_sets 02_test_mito 03_complex_subunits; do
   quarto render 05_Mitochondria/$s/a_script/$s.qmd --output-dir ../b_reports
 done
 
-for s in 01_fibre_type_export 02_fibre_type; do
-  quarto render 06_Composition/$s/a_script/$s.qmd --output-dir ../b_reports
-done
+quarto render 06_Composition/02_fibre_type/a_script/02_fibre_type.qmd --output-dir ../b_reports
 
 for s in 01_pca 02_splsda 03_spls; do
   quarto render 07_Multivariate/$s/a_script/$s.qmd --output-dir ../b_reports
 done
 ```
 
-The block takes about twenty minutes, five of them in `07_Multivariate`. `dpcQuant()` takes about
-100 minutes, so it runs separately from `01_Preprocess/02_Quantification/a_script/02_quantify_run.R`;
-its output is committed, so rerun it only when the precursor matrix changes.
+`dpcQuant()` takes about 100 minutes, so it runs separately from
+`01_Preprocess/02_Quantification/a_script/02_quantify_run.R`; its output is committed, so rerun it
+only when the precursor matrix changes.
 
 ## Approach
 
