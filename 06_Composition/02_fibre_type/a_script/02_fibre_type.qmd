@@ -22,12 +22,13 @@ here::i_am("06_Composition/02_fibre_type/a_script/02_fibre_type.qmd")
 
 FibeRtypeR (Van der Stede et al. 2026, doi:10.1113/JP290082) reads each biopsy as a mix of a pure
 slow (type I) and a pure fast (type II) fibre profile. Its proteomics markers are the 77 slow and
-68 fast proteins of its Table S1 (Shared and Proteome columns). The reference profile of each
-marker is its mean log2 abundance in the 24 slow and 24 fast pre-training fibre pools of Moesgaard
-et al. 2026 (doi:10.1038/s41467-026-77275-9, PRIDE PXD056664), the data FibeRtypeR's proteomics
-reference was built from; `references/fibertyper_reference.csv` holds both. The bulk input is the
-limpa matrix rather than DIA-NN's MaxLFQ, because limpa's complete matrix measures more markers in
-every sample.
+68 fast proteins of its Table S1 (Shared and Proteome columns). As in the paper, the reference is
+sex-specific: each marker's median log2 abundance in the slow and in the fast pre-training fibre
+pools of each sex (12 pools per sex and type) of Moesgaard et al. 2026
+(doi:10.1038/s41467-026-77275-9, PRIDE PXD056664), the data FibeRtypeR's proteomics reference was
+built from; `references/fibertyper_reference.csv` holds both. The bulk input is the limpa matrix
+rather than DIA-NN's LFQ, because limpa's complete matrix measures more markers in every
+sample.
 
 ```{r read}
 stage <- here("06_Composition", "02_fibre_type")
@@ -42,22 +43,27 @@ count(reference, marker_type)
 
 ## Estimate the slow fraction
 
-Markers are matched to the matrix by gene symbol, one row per symbol. Each sample is shifted so its
-median over the markers equals the reference's, a project choice where the paper says only
-"log2-normalized". For two fractions that are non-negative and sum to one, the least-squares fit
-FibeRtypeR runs (DeconRNASeq, equivalently `limSolve::lsei()`) has a closed form: the projection of
-the sample onto the line from the fast to the slow profile, clipped to [0, 1].
+Markers are matched to the matrix by gene symbol, one row per symbol, and kept when both sexes'
+references have them. Each sample is fitted against its own sex's reference, and shifted so its
+median over the markers equals that reference's, because limpa's scale differs from the deposit's.
+For two fractions that are non-negative and sum to one, the least-squares fit FibeRtypeR runs
+(DeconRNASeq, equivalently `limSolve::lsei()`) has a closed form: the projection of the sample onto
+the line from the fast to the slow profile, clipped to [0, 1].
 
 ```{r deconvolve}
+stopifnot(identical(colnames(proteins$E), targets$sample_id))
 genes <- proteins$genes$Genes
+reference <- filter(reference, !is.na(slow_F + fast_F + slow_M + fast_M))
 rows <- which(genes %in% reference$gene & !duplicated(genes))
 bulk <- proteins$E[rows, ]
-profile <- reference[match(genes[rows], reference$gene), ]
-bulk <- sweep(bulk, 2, apply(bulk, 2, median) - median(c(profile$slow_log2, profile$fast_log2)))
-direction <- profile$slow_log2 - profile$fast_log2
-slow <- colSums((bulk - profile$fast_log2) * direction) / sum(direction^2)
-targets$slow <- pmin(pmax(slow, 0), 1)[targets$sample_id]
-count(profile, marker_type)
+marker_profile <- reference[match(genes[rows], reference$gene), ]
+slow_ref <- as.matrix(marker_profile[paste0("slow_", targets$sex)])
+fast_ref <- as.matrix(marker_profile[paste0("fast_", targets$sex)])
+bulk <- sweep(bulk, 2, apply(bulk, 2, median) - apply(rbind(slow_ref, fast_ref), 2, median))
+direction <- slow_ref - fast_ref
+slow <- colSums((bulk - fast_ref) * direction) / colSums(direction^2)
+targets$slow <- pmin(pmax(slow, 0), 1)
+count(marker_profile, marker_type)
 summary(targets$slow)
 ```
 
@@ -94,7 +100,7 @@ contrasts as a single outcome row, so the test is the plain least-squares t, as 
 
 ```{r contrasts}
 fit <- contrasts.fit(lmFit(rbind(slow = 100 * targets$slow), d$design), d$contrasts)
-contrasts <- tibble(
+slow_tests <- tibble(
   contrast = colnames(d$contrasts), points = fit$coefficients[1, ],
   se = fit$stdev.unscaled[1, ] * fit$sigma, df = fit$df.residual
 ) |>
@@ -105,7 +111,7 @@ contrasts <- tibble(
 group_summary <- targets |>
   summarise(mean = 100 * mean(slow), sd = 100 * sd(slow), n = n(), .by = c(treatment, timepoint))
 group_summary
-mutate(contrasts, across(where(is.double), function(x) signif(x, 3)))
+mutate(slow_tests, across(where(is.double), function(x) signif(x, 3)))
 ```
 
 ## Figure
@@ -137,7 +143,7 @@ invisible(dev.off())
 write_xlsx(
   list(
     slow_fraction = select(targets, sample_id, participant, leg, treatment, timepoint, sex, slow),
-    contrasts = contrasts,
+    contrasts = slow_tests,
     group_summary = group_summary,
     checks = checks
   ),
