@@ -141,7 +141,8 @@ before the contaminant filter, measure how much: `dpcQuant()` estimates both fro
 with the same detection curve as every other protein, and the blood index is the mean of the two
 log2 estimates, centred on the mean sample. The contamination load from `01_Filtering`, the share
 of a sample's signal the contaminant filter removed, is about 95% haemoglobin and albumin and is
-kept beside it for comparison. Both join the sample table for later stages.
+kept beside it for comparison. Both join the sample table: later stages model the blood index,
+and the contamination load stays for reference.
 
 ```{r blood}
 haemoglobin <- readRDS(

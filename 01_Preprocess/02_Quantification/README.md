@@ -3,7 +3,9 @@
 Estimates protein abundance from the filtered precursors with limpa, filters proteins on detection
 and normalises them with cyclic loess.
 
-Inputs: `01_Filtering/c_data/precursors_filtered.rds`.
+Inputs: `01_Filtering/c_data/precursors_filtered.rds`,
+`01_Filtering/c_data/haemoglobin_precursors.rds` and the `sample_contamination` sheet of
+`01_Filtering/c_data/01_filter.xlsx`.
 
 `dpcQuant()` takes about 100 minutes, so a script runs it and saves checkpoints in
 `c_data/quant_runs/`; rerun it whenever the filtered precursors change. The primary run presets the
