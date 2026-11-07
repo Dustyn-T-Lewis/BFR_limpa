@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)
+pacman::p_load(here, dplyr, tidyr, purrr, ggplot2, readxl, writexl)
 here::i_am(
   "02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.qmd"
 )
@@ -22,10 +22,10 @@ here::i_am(
 
 ## Read proteins and earlier results
 
-`proteins` holds the normalised log2 abundances (`E`), the sample table and the gene annotation.
-`genes` maps each protein to its gene symbol, falling back to the protein identifier. The
-`DEP_matrix` sheet of `02_Differential` and the `associations` sheet of `03_Protein_Association`
-are only used for the candidate list at the end.
+`proteins` holds the normalised, blood-adjusted log2 abundances (`E`), the sample table and the
+gene annotation. `genes` maps each protein to its gene symbol, falling back to the protein
+identifier. The `DEP_matrix` sheet of `02_Differential` and the `associations` sheet of
+`03_Protein_Association` are only used for the candidate list at the end.
 
 ```{r read}
 stage <- here("02_Differential_Expression", "04_Protein_Classification")
@@ -283,7 +283,7 @@ association tests, so about a third of any list clears the association bar by ch
 
 ```{r de-hits}
 de_hits <- de |>
-  select(protein, ends_with("adj.P.Val")) |>
+  select(protein, ends_with("adj.P.Val"), -starts_with("blood")) |>
   pivot_longer(-protein, names_to = "contrast", values_to = "de_fdr") |>
   filter(de_fdr < 0.05) |>
   summarise(

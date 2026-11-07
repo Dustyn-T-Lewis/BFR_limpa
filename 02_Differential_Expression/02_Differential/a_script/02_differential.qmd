@@ -179,7 +179,7 @@ fitted_slope <- fitted_slope[
 ]
 fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
 stopifnot(identical(colnames(fitted_slope$E), rownames(d$design)))
-refit <- dpcDE(fitted_slope, d$design) |>
+refit <- dpcDE(fitted_slope, d$design, plot = FALSE) |>
   contrasts.fit(d$contrasts) |>
   eBayes(robust = TRUE)
 stopifnot(all(rownames(primary_hits) %in% rownames(refit)))

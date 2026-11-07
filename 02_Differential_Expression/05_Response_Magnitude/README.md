@@ -10,7 +10,7 @@ all within the 32 participants with all four biopsies:
    hits) by one arm's response, and the other half measure both arms' median |log2 change| on
    them, so selection does not inflate the choosing arm. Run once choosing by HLRT and once by
    BFR. The swap p compares the BFR to HLRT ratio with 200 data sets in which each participant's
-   arm labels are swapped at random.
+   arm labels are swapped at random, each summarised over 200 splits like the observed ratio.
 2. Signature score. For each participant the training direction is the mean change across both
    arms in the other participants, over the proteins whose average training change across both
    arms passes BH 0.05 (a set fixed before any comparison). Each leg's change is projected onto it;
@@ -37,16 +37,17 @@ Outputs:
   and set, chosen by HLRT and by BFR, each pair labelled with its BFR to HLRT ratio and swap p;
   below, each participant's BFR and HLRT signature scores.
 - `c_data/05_response_magnitude.xlsx`:
-  - `magnitude`: one row per choosing arm and set: proteins, BFR and HLRT median |log2 change|
-    over splits, ratio with the middle 95% of splits, and swap p;
+  - `magnitude`: one row per choosing arm and set (all proteins once, `selected_on` "none"):
+    proteins, BFR and HLRT median |log2 change| over splits, ratio, `split_low` and `split_high`
+    (the middle 95% of splits, not a confidence interval), and swap p;
   - `signature_scores`: one row per participant: BFR and HLRT score;
   - `tests`: the signature test (proteins, mean scores, ratio, paired p, swap p) and the two fry
     tests (proteins, median average training change, median interaction, direction, p).
 
 BFR training moves the proteome in the same direction as HLRT training and about a quarter less
-far. The signature score puts BFR at 0.77 of HLRT (paired p 0.031, swap p 0.035). Cross-fitted,
+far. The signature score puts BFR at 0.77 of HLRT (paired p 0.031, swap p 0.030). Cross-fitted,
 BFR's median change is 0.75 to 0.94 of HLRT's across sets and both choosing arms, and HLRT changes
 more even when BFR chooses the proteins. fry leans the same way: the rising set's interaction is
 −0.04 against an average rise of 0.27 (p 0.36), the falling set's +0.05 against an average fall of
 0.23 (p 0.13). This is an aggregate difference that single-protein tests cannot resolve, and only
-the signature score passes 0.05; the cross-fitted ratios (swap p 0.23 to 0.34) and fry do not.
+the signature score passes 0.05; the cross-fitted ratios (swap p 0.21 to 0.35) and fry do not.

@@ -2244,7 +2244,7 @@ vertical-align: -.125em;
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, stringr, ggplot2, readxl, writexl)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, dplyr, tidyr, purrr, ggplot2, readxl, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression/04_Protein_Classification/a_script/04_protein_classification.qmd&quot;</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2252,7 +2252,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins-and-earlier-results" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins-and-earlier-results">Read proteins and earlier results</h2>
-<p><code>proteins</code> holds the normalised log2 abundances (<code>E</code>), the sample table and the gene annotation. <code>genes</code> maps each protein to its gene symbol, falling back to the protein identifier. The <code>DEP_matrix</code> sheet of <code>02_Differential</code> and the <code>associations</code> sheet of <code>03_Protein_Association</code> are only used for the candidate list at the end.</p>
+<p><code>proteins</code> holds the normalised, blood-adjusted log2 abundances (<code>E</code>), the sample table and the gene annotation. <code>genes</code> maps each protein to its gene symbol, falling back to the protein identifier. The <code>DEP_matrix</code> sheet of <code>02_Differential</code> and the <code>associations</code> sheet of <code>03_Protein_Association</code> are only used for the candidate list at the end.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;04_Protein_Classification&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
@@ -2530,7 +2530,7 @@ vertical-align: -.125em;
 <p>A candidate passes three bars: DE at FDR 0.05 in any contrast, association at nominal p with any outcome, and classification at nominal p after training or in change. Each protein gets eight association tests, so about a third of any list clears the association bar by chance.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>de_hits <span class="ot">&lt;-</span> de <span class="sc">|&gt;</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, <span class="fu">ends_with</span>(<span class="st">&quot;adj.P.Val&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, <span class="fu">ends_with</span>(<span class="st">&quot;adj.P.Val&quot;</span>), <span class="sc">-</span><span class="fu">starts_with</span>(<span class="st">&quot;blood&quot;</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>protein, <span class="at">names_to =</span> <span class="st">&quot;contrast&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;de_fdr&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(de_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
 <span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
@@ -2552,7 +2552,7 @@ vertical-align: -.125em;
 <span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">de =</span> <span class="fu">nrow</span>(de_hits), <span class="at">associated =</span> <span class="fu">nrow</span>(associated), <span class="at">classified =</span> <span class="fu">nrow</span>(classified))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        de associated classified 
-      1097        761        296 </code></pre>
+       262        761        296 </code></pre>
 </div>
 </div>
 <p>Strongest association first.</p>
@@ -2565,19 +2565,19 @@ vertical-align: -.125em;
 <span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(candidates)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 27</code></pre>
+<pre><code>[1] 18</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">select</span>(candidates, protein, gene, best_de_fdr, best_association_p))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 4
   protein gene    best_de_fdr best_association_p
   &lt;chr&gt;   &lt;chr&gt;         &lt;dbl&gt;              &lt;dbl&gt;
-1 Q96BM9  ARL8A      0.000106            0.00140
-2 O95295  SNAPIN     0.00568             0.00217
-3 O43852  CALU       0.00358             0.00220
-4 P12270  TPR        0.0456              0.00448
-5 Q9BVC6  TMEM109    0.0418              0.00612
-6 P49419  ALDH7A1    0.0449              0.00934</code></pre>
+1 O43852  CALU       3.45e- 2            0.00220
+2 P12270  TPR        4.56e- 2            0.00448
+3 Q9BVC6  TMEM109    4.18e- 2            0.00612
+4 Q9NS86  LANCL2     4.18e- 2            0.00962
+5 P43490  NAMPT      2.16e-10            0.0156 
+6 P31150  GDI1       3.41e- 2            0.0227 </code></pre>
 </div>
 </div>
 </section>
@@ -2618,8 +2618,8 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] writexl_1.5.4 readxl_1.4.5  ggplot2_4.0.3 stringr_1.6.0 purrr_1.2.2  
-[6] tidyr_1.3.2   dplyr_1.2.1   here_1.0.2   
+[1] writexl_1.5.4 readxl_1.4.5  ggplot2_4.0.3 purrr_1.2.2   tidyr_1.3.2  
+[6] dplyr_1.2.1   here_1.0.2   
 
 loaded via a namespace (and not attached):
  [1] limma_3.68.1       gtable_0.3.6       jsonlite_2.0.0     compiler_4.6.0    
@@ -2627,12 +2627,12 @@ loaded via a namespace (and not attached):
  [9] yaml_2.3.12        fastmap_1.2.0      R6_2.6.1           labeling_0.4.3    
 [13] generics_0.1.4     knitr_1.52         htmlwidgets_1.6.4  tibble_3.3.1      
 [17] pROC_1.19.0.1      rprojroot_2.1.1    pillar_1.11.1      RColorBrewer_1.1-3
-[21] rlang_1.2.0        utf8_1.2.6         stringi_1.8.7      xfun_0.57         
-[25] S7_0.2.2           otel_0.2.0         cli_3.6.6          withr_3.0.2       
-[29] magrittr_2.0.5     digest_0.6.39      grid_4.6.0         lifecycle_1.0.5   
-[33] vctrs_0.7.3        evaluate_1.0.5     glue_1.8.1         cellranger_1.1.0  
-[37] farver_2.1.2       pacman_0.5.1       rmarkdown_2.32     tools_4.6.0       
-[41] pkgconfig_2.0.3    htmltools_0.5.9   </code></pre>
+[21] rlang_1.2.0        utf8_1.2.6         xfun_0.57          S7_0.2.2          
+[25] otel_0.2.0         cli_3.6.6          withr_3.0.2        magrittr_2.0.5    
+[29] digest_0.6.39      grid_4.6.0         lifecycle_1.0.5    vctrs_0.7.3       
+[33] evaluate_1.0.5     glue_1.8.1         farver_2.1.2       cellranger_1.1.0  
+[37] pacman_0.5.1       rmarkdown_2.32     tools_4.6.0        pkgconfig_2.0.3   
+[41] htmltools_0.5.9   </code></pre>
 </div>
 </div>
 </section>

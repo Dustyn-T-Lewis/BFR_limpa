@@ -2243,7 +2243,7 @@ vertical-align: -.125em;
 <section id="load-packages" class="level2">
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, limpa, limma, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, writexl)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(here, limpa, limma, dplyr, tibble, tidyr, purrr, ggplot2, readr, writexl)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd&quot;</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2368,7 +2368,7 @@ vertical-align: -.125em;
 6 S04_L  HLRT       0.891   -554.  1.03    2752.</code></pre>
 </div>
 </div>
-<p>The differential analysis works within participant: BFR change minus HLRT change, for protein and for each outcome alike. One column per participant.</p>
+<p>The differential figure pages plot change within participant: BFR change minus HLRT change, for protein and for each outcome alike, one column per participant. Only the figures read these; the model below makes the same comparison through its design.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>paired <span class="ot">&lt;-</span> delta[, delta_pairs<span class="sc">$</span>BFR] <span class="sc">-</span> delta[, delta_pairs<span class="sc">$</span>HLRT]</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(paired) <span class="ot">&lt;-</span> delta_pairs<span class="sc">$</span>participant</span>
@@ -2534,49 +2534,53 @@ vertical-align: -.125em;
 <span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(p) <span class="sc">|&gt;</span></span>
 <span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">gene =</span> <span class="fu">coalesce</span>(gene, protein))</span>
 <span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a>  points <span class="ot">&lt;-</span> <span class="fu">pmap</span>(hits, <span class="cf">function</span>(protein, gene, outcome, t, p, fdr, ...) {</span>
-<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a>    arms <span class="ot">&lt;-</span> <span class="fu">map_chr</span>(<span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>), <span class="cf">function</span>(arm) {</span>
-<span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a>      keep <span class="ot">&lt;-</span> leg_phenotype<span class="sc">$</span>treatment <span class="sc">==</span> arm</span>
-<span id="cb29-25"><a href="#cb29-25" aria-hidden="true" tabindex="-1"></a>      r <span class="ot">&lt;-</span> <span class="fu">cor</span>(delta[protein, keep], leg_phenotype[[outcome]][keep], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
-<span id="cb29-26"><a href="#cb29-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sprintf</span>(<span class="st">&quot;%-5s n=%d  r=%+.2f&quot;</span>, arm, <span class="fu">sum</span>(keep), r)</span>
-<span id="cb29-27"><a href="#cb29-27" aria-hidden="true" tabindex="-1"></a>    })</span>
-<span id="cb29-28"><a href="#cb29-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
-<span id="cb29-29"><a href="#cb29-29" aria-hidden="true" tabindex="-1"></a>      <span class="at">panel =</span> <span class="fu">sprintf</span>(</span>
-<span id="cb29-30"><a href="#cb29-30" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;%s</span><span class="sc">\n</span><span class="st">vs %s   t = %+.2f   p %s   q %s&quot;</span>,</span>
-<span id="cb29-31"><a href="#cb29-31" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(gene, protein, <span class="at">sep =</span> <span class="st">&quot;  &quot;</span>), outcome, t, <span class="fu">signif</span>(p, <span class="dv">2</span>), <span class="fu">signif</span>(fdr, <span class="dv">2</span>)</span>
-<span id="cb29-32"><a href="#cb29-32" aria-hidden="true" tabindex="-1"></a>      ),</span>
-<span id="cb29-33"><a href="#cb29-33" aria-hidden="true" tabindex="-1"></a>      <span class="at">change =</span> protein_change[protein, ], <span class="at">d_outcome =</span> phenotype_change[[outcome]],</span>
-<span id="cb29-34"><a href="#cb29-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">series =</span> point_series, <span class="at">inset =</span> <span class="cf">if</span> (differential) <span class="st">&quot;&quot;</span> <span class="cf">else</span> <span class="fu">paste</span>(arms, <span class="at">collapse =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb29-35"><a href="#cb29-35" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb29-36"><a href="#cb29-36" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb29-37"><a href="#cb29-37" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb29-38"><a href="#cb29-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">factor</span>(panel, <span class="at">levels =</span> <span class="fu">unique</span>(panel)))</span>
-<span id="cb29-39"><a href="#cb29-39" aria-hidden="true" tabindex="-1"></a>  pages <span class="ot">&lt;-</span> <span class="fu">unname</span>(<span class="fu">split</span>(points, (<span class="fu">as.integer</span>(points<span class="sc">$</span>panel) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">12</span>))</span>
-<span id="cb29-40"><a href="#cb29-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(pages, <span class="cf">function</span>(page, i) {</span>
-<span id="cb29-41"><a href="#cb29-41" aria-hidden="true" tabindex="-1"></a>    page <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(page)</span>
-<span id="cb29-42"><a href="#cb29-42" aria-hidden="true" tabindex="-1"></a>    page_count <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(pages) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="fu">sprintf</span>(<span class="st">&quot; (page %d of %d)&quot;</span>, i, <span class="fu">length</span>(pages)) <span class="cf">else</span> <span class="st">&quot;&quot;</span></span>
-<span id="cb29-43"><a href="#cb29-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(page, <span class="fu">aes</span>(change, d_outcome, <span class="at">colour =</span> series, <span class="at">fill =</span> series)) <span class="sc">+</span></span>
-<span id="cb29-44"><a href="#cb29-44" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
-<span id="cb29-45"><a href="#cb29-45" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
-<span id="cb29-46"><a href="#cb29-46" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="at">formula =</span> y <span class="sc">~</span> x, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">alpha =</span> <span class="fl">0.12</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb29-47"><a href="#cb29-47" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">1.2</span>, <span class="at">alpha =</span> <span class="fl">0.9</span>) <span class="sc">+</span></span>
-<span id="cb29-48"><a href="#cb29-48" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_text</span>(</span>
-<span id="cb29-49"><a href="#cb29-49" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> <span class="fu">distinct</span>(page, panel, inset), <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb29-50"><a href="#cb29-50" aria-hidden="true" tabindex="-1"></a>        <span class="fu">aes</span>(<span class="at">x =</span> <span class="sc">-</span><span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">label =</span> inset), <span class="at">family =</span> <span class="st">&quot;mono&quot;</span>,</span>
-<span id="cb29-51"><a href="#cb29-51" aria-hidden="true" tabindex="-1"></a>        <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.05</span>, <span class="at">vjust =</span> <span class="fl">1.25</span>, <span class="at">size =</span> <span class="fl">1.9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>, <span class="at">colour =</span> <span class="st">&quot;grey25&quot;</span></span>
-<span id="cb29-52"><a href="#cb29-52" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb29-53"><a href="#cb29-53" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="fl">0.06</span>, headroom))) <span class="sc">+</span></span>
-<span id="cb29-54"><a href="#cb29-54" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_colour_manual</span>(</span>
-<span id="cb29-55"><a href="#cb29-55" aria-hidden="true" tabindex="-1"></a>        <span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="st">`</span><span class="at">BFR - HLRT</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;grey25&quot;</span>),</span>
-<span id="cb29-56"><a href="#cb29-56" aria-hidden="true" tabindex="-1"></a>        <span class="at">aesthetics =</span> <span class="fu">c</span>(<span class="st">&quot;colour&quot;</span>, <span class="st">&quot;fill&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span></span>
-<span id="cb29-57"><a href="#cb29-57" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb29-58"><a href="#cb29-58" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">scales =</span> <span class="st">&quot;free&quot;</span>) <span class="sc">+</span></span>
-<span id="cb29-59"><a href="#cb29-59" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
-<span id="cb29-60"><a href="#cb29-60" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> x_label, <span class="at">y =</span> y_label,</span>
-<span id="cb29-61"><a href="#cb29-61" aria-hidden="true" tabindex="-1"></a>        <span class="at">title =</span> <span class="fu">paste0</span>(title, <span class="st">&quot;, &quot;</span>, outcome_name, page_count)</span>
-<span id="cb29-62"><a href="#cb29-62" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb29-63"><a href="#cb29-63" aria-hidden="true" tabindex="-1"></a>      figure_theme</span>
-<span id="cb29-64"><a href="#cb29-64" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb29-65"><a href="#cb29-65" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a>    inset <span class="ot">&lt;-</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span>differential) {</span>
+<span id="cb29-25"><a href="#cb29-25" aria-hidden="true" tabindex="-1"></a>      arms <span class="ot">&lt;-</span> <span class="fu">map_chr</span>(<span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>), <span class="cf">function</span>(arm) {</span>
+<span id="cb29-26"><a href="#cb29-26" aria-hidden="true" tabindex="-1"></a>        keep <span class="ot">&lt;-</span> leg_phenotype<span class="sc">$</span>treatment <span class="sc">==</span> arm</span>
+<span id="cb29-27"><a href="#cb29-27" aria-hidden="true" tabindex="-1"></a>        r <span class="ot">&lt;-</span> <span class="fu">cor</span>(delta[protein, keep], leg_phenotype[[outcome]][keep], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
+<span id="cb29-28"><a href="#cb29-28" aria-hidden="true" tabindex="-1"></a>        <span class="fu">sprintf</span>(<span class="st">&quot;%-5s n=%d  r=%+.2f&quot;</span>, arm, <span class="fu">sum</span>(keep), r)</span>
+<span id="cb29-29"><a href="#cb29-29" aria-hidden="true" tabindex="-1"></a>      })</span>
+<span id="cb29-30"><a href="#cb29-30" aria-hidden="true" tabindex="-1"></a>      inset <span class="ot">&lt;-</span> <span class="fu">paste</span>(arms, <span class="at">collapse =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb29-31"><a href="#cb29-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb29-32"><a href="#cb29-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb29-33"><a href="#cb29-33" aria-hidden="true" tabindex="-1"></a>      <span class="at">panel =</span> <span class="fu">sprintf</span>(</span>
+<span id="cb29-34"><a href="#cb29-34" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;%s</span><span class="sc">\n</span><span class="st">vs %s   t = %+.2f   p %s   q %s&quot;</span>,</span>
+<span id="cb29-35"><a href="#cb29-35" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste</span>(gene, protein, <span class="at">sep =</span> <span class="st">&quot;  &quot;</span>), outcome, t, <span class="fu">signif</span>(p, <span class="dv">2</span>), <span class="fu">signif</span>(fdr, <span class="dv">2</span>)</span>
+<span id="cb29-36"><a href="#cb29-36" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb29-37"><a href="#cb29-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">change =</span> protein_change[protein, ], <span class="at">d_outcome =</span> phenotype_change[[outcome]],</span>
+<span id="cb29-38"><a href="#cb29-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">series =</span> point_series, <span class="at">inset =</span> inset</span>
+<span id="cb29-39"><a href="#cb29-39" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb29-40"><a href="#cb29-40" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb29-41"><a href="#cb29-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb29-42"><a href="#cb29-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">factor</span>(panel, <span class="at">levels =</span> <span class="fu">unique</span>(panel)))</span>
+<span id="cb29-43"><a href="#cb29-43" aria-hidden="true" tabindex="-1"></a>  pages <span class="ot">&lt;-</span> <span class="fu">unname</span>(<span class="fu">split</span>(points, (<span class="fu">as.integer</span>(points<span class="sc">$</span>panel) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">12</span>))</span>
+<span id="cb29-44"><a href="#cb29-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(pages, <span class="cf">function</span>(page, i) {</span>
+<span id="cb29-45"><a href="#cb29-45" aria-hidden="true" tabindex="-1"></a>    page <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(page)</span>
+<span id="cb29-46"><a href="#cb29-46" aria-hidden="true" tabindex="-1"></a>    page_count <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(pages) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="fu">sprintf</span>(<span class="st">&quot; (page %d of %d)&quot;</span>, i, <span class="fu">length</span>(pages)) <span class="cf">else</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb29-47"><a href="#cb29-47" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(page, <span class="fu">aes</span>(change, d_outcome, <span class="at">colour =</span> series, <span class="at">fill =</span> series)) <span class="sc">+</span></span>
+<span id="cb29-48"><a href="#cb29-48" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
+<span id="cb29-49"><a href="#cb29-49" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
+<span id="cb29-50"><a href="#cb29-50" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="at">formula =</span> y <span class="sc">~</span> x, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">alpha =</span> <span class="fl">0.12</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb29-51"><a href="#cb29-51" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">1.2</span>, <span class="at">alpha =</span> <span class="fl">0.9</span>) <span class="sc">+</span></span>
+<span id="cb29-52"><a href="#cb29-52" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_text</span>(</span>
+<span id="cb29-53"><a href="#cb29-53" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> <span class="fu">distinct</span>(page, panel, inset), <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb29-54"><a href="#cb29-54" aria-hidden="true" tabindex="-1"></a>        <span class="fu">aes</span>(<span class="at">x =</span> <span class="sc">-</span><span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">label =</span> inset), <span class="at">family =</span> <span class="st">&quot;mono&quot;</span>,</span>
+<span id="cb29-55"><a href="#cb29-55" aria-hidden="true" tabindex="-1"></a>        <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.05</span>, <span class="at">vjust =</span> <span class="fl">1.25</span>, <span class="at">size =</span> <span class="fl">1.9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>, <span class="at">colour =</span> <span class="st">&quot;grey25&quot;</span></span>
+<span id="cb29-56"><a href="#cb29-56" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb29-57"><a href="#cb29-57" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="fl">0.06</span>, headroom))) <span class="sc">+</span></span>
+<span id="cb29-58"><a href="#cb29-58" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_colour_manual</span>(</span>
+<span id="cb29-59"><a href="#cb29-59" aria-hidden="true" tabindex="-1"></a>        <span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="st">`</span><span class="at">BFR - HLRT</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;grey25&quot;</span>),</span>
+<span id="cb29-60"><a href="#cb29-60" aria-hidden="true" tabindex="-1"></a>        <span class="at">aesthetics =</span> <span class="fu">c</span>(<span class="st">&quot;colour&quot;</span>, <span class="st">&quot;fill&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span></span>
+<span id="cb29-61"><a href="#cb29-61" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb29-62"><a href="#cb29-62" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">scales =</span> <span class="st">&quot;free&quot;</span>) <span class="sc">+</span></span>
+<span id="cb29-63"><a href="#cb29-63" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
+<span id="cb29-64"><a href="#cb29-64" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> x_label, <span class="at">y =</span> y_label,</span>
+<span id="cb29-65"><a href="#cb29-65" aria-hidden="true" tabindex="-1"></a>        <span class="at">title =</span> <span class="fu">paste0</span>(title, <span class="st">&quot;, &quot;</span>, outcome_name, page_count)</span>
+<span id="cb29-66"><a href="#cb29-66" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb29-67"><a href="#cb29-67" aria-hidden="true" tabindex="-1"></a>      figure_theme</span>
+<span id="cb29-68"><a href="#cb29-68" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb29-69"><a href="#cb29-69" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>One PDF per outcome, so each can be read on its own: the pooled pages first, then the differential ones.</p>
 <div class="cell">
@@ -2656,9 +2660,8 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] writexl_1.5.4 readr_2.2.0   ggplot2_4.0.3 stringr_1.6.0 purrr_1.2.2  
- [6] tidyr_1.3.2   tibble_3.3.1  dplyr_1.2.1   limpa_1.4.0   limma_3.68.1 
-[11] here_1.0.2   
+ [1] writexl_1.5.4 readr_2.2.0   ggplot2_4.0.3 purrr_1.2.2   tidyr_1.3.2  
+ [6] tibble_3.3.1  dplyr_1.2.1   limpa_1.4.0   limma_3.68.1  here_1.0.2   
 
 loaded via a namespace (and not attached):
  [1] utf8_1.2.6         generics_0.1.4     lattice_0.22-9     stringi_1.8.7     
@@ -2668,12 +2671,12 @@ loaded via a namespace (and not attached):
 [17] cli_3.6.6          rlang_1.2.0        crayon_1.5.3       splines_4.6.0     
 [21] bit64_4.8.0        withr_3.0.2        yaml_2.3.12        otel_0.2.0        
 [25] tools_4.6.0        parallel_4.6.0     tzdb_0.5.0         pacman_0.5.1      
-[29] vctrs_0.7.3        R6_2.6.1           lifecycle_1.0.5    htmlwidgets_1.6.4 
-[33] bit_4.6.0          vroom_1.7.1        pkgconfig_2.0.3    pillar_1.11.1     
-[37] gtable_0.3.6       data.table_1.18.4  glue_1.8.1         statmod_1.5.1     
-[41] xfun_0.57          tidyselect_1.2.1   knitr_1.52         farver_2.1.2      
-[45] nlme_3.1-169       htmltools_0.5.9    labeling_0.4.3     rmarkdown_2.32    
-[49] compiler_4.6.0     S7_0.2.2          </code></pre>
+[29] vctrs_0.7.3        R6_2.6.1           lifecycle_1.0.5    stringr_1.6.0     
+[33] htmlwidgets_1.6.4  bit_4.6.0          vroom_1.7.1        pkgconfig_2.0.3   
+[37] pillar_1.11.1      gtable_0.3.6       data.table_1.18.4  glue_1.8.1        
+[41] statmod_1.5.1      xfun_0.57          tidyselect_1.2.1   knitr_1.52        
+[45] farver_2.1.2       nlme_3.1-169       htmltools_0.5.9    labeling_0.4.3    
+[49] rmarkdown_2.32     compiler_4.6.0     S7_0.2.2          </code></pre>
 </div>
 </div>
 </section>

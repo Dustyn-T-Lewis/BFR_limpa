@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, limpa, limma, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, writexl)
+pacman::p_load(here, limpa, limma, dplyr, tibble, tidyr, purrr, ggplot2, readr, writexl)
 here::i_am(
   "02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd"
 )
@@ -100,8 +100,9 @@ leg_phenotype <- legs |>
 head(select(leg_phenotype, leg_id, treatment, all_of(outcomes)))
 ```
 
-The differential analysis works within participant: BFR change minus HLRT change, for protein and
-for each outcome alike. One column per participant.
+The differential figure pages plot change within participant: BFR change minus HLRT change, for
+protein and for each outcome alike, one column per participant. Only the figures read these; the
+model below makes the same comparison through its design.
 
 ```{r paired-change}
 paired <- delta[, delta_pairs$BFR] - delta[, delta_pairs$HLRT]
@@ -266,18 +267,22 @@ association_figure <- function(which_analysis, outcome_name, title) {
     arrange(p) |>
     mutate(gene = coalesce(gene, protein))
   points <- pmap(hits, function(protein, gene, outcome, t, p, fdr, ...) {
-    arms <- map_chr(c("BFR", "HLRT"), function(arm) {
-      keep <- leg_phenotype$treatment == arm
-      r <- cor(delta[protein, keep], leg_phenotype[[outcome]][keep], method = "spearman")
-      sprintf("%-5s n=%d  r=%+.2f", arm, sum(keep), r)
-    })
+    inset <- ""
+    if (!differential) {
+      arms <- map_chr(c("BFR", "HLRT"), function(arm) {
+        keep <- leg_phenotype$treatment == arm
+        r <- cor(delta[protein, keep], leg_phenotype[[outcome]][keep], method = "spearman")
+        sprintf("%-5s n=%d  r=%+.2f", arm, sum(keep), r)
+      })
+      inset <- paste(arms, collapse = "\n")
+    }
     tibble(
       panel = sprintf(
         "%s\nvs %s   t = %+.2f   p %s   q %s",
         paste(gene, protein, sep = "  "), outcome, t, signif(p, 2), signif(fdr, 2)
       ),
       change = protein_change[protein, ], d_outcome = phenotype_change[[outcome]],
-      series = point_series, inset = if (differential) "" else paste(arms, collapse = "\n")
+      series = point_series, inset = inset
     )
   }) |>
     list_rbind() |>

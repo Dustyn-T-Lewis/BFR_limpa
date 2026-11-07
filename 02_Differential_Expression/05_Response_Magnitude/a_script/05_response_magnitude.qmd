@@ -43,13 +43,13 @@ removed. Only participants with all four biopsies enter, so every comparison is 
 ```{r read}
 stage <- here("02_Differential_Expression", "05_Response_Magnitude")
 adjusted <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
-complete <- adjusted$targets |>
+complete_legs <- adjusted$targets |>
   select(participant, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = c(treatment, timepoint), values_from = sample_id) |>
   drop_na()
-bfr <- adjusted$E[, complete$BFR_T2] - adjusted$E[, complete$BFR_T1]
-hlrt <- adjusted$E[, complete$HLRT_T2] - adjusted$E[, complete$HLRT_T1]
-n <- nrow(complete)
+bfr <- adjusted$E[, complete_legs$BFR_T2] - adjusted$E[, complete_legs$BFR_T1]
+hlrt <- adjusted$E[, complete_legs$HLRT_T2] - adjusted$E[, complete_legs$HLRT_T1]
+n <- nrow(complete_legs)
 hits <- read_excel(
   here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
   "contrast_summary"
@@ -68,9 +68,11 @@ Choosing proteins by one arm and measuring that arm on the same people inflates 
 enters partly because its estimate caught an upward noise draw. So each random split sends half
 the participants to choose the proteins and the other half to measure both arms on them. Sets run
 from all proteins to the top 500 and 250 and the BH set (as many proteins as the choosing arm's
-BH hits), chosen once by HLRT and once by BFR, over 200 splits. The interval is the middle 95% of
-splits. The swap p compares the ratio with 200 data sets in which each participant's BFR and HLRT
-labels are swapped at random, the null that the two legs respond alike (10 splits each).
+BH hits), chosen once by HLRT and once by BFR, over 200 splits. `split_low` and `split_high` are
+the middle 95% of splits, not a confidence interval. The swap p compares the ratio with 200 data
+sets in which each participant's BFR and HLRT labels are swapped at random, the null that the two
+legs respond alike, each summarised over 200 splits like the observed ratio. All proteins need no
+choosing arm, so the sheet keeps that row once.
 
 ```{r crossfit}
 crossfit <- function(bfr, hlrt, splits) {
@@ -101,12 +103,12 @@ swapped <- map(seq_len(200), function(i) {
   b <- bfr; h <- hlrt
   b[, flip] <- hlrt[, flip]
   h[, flip] <- bfr[, flip]
-  summarise(crossfit(b, h, 10), null_ratio = median(ratio), .by = c(selected_on, set))
+  summarise(crossfit(b, h, 200), null_ratio = median(ratio), .by = c(selected_on, set))
 }) |>
   list_rbind()
 magnitude <- split_results |>
   summarise(
-    conf.low = quantile(ratio, 0.025), conf.high = quantile(ratio, 0.975),
+    split_low = quantile(ratio, 0.025), split_high = quantile(ratio, 0.975),
     size = first(size), bfr = median(bfr), hlrt = median(hlrt), ratio = median(ratio),
     .by = c(selected_on, set)
   ) |>
@@ -147,7 +149,7 @@ signature_rows <- rownames(bfr) %in% unlist(training_set)
 signature_scores <- map(seq_len(n), function(i) {
   direction <- rowMeans((bfr + hlrt)[signature_rows, -i] / 2)
   tibble(
-    participant = complete$participant[i],
+    participant = complete_legs$participant[i],
     BFR = sum(bfr[signature_rows, i] * direction) / sum(direction^2),
     HLRT = sum(hlrt[signature_rows, i] * direction) / sum(direction^2)
   )
@@ -159,7 +161,7 @@ signature_test <- tibble(
   test = "signature score", proteins = sum(signature_rows),
   bfr = mean(signature_scores$BFR), hlrt = mean(signature_scores$HLRT),
   ratio = bfr / hlrt, p = t.test(difference)$p.value,
-  swap_p = mean(abs(flips) >= abs(mean(difference)))
+  swap_p = (1 + sum(abs(flips) >= abs(mean(difference)))) / (1 + length(flips))
 )
 signature_test
 ```
@@ -173,10 +175,11 @@ Choosing sets by the average of the two arms does not bias the interaction, beca
 participant's legs leaves the average unchanged.
 
 ```{r fry}
-interaction <- d$contrasts[, "Modality_x_Time_Interaction"]
-interaction_change <- contrasts.fit(coefficient_fit, cbind(interaction))$coefficients[, 1]
+interaction_contrast <- d$contrasts[, "Modality_x_Time_Interaction"]
+interaction_change <- contrasts.fit(coefficient_fit, cbind(interaction_contrast))$coefficients[, 1]
 proteins$weights <- coefficient_fit$EList$weights
-fry_test <- fry(proteins, training_set, d$design, interaction, robust = TRUE, sort = "none") |>
+fry_test <- fry(proteins, training_set, d$design, interaction_contrast, robust = TRUE,
+  sort = "none") |>
   as_tibble(rownames = "set") |>
   mutate(
     median_training = map_dbl(training_set, function(rows) median(average_fit[rows, "logFC"])),
@@ -236,7 +239,9 @@ invisible(dev.off())
 ```{r write}
 write_xlsx(
   list(
-    magnitude = magnitude,
+    magnitude = magnitude |>
+      mutate(selected_on = if_else(set == "All", "none", selected_on)) |>
+      distinct(selected_on, set, .keep_all = TRUE),
     signature_scores = signature_scores,
     tests = bind_rows(
       signature_test,

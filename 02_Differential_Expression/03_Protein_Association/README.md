@@ -31,6 +31,16 @@ Outputs:
   - `associations`: one row per protein, analysis and outcome; slope, t, p and FDR, sorted by FDR.
     Read by `04_Protein_Classification`.
 
+The closest lead is AGMAT, which rises more in legs whose RF CSA grew more (pooled, t 4.5,
+q 0.090). SMTNL1, which falls with training in both arms, falls further in legs that grew more in
+RF CSA, both pooled (t −3.4) and within participant (t −4.3, q 0.40). TJP1 runs against both VL
+and RF CSA in the pooled model (t −3.7). Nothing survives BH, and nominal counts sit near or below
+the 152 expected by chance from 3,042 proteins, a count that swings widely because proteins move
+together: shuffling vl_csa across legs within arm gave 63 to 308 nominal hits (middle 90% of 40
+shuffles; before the blood covariate).
+
+Nominal and BH hits per analysis and outcome:
+
 | Analysis | Outcome | Nominal | Ratio to chance | BH < 0.05 |
 |---|---|---:|---:|---:|
 | pooled | vl_csa | 137 | 0.90 | 0 |
@@ -41,11 +51,3 @@ Outputs:
 | differential | vl_echo | 101 | 0.66 | 0 |
 | differential | rf_csa | 129 | 0.85 | 0 |
 | differential | rf_echo | 116 | 0.76 | 0 |
-
-The closest lead is AGMAT, which rises more in legs whose RF CSA grew more (pooled, t 4.5,
-q 0.090). SMTNL1, which falls with training in both arms, falls further in legs that grew more in
-RF CSA, both pooled (t −3.4) and within participant (t −4.3, q 0.40). TJP1 runs against both VL
-and RF CSA in the pooled model (t −3.7). Nothing survives BH, and nominal counts sit near or below
-the 152 expected by chance from 3,042 proteins, a count that swings widely because proteins move
-together: shuffling vl_csa across legs within arm gave 63 to 308 nominal hits (middle 90% of 40
-shuffles; before the blood covariate).
