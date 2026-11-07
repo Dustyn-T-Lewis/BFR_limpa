@@ -13,7 +13,7 @@ knitr:
 
 ```{r setup}
 pacman::p_load(
-  here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,
+  here, dplyr, tibble, tidyr, purrr, limma, limpa, ggplot2, patchwork,
   readxl, writexl
 )
 here::i_am("05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd")
