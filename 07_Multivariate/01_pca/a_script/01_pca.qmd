@@ -1,0 +1,133 @@
+---
+title: "01 · Multilevel PCA"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, mixOmics, dplyr, tidyr, purrr, ggplot2, patchwork, writexl)
+here::i_am("07_Multivariate/01_pca/a_script/01_pca.qmd")
+```
+
+## Read proteins
+
+`proteins` holds the normalised log2 abundances of 3,042 proteins in 131 samples, with the blood
+index's effect removed (`proteins_adjusted.rds`), and the sample table.
+
+```{r read}
+stage <- here("07_Multivariate", "01_pca")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
+targets <- proteins$targets
+gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
+dim(proteins$E)
+```
+
+## Remove each participant's mean
+
+Participant explains about half of the first MDS coordinate in `02_Quantification`, so a plain
+PCA mostly separates people. `pca(multilevel = participant)` first subtracts each participant's
+mean profile (Liquet et al. 2012, doi:10.1186/1471-2105-13-325), leaving only how a person's four
+samples differ from one another: training, leg and noise. Proteins stay unscaled, as in the MDS
+plot.
+
+```{r pca}
+components <- pca(t(proteins$E), ncomp = 10, multilevel = targets$participant)
+variance <- tibble(
+  component = names(components$prop_expl_var$X),
+  proportion = unname(components$prop_expl_var$X)
+)
+variance
+```
+
+## What drives the components
+
+For the first four components, the share of each component's variance that timepoint, treatment
+and group explain, from a linear model on each factor.
+
+```{r structure}
+scores <- as_tibble(components$variates$X[, 1:5], rownames = "sample_id") |>
+  left_join(targets, by = "sample_id")
+pc_structure <- expand_grid(
+  component = paste0("PC", 1:4), factor = c("timepoint", "treatment", "group")
+) |>
+  mutate(r_squared = map2_dbl(component, factor, function(pc, f) {
+    summary(lm(scores[[pc]] ~ scores[[f]]))$r.squared
+  }))
+pivot_wider(pc_structure, names_from = factor, values_from = r_squared) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+```
+
+## Figure
+
+Samples on the first two components, coloured by arm, open before training and filled after. A
+line joins each leg's two samples, so its direction is that leg's training change. The bars give
+the 20 proteins with the largest loadings on each component, the weight each carries in the
+component score.
+
+```{r figure}
+#| fig-height: 10
+arm_colours <- c(BFR = "#D55E00", HLRT = "#0072B2")
+pc_label <- function(pc) sprintf("%s (%.1f%%)", pc, 100 * components$prop_expl_var$X[[pc]])
+
+score_plot <- scores |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
+  ggplot(aes(PC1, PC2, colour = treatment)) +
+  geom_line(aes(group = leg_id), alpha = 0.35, linewidth = 0.3) +
+  geom_point(aes(shape = timepoint), size = 1.8) +
+  scale_colour_manual(values = arm_colours) +
+  scale_shape_manual(values = c(T1 = 1, T2 = 16)) +
+  labs(x = pc_label("PC1"), y = pc_label("PC2"), colour = NULL, shape = NULL) +
+  theme_bw(base_size = 9)
+
+pc_loadings <- as_tibble(components$loadings$X[, 1:2], rownames = "protein") |>
+  mutate(gene = gene_of[protein])
+
+loading_plot <- function(pc) {
+  pc_loadings |>
+    slice_max(abs(.data[[pc]]), n = 20) |>
+    ggplot(aes(.data[[pc]], reorder(gene, .data[[pc]]), fill = .data[[pc]] > 0)) +
+    geom_col(width = 0.7, show.legend = FALSE) +
+    scale_fill_manual(values = c(`TRUE` = "grey30", `FALSE` = "grey65")) +
+    labs(x = paste(pc, "loading"), y = NULL) +
+    theme_bw(base_size = 8)
+}
+
+pca_page <- score_plot / (loading_plot("PC1") | loading_plot("PC2")) +
+  plot_layout(heights = c(1.2, 1)) +
+  plot_annotation(title = "Multilevel PCA: samples with each participant's mean removed")
+pca_page
+
+pdf(file.path(stage, "b_reports", "01_pca.pdf"), width = 8.27, height = 11.69)
+print(pca_page)
+invisible(dev.off())
+```
+
+## Save results
+
+```{r write}
+write_xlsx(
+  list(
+    variance = variance,
+    structure = pc_structure,
+    scores = select(scores, sample_id, participant, leg, treatment, timepoint, PC1:PC5),
+    loadings = as_tibble(components$loadings$X[, 1:5], rownames = "protein") |>
+      mutate(gene = gene_of[protein], .after = protein)
+  ),
+  file.path(stage, "c_data", "01_pca.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

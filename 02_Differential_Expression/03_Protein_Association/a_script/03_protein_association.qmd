@@ -14,7 +14,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(here, limpa, limma, dplyr, tibble, tidyr, purrr, stringr, ggplot2, readr, writexl)
+pacman::p_load(here, limpa, limma, dplyr, tibble, tidyr, purrr, ggplot2, readr, writexl)
 here::i_am(
   "02_Differential_Expression/03_Protein_Association/a_script/03_protein_association.qmd"
 )
@@ -23,14 +23,16 @@ here::i_am(
 ## Read proteins and phenotype
 
 `proteins` holds the normalised log2 abundances (`E`), the sample table (`targets`) and the gene
-annotation. `phenotype.csv` holds one row per leg with muscle size (cross-sectional area, CSA) and
-echo intensity, before and after training, for vastus lateralis (`vl_`) and rectus femoris (`rf_`).
+annotation; the models read it and carry the blood index as a covariate. `values`, used for the
+paired changes and figures, comes from `proteins_adjusted.rds`, with the blood effect removed.
+`phenotype.csv` holds one row per leg with muscle size (cross-sectional area, CSA) and echo
+intensity, before and after training, for vastus lateralis (`vl_`) and rectus femoris (`rf_`).
 
 ```{r read}
 stage <- here("02_Differential_Expression", "03_Protein_Association")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 targets <- proteins$targets
-values <- proteins$E
+values <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))$E
 phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 
 dim(values)
@@ -98,8 +100,9 @@ leg_phenotype <- legs |>
 head(select(leg_phenotype, leg_id, treatment, all_of(outcomes)))
 ```
 
-The differential analysis works within participant: BFR change minus HLRT change, for protein and
-for each outcome alike. One column per participant.
+The differential figure pages plot change within participant: BFR change minus HLRT change, for
+protein and for each outcome alike, one column per participant. Only the figures read these; the
+model below makes the same comparison through its design.
 
 ```{r paired-change}
 paired <- delta[, delta_pairs$BFR] - delta[, delta_pairs$HLRT]
@@ -117,12 +120,13 @@ dim(paired)
 The association is a slope in the same limpa model as `02_Differential`, so it carries the
 `dpcQuant()` standard errors. For protein *g* in leg *l* at time *s* (0 before, 1 after):
 
-y(g, l, s) = a(g, l) + s × [b(g, arm) + c(g) × x(l)]
+y(g, l, s) = a(g, l) + s × [b(g, arm) + c(g) × x(l)] + d(g) × blood(l, s)
 
 `a` is each leg's own baseline, so only change within a leg counts; `b` is the mean training change
 in each arm, so an arm difference cannot pose as association; `x` is the leg's outcome change,
-centred on the mean leg. `c(g)` is the extra protein change per unit of extra outcome change, and
-its moderated t ranks proteins for gene set tests. Two versions per outcome:
+centred on the mean leg; `d` is the protein's blood slope, as in `02_Differential`. `c(g)` is the
+extra protein change per unit of extra outcome change, and its moderated t ranks proteins for gene
+set tests. Two versions per outcome:
 
 - pooled: the model above, over every leg of both arms;
 - differential: one time effect per participant replaces the two arm terms (plus one for BFR), so
@@ -141,8 +145,8 @@ samples <- targets |>
   left_join(select(leg_phenotype, leg_id, all_of(outcomes)), by = "leg_id") |>
   mutate(across(all_of(outcomes), function(x) coalesce(x - mean(x, na.rm = TRUE), 0)))
 designs <- list(
-  pooled = ~ 0 + leg_id + treatment:post + post:x,
-  differential = ~ 0 + leg_id + participant:post + bfr_post + post:x
+  pooled = ~ 0 + leg_id + treatment:post + post:x + blood,
+  differential = ~ 0 + leg_id + participant:post + bfr_post + post:x + blood
 )
 ```
 
@@ -263,18 +267,22 @@ association_figure <- function(which_analysis, outcome_name, title) {
     arrange(p) |>
     mutate(gene = coalesce(gene, protein))
   points <- pmap(hits, function(protein, gene, outcome, t, p, fdr, ...) {
-    arms <- map_chr(c("BFR", "HLRT"), function(arm) {
-      keep <- leg_phenotype$treatment == arm
-      r <- cor(delta[protein, keep], leg_phenotype[[outcome]][keep], method = "spearman")
-      sprintf("%-5s n=%d  r=%+.2f", arm, sum(keep), r)
-    })
+    inset <- ""
+    if (!differential) {
+      arms <- map_chr(c("BFR", "HLRT"), function(arm) {
+        keep <- leg_phenotype$treatment == arm
+        r <- cor(delta[protein, keep], leg_phenotype[[outcome]][keep], method = "spearman")
+        sprintf("%-5s n=%d  r=%+.2f", arm, sum(keep), r)
+      })
+      inset <- paste(arms, collapse = "\n")
+    }
     tibble(
       panel = sprintf(
         "%s\nvs %s   t = %+.2f   p %s   q %s",
         paste(gene, protein, sep = "  "), outcome, t, signif(p, 2), signif(fdr, 2)
       ),
       change = protein_change[protein, ], d_outcome = phenotype_change[[outcome]],
-      series = point_series, inset = if (differential) "" else paste(arms, collapse = "\n")
+      series = point_series, inset = inset
     )
   }) |>
     list_rbind() |>

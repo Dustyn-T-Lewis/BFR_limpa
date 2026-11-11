@@ -20,5 +20,13 @@ Outputs:
   twelve collapse survivors, lowest adjusted p first, coloured by NES, with ticks on their
   leading-edge proteins.
 
-No table is written, so there is no `c_data/`. fry finds no set on S3's panels A and D, the
-interaction and BFR_Post-HLRT_Post (see `01_run_fgsea_and_fry`).
+No table is written, so there is no `c_data/`.
+
+The training volcanoes are ringed by rising mitochondrial sets in both legs, led by aerobic
+respiration and oxidative phosphorylation. NAMPT tops both legs (log2 +0.69 with BFR, +1.01 with
+HLRT) and MYLK2 falls in both; the BFR panel also names SUCLA2, HK1 and IDH3B, the HLRT panel
+ALDH1B1, ART3 and GSTK1. The interaction and post-training panels name no protein, since none
+reaches BH 0.05, and their rings hold the between-leg fgsea leads. The interaction ring holds cell
+motility, adhesion and cytoskeleton sets, lower in BFR. The post-training ring holds muscle
+contraction and cytoplasmic translation sets lower in BFR and amino acid metabolism sets higher.
+fry confirms none of the sets on those two panels (see `01_run_fgsea_and_fry`).

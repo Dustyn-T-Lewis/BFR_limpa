@@ -3,7 +3,9 @@
 Estimates protein abundance from the filtered precursors with limpa, filters proteins on detection
 and normalises them with cyclic loess.
 
-Inputs: `01_Filtering/c_data/precursors_filtered.rds`.
+Inputs: `01_Filtering/c_data/precursors_filtered.rds`,
+`01_Filtering/c_data/haemoglobin_precursors.rds` and the `sample_contamination` sheet of
+`01_Filtering/c_data/01_filter.xlsx`.
 
 `dpcQuant()` takes about 100 minutes, so a script runs it and saves checkpoints in
 `c_data/quant_runs/`; rerun it whenever the filtered precursors change. The primary run presets the
@@ -18,9 +20,13 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 Outputs:
 
 - `b_reports/02_quantify.html`: the walkthrough, with diagnostic plots.
-- `c_data/proteins.rds`: abundance, standard errors and annotations, read by stages 02 to 06.
+- `c_data/proteins.rds`: abundance, standard errors and annotations, read by stages 02 to 07. The
+  sample table carries the blood index (mean log2 HBB and HBA1, from `dpcQuant()` on the
+  precursors `01_Filtering` sets aside, centred) and the contamination load.
+- `c_data/proteins_adjusted.rds`: the same, with the blood index's effect removed
+  (`removeBatchEffect()`, group and participant protected), for steps that take no design.
 - `c_data/02_quantify.xlsx`:
-  - `samples`: sample identifiers and study metadata;
+  - `samples`: sample identifiers, study metadata, blood index and contamination load;
   - `dpc_parameters`: the diagnostic detection-curve fit (the primary run uses slope 0.7);
   - `detection_summary`: proteins before and after the detection filter, and its threshold;
   - `protein_quality`: per protein, precursor count, proportion observed, mean abundance, mean

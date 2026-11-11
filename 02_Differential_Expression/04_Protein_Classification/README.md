@@ -5,7 +5,7 @@ after training and in change (AUC from `pROC` with `direction = "<"`, p from the
 signed-rank test, BH within task). Pre-to-post within an arm is tested in `02_Differential`, and
 for sets in `03_Pathway_Enrichment/04_set_classification`.
 
-Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`,
+Inputs: `01_Preprocess/02_Quantification/c_data/proteins_adjusted.rds`,
 `02_Differential/c_data/02_differential.xlsx`,
 `03_Protein_Association/c_data/03_protein_association.xlsx`.
 
@@ -31,14 +31,20 @@ Outputs:
   - `candidates`: one row per protein that is DE at FDR 0.05 and reaches nominal p for association
     and classification.
 
+The best separators match the interaction leads of `02_Differential`. After training RPL36 and
+MUSTN1 sit lower in the BFR leg (AUC 0.31 and 0.28); in change PCYT1A, GPD2, KLHL30 and EIF2S1 are
+higher in BFR (AUC 0.73 to 0.76). Before training RPN2 separates the legs most (AUC 0.29, q 0.13).
+The `candidates` sheet lists the proteins that pass DE at FDR 0.05 in any contrast and reach nominal
+p for association and for separating the arms after training or in change: 18 proteins, led by CALU,
+TPR, TMEM109 and LANCL2, and including NAMPT, GDI1, ALDH1B1, GLUD1, PNPO, TMEM11, PCYT1A and NPEPPS.
+The blood slope is not counted as a contrast. Treat both as leads: no protein passes BH, nominal
+counts sit near chance, and with eight association tests per protein about a third of DE hits clear
+the association bar by chance.
+
+Nominal hits per task against chance:
+
 | Task | Nominal | Expected | Ratio | BH < 0.05 |
 |---|---:|---:|---:|---:|
-| Baseline BFR vs HLRT | 141 | 152 | 0.93 | 0 |
-| Post BFR vs HLRT | 172 | 152 | 1.13 | 0 |
-| Change, BFR vs HLRT | 121 | 152 | 0.80 | 0 |
-
-No protein separates BFR from HLRT beyond chance. The `candidates` sheet lists the proteins that
-pass DE at FDR 0.05 in any contrast and reach nominal p for association and for separating the arms
-after training or in change (GLUD1, GDI1, NAMPT, EEA1, ALDH1B1, TMEM11, SUCLG1, PNPO, NPEPPS). Each
-protein gets eight association tests, so about a third of DE hits clear the association bar by
-chance. Treat the list as leads.
+| Baseline BFR vs HLRT | 185 | 152 | 1.22 | 0 |
+| Post BFR vs HLRT | 189 | 152 | 1.24 | 0 |
+| Change, BFR vs HLRT | 157 | 152 | 1.03 | 0 |

@@ -2278,39 +2278,39 @@ vertical-align: -.125em;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(ranked, <span class="cf">function</span>(x) <span class="fu">head</span>(x, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$BFR
-   NAMPT      HK1     CA14 
-5.918834 5.138961 5.115788 
+   NAMPT   SUCLA2      HK1 
+5.901511 5.386287 5.312043 
 
 $HLRT
    NAMPT  ALDH1B1    GSTK1 
-8.630152 8.173396 7.086364 </code></pre>
+8.702344 8.260028 7.094014 </code></pre>
 </div>
 </div>
-<p><code>labels</code> gives every set a readable name for the figures.</p>
+<p><code>set_labels</code> gives every set a readable name for the figures.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>labels <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>set_labels <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(set_id, database, pathway) <span class="sc">|&gt;</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">label =</span> enrichVolcano<span class="sc">::</span><span class="fu">clean_label</span>(pathway, <span class="at">width =</span> <span class="dv">1000</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="choose-the-pathways-to-draw" class="level2">
 <h2 class="anchored" data-anchor-id="choose-the-pathways-to-draw">Choose the pathways to draw</h2>
-<p>The main sets <code>01</code> kept, one per cluster of overlapping sets, significant at FDR &lt; 0.05 in either leg. GO:BP has 77 and Reactome 37, so each is cut to the 30 with the smallest adjusted p.</p>
+<p>The main sets <code>01</code> kept, one per cluster of overlapping sets, significant at FDR &lt; 0.05 in either leg. A collection with more than 30 is cut to the 30 with the smallest adjusted p.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>drawn <span class="ot">&lt;-</span> set_tests <span class="sc">|&gt;</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(method <span class="sc">==</span> <span class="st">&quot;fgsea&quot;</span>, contrast <span class="sc">%in%</span> arms, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, main) <span class="sc">|&gt;</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">padj =</span> <span class="fu">min</span>(padj), <span class="at">.by =</span> <span class="fu">c</span>(set_id, database)) <span class="sc">|&gt;</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(padj, <span class="at">n =</span> <span class="dv">30</span>, <span class="at">by =</span> database, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(labels, set_id, label), <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(set_labels, set_id, label), <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>)</span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(drawn, database)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 2
   database        n
   &lt;chr&gt;       &lt;int&gt;
 1 GOBP           30
-2 GO_Slim         9
-3 Hallmark        6
-4 KEGG_Legacy    10
+2 GO_Slim        13
+3 Hallmark        5
+4 KEGG_Legacy    12
 5 Reactome       30</code></pre>
 </div>
 </div>
@@ -2322,7 +2322,7 @@ $HLRT
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>run_gsea <span class="ot">&lt;-</span> <span class="cf">function</span>(db) {</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  members <span class="ot">&lt;-</span> sets[<span class="fu">startsWith</span>(<span class="fu">names</span>(sets), <span class="fu">paste0</span>(db, <span class="st">&quot;|&quot;</span>))]</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  term_gene <span class="ot">&lt;-</span> <span class="fu">stack</span>(members)[, <span class="fu">c</span>(<span class="st">&quot;ind&quot;</span>, <span class="st">&quot;values&quot;</span>)]</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  term_name <span class="ot">&lt;-</span> <span class="fu">select</span>(<span class="fu">filter</span>(labels, database <span class="sc">==</span> db), set_id, label)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  term_name <span class="ot">&lt;-</span> <span class="fu">select</span>(<span class="fu">filter</span>(set_labels, database <span class="sc">==</span> db), set_id, label)</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># GSEA() drops `...`, so eps never reaches enrichit and p below 1e-10 is floored with a warning.</span></span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># The floored p reach no figure: the pathways come from 01, and colour is NES.</span></span>
@@ -2332,7 +2332,7 @@ $HLRT
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">minGSSize =</span> <span class="dv">15</span>, <span class="at">maxGSSize =</span> <span class="dv">500</span>, <span class="at">pvalueCutoff =</span> <span class="dv">1</span>, <span class="at">verbose =</span> <span class="cn">FALSE</span></span>
 <span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  ))</span>
 <span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>compared <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">unique</span>(labels<span class="sc">$</span>database)), run_gsea)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>compared <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">unique</span>(set_labels<span class="sc">$</span>database)), run_gsea)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="check-against-01" class="level2">
@@ -2357,11 +2357,11 @@ $HLRT
 <span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     database pairs         r max_abs_diff
-1        GOBP  2732 0.9998643   0.08758329
-2     GO_Slim   118 0.9999436   0.04623257
-3    Hallmark    82 0.9998819   0.04590819
-4 KEGG_Legacy   188 0.9998864   0.06755180
-5    Reactome   860 0.9998384   0.08730215</code></pre>
+1        GOBP  2732 0.9998774   0.08696831
+2     GO_Slim   118 0.9999451   0.05263744
+3    Hallmark    82 0.9998911   0.04466209
+4 KEGG_Legacy   188 0.9998952   0.07261930
+5    Reactome   860 0.9998518   0.08777434</code></pre>
 </div>
 </div>
 </section>
@@ -2427,15 +2427,15 @@ $HLRT
    database    contrast      drawn fdr_05
    &lt;chr&gt;       &lt;chr&gt;         &lt;int&gt;  &lt;int&gt;
  1 GOBP        BFR_Post-Pre     30     30
- 2 GO_Slim     BFR_Post-Pre      9      9
- 3 Hallmark    BFR_Post-Pre      6      3
- 4 KEGG_Legacy BFR_Post-Pre     10      8
- 5 Reactome    BFR_Post-Pre     30     30
- 6 GOBP        HLRT_Post-Pre    30     29
- 7 GO_Slim     HLRT_Post-Pre     9      1
- 8 Hallmark    HLRT_Post-Pre     6      6
- 9 KEGG_Legacy HLRT_Post-Pre    10      7
-10 Reactome    HLRT_Post-Pre    30     27</code></pre>
+ 2 GO_Slim     BFR_Post-Pre     13     13
+ 3 Hallmark    BFR_Post-Pre      5      3
+ 4 KEGG_Legacy BFR_Post-Pre     12     10
+ 5 Reactome    BFR_Post-Pre     30     27
+ 6 GOBP        HLRT_Post-Pre    30     25
+ 7 GO_Slim     HLRT_Post-Pre    13      5
+ 8 Hallmark    HLRT_Post-Pre     5      5
+ 9 KEGG_Legacy HLRT_Post-Pre    12      7
+10 Reactome    HLRT_Post-Pre    30     23</code></pre>
 </div>
 </div>
 </section>
@@ -2446,7 +2446,7 @@ $HLRT
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 

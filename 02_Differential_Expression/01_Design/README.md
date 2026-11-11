@@ -1,7 +1,8 @@
 # 01 · Design
 
-Builds the design matrix (treatment-by-timepoint groups plus a fixed effect per participant) and
-the five contrasts, and checks the residual within-leg correlation.
+Builds the design matrix (treatment-by-timepoint groups, a fixed effect per participant and the
+haemoglobin blood index as a covariate) and the five contrasts, and checks the residual within-leg
+correlation.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds`.
 

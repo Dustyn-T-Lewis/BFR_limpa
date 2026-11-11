@@ -2248,7 +2248,7 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  here, dplyr, tibble, tidyr, purrr, limma, limpa, ggplot2, patchwork,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  readxl, writexl</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>here<span class="sc">::</span><span class="fu">i_am</span>(<span class="st">&quot;05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2348,13 +2348,13 @@ vertical-align: -.125em;
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(mpe_test, <span class="fu">across</span>(<span class="fu">where</span>(is.double), <span class="cf">function</span>(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 8
-  contrast                log2FC     se    df       t       p conf.low conf.high
-  &lt;chr&gt;                    &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-1 BFR_Post-Pre           0.151   0.0432    95  3.5    7.03e-4   0.0655     0.237
-2 HLRT_Post-Pre          0.155   0.0427    95  3.62   4.71e-4   0.07       0.24 
-3 BFR_Pre-HLRT_Pre       0.0305  0.0427    95  0.714  4.77e-1  -0.0543     0.115
-4 BFR_Post-HLRT_Post     0.027   0.0432    95  0.625  5.34e-1  -0.0587     0.113
-5 Modality_x_Time_Inte… -0.00354 0.0607    95 -0.0582 9.54e-1  -0.124      0.117</code></pre>
+  contrast                  log2FC     se    df     t       p conf.low conf.high
+  &lt;chr&gt;                      &lt;dbl&gt;  &lt;dbl&gt; &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+1 BFR_Post-Pre              0.155  0.0412    94 3.76  0.00029   0.0734    0.237 
+2 HLRT_Post-Pre             0.138  0.0411    94 3.36  0.00113   0.0565    0.22  
+3 BFR_Pre-HLRT_Pre          0.0171 0.041     94 0.417 0.678    -0.0643    0.0985
+4 BFR_Post-HLRT_Post        0.0342 0.0413    94 0.829 0.409    -0.0477    0.116 
+5 Modality_x_Time_Interact… 0.0171 0.0584    94 0.293 0.77     -0.0987    0.133 </code></pre>
 </div>
 </div>
 </section>
@@ -2370,13 +2370,13 @@ vertical-align: -.125em;
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tibble</span>(citrate_synthase)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 4
-  contrast                      logFC  P.Value adj.P.Val
-  &lt;chr&gt;                         &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-1 BFR_Post-Pre                0.262   0.000177    0.0142
-2 HLRT_Post-Pre               0.205   0.00258     0.0495
-3 BFR_Pre-HLRT_Pre            0.00989 0.882       1.000 
-4 BFR_Post-HLRT_Post          0.0667  0.321       0.964 
-5 Modality_x_Time_Interaction 0.0568  0.548       0.998 </code></pre>
+  contrast                       logFC   P.Value adj.P.Val
+  &lt;chr&gt;                          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 BFR_Post-Pre                 0.267   0.0000976   0.00849
+2 HLRT_Post-Pre                0.187   0.00519     0.0622 
+3 BFR_Pre-HLRT_Pre            -0.00579 0.930       0.992  
+4 BFR_Post-HLRT_Post           0.0742  0.260       0.916  
+5 Modality_x_Time_Interaction  0.0800  0.391       0.990  </code></pre>
 </div>
 </div>
 </section>
@@ -2403,9 +2403,9 @@ vertical-align: -.125em;
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(mito_proteins, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      contrast    protein      logFC  AveExpr         t   P.Value adj.P.Val
-1 BFR_Post-Pre A0A0B4J2F0 0.09432611 17.43696 0.6346466 0.5270146 0.8257675
-2 BFR_Post-Pre     A3KMH1 0.13636600 15.52409 1.1509797 0.2522843 0.6011106
-3 BFR_Post-Pre     A8MXV4 0.16305546 17.34436 1.1770068 0.2417822 0.5928046
+1 BFR_Post-Pre A0A0B4J2F0 0.08015927 17.43696 0.5571385 0.5786028 0.8423488
+2 BFR_Post-Pre     A3KMH1 0.13395534 15.52409 1.1292200 0.2613442 0.5895652
+3 BFR_Post-Pre     A8MXV4 0.14025290 17.34436 1.0302609 0.3052235 0.6498307
      gene   label selected
 1 PIGBOS1 PIGBOS1     TRUE
 2    VWA8    VWA8     TRUE
@@ -2439,12 +2439,12 @@ vertical-align: -.125em;
 <span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(fit, contrast, set, NGenes, Direction, PValue, FDR)</span>
 <span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(complex_tests, <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       fit     contrast           set NGenes Direction      PValue        FDR
-1 standard BFR_Post-Pre   CI subunits     41        Up 0.113552472 0.11355247
-2 standard BFR_Post-Pre  CII subunits      4        Up 0.016114062 0.02685677
-3 standard BFR_Post-Pre CIII subunits     10        Up 0.002224194 0.00826077
-4 standard BFR_Post-Pre  CIV subunits     16        Up 0.035796305 0.04474538
-5 standard BFR_Post-Pre   CV subunits     17        Up 0.003304308 0.00826077</code></pre>
+<pre><code>       fit     contrast           set NGenes Direction      PValue         FDR
+1 standard BFR_Post-Pre   CI subunits     41        Up 0.108154904 0.108154904
+2 standard BFR_Post-Pre  CII subunits      4        Up 0.007982912 0.013304853
+3 standard BFR_Post-Pre CIII subunits     10        Up 0.001311062 0.004591419
+4 standard BFR_Post-Pre  CIV subunits     16        Up 0.024543804 0.030679755
+5 standard BFR_Post-Pre   CV subunits     17        Up 0.001836568 0.004591419</code></pre>
 </div>
 </div>
 </section>
@@ -2561,8 +2561,8 @@ vertical-align: -.125em;
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">tested =</span> <span class="fu">n</span>(), <span class="at">fdr_05 =</span> <span class="fu">sum</span>(adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> contrast)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                     contrast tested fdr_05
-1                BFR_Post-Pre    660     24
-2               HLRT_Post-Pre    660     42
+1                BFR_Post-Pre    660     26
+2               HLRT_Post-Pre    660     46
 3            BFR_Pre-HLRT_Pre    660      0
 4          BFR_Post-HLRT_Post    660      0
 5 Modality_x_Time_Interaction    660      0</code></pre>
@@ -2574,16 +2574,16 @@ vertical-align: -.125em;
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">fdr_05 =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">min_fdr =</span> <span class="fu">signif</span>(<span class="fu">min</span>(FDR), <span class="dv">2</span>), <span class="at">.by =</span> <span class="fu">c</span>(fit, contrast))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                       fit                    contrast fdr_05 min_fdr
-1                 standard                BFR_Post-Pre      4  0.0083
-2                 standard               HLRT_Post-Pre      4  0.0057
-3                 standard            BFR_Pre-HLRT_Pre      0  0.9500
-4                 standard          BFR_Post-HLRT_Post      0  0.4300
-5                 standard Modality_x_Time_Interaction      0  0.9300
-6  mitochondria_normalised                BFR_Post-Pre      0  0.7100
-7  mitochondria_normalised               HLRT_Post-Pre      0  0.3700
-8  mitochondria_normalised            BFR_Pre-HLRT_Pre      0  0.8500
-9  mitochondria_normalised          BFR_Post-HLRT_Post      0  0.0570
-10 mitochondria_normalised Modality_x_Time_Interaction      0  0.8200</code></pre>
+1                 standard                BFR_Post-Pre      4  0.0046
+2                 standard               HLRT_Post-Pre      4  0.0100
+3                 standard            BFR_Pre-HLRT_Pre      0  0.8500
+4                 standard          BFR_Post-HLRT_Post      0  0.4600
+5                 standard Modality_x_Time_Interaction      0  0.7300
+6  mitochondria_normalised                BFR_Post-Pre      0  0.6900
+7  mitochondria_normalised               HLRT_Post-Pre      0  0.4400
+8  mitochondria_normalised            BFR_Pre-HLRT_Pre      0  0.9400
+9  mitochondria_normalised          BFR_Post-HLRT_Post      0  0.0550
+10 mitochondria_normalised Modality_x_Time_Interaction      0  0.8800</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>pathway_tests <span class="sc">|&gt;</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">fdr_05 =</span> <span class="fu">sum</span>(FDR <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">.by =</span> <span class="fu">c</span>(method, contrast)) <span class="sc">|&gt;</span></span>
@@ -2592,11 +2592,11 @@ vertical-align: -.125em;
 <pre><code># A tibble: 5 × 3
   contrast                      fry fgsea
   &lt;chr&gt;                       &lt;int&gt; &lt;int&gt;
-1 BFR_Post-Pre                   13     7
-2 HLRT_Post-Pre                  17    11
-3 BFR_Pre-HLRT_Pre                0     3
-4 BFR_Post-HLRT_Post              0    11
-5 Modality_x_Time_Interaction     0     1</code></pre>
+1 BFR_Post-Pre                    9     7
+2 HLRT_Post-Pre                  16     9
+3 BFR_Pre-HLRT_Pre                0     4
+4 BFR_Post-HLRT_Post              0    10
+5 Modality_x_Time_Interaction     0     4</code></pre>
 </div>
 </div>
 </section>
@@ -2621,7 +2621,7 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 
@@ -2638,28 +2638,29 @@ attached base packages:
 
 other attached packages:
  [1] writexl_1.5.4   readxl_1.4.5    patchwork_1.3.2 ggplot2_4.0.3  
- [5] limpa_1.4.0     limma_3.68.1    stringr_1.6.0   purrr_1.2.2    
- [9] tidyr_1.3.2     tibble_3.3.1    dplyr_1.2.1     here_1.0.2     
+ [5] limpa_1.4.0     limma_3.68.1    purrr_1.2.2     tidyr_1.3.2    
+ [9] tibble_3.3.1    dplyr_1.2.1     here_1.0.2     
 
 loaded via a namespace (and not attached):
  [1] utf8_1.2.6          generics_0.1.4      fgsea_1.38.0       
- [4] lattice_0.22-9      stringi_1.8.7       digest_0.6.39      
+ [4] stringi_1.8.7       lattice_0.22-9      digest_0.6.39      
  [7] magrittr_2.0.5      evaluate_1.0.5      grid_4.6.0         
-[10] RColorBrewer_1.1-3  fastmap_1.2.0       Matrix_1.7-5       
-[13] cellranger_1.1.0    rprojroot_2.1.1     jsonlite_2.0.0     
+[10] RColorBrewer_1.1-3  fastmap_1.2.0       cellranger_1.1.0   
+[13] rprojroot_2.1.1     jsonlite_2.0.0      Matrix_1.7-5       
 [16] ggrepel_0.9.8       scales_1.4.0        tweenr_2.0.3       
 [19] codetools_0.2-20    cli_3.6.6           rlang_1.2.0        
 [22] polyclip_1.10-7     cowplot_1.2.0       withr_3.0.2        
 [25] yaml_2.3.12         otel_0.2.0          tools_4.6.0        
 [28] parallel_4.6.0      BiocParallel_1.46.0 fastmatch_1.1-8    
 [31] pacman_0.5.1        vctrs_0.7.3         R6_2.6.1           
-[34] lifecycle_1.0.5     enrichVolcano_2.3.0 htmlwidgets_1.6.4  
-[37] MASS_7.3-65         pkgconfig_2.0.3     pillar_1.11.1      
-[40] gtable_0.3.6        data.table_1.18.4   glue_1.8.1         
-[43] Rcpp_1.1.2          ggforce_0.5.0       statmod_1.5.1      
-[46] xfun_0.57           tidyselect_1.2.1    knitr_1.52         
-[49] farver_2.1.2        htmltools_0.5.9     labeling_0.4.3     
-[52] rmarkdown_2.32      compiler_4.6.0      S7_0.2.2           </code></pre>
+[34] lifecycle_1.0.5     stringr_1.6.0       enrichVolcano_2.3.0
+[37] htmlwidgets_1.6.4   MASS_7.3-65         pkgconfig_2.0.3    
+[40] pillar_1.11.1       gtable_0.3.6        data.table_1.18.4  
+[43] glue_1.8.1          Rcpp_1.1.2          ggforce_0.5.0      
+[46] statmod_1.5.1       xfun_0.57           tidyselect_1.2.1   
+[49] knitr_1.52          farver_2.1.2        htmltools_0.5.9    
+[52] labeling_0.4.3      rmarkdown_2.32      compiler_4.6.0     
+[55] S7_0.2.2           </code></pre>
 </div>
 </div>
 </section>

@@ -2280,9 +2280,10 @@ vertical-align: -.125em;
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(fit<span class="sc">$</span>coefficients), protein_map<span class="sc">$</span>protein),</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">colnames</span>(fit<span class="sc">$</span>coefficients), contrast_names),</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(proteins<span class="sc">$</span>E), protein_map<span class="sc">$</span>protein)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>contrast_names</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(proteins<span class="sc">$</span>E), protein_map<span class="sc">$</span>protein),</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>contrast_names</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;BFR_Post-Pre&quot;                &quot;HLRT_Post-Pre&quot;              
 [3] &quot;BFR_Pre-HLRT_Pre&quot;            &quot;BFR_Post-HLRT_Post&quot;         
@@ -2305,11 +2306,11 @@ vertical-align: -.125em;
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pi_score =</span> P.Value<span class="sc">^</span><span class="fu">abs</span>(logFC))</span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(protein_results[<span class="fu">c</span>(<span class="st">&quot;contrast&quot;</span>, <span class="st">&quot;protein&quot;</span>, <span class="st">&quot;gene&quot;</span>, <span class="st">&quot;logFC&quot;</span>, <span class="st">&quot;t&quot;</span>, <span class="st">&quot;adj.P.Val&quot;</span>, <span class="st">&quot;pi_score&quot;</span>)], <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      contrast    protein    gene      logFC          t adj.P.Val  pi_score
-1 BFR_Post-Pre A0A0B4J2F0 PIGBOS1  0.1862366  1.5087732 0.5081575 0.6882711
-2 BFR_Post-Pre A0A0U1RRL7 MMP24OS -0.0411697 -0.3730895 0.9027705 0.9859913
-3 BFR_Post-Pre     A0AVT1    UBA6 -0.1045789 -0.5742655 0.8433528 0.9424018
-4 BFR_Post-Pre     A0FGR8   ESYT2 -0.1319026 -1.3050809 0.5854570 0.8059571</code></pre>
+<pre><code>      contrast    protein    gene       logFC          t adj.P.Val  pi_score
+1 BFR_Post-Pre A0A0B4J2F0 PIGBOS1  0.17787804  1.4884311 0.4985622 0.7047009
+2 BFR_Post-Pre A0A0U1RRL7 MMP24OS -0.03841711 -0.3468643 0.9068328 0.9879527
+3 BFR_Post-Pre     A0AVT1    UBA6 -0.10788835 -0.5985194 0.8262807 0.9376934
+4 BFR_Post-Pre     A0FGR8   ESYT2 -0.12861817 -1.2735625 0.5790953 0.8160051</code></pre>
 </div>
 </div>
 <p>Proteins up and down at FDR 0.05, per contrast.</p>
@@ -2323,12 +2324,12 @@ vertical-align: -.125em;
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  )</span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>protein_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>                     contrast tested up down  min_fdr
-1                BFR_Post-Pre   3042 53   33 1.39e-04
-2               HLRT_Post-Pre   3042 90   71 2.98e-10
-3            BFR_Pre-HLRT_Pre   3042  0    0 4.84e-01
-4          BFR_Post-HLRT_Post   3042  0    0 5.16e-01
-5 Modality_x_Time_Interaction   3042  0    0 9.98e-01</code></pre>
+<pre><code>                     contrast tested  up down  min_fdr
+1                BFR_Post-Pre   3042  58   37 1.52e-04
+2               HLRT_Post-Pre   3042 106  112 2.16e-10
+3            BFR_Pre-HLRT_Pre   3042   0    0 4.21e-01
+4          BFR_Post-HLRT_Post   3042   0    0 4.53e-01
+5 Modality_x_Time_Interaction   3042   0    0 6.82e-01</code></pre>
 </div>
 </div>
 </section>
@@ -2357,7 +2358,7 @@ Modality_x_Time_Interaction
 </section>
 <section id="run-fry" class="level2">
 <h2 class="anchored" data-anchor-id="run-fry">Run fry</h2>
-<p>fry reads rows of <code>proteins$E</code>, so each set’s gene symbols are turned into row numbers through each symbol’s representative protein. It reads limpa’s precision weights through <code>proteins$weights</code>, with robust empirical Bayes as in the protein fit. No <code>block</code>: participant is a fixed term in the design, and the residual within-leg correlation is 0.027.</p>
+<p>fry reads rows of <code>proteins$E</code>, so each set’s gene symbols are turned into row numbers through each symbol’s representative protein. It reads limpa’s precision weights through <code>proteins$weights</code>, with robust empirical Bayes as in the protein fit. The design is the protein fit’s, with the blood index as a covariate. No <code>block</code>: participant is a fixed term in the design, which leaves little residual within-leg correlation (the <code>correlation_strata</code> sheet of <code>01_Design</code>).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>selected_rows <span class="ot">&lt;-</span> <span class="fu">which</span>(protein_map<span class="sc">$</span>selected)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>set_rows <span class="ot">&lt;-</span> <span class="fu">map</span>(sets, <span class="cf">function</span>(genes) {</span>
@@ -2409,11 +2410,11 @@ fgsea   fry
 <span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lengths</span>(main_sets)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>               BFR_Post-Pre               HLRT_Post-Pre 
-                        102                          66 
+                        102                          62 
            BFR_Pre-HLRT_Pre          BFR_Post-HLRT_Post 
-                         14                          50 
+                         29                          53 
 Modality_x_Time_Interaction 
-                          3 </code></pre>
+                         25 </code></pre>
 </div>
 </div>
 <p>Survivors get <code>main = TRUE</code>; fry rows get <code>NA</code>, since only fgsea results are collapsed.</p>
@@ -2431,12 +2432,12 @@ Modality_x_Time_Interaction
 <span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">select</span>(set_tests, contrast, method, set_id, n, NES, p, padj, main), <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 8
-  contrast     method set_id                       n   NES       p    padj main 
-  &lt;chr&gt;        &lt;chr&gt;  &lt;chr&gt;                    &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;lgl&gt;
-1 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_BI…    18  1.83 5.26e-3 0.0274  FALSE
-2 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_ME…    26  1.68 1.11e-2 0.0484  FALSE
-3 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAMEN…    52 -1.82 4.16e-4 0.00325 FALSE
-4 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAMEN…    57 -1.34 5.31e-2 0.161   FALSE</code></pre>
+  contrast     method set_id                        n   NES       p   padj main 
+  &lt;chr&gt;        &lt;chr&gt;  &lt;chr&gt;                     &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt; &lt;lgl&gt;
+1 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_BIO…    18  1.84 0.00463 0.0262 FALSE
+2 BFR_Post-Pre fgsea  GOBP|GOBP_ACETYL_COA_MET…    26  1.73 0.00676 0.0345 FALSE
+3 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAMENT…    52 -1.65 0.00344 0.0206 FALSE
+4 BFR_Post-Pre fgsea  GOBP|GOBP_ACTIN_FILAMENT…    57 -1.31 0.0851  0.224  FALSE</code></pre>
 </div>
 </div>
 </section>
@@ -2457,11 +2458,11 @@ Modality_x_Time_Interaction
 <pre><code># A tibble: 5 × 5
   contrast                     sets fgsea collapsed   fry
   &lt;chr&gt;                       &lt;int&gt; &lt;int&gt;     &lt;int&gt; &lt;int&gt;
-1 BFR_Post-Pre                 1990   460       102   604
-2 HLRT_Post-Pre                1990   298        66   401
-3 BFR_Pre-HLRT_Pre             1990    34        14     0
-4 BFR_Post-HLRT_Post           1990   155        50     0
-5 Modality_x_Time_Interaction  1990     3         3     0</code></pre>
+1 BFR_Post-Pre                 1990   433       102   635
+2 HLRT_Post-Pre                1990   279        62   410
+3 BFR_Pre-HLRT_Pre             1990    70        29     0
+4 BFR_Post-HLRT_Post           1990   154        53     0
+5 Modality_x_Time_Interaction  1990    38        25     0</code></pre>
 </div>
 </div>
 </section>
@@ -2481,9 +2482,9 @@ Modality_x_Time_Interaction
   contrast                        n
   &lt;fct&gt;                       &lt;int&gt;
 1 BFR_Post-Pre                  102
-2 HLRT_Post-Pre                  66
-3 Modality_x_Time_Interaction     3
-4 BFR_Post-HLRT_Post             50</code></pre>
+2 HLRT_Post-Pre                  62
+3 Modality_x_Time_Interaction    25
+4 BFR_Post-HLRT_Post             53</code></pre>
 </div>
 </div>
 <p>S1 stacks one dot plot per contrast that has a survivor, each showing its ten survivors with the lowest adjusted p: NES on the x axis, point size for set size, colour for the collection. The size scale spans every row on the page, so the panels compare. Labels drop the collection prefix, and <code>GOBP_MUSCLE_CONTRACTION</code> and <code>REACTOME_MUSCLE_CONTRACTION</code> would then share a row, so a name whose stem repeats within a contrast gets its collection appended. Each collection’s own view is the dotplot in <code>07_pathway_maps</code>.</p>
@@ -2566,7 +2567,7 @@ Modality_x_Time_Interaction
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 

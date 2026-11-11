@@ -1,7 +1,8 @@
 # 01 · Run fgsea and fry
 
 Tests every gene set on every contrast with fgsea and fry, and marks the significant fgsea sets
-that are not redundant with a stronger one.
+that are not redundant with a stronger one. fry uses the stage 02 design, which carries the blood
+index as a covariate.
 
 Inputs: `00_build_gene_sets/c_data/gene_sets.rds` and `00_build_gene_sets.xlsx`,
 `02_Differential_Expression/02_Differential/c_data/fit.rds`,
@@ -32,12 +33,20 @@ Significant sets at an adjusted p below 0.05, BH over all 1,990 sets in the cont
 
 | Contrast | fgsea | after collapse | fry |
 |---|---:|---:|---:|
-| BFR_Post-Pre | 460 | 102 | 604 |
-| HLRT_Post-Pre | 298 | 66 | 401 |
-| BFR_Post-HLRT_Post | 155 | 50 | 0 |
-| Modality_x_Time_Interaction | 3 | 3 | 0 |
-| BFR_Pre-HLRT_Pre *(baseline)* | 34 | 14 | 0 |
+| BFR_Post-Pre | 433 | 102 | 635 |
+| HLRT_Post-Pre | 279 | 62 | 410 |
+| BFR_Post-HLRT_Post | 154 | 53 | 0 |
+| Modality_x_Time_Interaction | 38 | 25 | 0 |
+| BFR_Pre-HLRT_Pre *(baseline)* | 70 | 29 | 0 |
 
-fry finds no set on any between-leg contrast, so their fgsea counts are leads only. The baseline
-contrast compares the legs before training, when no difference is expected: fgsea calls 34 sets,
-mostly muscle contraction and sarcomere sets ranked lower in the BFR leg, and fry confirms none.
+Training raises mitochondrial pathways in both legs. The top sets are the same in each arm: aerobic
+respiration and electron transport (NES 3.2 with BFR, 2.8 with HLRT), oxidative phosphorylation,
+mitochondrial gene expression and mitochondrial protein degradation, all with BH q below 10⁻⁹. The
+BFR response in these sets is as strong as the HLRT one.
+
+Between the arms, the interaction points to structural remodelling that HLRT training drives and
+BFR training does not. The sets lower in BFR than in HLRT are cell motility, cell adhesion,
+cytoskeleton organisation, wound healing, epithelial–mesenchymal transition and Rho GTPase effectors
+(fgsea q 0.0008 to 0.015). These are exploratory leads: fry does not confirm any between-leg set,
+and the baseline contrast, where no difference is expected, also gives fgsea 70 sets, so fgsea calls
+between legs run high in these data.

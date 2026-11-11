@@ -2250,7 +2250,7 @@ vertical-align: -.125em;
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
 <p>singscore gives each sample one score per gene set. Within a sample it ranks every gene by abundance, then scores a set by how high its members rank on average, centred so that 0 is what random members would give. The ranks are within the sample, so a score ignores the rest of the cohort; there is no p-value and no contrast. Later steps (<code>04_set_classification</code>, <code>05_set_association</code>) test the scores.</p>
-<p>The inputs are the tested sets, the catalogue and protein-to-gene map from <code>00_build_gene_sets</code>, and the protein abundance matrix from quantification.</p>
+<p>The inputs are the tested sets, the catalogue and protein-to-gene map from <code>00_build_gene_sets</code>, and the protein abundance matrix from quantification with the blood index’s effect removed (<code>proteins_adjusted.rds</code>).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_run_singscore&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
@@ -2258,7 +2258,7 @@ vertical-align: -.125em;
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>book <span class="ot">&lt;-</span> <span class="fu">file.path</span>(gene_sets, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(book, <span class="st">&quot;set_catalog&quot;</span>)</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(book, <span class="st">&quot;protein_gene_map&quot;</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 3042  131</code></pre>
@@ -2281,15 +2281,15 @@ vertical-align: -.125em;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>scores[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                                          S02_L_T1     S02_L_T2    S02_R_T1
-Hallmark|HALLMARK_ADIPOGENESIS         0.194802144  0.186611794  0.19563162
-Hallmark|HALLMARK_ALLOGRAFT_REJECTION -0.023270739  0.008333729  0.02165439
-Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.011483307 -0.018577864  0.03671736
-Hallmark|HALLMARK_APICAL_JUNCTION     -0.005159882 -0.073782590 -0.03035152
+Hallmark|HALLMARK_ADIPOGENESIS         0.190704068  0.185312475  0.19934106
+Hallmark|HALLMARK_ALLOGRAFT_REJECTION -0.027454243  0.006565248  0.02478251
+Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.001718213 -0.019091816  0.03746309
+Hallmark|HALLMARK_APICAL_JUNCTION     -0.024552852 -0.076988911 -0.02263650
                                           S02_R_T2
-Hallmark|HALLMARK_ADIPOGENESIS         0.188102530
-Hallmark|HALLMARK_ALLOGRAFT_REJECTION  0.039234609
-Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.001758523
-Hallmark|HALLMARK_APICAL_JUNCTION     -0.015033118</code></pre>
+Hallmark|HALLMARK_ADIPOGENESIS         0.186002738
+Hallmark|HALLMARK_ALLOGRAFT_REJECTION  0.036363204
+Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.000559301
+Hallmark|HALLMARK_APICAL_JUNCTION     -0.019200714</code></pre>
 </div>
 </div>
 </section>
@@ -2314,11 +2314,11 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.015033118</code></pre>
 <pre><code># A tibble: 5 × 4
   database     sets median_score median_dispersion
   &lt;chr&gt;       &lt;int&gt;        &lt;dbl&gt;             &lt;dbl&gt;
-1 Hallmark       41       0.0256             1010.
-2 Reactome      430       0.0777              854.
-3 KEGG_Legacy    94       0.0253              935.
-4 GOBP         1366      -0.0068             1006.
-5 GO_Slim        59      -0.0037             1046.</code></pre>
+1 Hallmark       41       0.0255             1015.
+2 Reactome      430       0.0776              857.
+3 KEGG_Legacy    94       0.0253              928.
+4 GOBP         1366      -0.007              1006.
+5 GO_Slim        59      -0.0036             1046 </code></pre>
 </div>
 </div>
 </section>
@@ -2339,10 +2339,10 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.015033118</code></pre>
 <pre><code># A tibble: 4 × 3
   component variance_explained participant_share
   &lt;chr&gt;                  &lt;dbl&gt;             &lt;dbl&gt;
-1 PC1                    0.336             0.638
-2 PC2                    0.154             0.32 
-3 PC3                    0.065            NA    
-4 PC4                    0.05             NA    </code></pre>
+1 PC1                    0.34              0.635
+2 PC2                    0.156             0.408
+3 PC3                    0.066            NA    
+4 PC4                    0.054            NA    </code></pre>
 </div>
 </div>
 <p>Participant identity dominates the raw scores, so later steps use the within-leg change, never the raw value.</p>
@@ -2391,7 +2391,7 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.015033118</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 

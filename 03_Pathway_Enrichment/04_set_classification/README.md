@@ -28,17 +28,24 @@ Outputs:
   - `chance_expectation`: one row per task and collection, with nominal hits against chance and BH
     hits.
   - `set_auc`: one row per set and task, with AUC, paired Wilcoxon p and BH q, smallest p first.
-  - `set_catalog`: one row per tested set, with its collection and measured size.
 
 Nominal hits as a multiple of chance (5% of the sets tested):
 
 | Task | Hallmark | KEGG | Reactome | GO:BP | GO Slim |
 |---|---:|---:|---:|---:|---:|
-| pre vs post, BFR | 1.46 | 3.83 | 3.49 | 4.01 | 7.46 |
-| pre vs post, HLRT | 4.88 | 4.04 | 4.33 | 3.69 | 4.75 |
-| post, BFR vs HLRT | 0.98 | 0.64 | 0.37 | 1.19 | 1.02 |
-| change, BFR vs HLRT | 0.98 | 0.00 | 0.14 | 0.54 | 0.68 |
-| baseline | 0.98 | 0.43 | 0.47 | 0.48 | 0.00 |
+| pre vs post, BFR | 2.44 | 3.40 | 3.72 | 4.07 | 7.46 |
+| pre vs post, HLRT | 4.39 | 4.47 | 5.21 | 4.10 | 4.75 |
+| post, BFR vs HLRT | 0.98 | 0.85 | 0.33 | 1.04 | 0.68 |
+| change, BFR vs HLRT | 1.95 | 0.64 | 0.28 | 0.82 | 1.69 |
+| baseline | 1.46 | 1.06 | 0.51 | 1.26 | 0.68 |
 
-After BH, 8 sets survive on BFR training, 50 on HLRT and none elsewhere. Protein-level
-classification is `02_Differential_Expression/04_Protein_Classification`.
+Set scores separate pre from post training in both arms: 30 sets pass BH with BFR and 112 with
+HLRT. With HLRT the strongest sets are rises in tRNA aminoacylation, mitochondrial protein
+degradation and mitochondrial RNA metabolism (AUC 0.69 to 0.71). With BFR mitochondrial protein
+degradation also rises (AUC 0.74), while growth factor response and NF-κB signalling sets fall
+(AUC 0.22 to 0.29). Between the arms one set passes BH, HALLMARK_SPERMATOGENESIS on change (AUC
+0.68, q 0.018). The nominal leads on change are NF-κB signalling and programmed cell death, both
+lower in BFR's change (AUC 0.27), and after training tRNA processing sits higher in BFR (AUC 0.67,
+q 0.14). The between-arm rows of the table sit near chance, so the single BH hit among the many
+sets tested and these leads need confirmation. Protein-level classification is
+`02_Differential_Expression/04_Protein_Classification`.

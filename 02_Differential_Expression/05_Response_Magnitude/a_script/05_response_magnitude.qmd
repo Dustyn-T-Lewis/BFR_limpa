@@ -1,0 +1,260 @@
+---
+title: "05 · Response magnitude"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, limpa, limma, dplyr, tidyr, tibble, purrr, readxl, ggplot2, patchwork,
+  writexl)
+here::i_am("02_Differential_Expression/05_Response_Magnitude/a_script/05_response_magnitude.qmd")
+set.seed(2026)
+```
+
+## Question
+
+Protein by protein, BFR and HLRT training do not differ (no interaction hit in `02_Differential`).
+A response can still be smaller overall, every protein moving the same way but less far, which no
+single-protein test can see. Three tests ask that:
+
+1. cross-fitted magnitude, as in the YvO Figure 4C: proteins chosen by one arm's response in half
+   the participants, both arms' median |log2 change| measured in the other half;
+2. a signature score: each leg's change projected onto the training direction learned from the
+   other participants;
+3. fry on the interaction contrast over the proteins that rise, and those that fall, with training.
+
+Comparing hit counts (95 against 218) is not one of them: a difference in significance is not a
+significant difference.
+
+## Read changes
+
+`proteins_adjusted.rds` gives each leg's change, T2 minus T1, with the blood index's effect
+removed. Only participants with all four biopsies enter, so every comparison is within person.
+
+```{r read}
+stage <- here("02_Differential_Expression", "05_Response_Magnitude")
+adjusted <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
+complete_legs <- adjusted$targets |>
+  select(participant, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = c(treatment, timepoint), values_from = sample_id) |>
+  drop_na()
+bfr <- adjusted$E[, complete_legs$BFR_T2] - adjusted$E[, complete_legs$BFR_T1]
+hlrt <- adjusted$E[, complete_legs$HLRT_T2] - adjusted$E[, complete_legs$HLRT_T1]
+n <- nrow(complete_legs)
+hits <- read_excel(
+  here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
+  "contrast_summary"
+)
+bh_size <- c(
+  BFR = hits$n_fdr_05[hits$contrast == "BFR_Post-Pre"],
+  HLRT = hits$n_fdr_05[hits$contrast == "HLRT_Post-Pre"]
+)
+n
+bh_size
+```
+
+## Cross-fitted magnitude
+
+Choosing proteins by one arm and measuring that arm on the same people inflates it: a protein
+enters partly because its estimate caught an upward noise draw. So each random split sends half
+the participants to choose the proteins and the other half to measure both arms on them. Sets run
+from all proteins to the top 500 and 250 and the BH set (as many proteins as the choosing arm's
+BH hits), chosen once by HLRT and once by BFR, over 200 splits. `split_low` and `split_high` are
+the middle 95% of splits, not a confidence interval. The swap p compares the ratio with 200 data
+sets in which each participant's BFR and HLRT labels are swapped at random, the null that the two
+legs respond alike, each summarised over 200 splits like the observed ratio. All proteins need no
+choosing arm, so the sheet keeps that row once.
+
+```{r crossfit}
+crossfit <- function(bfr, hlrt, splits) {
+  map(seq_len(splits), function(split) {
+    half <- sample(n, n %/% 2)
+    measured <- list(BFR = abs(rowMeans(bfr[, -half])), HLRT = abs(rowMeans(hlrt[, -half])))
+    expand_grid(selected_on = c("HLRT", "BFR"), set = c("All", "Top 500", "Top 250", "BH")) |>
+      mutate(
+        size = case_when(
+          set == "All" ~ nrow(bfr), set == "Top 500" ~ 500, set == "Top 250" ~ 250,
+          .default = bh_size[selected_on]
+        ),
+        chosen = map2(selected_on, size, function(arm, size) {
+          choose <- abs(rowMeans(list(BFR = bfr, HLRT = hlrt)[[arm]][, half]))
+          rank(-choose, ties.method = "first") <= size
+        }),
+        bfr = map_dbl(chosen, function(k) median(measured$BFR[k])),
+        hlrt = map_dbl(chosen, function(k) median(measured$HLRT[k]))
+      ) |>
+      select(-chosen)
+  }) |>
+    list_rbind() |>
+    mutate(ratio = bfr / hlrt)
+}
+split_results <- crossfit(bfr, hlrt, 200)
+swapped <- map(seq_len(200), function(i) {
+  flip <- sample(c(TRUE, FALSE), n, replace = TRUE)
+  b <- bfr; h <- hlrt
+  b[, flip] <- hlrt[, flip]
+  h[, flip] <- bfr[, flip]
+  summarise(crossfit(b, h, 200), null_ratio = median(ratio), .by = c(selected_on, set))
+}) |>
+  list_rbind()
+magnitude <- split_results |>
+  summarise(
+    split_low = quantile(ratio, 0.025), split_high = quantile(ratio, 0.975),
+    size = first(size), bfr = median(bfr), hlrt = median(hlrt), ratio = median(ratio),
+    .by = c(selected_on, set)
+  ) |>
+  left_join(summarise(swapped, nulls = list(null_ratio), .by = c(selected_on, set)),
+    by = c("selected_on", "set")) |>
+  mutate(swap_p = map2_dbl(nulls, ratio, function(null, r) {
+    (1 + sum(abs(log(null)) >= abs(log(r)))) / (1 + length(null))
+  })) |>
+  select(-nulls)
+mutate(magnitude, across(where(is.double), function(x) signif(x, 3)))
+```
+
+## Signature score
+
+The training direction is the mean change across both arms. For each participant it is learned
+from the other participants only, over a set fixed before any comparison: the proteins whose
+average training change across both arms passes BH 0.05 in the limpa model (below). Each leg's
+score is its change projected onto that direction; 1 means it moved as far as the average leg of
+the others. BFR against HLRT is then a paired comparison of one number per participant, tested
+with a paired t and with 5,000 random sign flips of the per-participant differences.
+
+```{r average-fit}
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+coefficient_fit <- dpcDE(proteins, d$design, plot = FALSE)
+average <- makeContrasts(average = (BFR_T2 - BFR_T1 + HLRT_T2 - HLRT_T1) / 2, levels = d$design)
+average_fit <- topTable(eBayes(contrasts.fit(coefficient_fit, average), robust = TRUE),
+  number = Inf, sort.by = "none")
+training_set <- list(
+  up = rownames(average_fit)[average_fit$adj.P.Val < 0.05 & average_fit$logFC > 0],
+  down = rownames(average_fit)[average_fit$adj.P.Val < 0.05 & average_fit$logFC < 0]
+)
+lengths(training_set)
+```
+
+```{r signature}
+signature_rows <- rownames(bfr) %in% unlist(training_set)
+signature_scores <- map(seq_len(n), function(i) {
+  direction <- rowMeans((bfr + hlrt)[signature_rows, -i] / 2)
+  tibble(
+    participant = complete_legs$participant[i],
+    BFR = sum(bfr[signature_rows, i] * direction) / sum(direction^2),
+    HLRT = sum(hlrt[signature_rows, i] * direction) / sum(direction^2)
+  )
+}) |>
+  list_rbind()
+difference <- signature_scores$BFR - signature_scores$HLRT
+flips <- replicate(5000, mean(difference * sample(c(-1, 1), n, replace = TRUE)))
+signature_test <- tibble(
+  test = "signature score", proteins = sum(signature_rows),
+  bfr = mean(signature_scores$BFR), hlrt = mean(signature_scores$HLRT),
+  ratio = bfr / hlrt, p = t.test(difference)$p.value,
+  swap_p = (1 + sum(abs(flips) >= abs(mean(difference)))) / (1 + length(flips))
+)
+signature_test
+```
+
+## fry on the interaction
+
+If BFR responds less, the proteins that rise with training rise less in BFR, so their interaction
+(BFR change minus HLRT change) leans negative, and those that fall lean positive. fry tests each set
+as a whole in the limpa model with the blood covariate, allowing for correlation between proteins.
+Choosing sets by the average of the two arms does not bias the interaction, because swapping a
+participant's legs leaves the average unchanged.
+
+```{r fry}
+interaction_contrast <- d$contrasts[, "Modality_x_Time_Interaction"]
+interaction_change <- contrasts.fit(coefficient_fit, cbind(interaction_contrast))$coefficients[, 1]
+proteins$weights <- coefficient_fit$EList$weights
+fry_test <- fry(proteins, training_set, d$design, interaction_contrast, robust = TRUE,
+  sort = "none") |>
+  as_tibble(rownames = "set") |>
+  mutate(
+    median_training = map_dbl(training_set, function(rows) median(average_fit[rows, "logFC"])),
+    median_interaction = map_dbl(training_set, function(rows) median(interaction_change[rows]))
+  )
+fry_test
+```
+
+## Figure
+
+Cross-fitted median |log2 change| per arm, chosen by HLRT (left) and by BFR (right), with the BFR
+to HLRT ratio and swap p above each pair; below, each participant's two signature scores.
+
+```{r figure}
+#| fig-height: 9
+arm_colours <- c(BFR = "#D55E00", HLRT = "#0072B2")
+bars <- magnitude |>
+  mutate(
+    set = factor(set, c("All", "Top 500", "Top 250", "BH")),
+    selected_on = factor(paste("Chosen by", selected_on), c("Chosen by HLRT", "Chosen by BFR")),
+    label = sprintf("%.2f\np %.2f", ratio, swap_p)
+  )
+magnitude_plot <- bars |>
+  pivot_longer(c(bfr, hlrt), names_to = "arm", values_to = "magnitude") |>
+  mutate(arm = toupper(arm)) |>
+  ggplot(aes(set, magnitude, fill = arm)) +
+  geom_col(position = position_dodge(0.8), width = 0.7, alpha = 0.8) +
+  geom_text(data = bars, aes(set, pmax(bfr, hlrt), label = label), inherit.aes = FALSE,
+    vjust = -0.3, size = 2.5, lineheight = 0.9) +
+  facet_wrap(~selected_on) +
+  scale_fill_manual(values = arm_colours) +
+  scale_y_continuous(expand = expansion(c(0, 0.25))) +
+  labs(x = NULL, y = "Median |log2 change|, held-out half", fill = NULL) +
+  theme_bw(base_size = 9)
+signature_plot <- signature_scores |>
+  pivot_longer(c(BFR, HLRT), names_to = "arm", values_to = "score") |>
+  ggplot(aes(arm, score, group = participant)) +
+  geom_hline(yintercept = 0, colour = "grey80") +
+  geom_line(colour = "grey70", linewidth = 0.3) +
+  geom_point(aes(colour = arm), size = 1.4, show.legend = FALSE) +
+  scale_colour_manual(values = arm_colours) +
+  labs(x = NULL, y = "Signature score",
+    subtitle = sprintf("BFR/HLRT %.2f, paired p %.3f, swap p %.3f", signature_test$ratio,
+      signature_test$p, signature_test$swap_p)) +
+  theme_bw(base_size = 9)
+page <- magnitude_plot / (signature_plot | plot_spacer()) +
+  plot_annotation(title = "Training response magnitude, BFR against HLRT")
+page
+
+pdf(file.path(stage, "b_reports", "05_response_magnitude.pdf"), width = 8.27, height = 9)
+print(page)
+invisible(dev.off())
+```
+
+## Save results
+
+```{r write}
+write_xlsx(
+  list(
+    magnitude = magnitude |>
+      mutate(selected_on = if_else(set == "All", "none", selected_on)) |>
+      distinct(selected_on, set, .keep_all = TRUE),
+    signature_scores = signature_scores,
+    tests = bind_rows(
+      signature_test,
+      transmute(fry_test, test = paste("fry", set), proteins = NGenes, median_training,
+        median_interaction, direction = Direction, p = PValue)
+    )
+  ),
+  file.path(stage, "c_data", "05_response_magnitude.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

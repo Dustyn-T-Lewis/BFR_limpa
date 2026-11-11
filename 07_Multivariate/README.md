@@ -1,0 +1,23 @@
+# 07 · Multivariate
+
+Stages 02 to 04 test proteins one at a time, curated sets and data-driven modules. This stage asks
+the same three questions with mixOmics (Rohart et al. 2017, doi:10.1371/journal.pcbi.1005752),
+where a panel of proteins is built to fit the outcome and judged by cross-validated prediction in
+participants left out. It answers one thing the earlier stages cannot: whether any combination of
+proteins separates the groups or predicts growth.
+
+[`01_pca`](01_pca/README.md) draws a multilevel PCA of all samples with each participant's mean
+removed.
+
+[`02_splsda`](02_splsda/README.md) classifies T1 against T2 in each arm (the positive control) and
+BFR against HLRT before training, after training and on change, with multilevel sparse PLS-DA;
+it also transfers each arm's training panel to the other arm and annotates the training panels.
+
+[`03_spls`](03_spls/README.md) predicts each leg's CSA and echo change from its protein change with
+sparse PLS regression, per arm and pooled.
+
+Every classifier and per-arm regression uses 5-fold cross-validation repeated 50 times, with folds
+of whole participants; the pooled regressions hold out one participant per fold in a single pass.
+The PCA is descriptive and has no cross-validation. Panel sizes are tuned on the same data and there
+is no permutation reference, so error rates lean optimistic. Two-factor multilevel designs are not
+used: on this crossover they leak the labels.

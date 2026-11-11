@@ -27,7 +27,8 @@ cohort; there is no p-value and no contrast. Later steps (`04_set_classification
 `05_set_association`) test the scores.
 
 The inputs are the tested sets, the catalogue and protein-to-gene map from `00_build_gene_sets`,
-and the protein abundance matrix from quantification.
+and the protein abundance matrix from quantification with the blood index's effect removed
+(`proteins_adjusted.rds`).
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "03_run_singscore")
@@ -36,7 +37,7 @@ sets <- readRDS(file.path(gene_sets, "gene_sets.rds"))
 book <- file.path(gene_sets, "00_build_gene_sets.xlsx")
 set_catalog <- read_excel(book, "set_catalog")
 protein_map <- read_excel(book, "protein_gene_map")
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 dim(proteins$E)
 ```
 

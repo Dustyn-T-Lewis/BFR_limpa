@@ -29,12 +29,13 @@ proteins into modules by correlation and summarises each module by its eigengene
 principal component of its members. Associations with muscle size and echo intensity are in
 `02_module_traits`.
 
-Inputs: the protein estimates, the stage 02 design and contrasts, and the gene sets and
+Inputs: the protein estimates with the blood index's effect removed (`proteins_adjusted.rds`),
+the stage 02 design and contrasts, and the gene sets and
 protein-to-gene map from `00_build_gene_sets`.
 
 ```{r read}
 stage <- here("04_Network", "01_modules")
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
 sets_dir <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 sets <- readRDS(file.path(sets_dir, "gene_sets.rds"))
@@ -100,6 +101,11 @@ Module 0 holds the proteins no module takes, and it is never tested.
 Module membership (kME) is each protein's bicor with each eigengene; a protein's kME with its own
 module says how central it is. `find_modules()` runs these steps on one input.
 
+Two checks ride along. The network is rebuilt at power 12, and each module's best Jaccard
+overlap with a power-12 module is kept: near 1 means the module does not depend on the chosen
+power. `chooseTopHubInEachModule()` picks WGCNA's own hub, the member with the highest
+whole-network connectivity, to compare with the highest-kME hub.
+
 ```{r find-modules}
 find_modules <- function(x) {
   soft <- pickSoftThreshold(
@@ -108,21 +114,26 @@ find_modules <- function(x) {
     corOptions = list(maxPOutliers = 0.1), verbose = 0
   )
   power <- coalesce(soft$powerEstimate, 12)
-  network <- blockwiseModules(
-    x,
-    power = power, networkType = "signed", TOMType = "signed", corType = "bicor",
-    maxPOutliers = 0.1, minModuleSize = 10, mergeCutHeight = 0.25, deepSplit = 3,
-    pamRespectsDendro = FALSE, maxBlockSize = 5000, numericLabels = TRUE, verbose = 0
-  )
+  build <- function(power) {
+    blockwiseModules(
+      x,
+      power = power, networkType = "signed", TOMType = "signed", corType = "bicor",
+      maxPOutliers = 0.1, minModuleSize = 10, mergeCutHeight = 0.25, deepSplit = 3,
+      pamRespectsDendro = FALSE, maxBlockSize = 5000, numericLabels = TRUE, verbose = 0
+    )
+  }
+  network <- build(power)
   kme <- signedKME(x, network$MEs, corFnc = "bicor", corOptions = "maxPOutliers = 0.1")
   list(
     power = power, network = network,
+    hubs = chooseTopHubInEachModule(x, network$colors, omitColors = 0, type = "signed"),
     soft_threshold = transmute(
       soft$fitIndices,
       power = Power, signed_r2 = -sign(slope) * SFT.R.sq, mean_connectivity = mean.k.
     ),
     membership = tibble(
       protein = colnames(x), module = paste0("M", network$colors),
+      module_12 = paste0("M", build(12)$colors),
       kme = kme[cbind(seq_len(nrow(kme)), match(paste0("kME", network$colors), colnames(kme)))]
     )
   )
@@ -173,9 +184,25 @@ enrichment <- membership |>
   filter(pval < 0.05) |>
   mutate(overlapGenes = map_chr(overlapGenes, paste, collapse = ";")) |>
   arrange(match(network, names(inputs)), as.integer(sub("M", "", module)), padj)
+power_12 <- membership |>
+  filter(module != "M0", module_12 != "M0") |>
+  count(network, module, module_12, name = "shared") |>
+  left_join(count(membership, network, module, name = "size"), by = c("network", "module")) |>
+  left_join(
+    count(membership, network, module_12, name = "size_12"), by = c("network", "module_12")
+  ) |>
+  mutate(power12_jaccard = shared / (size + size_12 - shared)) |>
+  slice_max(power12_jaccard, n = 1, by = c(network, module), with_ties = FALSE)
+connectivity_hubs <- imap(networks, function(n, network) {
+  tibble(network = network, module = paste0("M", names(n$hubs)), connectivity_hub = unname(n$hubs))
+}) |>
+  list_rbind() |>
+  mutate(connectivity_hub = proteins$genes$Genes[match(connectivity_hub, rownames(proteins$E))])
 modules <- membership |>
   filter(module != "M0") |>
   summarise(proteins = n(), hub = gene[which.max(kme)], .by = c(network, module)) |>
+  left_join(connectivity_hubs, by = c("network", "module")) |>
+  left_join(select(power_12, network, module, power12_jaccard), by = c("network", "module")) |>
   left_join(
     enrichment |>
       filter(padj < 0.05) |>
@@ -184,15 +211,21 @@ modules <- membership |>
     by = c("network", "module")
   )
 count(modules, network, named = !is.na(top_set))
+modules |>
+  summarise(
+    median_power12_jaccard = median(power12_jaccard, na.rm = TRUE),
+    hubs_agree = mean(hub == connectivity_hub), .by = network
+  )
 ```
 
 ## Test the main-network eigengenes
 
 Eigengenes carry no standard errors, so they go through plain limma, with the stage 02 design
-(participant fixed) and its five contrasts. With a few dozen rows there is little for `eBayes()`
-to borrow, so, as for log2 MPE in `05_Mitochondria/02_test_mito`, the test is the least-squares t
-with `df.residual` degrees of freedom and a 95% interval. BH runs within each contrast across
-modules. `plain_t()` turns one coefficient of a fit into that table.
+(participant fixed, blood index as a covariate) and its five contrasts. The blood term is inert
+here, since the network's abundances already have the blood effect removed. With a few dozen rows
+there is little for `eBayes()` to borrow, so, as for log2 MPE in `05_Mitochondria/02_test_mito`, the
+test is the least-squares t with `df.residual` degrees of freedom and a 95% interval. BH runs within
+each contrast across modules. `plain_t()` turns one coefficient of a fit into that table.
 
 ```{r plain-t}
 plain_t <- function(fit, coef) {

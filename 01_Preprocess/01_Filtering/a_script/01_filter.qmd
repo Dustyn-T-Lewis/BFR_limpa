@@ -276,6 +276,16 @@ sample_contamination <- tibble(
 )
 ```
 
+Haemoglobin β and α (HBB, HBA1) come from red cells, which muscle does not make, so their abundance
+measures how much blood a biopsy holds. Their precursors are kept aside before the filter for
+`02_Quantification`, which turns them into a blood index; nothing else reads them.
+
+```{r keep-haemoglobin}
+haemoglobin <- y[y$genes$Genes %in% c("HBB", "HBA1"), ]
+stopifnot(setequal(unique(haemoglobin$genes$Genes), c("HBB", "HBA1")))
+table(haemoglobin$genes$Genes)
+```
+
 ```{r remove-contaminants}
 y <- y[!contaminant, ]
 filter_log <- bind_rows(filter_log, step_summary(y, "contaminants removed", signal_start))
@@ -298,7 +308,7 @@ head(contaminants_removed, 20)
 ```
 
 The median removed fraction per treatment and timepoint group, then the five most contaminated
-samples, which a median hides. Nothing tests or adjusts for either.
+samples, which a median hides.
 
 ```{r contaminant-fractions}
 round(tapply(contaminant_fraction, y$targets$group, median), 4)
@@ -307,13 +317,14 @@ slice_max(sample_contamination, pct_signal_removed, n = 5)
 
 ## Save results
 
-`precursors_filtered.rds` holds the filtered measurements for protein quantification, and
-`01_filter.xlsx` the summaries, both in `c_data/`. Rerun protein quantification whenever this
-matrix changes.
+`precursors_filtered.rds` holds the filtered measurements for protein quantification,
+`haemoglobin_precursors.rds` the HBB and HBA1 precursors for the blood index, and `01_filter.xlsx`
+the summaries, all in `c_data/`. Rerun protein quantification whenever this matrix changes.
 
 ```{r write}
 out <- here("01_Preprocess", "01_Filtering", "c_data")
 saveRDS(y, file.path(out, "precursors_filtered.rds"))
+saveRDS(haemoglobin, file.path(out, "haemoglobin_precursors.rds"))
 write_xlsx(
   list(
     samples = as.data.frame(y$targets),

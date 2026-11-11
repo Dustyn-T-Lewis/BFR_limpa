@@ -32,9 +32,11 @@ The steps run in order:
 | [`03_complex_subunits`](03_complex_subunits/README.md) | Which subunits and assembly factors carry each complex's change in each leg? |
 
 Mean MPE rose from 29.7% to 32.9% in the BFR leg and from 29.1% to 32.3% in the HLRT leg. The
-interaction, BFR's rise minus HLRT's, is −0.004 log2, and its 95% CI (−0.124 to 0.117) excludes
-a difference in the MPE rise beyond about ±8%. After mitochondrial normalisation no protein,
-complex or pathway differs between legs by fry or protein-level FDR.
+interaction, BFR's rise minus HLRT's, is 0.017 log2 (95% CI −0.099 to 0.133, about −7% to +10%
+on the MPE ratio). Relative to that content, both legs shift
+away from mitophagy, autophagy and redox proteins. The one between-leg lead is complex I, lower in
+BFR relative to mitochondrial content after training (fgsea; fry FDR 0.055). After mitochondrial
+normalisation no protein, complex or pathway differs between legs by fry or protein-level FDR.
 
 MPE from whole muscle mixes mitochondrial content with fibre type, since type I fibres hold more
 mitochondria. `06_Composition` estimates each biopsy's fibre mix for that reason.

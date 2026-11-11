@@ -41,12 +41,17 @@ place of `lmFit()` because only it reads the standard errors from `dpcQuant()`, 
 weights. No per-sample quality weights (limpa's default): estimated, they ranged from 0.09 to 3.6
 and did not follow contaminant load. `contrasts.fit()` forms the five comparisons and `eBayes()`
 moderates each protein's variance toward a prior fitted across all proteins; `robust = TRUE` keeps
-proteins with outlying variances from distorting that prior.
+proteins with outlying variances from distorting that prior. The design carries the blood index,
+and its coefficient, read before the contrasts are formed, is each protein's blood slope: log2
+protein per log2 haemoglobin, near 1 for a protein that comes only from blood and near 0 for one
+blood does not carry.
 
 ```{r fit}
-fit <- dpcDE(proteins, d$design)
-fit <- contrasts.fit(fit, d$contrasts)
-fit <- eBayes(fit, robust = TRUE)
+coefficient_fit <- dpcDE(proteins, d$design)
+blood_fit <- topTable(eBayes(coefficient_fit, robust = TRUE), coef = "blood", number = Inf,
+  sort.by = "none")
+fit <- eBayes(contrasts.fit(coefficient_fit, d$contrasts), robust = TRUE)
+sum(blood_fit$adj.P.Val < 0.05)
 ```
 
 ## Results
@@ -141,6 +146,25 @@ slice_min(baseline, P.Value, n = 5) |>
   select(protein, Genes, logFC, P.Value, adj.P.Val)
 ```
 
+## Without the blood covariate
+
+The same fit without the blood index, its BH discoveries per contrast beside the primary fit's.
+
+```{r unadjusted}
+unadjusted_design <- d$design[, colnames(d$design) != "blood"]
+unadjusted <- dpcDE(proteins, unadjusted_design, plot = FALSE) |>
+  contrasts.fit(d$contrasts[colnames(unadjusted_design), ]) |>
+  eBayes(robust = TRUE)
+primary_hits <- decideTests(fit) != 0
+unadjusted_hits <- decideTests(unadjusted) != 0
+contrast_summary$n_fdr_05_unadjusted <- colSums(unadjusted_hits)[contrast_summary$contrast]
+rbind(
+  blood_adjusted = colSums(primary_hits),
+  unadjusted = colSums(unadjusted_hits),
+  both = colSums(primary_hits & unadjusted_hits)
+)
+```
+
 ## Slope sensitivity
 
 `02_quantify_run.R --sensitivity` also quantifies with the detection-curve (DPC) slope fitted to
@@ -155,10 +179,9 @@ fitted_slope <- fitted_slope[
 ]
 fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
 stopifnot(identical(colnames(fitted_slope$E), rownames(d$design)))
-refit <- dpcDE(fitted_slope, d$design) |>
+refit <- dpcDE(fitted_slope, d$design, plot = FALSE) |>
   contrasts.fit(d$contrasts) |>
   eBayes(robust = TRUE)
-primary_hits <- decideTests(fit) != 0
 stopifnot(all(rownames(primary_hits) %in% rownames(refit)))
 refit_hits <- decideTests(refit)[rownames(primary_hits), , drop = FALSE] != 0
 rbind(
@@ -171,8 +194,9 @@ rbind(
 ## Save results
 
 `fit.rds` keeps the fitted model for the stages that rebuild contrasts. `02_differential.xlsx`
-holds `DEP_matrix` (one row per protein: log2 fold change, p and BH-adjusted p per contrast),
-discovery counts and the distribution summaries.
+holds `DEP_matrix` (one row per protein: log2 fold change, p and BH-adjusted p per contrast, and
+the blood slope with its BH-adjusted p), discovery counts with and without the blood covariate, and
+the distribution summaries.
 
 ```{r write}
 dep_matrix <- results |>
@@ -181,6 +205,10 @@ dep_matrix <- results |>
     names_from = contrast,
     values_from = c(logFC, P.Value, adj.P.Val),
     names_glue = "{contrast}_{.value}"
+  ) |>
+  mutate(
+    blood_slope = blood_fit[protein, "logFC"],
+    blood_adj.P.Val = blood_fit[protein, "adj.P.Val"]
   )
 
 out <- here("02_Differential_Expression", "02_Differential", "c_data")

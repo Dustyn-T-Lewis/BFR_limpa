@@ -41,9 +41,11 @@ Outputs:
   - `association_sets`: one row per set, analysis and outcome; fgsea NES, p, BH q and leading edge,
     and fry direction, p and FDR. fgsea treats proteins as independent, so a set counts when fry
     confirms it.
-  - `set_catalog`: one row per tested set, with its collection and measured size.
 
-No set's singscore tracks the phenotype after correction, and no protein does either
-(`02_Differential_Expression/03_Protein_Association`). On the protein association ranking, fgsea
-calls up to 149 sets per outcome (mitochondrial translation and respiration top pooled rf_csa),
-and fry confirms none (smallest FDR 0.748).
+On the protein association ranking, legs whose RF CSA grew more show larger rises in mitochondrial
+gene expression, mitochondrial translation, aerobic respiration and oxidative phosphorylation
+(pooled, fgsea NES 2.3 to 2.9), and smaller ones in cytoskeleton organisation and cell adhesion
+(NES −2.0); fgsea calls up to 148 sets per outcome. The closest singscore lead is prostanoid
+metabolism, whose BFR minus HLRT change runs against the difference in RF echo (r −0.66, q 0.081).
+These are leads: fry confirms no set (smallest FDR 0.802), and no set's singscore or protein
+(`02_Differential_Expression/03_Protein_Association`) tracks the phenotype after BH.

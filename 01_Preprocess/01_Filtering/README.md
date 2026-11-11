@@ -14,6 +14,8 @@ Outputs:
 
 - `b_reports/01_filter.html`: the walkthrough, with previews at each step.
 - `c_data/precursors_filtered.rds`: filtered precursors, read by `02_Quantification`.
+- `c_data/haemoglobin_precursors.rds`: the HBB and HBA1 precursors set aside before the
+  contaminant filter, read by `02_Quantification` for the blood index.
 - `c_data/01_filter.xlsx`:
   - `samples`: sample identifiers and study metadata;
   - `filtering_summary`: precursors, protein groups and percentage of starting signal after each
