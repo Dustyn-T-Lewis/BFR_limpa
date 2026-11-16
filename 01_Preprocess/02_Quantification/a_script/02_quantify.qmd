@@ -175,11 +175,28 @@ protein_quality <- tibble(
 summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
 ```
 
-`plotMDSUsingSEs()` places samples by their protein profiles, weighted by the standard errors and
-labelled by participant, then the share of the first coordinate participant and group explain.
+`plotMDSUsingSEs()` places samples by their protein profiles, weighted by the standard errors.
+limma's `plotMDS()` redraws it coloured by treatment (open T1, filled T2) and labelled by
+participant, saved as `02_quantify_mds.pdf`; then the share of the first coordinate participant and
+group explain.
 
 ```{r mds}
-mds <- plotMDSUsingSEs(proteins, labels = proteins$targets$participant, cex = 0.6)
+#| fig-height: 10
+mds <- plotMDSUsingSEs(proteins, plot = FALSE)
+treatment_colours <- c(BFR = "#D55E00", HLRT = "#0072B2")
+draw_mds <- function() {
+  par(mfrow = c(2, 1))
+  plotMDS(mds, col = treatment_colours[proteins$targets$treatment],
+    pch = c(T1 = 1, T2 = 16)[proteins$targets$timepoint], main = "MDS of protein abundance")
+  legend("topright", c(names(treatment_colours), "T1", "T2"), bty = "n", cex = 0.8,
+    col = c(treatment_colours, "grey30", "grey30"), pch = c(16, 16, 1, 16))
+  plotMDS(mds, labels = proteins$targets$participant, cex = 0.6, main = "Labelled by participant")
+}
+draw_mds()
+pdf(here("01_Preprocess", "02_Quantification", "b_reports", "02_quantify_mds.pdf"),
+  width = 8.27, height = 11.69)
+draw_mds()
+invisible(dev.off())
 round(sapply(proteins$targets[c("participant", "group")], function(f) {
   summary(lm(mds$x ~ factor(f)))$r.squared
 }), 3)
