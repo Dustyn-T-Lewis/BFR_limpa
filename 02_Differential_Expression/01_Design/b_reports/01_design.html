@@ -2247,7 +2247,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-sample-metadata" class="level2">
 <h2 class="anchored" data-anchor-id="read-sample-metadata">Read sample metadata</h2>
-<p>The design uses the metadata attached to the protein matrix, so it follows the same sample order. The table counts samples per treatment and timepoint.</p>
+<p>The design uses the sample table attached to the protein matrix, so it follows the same order.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
@@ -2263,8 +2263,8 @@ treatment T1 T2
 </section>
 <section id="design" class="level2">
 <h2 class="anchored" data-anchor-id="design">Design</h2>
-<p>A design matrix has one row per sample and one column per model coefficient, marking which group and participant each sample belongs to. <code>~ 0 + group + participant + blood</code> gives one mean per treatment-by-timepoint group, no separate intercept, and a fixed effect per participant. Participant is fixed rather than random because every contrast sits within one person (limma User’s Guide §9.4.2), which makes pre-to-post comparisons paired. A participant-level variable such as sex is constant within person and cannot be estimated here. <code>blood</code>, the haemoglobin index from <code>02_Quantification</code>, is a covariate: each protein gets a slope on how much blood its sample holds, so blood no longer adds to the residual variance. <code>02_Quantification</code> gives its median per group.</p>
-<p><code>makeContrasts()</code> reads its arguments as R code, so a column named <code>groupBFR_T1</code> must become <code>BFR_T1</code> and every name must be syntactic. <code>is.fullrank()</code> checks that the columns are linearly independent; a rank-deficient design would leave contrasts inestimable.</p>
+<p><code>~ 0 + group + participant + blood</code> gives one mean per treatment-by-timepoint group and a fixed effect per participant. Participant is fixed rather than random because every contrast sits within one person (limma User’s Guide §9.4.2), which makes pre-to-post comparisons paired; a participant-level variable such as sex cannot be estimated. <code>blood</code>, the haemoglobin index from <code>02_Quantification</code>, gives each protein a slope on how much blood its sample holds, so blood no longer adds to the residual variance.</p>
+<p><code>makeContrasts()</code> needs syntactic column names, so the <code>group</code> prefix is dropped.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group <span class="sc">+</span> participant <span class="sc">+</span> blood, <span class="at">data =</span> targets)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(design) <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">&quot;^group&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="fu">colnames</span>(design))</span>
@@ -2287,7 +2287,7 @@ treatment T1 T2
 </section>
 <section id="contrasts" class="level2">
 <h2 class="anchored" data-anchor-id="contrasts">Contrasts</h2>
-<p>A contrast is a difference between model coefficients; positive values follow the subtraction order below.</p>
+<p>Positive values follow the subtraction order below.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>contrast_matrix <span class="ot">&lt;-</span> <span class="fu">makeContrasts</span>(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Post-Pre</span><span class="st">`</span> <span class="ot">=</span> BFR_T2 <span class="sc">-</span> BFR_T1,</span>
@@ -2332,7 +2332,7 @@ Levels    Modality_x_Time_Interaction
 <tr class="odd">
 <td><code>Modality_x_Time_Interaction</code></td>
 <td>primary</td>
-<td>difference of the two time effects</td>
+<td>difference of the time effects</td>
 <td>the study question</td>
 </tr>
 <tr class="even">
@@ -2343,29 +2343,29 @@ Levels    Modality_x_Time_Interaction
 </tr>
 <tr class="odd">
 <td><code>BFR_Post-Pre</code></td>
-<td>secondary, exploratory</td>
+<td>exploratory</td>
 <td>one leg over time</td>
 <td>what restricted training did</td>
 </tr>
 <tr class="even">
 <td><code>HLRT_Post-Pre</code></td>
-<td>secondary, exploratory</td>
+<td>exploratory</td>
 <td>the other leg over time</td>
 <td>what conventional training did</td>
 </tr>
 <tr class="odd">
 <td><code>BFR_Post-HLRT_Post</code></td>
-<td>secondary, exploratory</td>
+<td>exploratory</td>
 <td>two legs after training</td>
 <td>leg difference at the end</td>
 </tr>
 </tbody>
 </table>
-<p><code>Modality_x_Time_Interaction</code> equals <code>BFR_Post-HLRT_Post</code> minus <code>BFR_Pre-HLRT_Pre</code> exactly, so the five are not independent questions. The interaction tests whether the change over time differs between treatments. Baseline differences can exist and are inspected, not assumed absent.</p>
+<p>The interaction equals <code>BFR_Post-HLRT_Post</code> minus <code>BFR_Pre-HLRT_Pre</code> exactly, so the five are not independent questions. Baseline differences are inspected, not assumed absent.</p>
 </section>
 <section id="check-within-leg-correlation" class="level2">
 <h2 class="anchored" data-anchor-id="check-within-leg-correlation">Check within-leg correlation</h2>
-<p>Samples from the same leg may stay correlated after the participant term. <code>leg_id</code> marks each participant and leg; <code>duplicateCorrelation()</code> estimates the average residual correlation within legs.</p>
+<p>Samples from the same leg may stay correlated after the participant term; <code>duplicateCorrelation()</code> estimates the average residual correlation within legs.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>leg_id <span class="ot">&lt;-</span> <span class="fu">paste</span>(targets<span class="sc">$</span>participant, targets<span class="sc">$</span>leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2378,11 +2378,11 @@ Levels    Modality_x_Time_Interaction
 <pre><code>[1] 0.015</code></pre>
 </div>
 </div>
-<p>The estimate ignores the standard errors the later fit uses. <code>02_Differential</code> fits without a leg block while this stays near zero. If it rose, the fix is <code>block = leg_id</code> there; <code>leg_id</code> is not saved, so read this value on every rerun.</p>
+<p>The estimate ignores the standard errors the later fit uses. <code>02_Differential</code> fits without a leg block while this stays near zero; if it rose, the fix is <code>block = leg_id</code> there.</p>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>design.rds</code> holds the design, the contrasts and the name of the baseline contrast for the models downstream. <code>01_design.xlsx</code> holds the samples, the design, the contrasts and the correlation check; identifier columns keep the matrix row names in Excel.</p>
+<p>Identifier columns keep the matrix row names in the workbook.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>

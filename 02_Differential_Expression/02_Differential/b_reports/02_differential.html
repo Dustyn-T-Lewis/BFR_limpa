@@ -2251,20 +2251,17 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins-and-design" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins-and-design">Read proteins and design</h2>
-<p><code>proteins</code> holds the normalised log2 abundances and their standard errors; <code>d</code> holds the design, the contrasts and the baseline contrast’s name. Design rows and matrix columns must name the same samples in the same order; equal dimensions alone would not catch a swapped sample.</p>
+<p>Design rows and matrix columns must name the same samples in the same order.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;design.rds&quot;</span>))</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fitted_slope_file <span class="ot">&lt;-</span> <span class="fu">here</span>(</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;quant_runs&quot;</span>, <span class="st">&quot;proteins_slope_fitted.rds&quot;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>quant <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(quant, <span class="st">&quot;proteins.rds&quot;</span>))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;design.rds&quot;</span>))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">rownames</span>(d<span class="sc">$</span>design), <span class="fu">colnames</span>(proteins<span class="sc">$</span>E)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="fit" class="level2">
 <h2 class="anchored" data-anchor-id="fit">Fit</h2>
-<p>limpa’s sequence is <code>dpcDE()</code>, <code>contrasts.fit()</code>, <code>eBayes()</code>, <code>topTable()</code>. <code>dpcDE()</code> takes the place of <code>lmFit()</code> because only it reads the standard errors from <code>dpcQuant()</code>, as precision weights. No per-sample quality weights (limpa’s default): estimated, they ranged from 0.09 to 3.6 and did not follow contaminant load. <code>contrasts.fit()</code> forms the five comparisons and <code>eBayes()</code> moderates each protein’s variance toward a prior fitted across all proteins; <code>robust = TRUE</code> keeps proteins with outlying variances from distorting that prior. The design carries the blood index, and its coefficient, read before the contrasts are formed, is each protein’s blood slope: log2 protein per log2 haemoglobin, near 1 for a protein that comes only from blood and near 0 for one blood does not carry.</p>
+<p>limpa’s sequence is <code>dpcDE()</code>, <code>contrasts.fit()</code>, <code>eBayes()</code>, <code>topTable()</code>. <code>dpcDE()</code> replaces <code>lmFit()</code> because only it reads the <code>dpcQuant()</code> standard errors, as precision weights. No sample quality weights (limpa’s default): estimated, they ranged from 0.09 to 3.6 and did not follow contaminant load. <code>robust = TRUE</code> keeps proteins with outlying variances from distorting the prior. The blood coefficient, read before the contrasts are formed, is each protein’s blood slope: log2 protein per log2 haemoglobin, near 1 for a protein that comes only from blood.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>coefficient_fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, d<span class="sc">$</span>design)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
@@ -2274,8 +2271,8 @@ vertical-align: -.125em;
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>blood_fit <span class="ot">&lt;-</span> <span class="fu">topTable</span>(<span class="fu">eBayes</span>(coefficient_fit, <span class="at">robust =</span> <span class="cn">TRUE</span>), <span class="at">coef =</span> <span class="st">&quot;blood&quot;</span>, <span class="at">number =</span> <span class="cn">Inf</span>,</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>blood_fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(coefficient_fit, <span class="at">robust =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topTable</span>(<span class="at">coef =</span> <span class="st">&quot;blood&quot;</span>, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">contrasts.fit</span>(coefficient_fit, d<span class="sc">$</span>contrasts), <span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(blood_fit<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -2285,7 +2282,7 @@ vertical-align: -.125em;
 </section>
 <section id="results" class="level2">
 <h2 class="anchored" data-anchor-id="results">Results</h2>
-<p>In <code>topTable()</code>, <code>sort.by = &quot;none&quot;</code> keeps protein order (the default sorts on the B statistic). Benjamini–Hochberg (BH) adjustment controls the false discovery rate within each contrast, not across all five.</p>
+<p>Benjamini-Hochberg (BH) adjustment runs within each contrast, not across all five.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">colnames</span>(d<span class="sc">$</span>contrasts), <span class="cf">function</span>(cn) {</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topTable</span>(fit, <span class="at">coef =</span> cn, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -2316,7 +2313,7 @@ vertical-align: -.125em;
 </section>
 <section id="inspect-p-value-distributions" class="level2">
 <h2 class="anchored" data-anchor-id="inspect-p-value-distributions">Inspect p-value distributions</h2>
-<p>Per contrast: the estimated share of true nulls (<code>propTrueNull()</code>), the median absolute t and the fraction of p below 0.2. Under a flat null, 20% of p fall below 0.2 and the median |t| is about 0.67.</p>
+<p>Under a flat null, 20% of p fall below 0.2 and the median |t| is about 0.67.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>null_summary <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
@@ -2350,7 +2347,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>From the fitted standard errors, the interaction effect each protein would need for 80% power at an unadjusted two-sided 0.05 threshold, on the log2 scale: median and 90th percentile across proteins. It describes sensitivity, not FDR-adjusted power.</p>
+<p>The log2 interaction effect each protein would need for 80% power at unadjusted two-sided 0.05, median and 90th percentile across proteins. It describes sensitivity, not FDR-adjusted power.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>se <span class="ot">&lt;-</span> fit<span class="sc">$</span>stdev.unscaled[, <span class="st">&quot;Modality_x_Time_Interaction&quot;</span>] <span class="sc">*</span> <span class="fu">sqrt</span>(fit<span class="sc">$</span>s2.post)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">quantile</span>(se <span class="sc">*</span> (<span class="fu">qt</span>(<span class="fl">0.975</span>, fit<span class="sc">$</span>df.total) <span class="sc">+</span> <span class="fu">qt</span>(<span class="fl">0.80</span>, fit<span class="sc">$</span>df.total)), <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.9</span>)), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2362,7 +2359,7 @@ vertical-align: -.125em;
 </section>
 <section id="the-pi-score" class="level2">
 <h2 class="anchored" data-anchor-id="the-pi-score">The pi score</h2>
-<p><code>pi_score</code> is <code>P.Value^abs(logFC)</code>, which equals 10 to the minus Xiao et al.’s π (|logFC| times −log10 p; 2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest first: large effects with small p. It ranks the two within-leg contrasts, controls no error rate and selects nothing. The mean number of observed precursors per sample sits beside it, because the top of a pi ranking is often thinly observed.</p>
+<p><code>pi_score</code> is <code>P.Value^abs(logFC)</code>, 10 to the minus Xiao et al.’s π (|logFC| times -log10 p; 2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest first. It ranks the two within-leg contrasts, controls no error rate and selects nothing. Mean observed precursors per sample sit beside it, because the top of a pi ranking is often thinly observed.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(contrast <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>)) <span class="sc">|&gt;</span></span>
@@ -2418,13 +2415,12 @@ vertical-align: -.125em;
 </section>
 <section id="baseline-comparison" class="level2">
 <h2 class="anchored" data-anchor-id="baseline-comparison">Baseline comparison</h2>
-<p>The two legs before training, where counterbalanced legs should differ by nothing; a difference can be biological or technical. The five smallest p:</p>
+<p>Counterbalanced legs before training should differ by nothing. The five smallest p:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> <span class="fu">filter</span>(results, contrast <span class="sc">==</span> d<span class="sc">$</span>baseline)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nrow</span>(baseline) <span class="sc">==</span> <span class="fu">nrow</span>(proteins))</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_min</span>(baseline, P.Value, <span class="at">n =</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, logFC, P.Value, adj.P.Val)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(contrast <span class="sc">==</span> d<span class="sc">$</span>baseline) <span class="sc">|&gt;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(P.Value, <span class="at">n =</span> <span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, logFC, P.Value, adj.P.Val)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  protein  Genes      logFC      P.Value adj.P.Val
 1  Q0D2K2 KLHL30 -0.3751254 0.0001554720 0.4210806
@@ -2465,9 +2461,9 @@ both                                     0</code></pre>
 </section>
 <section id="slope-sensitivity" class="level2">
 <h2 class="anchored" data-anchor-id="slope-sensitivity">Slope sensitivity</h2>
-<p><code>02_quantify_run.R --sensitivity</code> also quantifies with the detection-curve (DPC) slope fitted to these data (0.478) instead of the preset 0.7. When that run exists, it gets the same detection filter, normalisation and design, and its discovery counts are set beside the primary run’s.</p>
+<p>The run with the detection-curve slope fitted (0.478) instead of preset at 0.7, when it exists, with the same detection filter, normalisation and design.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fitted_slope <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(fitted_slope_file)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fitted_slope <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(quant, <span class="st">&quot;quant_runs&quot;</span>, <span class="st">&quot;proteins_slope_fitted.rds&quot;</span>))</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>fitted_slope <span class="ot">&lt;-</span> fitted_slope[</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filterByDetection</span>(fitted_slope, <span class="at">n.samples =</span> <span class="fu">min</span>(<span class="fu">table</span>(fitted_slope<span class="sc">$</span>targets<span class="sc">$</span>group))),</span>
 <span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>]</span>
@@ -2476,13 +2472,12 @@ both                                     0</code></pre>
 <span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>refit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(fitted_slope, d<span class="sc">$</span>design, <span class="at">plot =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
 <span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">contrasts.fit</span>(d<span class="sc">$</span>contrasts) <span class="sc">|&gt;</span></span>
 <span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">eBayes</span>(<span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">all</span>(<span class="fu">rownames</span>(primary_hits) <span class="sc">%in%</span> <span class="fu">rownames</span>(refit)))</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>refit_hits <span class="ot">&lt;-</span> <span class="fu">decideTests</span>(refit)[<span class="fu">rownames</span>(primary_hits), , drop <span class="ot">=</span> <span class="cn">FALSE</span>] <span class="sc">!=</span> <span class="dv">0</span></span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="fu">rbind</span>(</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">slope_0.7 =</span> <span class="fu">colSums</span>(primary_hits),</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">fitted_curve =</span> <span class="fu">colSums</span>(refit_hits),</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">both =</span> <span class="fu">colSums</span>(primary_hits <span class="sc">&amp;</span> refit_hits)</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>refit_hits <span class="ot">&lt;-</span> <span class="fu">decideTests</span>(refit)[<span class="fu">rownames</span>(primary_hits), , drop <span class="ot">=</span> <span class="cn">FALSE</span>] <span class="sc">!=</span> <span class="dv">0</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="fu">rbind</span>(</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">slope_0.7 =</span> <span class="fu">colSums</span>(primary_hits),</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">fitted_curve =</span> <span class="fu">colSums</span>(refit_hits),</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">both =</span> <span class="fu">colSums</span>(primary_hits <span class="sc">&amp;</span> refit_hits)</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             BFR_Post-Pre HLRT_Post-Pre BFR_Pre-HLRT_Pre BFR_Post-HLRT_Post
 slope_0.7              95           218                0                  0
@@ -2497,7 +2492,6 @@ both                                   0</code></pre>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>fit.rds</code> keeps the fitted model for the stages that rebuild contrasts. <code>02_differential.xlsx</code> holds <code>DEP_matrix</code> (one row per protein: log2 fold change, p and BH-adjusted p per contrast, and the blood slope with its BH-adjusted p), discovery counts with and without the blood covariate, and the distribution summaries.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>dep_matrix <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(protein, Genes, NPrec, contrast, logFC, P.Value, adj.P.Val) <span class="sc">|&gt;</span></span>
