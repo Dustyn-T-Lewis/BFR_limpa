@@ -2249,8 +2249,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>singscore gives each sample one score per gene set. Within a sample it ranks every gene by abundance, then scores a set by how high its members rank on average, centred so that 0 is what random members would give. The ranks are within the sample, so a score ignores the rest of the cohort; there is no p-value and no contrast. Later steps (<code>04_set_classification</code>, <code>05_set_association</code>) test the scores.</p>
-<p>The inputs are the tested sets, the catalogue and protein-to-gene map from <code>00_build_gene_sets</code>, and the protein abundance matrix from quantification with the blood index’s effect removed (<code>proteins_adjusted.rds</code>).</p>
+<p>singscore ranks every gene within a sample and scores a set by its members’ mean rank, centred so 0 is what random members would give. A score ignores the rest of the cohort: no p-value, no contrast. <code>04_set_classification</code> and <code>05_set_association</code> test the scores. The abundances have the blood index’s effect removed (<code>proteins_adjusted.rds</code>).</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_run_singscore&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
@@ -2258,58 +2257,40 @@ vertical-align: -.125em;
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>book <span class="ot">&lt;-</span> <span class="fu">file.path</span>(gene_sets, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(book, <span class="st">&quot;set_catalog&quot;</span>)</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(book, <span class="st">&quot;protein_gene_map&quot;</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(proteins<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 3042  131</code></pre>
-</div>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="score-samples" class="level2">
 <h2 class="anchored" data-anchor-id="score-samples">Score samples</h2>
-<p>Sets are keyed on gene symbols, so the matrix keeps the representative protein of each symbol and its rows are renamed from protein to gene. <code>rankGenes()</code> ranks genes within each sample; <code>multiScore()</code> scores every set in every sample and returns <code>Scores</code>, a set-by-sample matrix, beside <code>Dispersions</code>, the spread of each set’s member ranks within each sample.</p>
+<p>Sets are keyed on gene symbols, so the matrix keeps each symbol’s representative protein, renamed to the gene. <code>multiScore()</code> returns <code>Scores</code> and <code>Dispersions</code> (the spread of a set’s member ranks), both set by sample.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>gene_map <span class="ot">&lt;-</span> <span class="fu">filter</span>(protein_map, selected)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>gene_matrix <span class="ot">&lt;-</span> proteins<span class="sc">$</span>E[gene_map<span class="sc">$</span>protein, ]</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(gene_matrix) <span class="ot">&lt;-</span> gene_map<span class="sc">$</span>gene</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>scored <span class="ot">&lt;-</span> singscore<span class="sc">::</span><span class="fu">multiScore</span>(singscore<span class="sc">::</span><span class="fu">rankGenes</span>(gene_matrix), <span class="at">upSetColc =</span> sets)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>scores <span class="ot">&lt;-</span> scored<span class="sc">$</span>Scores</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(scores)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gene_map <span class="ot">&lt;-</span> <span class="fu">filter</span>(protein_map, selected)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>gene_matrix <span class="ot">&lt;-</span> proteins<span class="sc">$</span>E[gene_map<span class="sc">$</span>protein, ]</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(gene_matrix) <span class="ot">&lt;-</span> gene_map<span class="sc">$</span>gene</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>scored <span class="ot">&lt;-</span> singscore<span class="sc">::</span><span class="fu">multiScore</span>(singscore<span class="sc">::</span><span class="fu">rankGenes</span>(gene_matrix), <span class="at">upSetColc =</span> sets)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>scores <span class="ot">&lt;-</span> scored<span class="sc">$</span>Scores</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(scores)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 1990  131</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>scores[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                                          S02_L_T1     S02_L_T2    S02_R_T1
-Hallmark|HALLMARK_ADIPOGENESIS         0.190704068  0.185312475  0.19934106
-Hallmark|HALLMARK_ALLOGRAFT_REJECTION -0.027454243  0.006565248  0.02478251
-Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.001718213 -0.019091816  0.03746309
-Hallmark|HALLMARK_APICAL_JUNCTION     -0.024552852 -0.076988911 -0.02263650
-                                          S02_R_T2
-Hallmark|HALLMARK_ADIPOGENESIS         0.186002738
-Hallmark|HALLMARK_ALLOGRAFT_REJECTION  0.036363204
-Hallmark|HALLMARK_ANDROGEN_RESPONSE    0.000559301
-Hallmark|HALLMARK_APICAL_JUNCTION     -0.019200714</code></pre>
 </div>
 </div>
 </section>
 <section id="score-and-dispersion-per-set" class="level2">
 <h2 class="anchored" data-anchor-id="score-and-dispersion-per-set">Score and dispersion per set</h2>
-<p>Dispersion is low when a set’s members sit together in the ranking and high when they scatter. Average each set’s score and dispersion across samples, then summarise by collection.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>set_spread <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database) <span class="sc">|&gt;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">score =</span> <span class="fu">rowMeans</span>(scores[set_id, ]),</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">dispersion =</span> <span class="fu">rowMeans</span>(scored<span class="sc">$</span>Dispersions[set_id, ])</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>collection_spread <span class="ot">&lt;-</span> set_spread <span class="sc">|&gt;</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">sets =</span> <span class="fu">n</span>(), <span class="at">median_score =</span> <span class="fu">round</span>(<span class="fu">median</span>(score), <span class="dv">4</span>),</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_dispersion =</span> <span class="fu">round</span>(<span class="fu">median</span>(dispersion), <span class="dv">1</span>), <span class="at">.by =</span> database</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>collection_spread</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>set_spread <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database) <span class="sc">|&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">score =</span> <span class="fu">rowMeans</span>(scores[set_id, ]),</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">dispersion =</span> <span class="fu">rowMeans</span>(scored<span class="sc">$</span>Dispersions[set_id, ])</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>collection_spread <span class="ot">&lt;-</span> set_spread <span class="sc">|&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">sets =</span> <span class="fu">n</span>(), <span class="at">median_score =</span> <span class="fu">round</span>(<span class="fu">median</span>(score), <span class="dv">4</span>),</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_dispersion =</span> <span class="fu">round</span>(<span class="fu">median</span>(dispersion), <span class="dv">1</span>), <span class="at">.by =</span> database</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>collection_spread</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 4
   database     sets median_score median_dispersion
@@ -2324,17 +2305,17 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.019200714</code></pre>
 </section>
 <section id="check-participant-structure" class="level2">
 <h2 class="anchored" data-anchor-id="check-participant-structure">Check participant structure</h2>
-<p>A principal component analysis of the scores (samples as rows) shows what drives them. For the first two components, the R² of a linear model on participant gives the share of that component’s variance explained by participant identity. <code>proteins$targets</code> rows follow the matrix columns, so they line up with the component scores.</p>
+<p>For the first two principal components of the scores, the R² on participant gives the share of the component explained by participant identity. <code>proteins$targets</code> rows follow the matrix columns.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>components <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(<span class="fu">t</span>(scores))</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>structure_check <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">component =</span> <span class="fu">paste0</span>(<span class="st">&quot;PC&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance_explained =</span> <span class="fu">round</span>(<span class="fu">summary</span>(components)<span class="sc">$</span>importance[<span class="dv">2</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], <span class="dv">3</span>),</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">participant_share =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">map_dbl</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="cf">function</span>(i) {</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summary</span>(<span class="fu">lm</span>(components<span class="sc">$</span>x[, i] <span class="sc">~</span> proteins<span class="sc">$</span>targets<span class="sc">$</span>participant))<span class="sc">$</span>r.squared</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  }), <span class="dv">3</span>), <span class="cn">NA</span>, <span class="cn">NA</span>)</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>structure_check</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>components <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(<span class="fu">t</span>(scores))</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>structure_check <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">component =</span> <span class="fu">paste0</span>(<span class="st">&quot;PC&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance_explained =</span> <span class="fu">round</span>(<span class="fu">summary</span>(components)<span class="sc">$</span>importance[<span class="dv">2</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], <span class="dv">3</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">participant_share =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">map_dbl</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="cf">function</span>(i) {</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summary</span>(<span class="fu">lm</span>(components<span class="sc">$</span>x[, i] <span class="sc">~</span> proteins<span class="sc">$</span>targets<span class="sc">$</span>participant))<span class="sc">$</span>r.squared</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  }), <span class="dv">3</span>), <span class="cn">NA</span>, <span class="cn">NA</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>structure_check</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 3
   component variance_explained participant_share
@@ -2349,45 +2330,43 @@ Hallmark|HALLMARK_APICAL_JUNCTION     -0.019200714</code></pre>
 </section>
 <section id="figure" class="level2">
 <h2 class="anchored" data-anchor-id="figure">Figure</h2>
-<p>singscore’s own <code>plotDispersion()</code> and <code>plotRankDensity()</code> draw one signature at a time. S5 plots each set’s mean score against its mean dispersion from the <code>multiScore()</code> matrices.</p>
+<p>singscore’s <code>plotDispersion()</code> draws one signature at a time, so S5 plots every set’s mean score against its mean dispersion directly.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>figure <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(set_spread, <span class="fu">aes</span>(score, dispersion, <span class="at">colour =</span> database)) <span class="sc">+</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey80&quot;</span>) <span class="sc">+</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>, <span class="at">size =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">3</span>, <span class="at">alpha =</span> <span class="dv">1</span>))) <span class="sc">+</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;mean score across samples&quot;</span>, <span class="at">y =</span> <span class="st">&quot;mean dispersion across samples&quot;</span>,</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;S5. singscore: set score against dispersion&quot;</span></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">aspect.ratio =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_run_singscore_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(figure)</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>figure <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(set_spread, <span class="fu">aes</span>(score, dispersion, <span class="at">colour =</span> database)) <span class="sc">+</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey80&quot;</span>) <span class="sc">+</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>, <span class="at">size =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_brewer</span>(<span class="at">palette =</span> <span class="st">&quot;Dark2&quot;</span>, <span class="at">name =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">colour =</span> <span class="fu">guide_legend</span>(<span class="at">override.aes =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">3</span>, <span class="at">alpha =</span> <span class="dv">1</span>))) <span class="sc">+</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;mean score across samples&quot;</span>, <span class="at">y =</span> <span class="st">&quot;mean dispersion across samples&quot;</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;S5. singscore: set score against dispersion&quot;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">aspect.ratio =</span> <span class="dv">1</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_run_singscore_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(figure)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p>The score matrix is written twice. <code>set_scores.rds</code> is the copy later steps read: singscore values carry exact rank ties, and a round trip through Excel changes the last bit of some, which breaks ties and moves 05’s Wilcoxon and Spearman p. <code>03_run_singscore.xlsx</code> holds the same matrix for reading, beside the collection medians and the component check.</p>
+<p>Later steps read the scores from <code>set_scores.rds</code>: singscore values carry exact rank ties, and an Excel round trip changes the last bit of some, which breaks ties and moves 05’s rank tests. The workbook copy is for reading.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(scores, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;set_scores.rds&quot;</span>))</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">collection_spread =</span> collection_spread,</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">structure_check =</span> structure_check,</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>)</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;03_run_singscore.xlsx&quot;</span>)</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(scores, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;set_scores.rds&quot;</span>))</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">collection_spread =</span> collection_spread,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">structure_check =</span> structure_check,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;03_run_singscore.xlsx&quot;</span>)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23

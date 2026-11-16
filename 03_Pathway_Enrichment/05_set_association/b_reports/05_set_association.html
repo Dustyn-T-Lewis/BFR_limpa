@@ -2209,11 +2209,9 @@ vertical-align: -.125em;
   <ul>
   <li><a href="#load-packages" id="toc-load-packages" class="nav-link active" data-scroll-target="#load-packages">Load packages</a></li>
   <li><a href="#read-inputs" id="toc-read-inputs" class="nav-link" data-scroll-target="#read-inputs">Read inputs</a></li>
-  <li><a href="#select-sets" id="toc-select-sets" class="nav-link" data-scroll-target="#select-sets">Select sets</a></li>
   <li><a href="#pair-the-samples" id="toc-pair-the-samples" class="nav-link" data-scroll-target="#pair-the-samples">Pair the samples</a></li>
   <li><a href="#prepare-the-phenotype" id="toc-prepare-the-phenotype" class="nav-link" data-scroll-target="#prepare-the-phenotype">Prepare the phenotype</a></li>
   <li><a href="#correlate-each-set" id="toc-correlate-each-set" class="nav-link" data-scroll-target="#correlate-each-set">Correlate each set</a></li>
-  <li><a href="#check-results" id="toc-check-results" class="nav-link" data-scroll-target="#check-results">Check results</a></li>
   <li><a href="#compare-with-chance" id="toc-compare-with-chance" class="nav-link" data-scroll-target="#compare-with-chance">Compare with chance</a></li>
   <li><a href="#rank-sets-on-the-protein-association" id="toc-rank-sets-on-the-protein-association" class="nav-link" data-scroll-target="#rank-sets-on-the-protein-association">Rank sets on the protein association</a></li>
   <li><a href="#draw-figures" id="toc-draw-figures" class="nav-link" data-scroll-target="#draw-figures">Draw figures</a></li>
@@ -2255,40 +2253,19 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>Four inputs here: the set catalogue from <code>00_build_gene_sets</code>, the singscore matrix from <code>03_run_singscore</code> (one row per set, one column per sample), the protein estimates with their sample targets and the per-leg phenotype measurements. The protein-association inputs (the gene sets, the protein to gene map and the saved t values and designs) are read in their own section.</p>
+<p>The protein-association inputs are read in their own section.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;05_set_association&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>set_catalog <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">file.path</span>(gene_sets, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>), <span class="st">&quot;set_catalog&quot;</span>)</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>set_score <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_run_singscore&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;set_scores.rds&quot;</span>))</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(set_score)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 1990  131</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(targets[<span class="fu">c</span>(<span class="st">&quot;sample_id&quot;</span>, <span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>, <span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;timepoint&quot;</span>)], <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>         sample_id participant leg treatment timepoint
-S02_L_T1  S02_L_T1         S02   L      HLRT        T1
-S02_L_T2  S02_L_T2         S02   L      HLRT        T2
-S02_R_T1  S02_R_T1         S02   R       BFR        T1
-S02_R_T2  S02_R_T2         S02   R       BFR        T2
-S03_L_T1  S03_L_T1         S03   L      HLRT        T1
-S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
-</div>
-</div>
-</section>
-<section id="select-sets" class="level2">
-<h2 class="anchored" data-anchor-id="select-sets">Select sets</h2>
-<p>Only sets the catalogue marks as <code>qualifies</code> are tested. <code>values</code> holds their scores in catalogue order.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>catalog <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> set_score[catalog<span class="sc">$</span>set_id, ]</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(catalog<span class="sc">$</span>database)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>phenotype <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;phenotype.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>catalog <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(set_id, database, pathway)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>values <span class="ot">&lt;-</span> set_score[catalog<span class="sc">$</span>set_id, ]</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(catalog<span class="sc">$</span>database)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     GO_Slim        GOBP    Hallmark KEGG_Legacy    Reactome 
@@ -2298,201 +2275,125 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="pair-the-samples" class="level2">
 <h2 class="anchored" data-anchor-id="pair-the-samples">Pair the samples</h2>
-<p>Every comparison here is paired, so each sample needs its partner. <code>by_timepoint</code> spreads the targets to one row per leg, with the T1 and T2 sample IDs side by side. <code>legs</code> keeps legs sampled at both time points. Treatment comes from the targets, never the leg letter: leg assignment was counterbalanced.</p>
+<p><code>legs</code> has one row per leg sampled at both time points, with its T1 and T2 sample IDs; <code>delta_pairs</code> one row per participant with both legs. Treatment comes from the targets, never the leg letter: leg assignment was counterbalanced.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>by_timepoint <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(leg_id, participant, leg, treatment, timepoint, sample_id) <span class="sc">|&gt;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> timepoint, <span class="at">values_from =</span> sample_id)</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>legs <span class="ot">&lt;-</span> <span class="fu">drop_na</span>(by_timepoint, T1, T2) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(participant, treatment)</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(legs, <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 4 × 6
-  leg_id participant leg   treatment T1       T2      
-  &lt;chr&gt;  &lt;chr&gt;       &lt;chr&gt; &lt;chr&gt;     &lt;chr&gt;    &lt;chr&gt;   
-1 S02_R  S02         R     BFR       S02_R_T1 S02_R_T2
-2 S02_L  S02         L     HLRT      S02_L_T1 S02_L_T2
-3 S03_R  S03         R     BFR       S03_R_T1 S03_R_T2
-4 S03_L  S03         L     HLRT      S03_L_T1 S03_L_T2</code></pre>
-</div>
-</div>
-<p>Widening the legs on treatment gives one row per participant with the BFR and HLRT legs side by side. Participants missing either leg are dropped.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>delta_pairs <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(participant, treatment, leg_id) <span class="sc">|&gt;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> treatment, <span class="at">values_from =</span> leg_id) <span class="sc">|&gt;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>(BFR, HLRT)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">legs =</span> <span class="fu">nrow</span>(legs), <span class="at">change =</span> <span class="fu">nrow</span>(delta_pairs))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>legs <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(leg_id, participant, leg, treatment, timepoint, sample_id) <span class="sc">|&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> timepoint, <span class="at">values_from =</span> sample_id) <span class="sc">|&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>(T1, T2) <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(participant, treatment)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>delta_pairs <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(participant, treatment, leg_id) <span class="sc">|&gt;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> treatment, <span class="at">values_from =</span> leg_id) <span class="sc">|&gt;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>(BFR, HLRT)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">legs =</span> <span class="fu">nrow</span>(legs), <span class="at">change =</span> <span class="fu">nrow</span>(delta_pairs))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  legs change 
     65     32 </code></pre>
 </div>
-</div>
-<p>The change in each set’s score per leg is T2 minus T1. Its columns are named by leg, so the BFR and HLRT legs of a participant can be picked out with <code>delta_pairs</code>.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>delta <span class="ot">&lt;-</span> values[, legs<span class="sc">$</span>T2] <span class="sc">-</span> values[, legs<span class="sc">$</span>T1]</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(delta) <span class="ot">&lt;-</span> legs<span class="sc">$</span>leg_id</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>delta <span class="ot">&lt;-</span> values[, legs<span class="sc">$</span>T2] <span class="sc">-</span> values[, legs<span class="sc">$</span>T1]</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(delta) <span class="ot">&lt;-</span> legs<span class="sc">$</span>leg_id</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="prepare-the-phenotype" class="level2">
 <h2 class="anchored" data-anchor-id="prepare-the-phenotype">Prepare the phenotype</h2>
-<p>Four outcomes, each a post minus pre change in one leg: cross-sectional area (<code>csa</code>) and echo intensity (<code>echo</code>) of vastus lateralis (<code>vl</code>) and rectus femoris (<code>rf</code>). Echo intensity falls as muscle composition improves, so a negative change is the favourable one. The join is declared one-to-one, because a duplicated phenotype row would silently misalign every leg below.</p>
+<p>Four outcomes, each a post minus pre change in one leg: cross-sectional area (<code>csa</code>) and echo intensity (<code>echo</code>) of vastus lateralis (<code>vl</code>) and rectus femoris (<code>rf</code>). Echo falls as muscle composition improves. The join is one-to-one, since a duplicated phenotype row would misalign every leg.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>outcomes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;vl_csa&quot;</span>, <span class="st">&quot;vl_echo&quot;</span>, <span class="st">&quot;rf_csa&quot;</span>, <span class="st">&quot;rf_echo&quot;</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>leg_phenotype <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(phenotype, <span class="sc">-</span>treatment),</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>), <span class="at">relationship =</span> <span class="st">&quot;one-to-one&quot;</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">vl_csa =</span> vl_csa_post_cm2 <span class="sc">-</span> vl_csa_pre_cm2,</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">vl_echo =</span> vl_echo_post_au <span class="sc">-</span> vl_echo_pre_au,</span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">rf_csa =</span> rf_csa_post_cm2 <span class="sc">-</span> rf_csa_pre_cm2,</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">rf_echo =</span> rf_echo_post_au <span class="sc">-</span> rf_echo_pre_au</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">select</span>(leg_phenotype, leg_id, treatment, <span class="fu">all_of</span>(outcomes)), <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 4 × 6
-  leg_id treatment vl_csa vl_echo rf_csa rf_echo
-  &lt;chr&gt;  &lt;chr&gt;      &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-1 S02_R  BFR        1.77    1069   3.21    7594.
-2 S02_L  HLRT       0.943    197   2.49     206 
-3 S03_R  BFR       -0.963  -4708.  2.22   -3502 
-4 S03_L  HLRT       1.71     826   0.225  -9888.</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>outcomes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;vl_csa&quot;</span>, <span class="st">&quot;vl_echo&quot;</span>, <span class="st">&quot;rf_csa&quot;</span>, <span class="st">&quot;rf_echo&quot;</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>leg_phenotype <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(phenotype, <span class="sc">-</span>treatment),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>), <span class="at">relationship =</span> <span class="st">&quot;one-to-one&quot;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">vl_csa =</span> vl_csa_post_cm2 <span class="sc">-</span> vl_csa_pre_cm2,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">vl_echo =</span> vl_echo_post_au <span class="sc">-</span> vl_echo_pre_au,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">rf_csa =</span> rf_csa_post_cm2 <span class="sc">-</span> rf_csa_pre_cm2,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">rf_echo =</span> rf_echo_post_au <span class="sc">-</span> rf_echo_pre_au</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
-<p>The within-participant analysis takes BFR minus HLRT for the score change and for each outcome change. Participant traits that move both legs cancel out of that difference.</p>
+<p>The within-participant analysis takes BFR minus HLRT for the score change and each outcome change, so participant traits that move both legs cancel.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>paired <span class="ot">&lt;-</span> delta[, delta_pairs<span class="sc">$</span>BFR] <span class="sc">-</span> delta[, delta_pairs<span class="sc">$</span>HLRT]</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(paired) <span class="ot">&lt;-</span> delta_pairs<span class="sc">$</span>participant</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>paired_outcome <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(name) {</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  value <span class="ot">&lt;-</span> <span class="fu">set_names</span>(leg_phenotype[[name]], leg_phenotype<span class="sc">$</span>leg_id)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  value[delta_pairs<span class="sc">$</span>BFR] <span class="sc">-</span> value[delta_pairs<span class="sc">$</span>HLRT]</span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>paired <span class="ot">&lt;-</span> delta[, delta_pairs<span class="sc">$</span>BFR] <span class="sc">-</span> delta[, delta_pairs<span class="sc">$</span>HLRT]</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(paired) <span class="ot">&lt;-</span> delta_pairs<span class="sc">$</span>participant</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>paired_outcome <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(name) {</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  value <span class="ot">&lt;-</span> <span class="fu">set_names</span>(leg_phenotype[[name]], leg_phenotype<span class="sc">$</span>leg_id)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  value[delta_pairs<span class="sc">$</span>BFR] <span class="sc">-</span> value[delta_pairs<span class="sc">$</span>HLRT]</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="correlate-each-set" class="level2">
 <h2 class="anchored" data-anchor-id="correlate-each-set">Correlate each set</h2>
-<p>Spearman correlation ranks both variables and correlates the ranks, so it measures any monotone relationship and is not pulled by single extreme legs. <code>cor.test()</code> computes its p with algorithm AS 89, which is exact below 10 observations and an Edgeworth series approximation at the 32 and 65 used here. Singscore changes can tie exactly; for those sets <code>cor.test()</code> warns and uses the t approximation instead, and the warnings are suppressed.</p>
+<p>Spearman correlation measures any monotone relationship and is not pulled by single extreme legs. <code>cor.test()</code> uses AS 89: exact below 10 observations, an Edgeworth approximation at the 32 and 65 here. <code>all_legs</code> correlates every leg’s score change with its outcome change, both arms together; <code>within_participant</code> correlates the BFR minus HLRT differences. BH runs within each analysis, outcome and collection.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>spearman_by_row <span class="ot">&lt;-</span> <span class="cf">function</span>(values, outcome) {</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  fits <span class="ot">&lt;-</span> <span class="fu">suppressWarnings</span>(<span class="fu">apply</span>(values, <span class="dv">1</span>, <span class="cf">function</span>(row) {</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    test <span class="ot">&lt;-</span> <span class="fu">cor.test</span>(row, outcome, <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="at">r =</span> <span class="fu">unname</span>(test<span class="sc">$</span>estimate), <span class="at">p =</span> test<span class="sc">$</span>p.value)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  }))</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_id =</span> <span class="fu">rownames</span>(values), <span class="at">n =</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(outcome)),</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">r =</span> <span class="fu">unname</span>(fits[<span class="st">&quot;r&quot;</span>, ]), <span class="at">p =</span> <span class="fu">unname</span>(fits[<span class="st">&quot;p&quot;</span>, ])</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tied singscore changes make cor.test() warn and fall back to the t approximation.</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>spearman_by_row <span class="ot">&lt;-</span> <span class="cf">function</span>(x, outcome) {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  fits <span class="ot">&lt;-</span> <span class="fu">suppressWarnings</span>(<span class="fu">apply</span>(x, <span class="dv">1</span>, <span class="cf">function</span>(row) {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    test <span class="ot">&lt;-</span> <span class="fu">cor.test</span>(row, outcome, <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="at">r =</span> <span class="fu">unname</span>(test<span class="sc">$</span>estimate), <span class="at">p =</span> test<span class="sc">$</span>p.value)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  }))</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_id =</span> <span class="fu">rownames</span>(x), <span class="at">n =</span> <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.na</span>(outcome)),</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">r =</span> <span class="fu">unname</span>(fits[<span class="st">&quot;r&quot;</span>, ]), <span class="at">p =</span> <span class="fu">unname</span>(fits[<span class="st">&quot;p&quot;</span>, ])</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>set_association <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(name) {</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">all_legs =</span> <span class="fu">spearman_by_row</span>(delta, leg_phenotype[[name]]),</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">within_participant =</span> <span class="fu">spearman_by_row</span>(paired, paired_outcome[[name]]),</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">.id =</span> <span class="st">&quot;analysis&quot;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">outcome =</span> name)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(analysis, outcome) <span class="sc">|&gt;</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(catalog, set_id, database, pathway), <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>), <span class="at">.by =</span> <span class="fu">c</span>(analysis, outcome, database))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Two analyses per outcome. <code>all_legs</code> correlates every leg’s score change with its outcome change, both arms together. <code>within_participant</code> correlates the BFR minus HLRT differences. BH adjustment runs within each analysis, outcome and collection, never across them.</p>
+<p>The all-legs analysis counts a participant’s two legs as independent. The check is the median Spearman r between a participant’s BFR and HLRT leg changes, across sets:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>set_association <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(name) {</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">all_legs =</span> <span class="fu">spearman_by_row</span>(delta, leg_phenotype[[name]]),</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">within_participant =</span> <span class="fu">spearman_by_row</span>(paired, paired_outcome[[name]]),</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">.id =</span> <span class="st">&quot;analysis&quot;</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">outcome =</span> name)</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(analysis, outcome) <span class="sc">|&gt;</span></span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(catalog, set_id, database, pathway), <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">fdr =</span> <span class="fu">p.adjust</span>(p, <span class="st">&quot;BH&quot;</span>), <span class="at">.by =</span> <span class="fu">c</span>(analysis, outcome, database))</span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">arrange</span>(set_association, p), <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 9
-  analysis           outcome set_id     n      r       p database pathway    fdr
-  &lt;chr&gt;              &lt;chr&gt;   &lt;chr&gt;  &lt;int&gt;  &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;dbl&gt;
-1 within_participant rf_echo GOBP|…    32 -0.660 5.96e-5 GOBP     GOBP_P… 0.0814
-2 all_legs           rf_csa  GOBP|…    65 -0.448 2.12e-4 GOBP     GOBP_R… 0.289 
-3 within_participant rf_echo GOBP|…    32  0.570 8.21e-4 GOBP     GOBP_N… 0.486 
-4 all_legs           vl_csa  GOBP|…    65 -0.397 1.16e-3 GOBP     GOBP_P… 0.889 
-5 all_legs           vl_echo GOBP|…    65 -0.392 1.25e-3 GOBP     GOBP_M… 0.999 
-6 within_participant rf_echo GOBP|…    32  0.547 1.42e-3 GOBP     GOBP_N… 0.486 </code></pre>
-</div>
-</div>
-<p>The all-legs analysis counts a participant’s two legs as independent observations. The check is the median Spearman r between a participant’s BFR and HLRT legs, across sets:</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>leg_r <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(<span class="fu">rownames</span>(delta), <span class="cf">function</span>(id) {</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cor</span>(delta[id, delta_pairs<span class="sc">$</span>BFR], delta[id, delta_pairs<span class="sc">$</span>HLRT], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">median</span>(leg_r), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>leg_r <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(<span class="fu">rownames</span>(delta), <span class="cf">function</span>(id) {</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cor</span>(delta[id, delta_pairs<span class="sc">$</span>BFR], delta[id, delta_pairs<span class="sc">$</span>HLRT], <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">median</span>(leg_r), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.021</code></pre>
 </div>
 </div>
-<p>The same correlation inside each arm, untested; it feeds the insets on the all-legs figure pages and the <code>set_by_arm</code> sheet.</p>
+<p>The same correlation inside each arm, reported but not adjusted, for the all-legs figure insets.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>by_arm <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>)), <span class="cf">function</span>(treatment) {</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  keep <span class="ot">&lt;-</span> leg_phenotype<span class="sc">$</span>treatment <span class="sc">==</span> treatment</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(name) {</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">spearman_by_row</span>(delta[, keep], leg_phenotype[[name]][keep]) <span class="sc">|&gt;</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">outcome =</span> name)</span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>()</span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;treatment&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section>
-<section id="check-results" class="level2">
-<h2 class="anchored" data-anchor-id="check-results">Check results</h2>
-<p>One row per analysis and outcome: every set tested once, the number of observations, the range of r and any missing p-value.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>set_association <span class="sc">|&gt;</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sets =</span> <span class="fu">n</span>(), <span class="at">observations =</span> <span class="fu">first</span>(n), <span class="at">r_min =</span> <span class="fu">min</span>(r), <span class="at">r_max =</span> <span class="fu">max</span>(r),</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">missing_p =</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(p)), <span class="at">.by =</span> <span class="fu">c</span>(analysis, outcome)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 8 × 7
-  analysis           outcome  sets observations  r_min r_max missing_p
-  &lt;chr&gt;              &lt;chr&gt;   &lt;int&gt;        &lt;int&gt;  &lt;dbl&gt; &lt;dbl&gt;     &lt;int&gt;
-1 all_legs           vl_csa   1990           65 -0.397 0.384         0
-2 within_participant vl_csa   1990           32 -0.521 0.413         0
-3 all_legs           vl_echo  1990           65 -0.392 0.319         0
-4 within_participant vl_echo  1990           32 -0.543 0.503         0
-5 all_legs           rf_csa   1990           65 -0.448 0.354         0
-6 within_participant rf_csa   1990           32 -0.528 0.544         0
-7 all_legs           rf_echo  1990           65 -0.385 0.367         0
-8 within_participant rf_echo  1990           32 -0.660 0.570         0</code></pre>
-</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>by_arm <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>)), <span class="cf">function</span>(treatment) {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  keep <span class="ot">&lt;-</span> leg_phenotype<span class="sc">$</span>treatment <span class="sc">==</span> treatment</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(name) {</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">spearman_by_row</span>(delta[, keep], leg_phenotype[[name]][keep]) <span class="sc">|&gt;</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">outcome =</span> name)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>()</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;treatment&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="compare-with-chance" class="level2">
 <h2 class="anchored" data-anchor-id="compare-with-chance">Compare with chance</h2>
-<p>With thousands of sets, some reach p &lt; 0.05 by chance. The chance expectation is 5% of the sets tested: the number of nominal hits a collection returns when no set tracks the outcome. The ratio of observed nominal hits to that count reads 1 at chance. Each collection gets its own denominator, so a 41-set collection is not read against a 1,366-set one, and BH runs inside the same split for the same reason.</p>
+<p>The chance expectation is 5% of the sets tested, so the ratio of nominal hits to it reads 1 at chance, with one denominator per collection as in <code>04_</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>chance_expectation <span class="ot">&lt;-</span> set_association <span class="sc">|&gt;</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">analysis =</span> <span class="fu">paste0</span>(<span class="st">&quot;association: &quot;</span>, analysis), <span class="at">comparison =</span> outcome, database,</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_pairs =</span> n, p, fdr</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">n</span>(), <span class="at">nominal =</span> <span class="fu">sum</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">expected =</span> <span class="fu">round</span>(<span class="fu">n</span>() <span class="sc">*</span> <span class="fl">0.05</span>, <span class="dv">1</span>),</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># divide by the exact expectation, not the rounded column above</span></span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">ratio =</span> <span class="fu">round</span>(nominal <span class="sc">/</span> (<span class="fu">n</span>() <span class="sc">*</span> <span class="fl">0.05</span>), <span class="dv">2</span>), <span class="at">fdr_sig =</span> <span class="fu">sum</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(analysis, comparison, database, n_pairs)</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(chance_expectation, <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 9
-  analysis   comparison database n_pairs features nominal expected ratio fdr_sig
-  &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;int&gt;    &lt;int&gt;   &lt;int&gt;    &lt;dbl&gt; &lt;dbl&gt;   &lt;int&gt;
-1 associati… vl_csa     Hallmark      65       41       0      2.1  0          0
-2 associati… vl_csa     Reactome      65      430       8     21.5  0.37       0
-3 associati… vl_csa     KEGG_Le…      65       94       7      4.7  1.49       0
-4 associati… vl_csa     GOBP          65     1366      70     68.3  1.02       0
-5 associati… vl_csa     GO_Slim       65       59       3      3    1.02       0
-6 associati… vl_csa     Hallmark      32       41       0      2.1  0          0</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The ratio divides by the unrounded expectation, not the rounded `expected` column.</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>chance_expectation <span class="ot">&lt;-</span> set_association <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">analysis =</span> <span class="fu">paste0</span>(<span class="st">&quot;association: &quot;</span>, analysis), <span class="at">comparison =</span> outcome, database,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_pairs =</span> n, p, fdr</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">features =</span> <span class="fu">n</span>(), <span class="at">nominal =</span> <span class="fu">sum</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">expected =</span> <span class="fu">round</span>(<span class="fu">n</span>() <span class="sc">*</span> <span class="fl">0.05</span>, <span class="dv">1</span>),</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">ratio =</span> <span class="fu">round</span>(nominal <span class="sc">/</span> (<span class="fu">n</span>() <span class="sc">*</span> <span class="fl">0.05</span>), <span class="dv">2</span>), <span class="at">fdr_sig =</span> <span class="fu">sum</span>(fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(analysis, comparison, database, n_pairs)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
-<p>Nominal hits as a multiple of chance, by analysis, outcome and collection, then the sets surviving BH in each analysis and outcome.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>chance_expectation <span class="sc">|&gt;</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(analysis, comparison, database, ratio) <span class="sc">|&gt;</span></span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> database, <span class="at">values_from =</span> ratio)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>chance_expectation <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(analysis, comparison, database, ratio) <span class="sc">|&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> database, <span class="at">values_from =</span> ratio)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 7
   analysis                comparison Hallmark Reactome KEGG_Legacy  GOBP GO_Slim
@@ -2506,7 +2407,7 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 7 association: all_legs   rf_echo        0        0.56        1.91  0.63    0.34
 8 association: within_pa… rf_echo        0.49     0.74        2.55  0.91    1.36</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summarise</span>(chance_expectation, <span class="at">fdr_sig =</span> <span class="fu">sum</span>(fdr_sig), <span class="at">.by =</span> <span class="fu">c</span>(analysis, comparison))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summarise</span>(chance_expectation, <span class="at">fdr_sig =</span> <span class="fu">sum</span>(fdr_sig), <span class="at">.by =</span> <span class="fu">c</span>(analysis, comparison))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 3
   analysis                        comparison fdr_sig
@@ -2524,54 +2425,54 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="rank-sets-on-the-protein-association" class="level2">
 <h2 class="anchored" data-anchor-id="rank-sets-on-the-protein-association">Rank sets on the protein association</h2>
-<p><code>03_Protein_Association</code> saves two rankings per outcome, each a moderated t from its arm-specific model: <code>average</code>, the protein-on-outcome slope averaged over BFR and HLRT, and <code>difference</code>, the BFR slope minus the HLRT slope. Outcomes are the four change outcomes and <code>volume_load_t</code>. fgsea ranks the representative protein of each gene by that t and tests every set, with the sets, size limits and seed of <code>01_run_fgsea_and_fry</code> and BH over all sets within each ranking. fgsea treats proteins as independent, so a set it calls is a lead; fry, below, is the confirmation, as in <code>01_</code>.</p>
+<p><code>03_Protein_Association</code> saves two moderated t rankings per outcome: <code>average</code>, the protein-on-outcome slope averaged over BFR and HLRT, and <code>difference</code>, BFR slope minus HLRT slope, for the four change outcomes and volume load. fgsea runs with the sets, size limits and seed of <code>01_run_fgsea_and_fry</code>, BH within each ranking. Its calls are leads; fry confirms.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>association_t <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Protein_Association&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;association_t.rds&quot;</span></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(gene_sets, <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>gene_of <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">file.path</span>(gene_sets, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>), <span class="st">&quot;protein_gene_map&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(selected)</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>association_fgsea <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">colnames</span>(association_t)), <span class="cf">function</span>(column) {</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  stats <span class="ot">&lt;-</span> <span class="fu">set_names</span>(association_t[gene_of<span class="sc">$</span>protein, column], gene_of<span class="sc">$</span>gene)</span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  fgsea<span class="sc">::</span><span class="fu">fgsea</span>(sets, stats, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
-<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">leadingEdge =</span> <span class="fu">map_chr</span>(leadingEdge, str_flatten, <span class="st">&quot;;&quot;</span>))</span>
-<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;ranking&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">set_id =</span> pathway) <span class="sc">|&gt;</span></span>
-<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(set_catalog, set_id, database), <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>association_t <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Protein_Association&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;association_t.rds&quot;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">file.path</span>(gene_sets, <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>gene_of <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">file.path</span>(gene_sets, <span class="st">&quot;00_build_gene_sets.xlsx&quot;</span>), <span class="st">&quot;protein_gene_map&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(selected)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>association_fgsea <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">colnames</span>(association_t)), <span class="cf">function</span>(column) {</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  stats <span class="ot">&lt;-</span> <span class="fu">set_names</span>(association_t[gene_of<span class="sc">$</span>protein, column], gene_of<span class="sc">$</span>gene)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  fgsea<span class="sc">::</span><span class="fu">fgsea</span>(sets, stats, <span class="at">minSize =</span> <span class="dv">15</span>, <span class="at">maxSize =</span> <span class="dv">500</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">leadingEdge =</span> <span class="fu">map_chr</span>(leadingEdge, str_flatten, <span class="st">&quot;;&quot;</span>))</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;ranking&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">set_id =</span> pathway) <span class="sc">|&gt;</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(set_catalog, set_id, database), <span class="at">by =</span> <span class="st">&quot;set_id&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>fry tests the same coefficient with the protein correlation kept: for each ranking it reads the arm design and contrast vector saved by <code>03_Protein_Association</code>, refits <code>dpcDE()</code> for that design’s precision weights and tests each set on the contrast. Set members become row numbers through each gene’s representative protein, as in <code>01_</code>.</p>
+<p>fry tests the same coefficient with protein correlation kept, on the saved design and contrast of each ranking, with that design’s <code>dpcDE()</code> precision weights.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>association_designs <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Protein_Association&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;association_designs.rds&quot;</span></span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>))</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>set_rows <span class="ot">&lt;-</span> <span class="fu">map</span>(sets, <span class="cf">function</span>(genes) {</span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">match</span>(gene_of<span class="sc">$</span>protein[<span class="fu">match</span>(genes, gene_of<span class="sc">$</span>gene)], <span class="fu">rownames</span>(proteins))</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>association_fry <span class="ot">&lt;-</span> <span class="fu">imap</span>(association_designs, <span class="cf">function</span>(model, ranking) {</span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">nrow</span>(model<span class="sc">$</span>design) <span class="sc">==</span> <span class="fu">ncol</span>(proteins))</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>weights <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, model<span class="sc">$</span>design, <span class="at">plot =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(</span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>    proteins, set_rows, model<span class="sc">$</span>design,</span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrast =</span> model<span class="sc">$</span>contrast, <span class="at">robust =</span> <span class="cn">TRUE</span>, <span class="at">sort =</span> <span class="st">&quot;none&quot;</span></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(ranking, set_id, <span class="at">fry_direction =</span> Direction, <span class="at">fry_p =</span> PValue, <span class="at">fry_fdr =</span> FDR)</span>
-<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>)</span>
-<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>association_sets <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
-<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>  association_fgsea, association_fry, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;outcome&quot;</span>, <span class="st">&quot;set_id&quot;</span>)</span>
-<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a>association_sets <span class="sc">|&gt;</span></span>
-<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">fgsea =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">fry =</span> <span class="fu">sum</span>(fry_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">fry_min_fdr =</span> <span class="fu">signif</span>(<span class="fu">min</span>(fry_fdr), <span class="dv">3</span>),</span>
-<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(coefficient, outcome)</span>
-<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>association_designs <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Protein_Association&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;association_designs.rds&quot;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>set_rows <span class="ot">&lt;-</span> <span class="fu">map</span>(sets, <span class="cf">function</span>(genes) {</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">match</span>(gene_of<span class="sc">$</span>protein[<span class="fu">match</span>(genes, gene_of<span class="sc">$</span>gene)], <span class="fu">rownames</span>(proteins))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>association_fry <span class="ot">&lt;-</span> <span class="fu">imap</span>(association_designs, <span class="cf">function</span>(model, ranking) {</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">nrow</span>(model<span class="sc">$</span>design) <span class="sc">==</span> <span class="fu">ncol</span>(proteins))</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>weights <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, model<span class="sc">$</span>design, <span class="at">plot =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fry</span>(</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    proteins, set_rows, model<span class="sc">$</span>design,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrast =</span> model<span class="sc">$</span>contrast, <span class="at">robust =</span> <span class="cn">TRUE</span>, <span class="at">sort =</span> <span class="st">&quot;none&quot;</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="st">&quot;set_id&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(ranking, set_id, <span class="at">fry_direction =</span> Direction, <span class="at">fry_p =</span> PValue, <span class="at">fry_fdr =</span> FDR)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_wider_delim</span>(ranking, <span class="st">&quot;_&quot;</span>, <span class="at">names =</span> <span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;outcome&quot;</span>), <span class="at">too_many =</span> <span class="st">&quot;merge&quot;</span>)</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>association_sets <span class="ot">&lt;-</span> <span class="fu">left_join</span>(</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>  association_fgsea, association_fry, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;coefficient&quot;</span>, <span class="st">&quot;outcome&quot;</span>, <span class="st">&quot;set_id&quot;</span>)</span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>association_sets <span class="sc">|&gt;</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">fgsea =</span> <span class="fu">sum</span>(padj <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">fry =</span> <span class="fu">sum</span>(fry_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span>), <span class="at">fry_min_fdr =</span> <span class="fu">signif</span>(<span class="fu">min</span>(fry_fdr), <span class="dv">3</span>),</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(coefficient, outcome)</span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 10 × 5
    coefficient outcome       fgsea   fry fry_min_fdr
@@ -2591,123 +2492,121 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="draw-figures" class="level2">
 <h2 class="anchored" data-anchor-id="draw-figures">Draw figures</h2>
+<p><code>association_figure()</code> draws every set-outcome pair in one collection reaching nominal p in one analysis, smallest p first, twelve to a page. All-legs pages (S11) plot each leg with a line fitted inside each arm and the within-arm correlations inset. Within-participant pages (S12) plot what was tested, the BFR minus HLRT differences, one point per participant. Pages are built from their own rows, because a paginating facet would build every panel for every page.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>figure_theme <span class="ot">&lt;-</span> <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>) <span class="sc">+</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="fl">6.8</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>, <span class="at">margin =</span> <span class="fu">margin</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">3</span>)),</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.spacing =</span> <span class="fu">unit</span>(<span class="dv">4</span>, <span class="st">&quot;mm&quot;</span>),</span>
-<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span></span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>write_pdf <span class="ot">&lt;-</span> <span class="cf">function</span>(pages, name) {</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, name), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">walk</span>(pages, print)</span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
-<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>figure_theme <span class="ot">&lt;-</span> <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">9</span>) <span class="sc">+</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="fl">6.8</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>, <span class="at">margin =</span> <span class="fu">margin</span>(<span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">3</span>)),</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.spacing =</span> <span class="fu">unit</span>(<span class="dv">4</span>, <span class="st">&quot;mm&quot;</span>),</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>write_pdf <span class="ot">&lt;-</span> <span class="cf">function</span>(pages, name) {</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, name), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">walk</span>(pages, print)</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>association_figure <span class="ot">&lt;-</span> <span class="cf">function</span>(which_analysis, number, title, db) {</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  hits <span class="ot">&lt;-</span> set_association <span class="sc">|&gt;</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(analysis <span class="sc">==</span> which_analysis, database <span class="sc">==</span> db, p <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(p)</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">nrow</span>(hits) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">list</span>())</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  per_participant <span class="ot">&lt;-</span> which_analysis <span class="sc">==</span> <span class="st">&quot;within_participant&quot;</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (per_participant) {</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    score_change <span class="ot">&lt;-</span> paired</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>    phenotype_change <span class="ot">&lt;-</span> paired_outcome</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>    point_series <span class="ot">&lt;-</span> <span class="st">&quot;BFR - HLRT&quot;</span></span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>    x_label <span class="ot">&lt;-</span> <span class="st">&quot;change in set score, T2 - T1, BFR minus HLRT, one point per participant&quot;</span></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>    y_label <span class="ot">&lt;-</span> <span class="st">&quot;change in phenotype, BFR minus HLRT&quot;</span></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>    headroom <span class="ot">&lt;-</span> <span class="fl">0.06</span></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>    score_change <span class="ot">&lt;-</span> delta</span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>    phenotype_change <span class="ot">&lt;-</span> leg_phenotype</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>    point_series <span class="ot">&lt;-</span> leg_phenotype<span class="sc">$</span>treatment</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>    x_label <span class="ot">&lt;-</span> <span class="st">&quot;change in set score, T2 - T1, one point per leg&quot;</span></span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>    y_label <span class="ot">&lt;-</span> <span class="st">&quot;change in phenotype&quot;</span></span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>    headroom <span class="ot">&lt;-</span> <span class="fl">0.35</span></span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a>  points <span class="ot">&lt;-</span> <span class="fu">pmap</span>(hits, <span class="cf">function</span>(set_id, database, pathway, outcome, r, p, fdr, ...) {</span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>    arms <span class="ot">&lt;-</span> by_arm <span class="sc">|&gt;</span></span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(set_id <span class="sc">==</span> <span class="sc">!!</span>set_id, outcome <span class="sc">==</span> <span class="sc">!!</span>outcome) <span class="sc">|&gt;</span></span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">text =</span> <span class="fu">sprintf</span>(<span class="st">&quot;%-5s n=%d  r=%+.2f  p=%.3f&quot;</span>, treatment, n, r, p))</span>
+<span id="cb21-40"><a href="#cb21-40" aria-hidden="true" tabindex="-1"></a>    label <span class="ot">&lt;-</span> <span class="fu">paste0</span>(database, <span class="st">&quot;: &quot;</span>, enrichVolcano<span class="sc">::</span><span class="fu">clean_label</span>(pathway, <span class="at">width =</span> <span class="dv">1000</span>))</span>
+<span id="cb21-41"><a href="#cb21-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb21-42"><a href="#cb21-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">panel =</span> <span class="fu">sprintf</span>(</span>
+<span id="cb21-43"><a href="#cb21-43" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;%s</span><span class="sc">\n</span><span class="st">vs %s   r = %+.2f   p %s   q %s&quot;</span>,</span>
+<span id="cb21-44"><a href="#cb21-44" aria-hidden="true" tabindex="-1"></a>        <span class="fu">str_wrap</span>(label, <span class="dv">40</span>), outcome, r, <span class="fu">signif</span>(p, <span class="dv">2</span>), <span class="fu">signif</span>(fdr, <span class="dv">2</span>)</span>
+<span id="cb21-45"><a href="#cb21-45" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb21-46"><a href="#cb21-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">change =</span> score_change[set_id, ], <span class="at">d_outcome =</span> phenotype_change[[outcome]],</span>
+<span id="cb21-47"><a href="#cb21-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">series =</span> point_series, <span class="at">inset =</span> <span class="cf">if</span> (per_participant) <span class="st">&quot;&quot;</span> <span class="cf">else</span> <span class="fu">paste</span>(arms<span class="sc">$</span>text, <span class="at">collapse =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb21-48"><a href="#cb21-48" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb21-49"><a href="#cb21-49" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb21-50"><a href="#cb21-50" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb21-51"><a href="#cb21-51" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">factor</span>(panel, <span class="at">levels =</span> <span class="fu">unique</span>(panel)))</span>
+<span id="cb21-52"><a href="#cb21-52" aria-hidden="true" tabindex="-1"></a>  pages <span class="ot">&lt;-</span> <span class="fu">unname</span>(<span class="fu">split</span>(points, (<span class="fu">as.integer</span>(points<span class="sc">$</span>panel) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">12</span>))</span>
+<span id="cb21-53"><a href="#cb21-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(pages, <span class="cf">function</span>(page, i) {</span>
+<span id="cb21-54"><a href="#cb21-54" aria-hidden="true" tabindex="-1"></a>    page <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(page)</span>
+<span id="cb21-55"><a href="#cb21-55" aria-hidden="true" tabindex="-1"></a>    page_note <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(pages) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="fu">sprintf</span>(<span class="st">&quot; (page %d of %d)&quot;</span>, i, <span class="fu">length</span>(pages)) <span class="cf">else</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb21-56"><a href="#cb21-56" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(page, <span class="fu">aes</span>(change, d_outcome, <span class="at">colour =</span> series, <span class="at">fill =</span> series)) <span class="sc">+</span></span>
+<span id="cb21-57"><a href="#cb21-57" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
+<span id="cb21-58"><a href="#cb21-58" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
+<span id="cb21-59"><a href="#cb21-59" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="at">formula =</span> y <span class="sc">~</span> x, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">alpha =</span> <span class="fl">0.12</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb21-60"><a href="#cb21-60" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">1.2</span>, <span class="at">alpha =</span> <span class="fl">0.9</span>) <span class="sc">+</span></span>
+<span id="cb21-61"><a href="#cb21-61" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_text</span>(</span>
+<span id="cb21-62"><a href="#cb21-62" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> <span class="fu">distinct</span>(page, panel, inset), <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb21-63"><a href="#cb21-63" aria-hidden="true" tabindex="-1"></a>        <span class="fu">aes</span>(<span class="at">x =</span> <span class="sc">-</span><span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">label =</span> inset), <span class="at">family =</span> <span class="st">&quot;mono&quot;</span>,</span>
+<span id="cb21-64"><a href="#cb21-64" aria-hidden="true" tabindex="-1"></a>        <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.05</span>, <span class="at">vjust =</span> <span class="fl">1.25</span>, <span class="at">size =</span> <span class="fl">1.9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>, <span class="at">colour =</span> <span class="st">&quot;grey25&quot;</span></span>
+<span id="cb21-65"><a href="#cb21-65" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb21-66"><a href="#cb21-66" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="fl">0.06</span>, headroom))) <span class="sc">+</span></span>
+<span id="cb21-67"><a href="#cb21-67" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_colour_manual</span>(</span>
+<span id="cb21-68"><a href="#cb21-68" aria-hidden="true" tabindex="-1"></a>        <span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="st">`</span><span class="at">BFR - HLRT</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;grey25&quot;</span>),</span>
+<span id="cb21-69"><a href="#cb21-69" aria-hidden="true" tabindex="-1"></a>        <span class="at">aesthetics =</span> <span class="fu">c</span>(<span class="st">&quot;colour&quot;</span>, <span class="st">&quot;fill&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span></span>
+<span id="cb21-70"><a href="#cb21-70" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb21-71"><a href="#cb21-71" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">scales =</span> <span class="st">&quot;free&quot;</span>) <span class="sc">+</span></span>
+<span id="cb21-72"><a href="#cb21-72" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
+<span id="cb21-73"><a href="#cb21-73" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> x_label, <span class="at">y =</span> y_label,</span>
+<span id="cb21-74"><a href="#cb21-74" aria-hidden="true" tabindex="-1"></a>        <span class="at">title =</span> <span class="fu">sprintf</span>(<span class="st">&quot;S%d. %s, %s%s&quot;</span>, number, title, db, page_note)</span>
+<span id="cb21-75"><a href="#cb21-75" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
+<span id="cb21-76"><a href="#cb21-76" aria-hidden="true" tabindex="-1"></a>      figure_theme</span>
+<span id="cb21-77"><a href="#cb21-77" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb21-78"><a href="#cb21-78" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p><code>association_figure()</code> draws every set-outcome pair in one collection that reaches nominal p in one analysis, smallest p first, twelve panels to a page; a collection without hits gets no pages. All-legs pages (S11) plot each leg’s score change against its outcome change, with a line fitted inside each arm and the within-arm correlations inset. Within-participant pages (S12) plot what was tested: one point per participant, the BFR minus HLRT difference in score change against the same difference in outcome change. Each page pools the hits of all four outcomes, so its chance count covers every set-outcome pair in the collection. Pages are built one at a time from their own rows, because a paginating facet would build every panel for every page.</p>
+<p>One PDF per collection.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>association_figure <span class="ot">&lt;-</span> <span class="cf">function</span>(which_analysis, number, title, db) {</span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  hits <span class="ot">&lt;-</span> set_association <span class="sc">|&gt;</span></span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(analysis <span class="sc">==</span> which_analysis, database <span class="sc">==</span> db, p <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">arrange</span>(p)</span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">nrow</span>(hits) <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">list</span>())</span>
-<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  per_participant <span class="ot">&lt;-</span> which_analysis <span class="sc">==</span> <span class="st">&quot;within_participant&quot;</span></span>
-<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (per_participant) {</span>
-<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    score_change <span class="ot">&lt;-</span> paired</span>
-<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>    phenotype_change <span class="ot">&lt;-</span> paired_outcome</span>
-<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>    point_series <span class="ot">&lt;-</span> <span class="st">&quot;BFR - HLRT&quot;</span></span>
-<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>    x_label <span class="ot">&lt;-</span> <span class="st">&quot;change in set score, T2 - T1, BFR minus HLRT, one point per participant&quot;</span></span>
-<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>    y_label <span class="ot">&lt;-</span> <span class="st">&quot;change in phenotype, BFR minus HLRT&quot;</span></span>
-<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>    headroom <span class="ot">&lt;-</span> <span class="fl">0.06</span></span>
-<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
-<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>    score_change <span class="ot">&lt;-</span> delta</span>
-<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>    phenotype_change <span class="ot">&lt;-</span> leg_phenotype</span>
-<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>    point_series <span class="ot">&lt;-</span> leg_phenotype<span class="sc">$</span>treatment</span>
-<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>    x_label <span class="ot">&lt;-</span> <span class="st">&quot;change in set score, T2 - T1, one point per leg&quot;</span></span>
-<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>    y_label <span class="ot">&lt;-</span> <span class="st">&quot;change in phenotype&quot;</span></span>
-<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>    headroom <span class="ot">&lt;-</span> <span class="fl">0.35</span></span>
-<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>  points <span class="ot">&lt;-</span> <span class="fu">pmap</span>(hits, <span class="cf">function</span>(set_id, database, pathway, outcome, r, p, fdr, ...) {</span>
-<span id="cb34-25"><a href="#cb34-25" aria-hidden="true" tabindex="-1"></a>    arms <span class="ot">&lt;-</span> by_arm <span class="sc">|&gt;</span></span>
-<span id="cb34-26"><a href="#cb34-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(set_id <span class="sc">==</span> <span class="sc">!!</span>set_id, outcome <span class="sc">==</span> <span class="sc">!!</span>outcome) <span class="sc">|&gt;</span></span>
-<span id="cb34-27"><a href="#cb34-27" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">text =</span> <span class="fu">sprintf</span>(<span class="st">&quot;%-5s n=%d  r=%+.2f  p=%.3f&quot;</span>, treatment, n, r, p))</span>
-<span id="cb34-28"><a href="#cb34-28" aria-hidden="true" tabindex="-1"></a>    label <span class="ot">&lt;-</span> <span class="fu">paste0</span>(database, <span class="st">&quot;: &quot;</span>, enrichVolcano<span class="sc">::</span><span class="fu">clean_label</span>(pathway, <span class="at">width =</span> <span class="dv">1000</span>))</span>
-<span id="cb34-29"><a href="#cb34-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
-<span id="cb34-30"><a href="#cb34-30" aria-hidden="true" tabindex="-1"></a>      <span class="at">panel =</span> <span class="fu">sprintf</span>(</span>
-<span id="cb34-31"><a href="#cb34-31" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;%s</span><span class="sc">\n</span><span class="st">vs %s   r = %+.2f   p %s   q %s&quot;</span>,</span>
-<span id="cb34-32"><a href="#cb34-32" aria-hidden="true" tabindex="-1"></a>        <span class="fu">str_wrap</span>(label, <span class="dv">40</span>), outcome, r, <span class="fu">signif</span>(p, <span class="dv">2</span>), <span class="fu">signif</span>(fdr, <span class="dv">2</span>)</span>
-<span id="cb34-33"><a href="#cb34-33" aria-hidden="true" tabindex="-1"></a>      ),</span>
-<span id="cb34-34"><a href="#cb34-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">change =</span> score_change[set_id, ], <span class="at">d_outcome =</span> phenotype_change[[outcome]],</span>
-<span id="cb34-35"><a href="#cb34-35" aria-hidden="true" tabindex="-1"></a>      <span class="at">series =</span> point_series, <span class="at">inset =</span> <span class="cf">if</span> (per_participant) <span class="st">&quot;&quot;</span> <span class="cf">else</span> <span class="fu">paste</span>(arms<span class="sc">$</span>text, <span class="at">collapse =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb34-36"><a href="#cb34-36" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb34-37"><a href="#cb34-37" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb34-38"><a href="#cb34-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb34-39"><a href="#cb34-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">factor</span>(panel, <span class="at">levels =</span> <span class="fu">unique</span>(panel)))</span>
-<span id="cb34-40"><a href="#cb34-40" aria-hidden="true" tabindex="-1"></a>  pages <span class="ot">&lt;-</span> <span class="fu">unname</span>(<span class="fu">split</span>(points, (<span class="fu">as.integer</span>(points<span class="sc">$</span>panel) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">12</span>))</span>
-<span id="cb34-41"><a href="#cb34-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">imap</span>(pages, <span class="cf">function</span>(page, i) {</span>
-<span id="cb34-42"><a href="#cb34-42" aria-hidden="true" tabindex="-1"></a>    page <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(page)</span>
-<span id="cb34-43"><a href="#cb34-43" aria-hidden="true" tabindex="-1"></a>    page_note <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">length</span>(pages) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="fu">sprintf</span>(<span class="st">&quot; (page %d of %d)&quot;</span>, i, <span class="fu">length</span>(pages)) <span class="cf">else</span> <span class="st">&quot;&quot;</span></span>
-<span id="cb34-44"><a href="#cb34-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(page, <span class="fu">aes</span>(change, d_outcome, <span class="at">colour =</span> series, <span class="at">fill =</span> series)) <span class="sc">+</span></span>
-<span id="cb34-45"><a href="#cb34-45" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
-<span id="cb34-46"><a href="#cb34-46" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
-<span id="cb34-47"><a href="#cb34-47" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="at">formula =</span> y <span class="sc">~</span> x, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">alpha =</span> <span class="fl">0.12</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb34-48"><a href="#cb34-48" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">1.2</span>, <span class="at">alpha =</span> <span class="fl">0.9</span>) <span class="sc">+</span></span>
-<span id="cb34-49"><a href="#cb34-49" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_text</span>(</span>
-<span id="cb34-50"><a href="#cb34-50" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> <span class="fu">distinct</span>(page, panel, inset), <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb34-51"><a href="#cb34-51" aria-hidden="true" tabindex="-1"></a>        <span class="fu">aes</span>(<span class="at">x =</span> <span class="sc">-</span><span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, <span class="at">label =</span> inset), <span class="at">family =</span> <span class="st">&quot;mono&quot;</span>,</span>
-<span id="cb34-52"><a href="#cb34-52" aria-hidden="true" tabindex="-1"></a>        <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.05</span>, <span class="at">vjust =</span> <span class="fl">1.25</span>, <span class="at">size =</span> <span class="fl">1.9</span>, <span class="at">lineheight =</span> <span class="fl">1.2</span>, <span class="at">colour =</span> <span class="st">&quot;grey25&quot;</span></span>
-<span id="cb34-53"><a href="#cb34-53" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb34-54"><a href="#cb34-54" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="fl">0.06</span>, headroom))) <span class="sc">+</span></span>
-<span id="cb34-55"><a href="#cb34-55" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_colour_manual</span>(</span>
-<span id="cb34-56"><a href="#cb34-56" aria-hidden="true" tabindex="-1"></a>        <span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="st">`</span><span class="at">BFR - HLRT</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;grey25&quot;</span>),</span>
-<span id="cb34-57"><a href="#cb34-57" aria-hidden="true" tabindex="-1"></a>        <span class="at">aesthetics =</span> <span class="fu">c</span>(<span class="st">&quot;colour&quot;</span>, <span class="st">&quot;fill&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span></span>
-<span id="cb34-58"><a href="#cb34-58" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb34-59"><a href="#cb34-59" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">3</span>, <span class="at">nrow =</span> <span class="dv">4</span>, <span class="at">scales =</span> <span class="st">&quot;free&quot;</span>) <span class="sc">+</span></span>
-<span id="cb34-60"><a href="#cb34-60" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(</span>
-<span id="cb34-61"><a href="#cb34-61" aria-hidden="true" tabindex="-1"></a>        <span class="at">x =</span> x_label, <span class="at">y =</span> y_label,</span>
-<span id="cb34-62"><a href="#cb34-62" aria-hidden="true" tabindex="-1"></a>        <span class="at">title =</span> <span class="fu">sprintf</span>(<span class="st">&quot;S%d. %s, %s%s&quot;</span>, number, title, db, page_note)</span>
-<span id="cb34-63"><a href="#cb34-63" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">+</span></span>
-<span id="cb34-64"><a href="#cb34-64" aria-hidden="true" tabindex="-1"></a>      figure_theme</span>
-<span id="cb34-65"><a href="#cb34-65" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb34-66"><a href="#cb34-66" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(<span class="fu">unique</span>(catalog<span class="sc">$</span>database), <span class="cf">function</span>(db) {</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_pdf</span>(</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">association_figure</span>(<span class="st">&quot;all_legs&quot;</span>, <span class="dv">11</span>, <span class="st">&quot;Association over all legs&quot;</span>, db),</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">association_figure</span>(<span class="st">&quot;within_participant&quot;</span>, <span class="dv">12</span>, <span class="st">&quot;Within participant, BFR minus HLRT&quot;</span>, db)</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;05_association_&quot;</span>, db, <span class="st">&quot;.pdf&quot;</span>)</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>One PDF per collection, so each can be read on its own: S11 for all legs, S12 within participant.</p>
+<p>S13 draws each chance ratio as a bar, one panel per analysis and outcome.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(<span class="fu">unique</span>(catalog<span class="sc">$</span>database), <span class="cf">function</span>(db) {</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">write_pdf</span>(</span>
-<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(</span>
-<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">association_figure</span>(<span class="st">&quot;all_legs&quot;</span>, <span class="dv">11</span>, <span class="st">&quot;Association over all legs&quot;</span>, db),</span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">association_figure</span>(<span class="st">&quot;within_participant&quot;</span>, <span class="dv">12</span>, <span class="st">&quot;Within participant, BFR minus HLRT&quot;</span>, db)</span>
-<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;05_association_&quot;</span>, db, <span class="st">&quot;.pdf&quot;</span>)</span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>S13 is the chance page across all analyses and outcomes: each ratio from <code>chance_expectation</code> drawn as a bar, one panel per analysis and outcome.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>chance_plot <span class="ot">&lt;-</span> chance_expectation <span class="sc">|&gt;</span></span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">paste0</span>(<span class="fu">sub</span>(<span class="st">&quot;association: &quot;</span>, <span class="st">&quot;&quot;</span>, analysis), <span class="st">&quot;, &quot;</span>, comparison)) <span class="sc">|&gt;</span></span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(ratio, database, <span class="at">fill =</span> ratio <span class="sc">&gt;</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
-<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>, <span class="at">colour =</span> <span class="st">&quot;grey40&quot;</span>) <span class="sc">+</span></span>
-<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">width =</span> <span class="fl">0.65</span>) <span class="sc">+</span></span>
-<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
-<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">sprintf</span>(<span class="st">&quot;%d of %d&quot;</span>, nominal, features)),</span>
-<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.12</span>, <span class="at">size =</span> <span class="fl">2.5</span>, <span class="at">colour =</span> <span class="st">&quot;grey25&quot;</span></span>
-<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">`</span><span class="at">TRUE</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="st">`</span><span class="at">FALSE</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;grey72&quot;</span>), <span class="at">guide =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span></span>
-<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.22</span>))) <span class="sc">+</span></span>
-<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;observed nominal hits / chance expectation&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
-<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;S13. Nominal hits against chance, by collection and outcome&quot;</span></span>
-<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>  figure_theme <span class="sc">+</span></span>
-<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>())</span>
-<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a><span class="fu">write_pdf</span>(<span class="fu">list</span>(chance_plot), <span class="st">&quot;05_chance_by_collection.pdf&quot;</span>)</span>
-<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>chance_plot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>chance_plot <span class="ot">&lt;-</span> chance_expectation <span class="sc">|&gt;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">paste0</span>(<span class="fu">sub</span>(<span class="st">&quot;association: &quot;</span>, <span class="st">&quot;&quot;</span>, analysis), <span class="st">&quot;, &quot;</span>, comparison)) <span class="sc">|&gt;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(ratio, database, <span class="at">fill =</span> ratio <span class="sc">&gt;</span> <span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>, <span class="at">colour =</span> <span class="st">&quot;grey40&quot;</span>) <span class="sc">+</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">width =</span> <span class="fl">0.65</span>) <span class="sc">+</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">sprintf</span>(<span class="st">&quot;%d of %d&quot;</span>, nominal, features)),</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.12</span>, <span class="at">size =</span> <span class="fl">2.5</span>, <span class="at">colour =</span> <span class="st">&quot;grey25&quot;</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>panel, <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">`</span><span class="at">TRUE</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="st">`</span><span class="at">FALSE</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;grey72&quot;</span>), <span class="at">guide =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">+</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.22</span>))) <span class="sc">+</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;observed nominal hits / chance expectation&quot;</span>, <span class="at">y =</span> <span class="cn">NULL</span>,</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;S13. Nominal hits against chance, by collection and outcome&quot;</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>  figure_theme <span class="sc">+</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>())</span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a><span class="fu">write_pdf</span>(<span class="fu">list</span>(chance_plot), <span class="st">&quot;05_chance_by_collection.pdf&quot;</span>)</span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>chance_plot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -2719,23 +2618,22 @@ S03_L_T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>05_set_association.xlsx</code> holds <code>chance_expectation</code> (nominal hits against chance), <code>set_association</code> (r, p and BH q per set, analysis and outcome, smallest p first), <code>set_by_arm</code> (the within-arm correlations) and <code>association_sets</code> (fgsea and fry on the average and difference rankings of the protein association).</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">chance_expectation =</span> chance_expectation,</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_association =</span> <span class="fu">arrange</span>(set_association, p),</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_by_arm =</span> by_arm,</span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">association_sets =</span> <span class="fu">arrange</span>(association_sets, pval)</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;05_set_association.xlsx&quot;</span>)</span>
-<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">chance_expectation =</span> chance_expectation,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_association =</span> <span class="fu">arrange</span>(set_association, p),</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_by_arm =</span> by_arm,</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">association_sets =</span> <span class="fu">arrange</span>(association_sets, pval)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;05_set_association.xlsx&quot;</span>)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23

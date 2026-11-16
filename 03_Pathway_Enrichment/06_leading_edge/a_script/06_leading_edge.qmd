@@ -11,8 +11,7 @@ knitr:
 
 ## Load packages
 
-`GO.db`, `AnnotationDbi` and `enrichVolcano` (not on CRAN) are called with `::` for one job
-each.
+`GO.db`, `AnnotationDbi` and `enrichVolcano` (not on CRAN) are called with `::`.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tidyr, purrr, stringr, ggplot2, patchwork, ggvenn, readxl, writexl)
@@ -21,17 +20,10 @@ here::i_am("03_Pathway_Enrichment/06_leading_edge/a_script/06_leading_edge.qmd")
 
 ## Read inputs
 
-The question: for pathways both legs move the same way with training, do the same proteins drive
-them? The comparison uses fgsea leading edges. In gene set enrichment, proteins are ranked by
-their training statistic and a running sum walks down the ranking, rising at each set member; the
-leading edge is the set members ranked before the running sum peaks, the ones carrying the
-enrichment. This step reads the fgsea run `01_run_fgsea_and_fry` already made, so nothing is
-re-ranked. Adapted from Sam's PR #26 (sc-norton): his overlap measures, GO hierarchy breakdown
-and unique-protein split, on the pipeline's fgsea results and gene sets.
-
-Inputs: the `set_tests` and `protein_results` sheets from `01_run_fgsea_and_fry` (one row per set,
-method and contrast, leading edges as `;`-joined symbols; one row per protein and contrast, with
-its t), and from `00_build_gene_sets` the set catalogue and the measured genes of every GO:BP set.
+For pathways both legs move the same way with training, do the same proteins drive them? The
+comparison uses the fgsea leading edges of `01_run_fgsea_and_fry`: the set members ranked before
+the running sum peaks, which carry the enrichment. Nothing is re-ranked. Adapted from Sam's PR #26
+(sc-norton): his overlap measures, GO hierarchy breakdown and unique-protein split.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "06_leading_edge")
@@ -49,15 +41,12 @@ go_sets <- readRDS(
 )
 arms <- c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre")
 arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
-dim(set_tests)
 ```
 
 ## Select the shared pathways
 
-Keep the fgsea rows for the two training contrasts, one per leg. A pathway is kept when fgsea
-calls it at FDR < 0.05 in both legs, with the same sign of NES (normalised enrichment score, the
-direction and strength of the enrichment), and when it is a main set after `collapsePathways` in
-at least one leg, so one representative stands for each cluster of overlapping sets.
+A pathway is kept when fgsea calls it at FDR < 0.05 in both legs with the same NES sign, and it
+is a main set after `collapsePathways` in at least one leg, so one set stands for each cluster.
 
 ```{r shared-sets}
 fgsea_results <- set_tests |>
@@ -75,8 +64,7 @@ length(shared_sets)
 
 ## Compare the leading edges
 
-Split each kept pathway's leading edges into one row per protein, then record which legs list
-that protein: BFR only, HLRT only or both.
+One row per pathway and leading-edge protein, with the legs that list it.
 
 ```{r proteins}
 proteins <- fgsea_results |>
@@ -87,10 +75,9 @@ proteins <- fgsea_results |>
     in_arm = paste(sort(arm), collapse = " and "), .by = c(set_id, database, pathway, gene)
   ) |>
   mutate(in_arm = recode(in_arm, "BFR and HLRT" = "both"))
-head(proteins, 4)
 ```
 
-Count the three groups per pathway and add three overlap measures:
+Three overlap measures per pathway:
 
 - Jaccard index, proteins in both leading edges over proteins in either: 1 when the legs share
   every driver, 0 when they share none;
@@ -99,7 +86,7 @@ Count the three groups per pathway and add three overlap measures:
 - `expected_shared`, the proteins two leading edges of these sizes would share if each were a
   random draw from the pathway's `n` measured members.
 
-Each leg's NES and adjusted p ride along, and rows sort from the lowest Jaccard index.
+Rows sort from the lowest Jaccard index.
 
 ```{r leading-edge}
 leading_edge <- proteins |>
@@ -125,11 +112,9 @@ Leading edges shift with small changes in the ranking, so these overlaps are des
 
 ## Break GO:BP parents into children
 
-The GO hierarchy view, for each GO:BP pathway both legs move. `GO.db::GOBPCHILDREN` gives a
-parent's direct child terms, each with its relation (`isa`, `part_of`, `regulates`). A child's
-genes are its measured MSigDB members inside the parent's measured members, which form the
-universe, and a child needs at least three of them, as in Sam's code. `mget()` returns `NA` for a
-term without children.
+`GO.db::GOBPCHILDREN` gives each GO:BP parent's direct children with their relation (`isa`,
+`part_of`, `regulates`), or `NA` for none. A child's genes are its measured members inside the
+parent's measured members, which form the universe; a child needs three, as in Sam's code.
 
 ```{r go-children}
 go_ids <- filter(set_catalog, database == "GOBP") |> select(set_id, source_id)
@@ -153,21 +138,15 @@ go_children <- parents |>
 c(parents = nrow(parents), children = nrow(go_children))
 ```
 
-`edge()` returns a parent's leading-edge proteins in one leg. Every leading-edge protein is already
-a measured member of its set.
+For every parent, child and leg, the decomposition counts the parent's leading-edge proteins in
+the child, as a share of the leading edge and a fold over the child's share of the universe, with
+a one-sided hypergeometric p, BH within parent and leg. Children overlap and the sets are small,
+so the p values are descriptive.
 
-```{r edge}
+```{r decomposition}
 edge <- function(id, which_arm) {
   filter(proteins, set_id == id, in_arm %in% c(which_arm, "both"))$gene
 }
-```
-
-For every parent, child and leg, the decomposition counts the parent's leading-edge proteins in
-the child, as a share of the leading edge and as a fold over the child's share of the universe,
-with a one-sided hypergeometric p for concentration in that child, BH within parent and leg.
-Children overlap and the tests are nested on small sets, so the p values are descriptive.
-
-```{r decomposition}
 decomposition <- go_children |>
   cross_join(tibble(arm = names(arms))) |>
   mutate(
@@ -186,10 +165,9 @@ decomposition <- go_children |>
 head(select(decomposition, parent, child, arm, in_child, share_of_edge, padj), 6)
 ```
 
-The coverage check asks the reverse: what share of a parent's leading edge already sits in the
-leading edges of its significant descendants (any depth, `GOBPOFFSPRING`, tested sets at FDR < 0.05
-in the same leg). A low share means the parent carries signal no more specific term captures;
-`unexplained` lists those proteins.
+Coverage is the share of a parent's leading edge already in the leading edges of its descendants
+(any depth) that fgsea calls at FDR < 0.05 in the same leg. A low share means the parent carries
+signal no more specific term captures.
 
 ```{r coverage}
 offspring_of <- AnnotationDbi::mget(parents$source_id, GO.db::GOBPOFFSPRING, ifnotfound = NA)
@@ -215,15 +193,13 @@ summary(go_coverage$explained)
 
 ## Split the unique proteins
 
-The last view takes the proteins in one leg's leading edge only (BFR-only and HLRT-only) and asks
-whether the two groups fall in different children. Per child, Fisher's exact test compares the
-share of BFR-only and HLRT-only proteins in it, BH within parent. Per parent, the divergence sums
-the absolute share differences over children plus a "(no child term)" bin, and its p comes from
-2,000 shuffles of the BFR and HLRT labels among the unique proteins, BH across parents. Both tests
-treat proteins as exchangeable, which co-regulated proteins are not, so they are descriptive.
-`edge_pct` is the median position of each leg's unique proteins in the other leg's ranking,
-measured from the enriched end: near 0 means they only just missed the other leading edge. A
-parent needs at least three unique proteins in each leg, as in Sam's code.
+Do the proteins in only one leg's leading edge fall in different children? Per child, Fisher's
+exact test compares the BFR-only and HLRT-only shares, BH within parent. Per parent, the
+divergence sums the absolute share differences over children plus a "(no child term)" bin, with p
+from 2,000 shuffles of the leg labels, BH across parents. Both tests treat proteins as
+exchangeable, so they are descriptive. `edge_pct` is the median position of a leg's unique
+proteins in the other leg's ranking from the enriched end: near 0 means they just missed the other
+leading edge. A parent needs three unique proteins per leg, as in Sam's code.
 
 ```{r unique-children}
 rank_position <- protein_results |>
@@ -279,8 +255,7 @@ distinct(unique_children, parent, only_BFR, only_HLRT, shared, divergence, padj_
 
 ## Draw figures
 
-S14 is the overlap heatmap: one tile per pathway coloured by Jaccard index and labelled with the
-shared count, one panel per collection.
+S14: one tile per pathway, coloured by Jaccard index and labelled with the shared count.
 
 ```{r overlap-page}
 overlap_page <- leading_edge |>
@@ -295,8 +270,7 @@ overlap_page <- leading_edge |>
   theme(panel.grid = element_blank(), strip.text.y = element_text(angle = 0))
 ```
 
-S15 is the Venn view: one Venn per pathway with each leg's NES and adjusted p above and the
-shared proteins below, six to a page.
+S15: one Venn per pathway, six to a page.
 
 ```{r venn-pages}
 venn <- function(id) {
@@ -315,9 +289,9 @@ venn <- function(id) {
         "BFR: NES %.2f, padj %.2g\nHLRT: NES %.2f, padj %.2g\nshared %d, expected %.1f",
         row$NES_BFR, row$padj_BFR, row$NES_HLRT, row$padj_HLRT, row$both, row$expected_shared
       ),
-      caption = str_wrap(paste("Shared:", str_flatten(sort(genes$gene[genes$in_arm == "both"]),
-        ", "
-      )), 75)
+      caption = str_wrap(
+        paste("Shared:", str_flatten(sort(genes$gene[genes$in_arm == "both"]), ", ")), 75
+      )
     ) +
     theme(
       plot.title = element_text(size = 7, face = "bold"),
@@ -331,8 +305,7 @@ venn_pages <- split(leading_edge$set_id, ceiling(seq_along(leading_edge$set_id) 
   })
 ```
 
-S16 is the NES scatter: every pathway tested in both legs, coloured by collection and shaped by
-where fgsea calls it at FDR < 0.05, with the count and share of pathways in each quadrant.
+S16: every pathway's NES in both legs, with the count and share in each quadrant.
 
 ```{r nes-scatter}
 nes <- fgsea_results |>
@@ -371,11 +344,8 @@ nes_page <- ggplot(nes, aes(NES_BFR, NES_HLRT)) +
   theme_bw(base_size = 9)
 ```
 
-S17 is the decomposition, one parent per panel, two to a page (Sam's 8.5 by 6 inch shape). It
-draws the 25 parents whose larger adjusted p across legs is smallest. Each row is a child term
-[relation], up to 15, those holding the largest share of either leg's leading edge; fill is the
-share of the leading edge, size the count, and a black outline marks a child at BH-adjusted
-p < 0.05.
+S17: the decomposition for the 25 parents whose larger adjusted p across legs is smallest, up to
+15 children each, those holding the largest share of either leg's leading edge.
 
 ```{r child-pages}
 top_parents <- leading_edge |>
@@ -387,9 +357,11 @@ child_pages <- map(top_parents, function(id) {
     filter(max(in_child) > 0, .by = child_id) |>
     filter(child_id %in% unique(child_id[order(-share_of_edge)])[1:15])
   coverage <- filter(go_coverage, parent_id == id)
-  ggplot(rows, aes(arm, reorder(str_trunc(sprintf("%s [%s]", child, relation), 70),
-    share_of_edge
-  ))) +
+  rows <- mutate(
+    rows,
+    row = reorder(str_trunc(sprintf("%s [%s]", child, relation), 70), share_of_edge)
+  )
+  ggplot(rows, aes(arm, row)) +
     geom_point(
       aes(size = in_child, fill = share_of_edge, colour = factor(padj < 0.05, c(TRUE, FALSE))),
       shape = 21, stroke = 0.8
@@ -416,9 +388,8 @@ child_pages <- map(top_parents, function(id) {
 })
 ```
 
-S18 is the unique-protein view for the 25 parents with the smallest divergence p, one per panel,
-two to a page. Per child, BFR-only proteins sit left and HLRT-only right (up to 15, the most
-populated), with the shared count in brackets and an asterisk at Fisher BH-adjusted p < 0.05.
+S18: the unique-protein split for the 25 parents with the smallest divergence p, up to 15 of the
+most populated children, an asterisk at Fisher BH-adjusted p < 0.05.
 
 ```{r unique-pages}
 unique_ids <- unique_children |>
@@ -453,7 +424,7 @@ unique_pages <- map(unique_ids, function(id) {
 })
 ```
 
-All pages go to one A4 PDF, S14 first; `pair_up()` stacks the S17 and S18 panels two to a page.
+All pages go to one A4 PDF; S17 and S18 go two panels to a page.
 
 ```{r write-figures}
 pair_up <- function(panels) {
@@ -469,8 +440,8 @@ invisible(dev.off())
 
 ## Summary
 
-Shared pathways per collection, the spread of the Jaccard index and of the shared count over
-chance, the GO:BP breakdown, and the parents whose unique proteins split most clearly.
+Shared pathways per collection, the Jaccard index and shared count over chance, the GO:BP
+breakdown, and the parents whose unique proteins split at BH 0.05.
 
 ```{r summary}
 count(leading_edge, database)
@@ -487,10 +458,6 @@ distinct(unique_children, parent, padj_divergence) |>
 ```
 
 ## Save results
-
-`06_leading_edge.xlsx` holds `leading_edge` (one row per pathway), `proteins` (one row per
-pathway and leading-edge protein), `go_children` (one row per parent, child and leg),
-`go_coverage` (one row per parent and leg) and `unique_children` (one row per parent and child).
 
 ```{r write}
 write_xlsx(

@@ -11,8 +11,7 @@ knitr:
 
 ## Load packages
 
-`msigdbr`, `AnnotationDbi`, `GSEABase` and `GO.db` are called with `::` where needed and are not
-attached.
+`msigdbr`, `AnnotationDbi`, `GSEABase` and `GO.db` are called with `::`.
 
 ```{r setup}
 pacman::p_load(here, dplyr, tibble, purrr, writexl)
@@ -21,28 +20,21 @@ here::i_am("03_Pathway_Enrichment/00_build_gene_sets/a_script/00_build_gene_sets
 
 ## Read proteins
 
-A gene set is a named list of genes that share a pathway, process or location. Every later
-enrichment step (`01_run_fgsea_and_fry`, `03_run_singscore` and on) reads the list built here, so
-set membership is decided once.
-
-`proteins.rds` is limpa's protein-level `EList` from quantification. Only its annotation
-(`genes`) and observation counts (`other$n.observations`) are used here.
+Every later enrichment step reads the set list built here, so set membership is decided once.
+Only the annotation (`genes`) and observation counts (`other$n.observations`) of limpa's
+protein-level `EList` are used.
 
 ```{r read}
 out <- here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data")
 cache_dir <- file.path(out, "cache")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
-dim(proteins$E)
-head(proteins$genes, 4)
 ```
 
 ## Freeze the MSigDB release
 
-Gene sets come from MSigDB, the Broad Institute's curated collection, through the `msigdbr`
-package. Membership shifts between releases, so one release (2026.1.Hs) is frozen in
-`c_data/cache/` with an md5 checksum. Four collections are used: Hallmark, Reactome, the legacy
-KEGG pathways and GO biological process (GO:BP). Each entry of `collection_specs` gives the MSigDB
-collection and subcollection.
+Gene sets come from MSigDB through `msigdbr`. Membership shifts between releases, so one release
+(2026.1.Hs) is frozen in `c_data/cache/` with an md5 checksum. Four collections are used:
+Hallmark, Reactome, legacy KEGG and GO biological process (GO:BP).
 
 ```{r collections}
 msigdb_release <- "2026.1.Hs"
@@ -56,37 +48,23 @@ collections <- names(collection_specs)
 cache_file <- file.path(cache_dir, paste0(
   "msigdb_", msigdb_release, "_", paste(collections, collapse = "-"), ".rds"
 ))
-basename(cache_file)
-```
-
-`md5_ok()` is `TRUE` when a `.md5` beside the file holds its current checksum. It guards both
-frozen files.
-
-```{r md5-helper}
 md5_ok <- function(f) {
   file.exists(paste0(f, ".md5")) &&
     identical(unname(tools::md5sum(f)), readLines(paste0(f, ".md5"), warn = FALSE))
 }
 ```
 
-The download runs only when the cache file is absent. It fetches each collection, stops if
-`msigdbr` serves a different release, and keeps one row per set and gene symbol. With the cache in
-place, as it is in the repository, this chunk does nothing and needs neither network nor `msigdbr`.
+The download runs only when the cache is absent, and stops if `msigdbr` serves a different
+release. With the cache in place, as in the repository, it needs neither network nor `msigdbr`.
 
 ```{r fetch-if-missing}
 if (!file.exists(cache_file)) {
-  message("fetching ", length(collections), " collections from msigdbr")
   fetched <- imap(collection_specs, function(spec, database) {
     df <- msigdbr::msigdbr(
       db_species = "HS", species = "Homo sapiens",
       collection = spec[[1]], subcollection = spec[[2]]
     )
-    if (!identical(unique(df$db_version), msigdb_release)) {
-      stop(
-        "Requested MSigDB ", msigdb_release, " but msigdbr returned ",
-        paste(unique(df$db_version), collapse = ", "), "."
-      )
-    }
+    stopifnot(identical(unique(df$db_version), msigdb_release))
     df |>
       transmute(
         database,
@@ -106,18 +84,13 @@ if (!file.exists(cache_file)) {
 }
 ```
 
-Check the checksum, then read the snapshot. `membership` has one row per set and gene;
-`set_id` joins the collection and set name, so names stay unique across collections.
+`membership` has one row per set and gene; `set_id` joins collection and set name, so names stay
+unique across collections.
 
 ```{r read-cache}
-if (!md5_ok(cache_file)) {
-  stop("MSigDB cache checksum missing or mismatched. Restore the RDS and its .md5 together.")
-}
-frozen <- readRDS(cache_file)
-membership <- frozen$membership
-frozen$db_version
+stopifnot(md5_ok(cache_file))
+membership <- readRDS(cache_file)$membership
 n_distinct(membership$set_id)
-head(membership[c("database", "set_id", "gene", "source_id")], 4)
 ```
 
 ## Map proteins to genes
@@ -170,24 +143,20 @@ protein_map <- protein_map |>
 gene_universe <- protein_map$gene[protein_map$selected]
 ```
 
-The measured gene universe is the set of representative symbols. Labels are what the volcanoes
-print, and a collision would put two proteins on one point, so the check stops on any duplicate.
+The measured gene universe is the set of representative symbols. A duplicated label would put
+two proteins on one volcano point.
 
 ```{r map-check}
 stopifnot(!anyDuplicated(protein_map$label))
 mapping_summary <- count(protein_map, mapping_status, name = "proteins")
 mapping_summary
 length(gene_universe)
-head(protein_map[c("protein", "Genes", "gene", "mapping_status", "label")], 4)
 ```
 
 ## Filter sets by size
 
-Size is the only filter applied before testing. A set qualifies with 15 to 500 genes in the
-source and at least 15 among the measured genes, which counts detected proteins and so governs
-power. No set is dropped for overlapping another or for its name.
-
-`sets_full` maps each `set_id` to its source genes; `sets_measured` keeps only the measured ones.
+Size is the only filter. A set qualifies with 15 to 500 genes in the source and at least 15
+measured, which governs power. No set is dropped for overlap or for its name.
 
 ```{r size-filter}
 set_members <- distinct(membership, set_id, gene)
@@ -206,11 +175,10 @@ sets <- sets_measured[set_catalog$set_id[set_catalog$qualifies]]
 
 ## Add GO Slim sets
 
-GO Slim is the GO Consortium's generic cut-down of the GO hierarchy (140 broad terms), frozen in
-`goslim_generic.obo` with an md5 like the MSigDB snapshot. For each slim term, `GO.db`'s
-`GOBPOFFSPRING` returns every GO:BP term below it. A term with no GO:BP offspring comes back
-`NA`: every CC and MF term, and any BP leaf term. Dropping `NA` keeps the BP terms that have
-offspring. `GO.db` itself is not frozen, so the README records the version used.
+GO Slim is the GO Consortium's generic cut-down of GO (140 broad terms), frozen in
+`goslim_generic.obo` with an md5. `GOBPOFFSPRING` returns every GO:BP term below a slim term, and
+`NA` for CC, MF and BP leaf terms, which are dropped. `GO.db` is not frozen; the README records
+the version used.
 
 ```{r slim-terms}
 slim_file <- file.path(cache_dir, "goslim_generic.obo")
@@ -222,9 +190,9 @@ slim_offspring <- AnnotationDbi::mget(
 slim_offspring <- slim_offspring[!is.na(slim_offspring)]
 ```
 
-A slim set is every measured gene annotated to the term or any GO:BP term below it. Genes come
-from the full GO:BP membership, so a gene survives when its own GO:BP set fails the size filter.
-For slim sets the source size is the measured size, and the 15-to-500 rule reads it.
+A slim set is every measured gene annotated to the term or any GO:BP term below it, taken from
+the full GO:BP membership, so a gene counts even when its own GO:BP set fails the size filter.
+For slim sets the source size is the measured size.
 
 ```{r slim-sets}
 go_genes <- membership |>
@@ -245,20 +213,13 @@ slim_catalog <- tibble(
 names(slim_sets) <- slim_catalog$set_id
 ```
 
-Append the slim sets to the catalogue and the tested list, and stop on any duplicated name. Of the
-140 slim terms, the printout gives those left after dropping `NA` and how many pass the size rule.
-
 ```{r combine-sets}
 set_catalog <- bind_rows(set_catalog, slim_catalog)
 sets <- c(sets, slim_sets[slim_catalog$set_id[slim_catalog$qualifies]])
-stopifnot(!anyDuplicated(set_catalog$set_id), !anyDuplicated(names(sets)))
-c(testable = sum(slim_catalog$qualifies), terms = nrow(slim_catalog))
+stopifnot(!anyDuplicated(set_catalog$set_id))
 ```
 
 ## Gene set summary
-
-Sets per collection in the source, the number that qualify for testing, and their median measured
-size.
 
 ```{r summary}
 collection_summary <- set_catalog |>
@@ -273,11 +234,8 @@ length(sets)
 
 ## Save results
 
-`gene_sets.rds` holds the tested sets, a named list of gene-symbol vectors. `go_bp_measured.rds`
-holds the measured genes of every GO:BP set, tested or not, so `06_leading_edge` can break a
-parent into child terms too small to test.
-`00_build_gene_sets.xlsx` holds the set catalogue and protein-to-gene map that later steps read,
-plus the counts above.
+`gene_sets.rds` holds the tested sets. `go_bp_measured.rds` holds the measured genes of every
+GO:BP set, tested or not, so `06_leading_edge` can use child terms too small to test.
 
 ```{r write}
 saveRDS(sets, file.path(out, "gene_sets.rds"), compress = "xz")

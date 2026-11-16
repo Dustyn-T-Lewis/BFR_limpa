@@ -20,10 +20,6 @@ here::i_am("03_Pathway_Enrichment/04_set_classification/a_script/04_set_classifi
 
 ## Read inputs
 
-Three inputs: the set catalogue from `00_build_gene_sets`, the singscore matrix from
-`03_run_singscore` (one row per set, one column per sample) and the sample targets stored with
-the protein estimates.
-
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "04_set_classification")
 set_catalog <- read_excel(
@@ -32,16 +28,6 @@ set_catalog <- read_excel(
 )
 set_score <- readRDS(here("03_Pathway_Enrichment", "03_run_singscore", "c_data", "set_scores.rds"))
 targets <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))$targets
-dim(set_score)
-head(targets[c("sample_id", "participant", "leg", "treatment", "timepoint")], 6)
-```
-
-## Select sets
-
-Only sets the catalogue marks as `qualifies` are tested. `values` holds their scores in catalogue
-order.
-
-```{r select-sets}
 catalog <- set_catalog |>
   filter(qualifies) |>
   select(set_id, database, pathway)
@@ -51,10 +37,9 @@ table(catalog$database)
 
 ## Pair the samples
 
-Every comparison here is paired, so each sample needs its partner. `by_timepoint` spreads the
-targets to one row per leg, with the T1 and T2 sample IDs side by side. `legs` keeps legs sampled
-at both time points. Treatment comes from the targets, never the leg letter: leg assignment was
-counterbalanced.
+Every comparison is paired. `by_timepoint` has one row per leg with its T1 and T2 sample IDs;
+`legs` keeps legs sampled at both. Treatment comes from the targets, never the leg letter: leg
+assignment was counterbalanced.
 
 ```{r pair-legs}
 by_timepoint <- targets |>
@@ -62,12 +47,10 @@ by_timepoint <- targets |>
   select(leg_id, participant, leg, treatment, timepoint, sample_id) |>
   pivot_wider(names_from = timepoint, values_from = sample_id)
 legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
-head(legs, 4)
 ```
 
-`pair_by_treatment()` puts each participant's BFR and HLRT legs side by side, one row per
-participant; participants without both legs drop out. It gives three pairings: baseline samples,
-post samples, and legs for the change scores.
+`pair_by_treatment()` puts each participant's BFR and HLRT legs side by side; participants
+without both drop out.
 
 ```{r pair-participants}
 pair_by_treatment <- function(data, column) {
@@ -82,8 +65,7 @@ delta_pairs <- pair_by_treatment(legs, "leg_id")
 c(legs = nrow(legs), baseline = nrow(baseline), post = nrow(post), change = nrow(delta_pairs))
 ```
 
-The change in each set's score per leg is T2 minus T1. Its columns are named by leg, so the BFR
-and HLRT legs of a participant can be picked out with `delta_pairs`.
+The change per leg is T2 minus T1, with columns named by leg.
 
 ```{r change-scores}
 delta <- values[, legs$T2] - values[, legs$T1]
@@ -92,15 +74,11 @@ colnames(delta) <- legs$leg_id
 
 ## Define the tasks
 
-Each task holds a score matrix and two paired column sets: `positive` and `negative`, matched
-position by position. Pre against post compares the two time points within each arm. The three
-BFR against HLRT tasks compare the two legs of each participant at baseline, after training and
-in change. Pre against post is also tested per protein in `02_Differential`; sets keep it, since
-singscore gives a per-sample view fgsea and fry do not.
-`favours` is the group an AUC above 0.5 points to, so the figures can state direction.
-
-The baseline comparison is legs before any training, so it shows what the method returns when
-nothing is there.
+Each task holds a score matrix and paired columns `positive` and `negative`, matched by position.
+Pre against post compares time points within each arm; the BFR against HLRT tasks compare a
+participant's two legs at baseline, after training and in change. Baseline is before any
+training, so it shows what the method returns when nothing is there. `favours` is the group an
+AUC above 0.5 points to.
 
 ```{r tasks}
 arm <- split(legs, legs$treatment)
@@ -134,28 +112,19 @@ tibble(
 
 ## Score each set
 
-Two numbers per set and task. The AUC (area under the ROC curve) is the probability that a
-randomly chosen positive sample scores higher than a randomly chosen negative one: 0.5 is no
-separation, 1 perfect separation upward, 0 perfect separation downward. It is computed from ranks
-and ignores the pairing. The p-value comes from the paired Wilcoxon signed-rank test, which ranks
-the within-pair differences and asks whether they centre on zero, so it uses the pairing.
+The AUC is the probability that a random positive sample scores higher than a random negative
+one (0.5 no separation); it ignores the pairing. The p-value is the paired Wilcoxon signed-rank
+test, which uses it. BH runs within each task and collection.
 
-```{r fit-roc}
-# pROC::roc() auto-orients: a true AUC of 0.194 comes back 0.806. direction = "<" pins it.
-fit_roc <- function(values, spec) {
+```{r set-auc}
+# pROC::roc() auto-orients, turning an AUC of 0.194 into 0.806; direction = "<" pins it.
+fit_roc <- function(score, spec) {
   pROC::roc(
-    controls = values[spec$negative], cases = values[spec$positive],
+    controls = score[spec$negative], cases = score[spec$positive],
     direction = "<", quiet = TRUE
   )
 }
-```
-
-Run every task, stack the results and attach each set's collection and name. BH adjustment runs
-within each task and collection, never pooled across them.
-
-```{r set-auc}
-# The argument is `spec`, not `task`: tibble() builds a `task` column first, and a later
-# `task$label` in the same call would read that column instead of the argument.
+# Named `spec`, not `task`: tibble() would shadow it with the `task` column it builds first.
 set_auc <- imap(tasks, function(spec, name) {
   tibble(
     task = name, task_label = spec$label, set_id = rownames(spec$values),
@@ -169,31 +138,16 @@ set_auc <- imap(tasks, function(spec, name) {
   list_rbind() |>
   left_join(select(catalog, set_id, database, pathway), by = "set_id") |>
   mutate(fdr = p.adjust(p_paired, "BH"), .by = c(task, database))
-head(arrange(set_auc, p_paired), 6)
-```
-
-## Check results
-
-One row per task: every set tested once, the AUC range and any missing p-value.
-
-```{r check}
-set_auc |>
-  summarise(
-    sets = n(), auc_min = min(auc), auc_max = max(auc), missing_p = sum(is.na(p_paired)),
-    .by = task
-  )
 ```
 
 ## Compare with chance
 
-With thousands of sets, some reach p < 0.05 by chance. The chance expectation is 5% of the sets
-tested: the number of nominal hits a collection returns when no set separates the groups.
-The ratio of observed nominal hits to that count reads 1 at chance. Each collection gets its own
-denominator, so a 41-set collection is not read against a 1,366-set one, and BH runs inside the
-same split for the same reason.
+The chance expectation is 5% of the sets tested, so the ratio of nominal hits to it reads 1 at
+chance. Each collection gets its own denominator, so a 41-set collection is not read against a
+1,366-set one.
 
 ```{r chance}
-# `expected` is rounded for display, so the ratio divides by the unrounded count.
+# The ratio divides by the unrounded expectation, not the rounded `expected` column.
 chance_expectation <- set_auc |>
   transmute(
     analysis = "classification", comparison = task_label, database, n_pairs, p = p_paired, fdr
@@ -203,12 +157,11 @@ chance_expectation <- set_auc |>
     ratio = round(nominal / (n() * 0.05), 2), fdr_sig = sum(fdr < 0.05),
     .by = c(analysis, comparison, database, n_pairs)
   )
-head(chance_expectation, 6)
 ```
 
-Nominal hits as a multiple of chance, by task and collection, then the sets surviving BH in each
-task. Training moves the pre against post ratios well above 1; the BFR against HLRT tasks,
-baseline included, sit near or below it.
+Nominal hits as a multiple of chance, then the sets passing BH per task. Training moves the pre
+against post ratios well above 1; the BFR against HLRT tasks, baseline included, sit near or
+below it.
 
 ```{r summary}
 chance_expectation |>
@@ -234,11 +187,9 @@ write_pdf <- function(pages, name) {
 }
 ```
 
-Each drawn task and collection gets pages of ROC curves for every set reaching nominal p, smallest
-p first, twelve to a page; a collection with no hits on a task adds no pages. Pages are built one
-at a time from their own rows, because a paginating facet would build every panel for every page.
-An ROC curve plots the true positive rate against the false positive rate as the score threshold
-moves; the area under it is the AUC.
+Each drawn task and collection gets ROC curves for every set reaching nominal p, smallest p first,
+twelve to a page. Pages are built from their own rows, because a paginating facet would build
+every panel for every page.
 
 ```{r roc-figure}
 roc_figure <- function(task_name, number, db) {
@@ -253,7 +204,6 @@ roc_figure <- function(task_name, number, db) {
     coordinates <- pROC::coords(fit_roc(spec$values[set_id, ], spec), "all")
     tibble(
       fpr = 1 - coordinates$specificity, tpr = coordinates$sensitivity,
-      # An AUC below 0.5 separates the groups the other way, so it is coloured by direction.
       direction = if_else(auc >= 0.5, "higher", "lower"),
       panel = sprintf(
         "%s\nAUC %.2f   p %s   q %s",
@@ -289,9 +239,8 @@ roc_figure <- function(task_name, number, db) {
 }
 ```
 
-One PDF per collection, so each can be read on its own. The four drawn tasks are S6 to S9 in
-the order of `drawn_tasks`; S10 is the chance page across all five tasks. The baseline task is
-reported in the chance table but not drawn.
+One PDF per collection, S6 to S9 for the four tasks other than baseline, which is in the chance
+table only.
 
 ```{r write-figures}
 drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
@@ -303,7 +252,7 @@ walk(unique(catalog$database), function(db) {
 })
 ```
 
-S10 draws each ratio as a bar, one panel per task.
+S10 draws each chance ratio as a bar, one panel per task.
 
 ```{r chance-figure}
 chance_plot <- chance_expectation |>
@@ -329,9 +278,6 @@ chance_plot
 ```
 
 ## Save results
-
-`04_set_classification.xlsx` holds `chance_expectation` (nominal hits against chance per task and
-collection) and `set_auc` (AUC, paired p and BH q per set and task, smallest p first).
 
 ```{r write}
 write_xlsx(
