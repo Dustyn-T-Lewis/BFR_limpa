@@ -1,14 +1,9 @@
 # 01 · Preprocess
 
-This stage turns the DIA-NN output into a normalised protein table with a standard error on every
-estimate, in two steps run in order.
+Turns the DIA-NN report into a normalised protein matrix with a standard error on every value.
 
-[`01_Filtering`](01_Filtering/README.md) repairs the search annotation, applies limpa's precursor
-filters and removes contaminants, writing `precursors_filtered.rds`, the haemoglobin precursors it
-sets aside (`haemoglobin_precursors.rds`) and `01_filter.xlsx`.
-[`02_Quantification`](02_Quantification/README.md) reads those `.rds` files, fits the detection
-curve as a diagnostic, rolls precursors up to proteins with the slope preset at 0.7, applies the
-detection filter and normalises with cyclic loess. It adds a blood index per sample, the mean of
-the HBB and HBA1 estimates, and writes `proteins.rds`, `proteins_adjusted.rds` (the blood index's
-effect removed, for steps that take no design), `02_quantify.xlsx` and the checkpoints in
-`quant_runs/`.
+1. [`01_Filtering`](01_Filtering/README.md): repairs the search annotation, applies limpa's
+   precursor filters and removes contaminants.
+2. [`02_Quantification`](02_Quantification/README.md): rolls precursors up to proteins with
+   `dpcQuant()` (slope 0.7), filters on detection, normalises with cyclic loess and adds a blood
+   index per sample.
