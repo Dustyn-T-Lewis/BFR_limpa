@@ -1,9 +1,9 @@
 # 02 · Test mito
 
 Measures mitochondrial protein enrichment (MPE) per biopsy and tests whether it rose differently
-between legs, then refits the mitochondrial proteins on their own (mitochondrial normalisation) to
-ask whether any protein, complex or MitoPathway changed beyond overall content. The stage README
-defines MPE.
+between legs, then refits the mitochondrial proteins alone (mitochondrial normalisation) to ask
+whether any protein, complex or MitoPathway changed beyond overall content. The stage README
+defines both.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` and
 `quant_runs/proteins_slope_0.7.rds`, `design.rds` from `01_Design`, `fit.rds` from
@@ -17,23 +17,17 @@ quarto render 05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd --output-di
 Outputs:
 
 - `b_reports/02_test_mito.html`: the walkthrough.
-- `b_reports/02_test_mito.pdf`: MPE by arm and time, with lines joining each leg before and after
-  training; complexes I to V by contrast for both fits, labelled with fry FDR and coloured by its
-  signed −log10; volcanoes of the normalised proteins (no baseline volcano), coloured at BH FDR
-  0.05 with five named per direction, ringed by up to twelve MitoPathways at fgsea FDR 0.05,
-  coloured by NES, with ticks on leading-edge proteins.
-- `c_data/02_test_mito.xlsx`, one sheet per table:
-  - `mpe`: one row per biopsy, with its MPE.
-  - `mpe_test`: one row per contrast; log2 MPE through the saved design and contrasts, plain
-    least-squares t and 95% CI.
-  - `citrate_synthase`: one row per contrast; citrate synthase protein from the stage 02 fit, for
-    comparison with CS activity studies.
-  - `complex_tests`: one row per fit, contrast and complex; fry on complexes I to V in the standard
-    and mitochondria-normalised fits, FDR within contrast. `03_complex_subunits` reads it.
-  - `pathway_tests`: one row per method, contrast and MitoPathway; fry and fgsea on MitoPathways at
-    20% coverage, mitochondria-normalised, FDR within contrast.
-  - `mito_proteins`: one row per MitoCarta protein and contrast; mitochondria-normalised dpcDE,
-    adj.P.Val BH within contrast.
+- `b_reports/02_test_mito.pdf`: MPE by arm and time with each leg's pair joined; complexes I to V
+  by contrast for both fits, labelled with fry FDR; volcanoes of the normalised proteins (no
+  baseline) ringed by up to twelve MitoPathways at fgsea FDR 0.05.
+- `c_data/02_test_mito.xlsx`:
+  - `mpe`: per biopsy, MPE;
+  - `mpe_test`: per contrast, log2 MPE change, plain least-squares t, p and 95% CI;
+  - `citrate_synthase`: per contrast, citrate synthase protein from the stage 02 fit;
+  - `complex_tests`: per fit, contrast and complex, fry (read by `03_complex_subunits`);
+  - `pathway_tests`: per method, contrast and MitoPathway at 20% coverage, fry and fgsea on the
+    normalised fit;
+  - `mito_proteins`: per MitoCarta protein and contrast, the normalised dpcDE fit.
 
 | Contrast | log2 MPE change | 95% CI | p |
 |---|---:|---|---:|
@@ -44,13 +38,12 @@ Outputs:
 | interaction | 0.017 | −0.099 to 0.133 | 0.77 |
 
 MPE rises with training by a similar amount in both legs. In the standard fit complexes II to V
-rise with BFR and I and III to V with HLRT (fry FDR 0.005 to 0.031); once total mitochondrial
-content is set aside, no complex moves at fry FDR 0.05. What shifts within the mitochondrion is the
-same in both legs: mitophagy, autophagy, selenoproteins and ROS and glutathione metabolism fall
-relative to content (fry, 9 MitoPathways with BFR and 16 with HLRT), and HLRT also raises the
-mitochondrial ribosome, translation and the TCA cycle. After normalisation 26 proteins reach BH
-0.05 with BFR and 46 with HLRT, ALDH6A1 and PRKN falling in both, none between legs or at
-baseline. Between legs, fgsea leads put complex I lower in BFR relative to content after training
-(CI subunits NES −2.85; fry FDR 0.055) and in the interaction (NES −1.84), with 10 between-leg
-MitoPathways after training and 4 in the interaction. These are leads: fry confirms no between-leg
-MitoPathway, and the baseline contrast also gives fgsea 4, CI subunits among them (NES −2.04).
+rise with BFR and I and III to V with HLRT (fry FDR 0.005 to 0.031); relative to total
+mitochondrial content no complex moves at fry FDR 0.05. Within the mitochondrion both legs shift
+the same way: mitophagy, autophagy, selenoproteins and ROS and glutathione metabolism fall relative
+to content (fry, 9 MitoPathways with BFR and 16 with HLRT), and HLRT also raises the mitochondrial
+ribosome, translation and the TCA cycle. After normalisation 26 proteins reach BH 0.05 with BFR and
+46 with HLRT, ALDH6A1 and PRKN falling in both, none between legs or at baseline. Between legs,
+fgsea puts complex I lower in BFR relative to content after training (CI subunits NES −2.85; fry
+FDR 0.055) and in the interaction (NES −1.84). These are leads: fry confirms no between-leg
+MitoPathway, and fgsea also calls 4 at baseline, CI subunits among them (NES −2.04).
