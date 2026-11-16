@@ -34,10 +34,14 @@ sample.
 stage <- here("06_Composition", "02_fibre_type")
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
-reference <- read_csv(file.path(stage, "references", "fibertyper_reference.csv"),
-  show_col_types = FALSE)
+reference <- read_csv(
+  file.path(stage, "references", "fibertyper_reference.csv"), show_col_types = FALSE
+)
 targets <- proteins$targets
-stopifnot(identical(rownames(d$design), targets$sample_id))
+stopifnot(
+  identical(rownames(d$design), targets$sample_id),
+  identical(colnames(proteins$E), targets$sample_id)
+)
 count(reference, marker_type)
 ```
 
@@ -51,7 +55,6 @@ For two fractions that are non-negative and sum to one, the least-squares fit Fi
 the line from the fast to the slow profile, clipped to [0, 1].
 
 ```{r deconvolve}
-stopifnot(identical(colnames(proteins$E), targets$sample_id))
 genes <- proteins$genes$Genes
 reference <- filter(reference, !is.na(slow_F + fast_F + slow_M + fast_M))
 rows <- which(genes %in% reference$gene & !duplicated(genes))
@@ -69,9 +72,9 @@ summary(targets$slow)
 
 ## Checks without histology
 
-No histology exists for these biopsies, so the level is unvalidated; the checks ask whether the
-ranking behaves like fibre type: a person's two legs should agree, as should one leg's two biopsies,
-most variation should sit between people, and women's muscle is usually slower than men's.
+No histology exists for these biopsies, so the level is unvalidated. The checks ask whether the
+ranking behaves like fibre type: a person's two legs and one leg's two biopsies should agree, most
+variation should sit between people, and women's muscle is usually slower than men's.
 
 ```{r checks}
 wide <- targets |>
@@ -94,9 +97,9 @@ mutate(checks, value = round(value, 2))
 
 ## Did training or arm shift fibre type?
 
-The slow fraction goes through the stage 02 design (group, participant, blood index) and its five
-contrasts as a single outcome row, so the test is the plain least-squares t, as for MPE in
-`05_Mitochondria`. Estimates are in percentage points.
+The slow fraction goes through the stage 02 design and contrasts as a single row, so the test is
+the plain least-squares t (no moderation), as for MPE in `05_Mitochondria`. Estimates are in
+percentage points.
 
 ```{r contrasts}
 fit <- contrasts.fit(lmFit(rbind(slow = 100 * targets$slow), d$design), d$contrasts)
@@ -127,8 +130,9 @@ figure <- targets |>
   stat_summary(aes(group = 1), fun = mean, geom = "line", linewidth = 1) +
   facet_wrap(~treatment) +
   scale_colour_manual(values = c(BFR = "#D55E00", HLRT = "#0072B2")) +
-  labs(x = NULL, y = "Slow (type I) fibre fraction, %",
-    title = "Fibre type before and after training") +
+  labs(
+    x = NULL, y = "Slow (type I) fibre fraction, %", title = "Fibre type before and after training"
+  ) +
   theme_bw(base_size = 9)
 figure
 
