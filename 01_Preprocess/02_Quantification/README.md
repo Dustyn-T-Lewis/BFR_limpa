@@ -19,6 +19,8 @@ quarto render 01_Preprocess/02_Quantification/a_script/02_quantify.qmd --output-
 Outputs:
 
 - `b_reports/02_quantify.html`: the report, with diagnostic plots.
+- `b_reports/02_quantify_mds.pdf`: MDS of the samples, coloured by treatment (open T1, filled T2)
+  and labelled by participant.
 - `c_data/proteins.rds`: abundance, standard errors, annotations and sample table (with blood index
   and contamination load), for stages 02 to 08.
 - `c_data/proteins_adjusted.rds`: the same with the blood effect removed (`removeBatchEffect()`,
