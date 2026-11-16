@@ -77,7 +77,6 @@ component score.
 #| fig-height: 10
 arm_colours <- c(BFR = "#D55E00", HLRT = "#0072B2")
 pc_label <- function(pc) sprintf("%s (%.1f%%)", pc, 100 * components$prop_expl_var$X[[pc]])
-
 score_plot <- scores |>
   mutate(leg_id = paste(participant, leg, sep = "_")) |>
   ggplot(aes(PC1, PC2, colour = treatment)) +
@@ -87,10 +86,8 @@ score_plot <- scores |>
   scale_shape_manual(values = c(T1 = 1, T2 = 16)) +
   labs(x = pc_label("PC1"), y = pc_label("PC2"), colour = NULL, shape = NULL) +
   theme_bw(base_size = 9)
-
-pc_loadings <- as_tibble(components$loadings$X[, 1:2], rownames = "protein") |>
-  mutate(gene = gene_of[protein])
-
+pc_loadings <- as_tibble(components$loadings$X[, 1:5], rownames = "protein") |>
+  mutate(gene = gene_of[protein], .after = protein)
 loading_plot <- function(pc) {
   pc_loadings |>
     slice_max(abs(.data[[pc]]), n = 20) |>
@@ -100,12 +97,10 @@ loading_plot <- function(pc) {
     labs(x = paste(pc, "loading"), y = NULL) +
     theme_bw(base_size = 8)
 }
-
 pca_page <- score_plot / (loading_plot("PC1") | loading_plot("PC2")) +
   plot_layout(heights = c(1.2, 1)) +
   plot_annotation(title = "Multilevel PCA: samples with each participant's mean removed")
 pca_page
-
 pdf(file.path(stage, "b_reports", "01_pca.pdf"), width = 8.27, height = 11.69)
 print(pca_page)
 invisible(dev.off())
@@ -119,8 +114,7 @@ write_xlsx(
     variance = variance,
     structure = pc_structure,
     scores = select(scores, sample_id, participant, leg, treatment, timepoint, PC1:PC5),
-    loadings = as_tibble(components$loadings$X[, 1:5], rownames = "protein") |>
-      mutate(gene = gene_of[protein], .after = protein)
+    loadings = pc_loadings
   ),
   file.path(stage, "c_data", "01_pca.xlsx")
 )

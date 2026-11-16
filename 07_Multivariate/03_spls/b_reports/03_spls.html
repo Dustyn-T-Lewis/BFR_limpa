@@ -2342,8 +2342,7 @@ vertical-align: -.125em;
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  }</span>
 <span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">tuned =</span> tuned, <span class="at">model =</span> model, <span class="at">performance =</span> performance)</span>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>fits <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits_to_run, fit_spls)</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(fits) <span class="ot">&lt;-</span> <span class="fu">paste</span>(fits_to_run<span class="sc">$</span>outcome, fits_to_run<span class="sc">$</span>fit, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>fits <span class="ot">&lt;-</span> <span class="fu">mutate</span>(fits_to_run, <span class="at">result =</span> <span class="fu">pmap</span>(<span class="fu">list</span>(outcome, fit, rows), fit_spls))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="prediction-error" class="level2">
@@ -2351,22 +2350,21 @@ vertical-align: -.125em;
 <p>One row per outcome, fit and component.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>measure <span class="ot">&lt;-</span> <span class="cf">function</span>(performance, name) performance<span class="sc">$</span>measures[[name]]<span class="sc">$</span>summary<span class="sc">$</span>mean</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>model_summary <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits_to_run, <span class="cf">function</span>(outcome, fit, rows) {</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  result <span class="ot">&lt;-</span> fits[[<span class="fu">paste</span>(outcome, fit, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)]]</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">outcome =</span> outcome, <span class="at">fit =</span> fit, <span class="at">n_legs =</span> <span class="fu">length</span>(rows), <span class="at">component =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">keep_x =</span> <span class="fu">unname</span>(result<span class="sc">$</span>tuned<span class="sc">$</span>choice.keepX),</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">tune_mae =</span> <span class="fu">map2_dbl</span>(keep_x, component,</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>      \(k, h) result<span class="sc">$</span>tuned<span class="sc">$</span>error.rate[<span class="fu">as.character</span>(k), h]),</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">msep =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;MSEP&quot;</span>),</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">rmsep =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;RMSEP&quot;</span>),</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">r2 =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;R2&quot;</span>),</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">q2 =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;Q2&quot;</span>),</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">q2_total =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;Q2.total&quot;</span>)</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>model_summary <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.double), \(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>model_summary <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits, <span class="cf">function</span>(outcome, fit, rows, result) {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">outcome =</span> outcome, <span class="at">fit =</span> fit, <span class="at">n_legs =</span> <span class="fu">length</span>(rows), <span class="at">component =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">keep_x =</span> <span class="fu">unname</span>(result<span class="sc">$</span>tuned<span class="sc">$</span>choice.keepX),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">tune_mae =</span> <span class="fu">map2_dbl</span>(keep_x, component,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>      \(k, h) result<span class="sc">$</span>tuned<span class="sc">$</span>error.rate[<span class="fu">as.character</span>(k), h]),</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">msep =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;MSEP&quot;</span>),</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">rmsep =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;RMSEP&quot;</span>),</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">r2 =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;R2&quot;</span>),</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">q2 =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;Q2&quot;</span>),</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">q2_total =</span> <span class="fu">measure</span>(result<span class="sc">$</span>performance, <span class="st">&quot;Q2.total&quot;</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>model_summary <span class="sc">|&gt;</span> <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.double), \(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 24 × 11
    outcome fit    n_legs component keep_x tune_mae  msep rmsep      r2        q2
@@ -2390,24 +2388,23 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="panels">Panels</h2>
 <p>Every selected protein, with its loading and its stability across the cross-validation refits.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>panels <span class="ot">&lt;-</span> <span class="fu">imap</span>(fits, <span class="cf">function</span>(result, name) {</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>panels <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits, <span class="cf">function</span>(outcome, fit, rows, result) {</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="cf">function</span>(h) {</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    loading <span class="ot">&lt;-</span> result<span class="sc">$</span>model<span class="sc">$</span>loadings<span class="sc">$</span>X[, h]</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    stable <span class="ot">&lt;-</span> result<span class="sc">$</span>performance<span class="sc">$</span>features<span class="sc">$</span>stability.X[[h]]</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">protein =</span> <span class="fu">names</span>(loading), <span class="at">loading =</span> <span class="fu">unname</span>(loading)) <span class="sc">|&gt;</span></span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(loading <span class="sc">!=</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">outcome =</span> <span class="fu">sub</span>(<span class="st">&quot;_(BFR|HLRT|pooled)$&quot;</span>, <span class="st">&quot;&quot;</span>, name), <span class="at">fit =</span> <span class="fu">sub</span>(<span class="st">&quot;.*_&quot;</span>, <span class="st">&quot;&quot;</span>, name),</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">component =</span> h, <span class="at">gene =</span> gene_of[protein], <span class="at">stability =</span> <span class="fu">unname</span>(stable[protein]),</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        <span class="at">.before =</span> protein</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">arrange</span>(<span class="fu">desc</span>(<span class="fu">abs</span>(loading)))</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>()</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>panels <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">proteins =</span> <span class="fu">n</span>(), <span class="at">stable_80 =</span> <span class="fu">sum</span>(stability <span class="sc">&gt;=</span> <span class="fl">0.8</span>),</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">.by =</span> <span class="fu">c</span>(outcome, fit, component))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">outcome =</span> outcome, <span class="at">fit =</span> fit, <span class="at">component =</span> h, <span class="at">gene =</span> gene_of[protein],</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">stability =</span> <span class="fu">unname</span>(stable[protein]), <span class="at">.before =</span> protein</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">arrange</span>(<span class="fu">desc</span>(<span class="fu">abs</span>(loading)))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>()</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>panels <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">proteins =</span> <span class="fu">n</span>(), <span class="at">stable_80 =</span> <span class="fu">sum</span>(stability <span class="sc">&gt;=</span> <span class="fl">0.8</span>),</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">.by =</span> <span class="fu">c</span>(outcome, fit, component))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 24 × 5
    outcome fit    component proteins stable_80
@@ -2431,10 +2428,10 @@ vertical-align: -.125em;
 <p><code>perf()</code> does not return its predictions, so the figure’s predicted values come from one cross-validation pass written with <code>spls()</code> and <code>predict()</code>: component 1 at the tuned panel size, on the same fold scheme as <code>perf()</code>. In a single arm that is one random draw of 5 folds, not <code>perf()</code>’s 50 repeats; pooled it is one participant per fold, the same folds <code>perf()</code> uses.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2026</span>)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>held_out <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits_to_run, <span class="cf">function</span>(outcome, fit, rows) {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>held_out <span class="ot">&lt;-</span> <span class="fu">pmap</span>(fits, <span class="cf">function</span>(outcome, fit, rows, result) {</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> change[rows, ]</span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> legs[[outcome]][rows]</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  keep_x <span class="ot">&lt;-</span> fits[[<span class="fu">paste</span>(outcome, fit, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)]]<span class="sc">$</span>tuned<span class="sc">$</span>choice.keepX[[<span class="dv">1</span>]]</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  keep_x <span class="ot">&lt;-</span> result<span class="sc">$</span>tuned<span class="sc">$</span>choice.keepX[[<span class="dv">1</span>]]</span>
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  folds <span class="ot">&lt;-</span> <span class="cf">if</span> (fit <span class="sc">==</span> <span class="st">&quot;pooled&quot;</span>) {</span>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">split</span>(<span class="fu">seq_along</span>(rows), legs<span class="sc">$</span>participant[rows])</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>

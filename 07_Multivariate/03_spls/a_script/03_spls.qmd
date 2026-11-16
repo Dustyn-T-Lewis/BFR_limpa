@@ -107,8 +107,7 @@ fit_spls <- function(outcome, fit, rows) {
   }
   list(tuned = tuned, model = model, performance = performance)
 }
-fits <- pmap(fits_to_run, fit_spls)
-names(fits) <- paste(fits_to_run$outcome, fits_to_run$fit, sep = "_")
+fits <- mutate(fits_to_run, result = pmap(list(outcome, fit, rows), fit_spls))
 ```
 
 ## Prediction error
@@ -117,8 +116,7 @@ One row per outcome, fit and component.
 
 ```{r models}
 measure <- function(performance, name) performance$measures[[name]]$summary$mean
-model_summary <- pmap(fits_to_run, function(outcome, fit, rows) {
-  result <- fits[[paste(outcome, fit, sep = "_")]]
+model_summary <- pmap(fits, function(outcome, fit, rows, result) {
   tibble(
     outcome = outcome, fit = fit, n_legs = length(rows), component = 1:2,
     keep_x = unname(result$tuned$choice.keepX),
@@ -140,16 +138,15 @@ model_summary |> mutate(across(where(is.double), \(x) signif(x, 3)))
 Every selected protein, with its loading and its stability across the cross-validation refits.
 
 ```{r panels}
-panels <- imap(fits, function(result, name) {
+panels <- pmap(fits, function(outcome, fit, rows, result) {
   map(1:2, function(h) {
     loading <- result$model$loadings$X[, h]
     stable <- result$performance$features$stability.X[[h]]
     tibble(protein = names(loading), loading = unname(loading)) |>
       filter(loading != 0) |>
       mutate(
-        outcome = sub("_(BFR|HLRT|pooled)$", "", name), fit = sub(".*_", "", name),
-        component = h, gene = gene_of[protein], stability = unname(stable[protein]),
-        .before = protein
+        outcome = outcome, fit = fit, component = h, gene = gene_of[protein],
+        stability = unname(stable[protein]), .before = protein
       ) |>
       arrange(desc(abs(loading)))
   }) |>
@@ -169,10 +166,10 @@ on the same fold scheme as `perf()`. In a single arm that is one random draw of 
 
 ```{r predictions}
 set.seed(2026)
-held_out <- pmap(fits_to_run, function(outcome, fit, rows) {
+held_out <- pmap(fits, function(outcome, fit, rows, result) {
   x <- change[rows, ]
   y <- legs[[outcome]][rows]
-  keep_x <- fits[[paste(outcome, fit, sep = "_")]]$tuned$choice.keepX[[1]]
+  keep_x <- result$tuned$choice.keepX[[1]]
   folds <- if (fit == "pooled") {
     split(seq_along(rows), legs$participant[rows])
   } else {
