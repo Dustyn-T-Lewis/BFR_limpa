@@ -12,10 +12,7 @@ knitr:
 ## Load packages
 
 ```{r setup}
-pacman::p_load(
-  here, dplyr, tibble, tidyr, purrr, stringr, limma, limpa, ggplot2, patchwork,
-  readxl, writexl
-)
+pacman::p_load(here, dplyr, tibble, tidyr, purrr, limma, limpa, ggplot2, patchwork, readxl, writexl)
 here::i_am("05_Mitochondria/02_test_mito/a_script/02_test_mito.qmd")
 ```
 
@@ -26,17 +23,18 @@ Two questions, both following Granata et al. 2021 (Nat Commun 12:7056) and Reism
 mitochondrial protein did each leg gain? And did any part of the mitochondrion change beyond that
 overall gain?
 
-`proteins` is the normalised protein matrix from stage 01. `raw` is the same quantification before
-cyclic loess, cut to the same rows, because mitochondrial content has to be read from unnormalised
-values. `d` holds the design, the contrasts and the baseline contrast's name; `fit` is the
-stage 02 protein fit. `protein_map` links proteins to gene symbols and `membership` lists the
-MitoCarta sets from `01_build_mito_sets`.
+`proteins` is the normalised protein matrix from stage 01. `unnormalised` is the same
+quantification before cyclic loess, cut to the same rows, because mitochondrial content has to be
+read from unnormalised values. `d` holds the design, the contrasts and the baseline contrast's
+name; `fit` is the stage 02 protein fit. `protein_map` links proteins to gene symbols and
+`membership` lists the MitoCarta sets from `01_build_mito_sets`.
 
 ```{r read}
 stage <- here("05_Mitochondria", "02_test_mito")
 quant <- here("01_Preprocess", "02_Quantification", "c_data")
 proteins <- readRDS(file.path(quant, "proteins.rds"))
-raw <- readRDS(file.path(quant, "quant_runs", "proteins_slope_0.7.rds"))[rownames(proteins), ]
+unnormalised <- readRDS(file.path(quant, "quant_runs", "proteins_slope_0.7.rds"))
+unnormalised <- unnormalised[rownames(proteins), ]
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
 fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
 protein_map <- read_excel(
@@ -47,7 +45,7 @@ membership <- read_excel(
   here("05_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx"),
   "membership"
 )
-dim(raw)
+dim(unnormalised)
 ```
 
 ## Check the inputs agree
@@ -60,9 +58,9 @@ the mitochondrial protein enrichment (MPE) fit and fry match them by position.
 ```{r check}
 stopifnot(
   identical(protein_map$protein, rownames(proteins)),
-  identical(colnames(raw), colnames(proteins)),
-  identical(rownames(d$design), colnames(raw)),
-  identical(normalizeBetweenArrays(raw$E, method = "cyclicloess"), proteins$E)
+  identical(colnames(unnormalised), colnames(proteins)),
+  identical(rownames(d$design), colnames(unnormalised)),
+  identical(normalizeBetweenArrays(unnormalised$E, method = "cyclicloess"), proteins$E)
 )
 contrast_names <- colnames(d$contrasts)
 targets <- proteins$targets
@@ -91,16 +89,16 @@ c(mitopathways = sum(coverage$collection == "MitoPathways"), tested = length(pat
 
 Mitochondrial protein enrichment (MPE) is the share that MitoCarta proteins take of the summed
 protein values, one number per biopsy. The values are the dpcQuant protein estimates before
-normalisation, with `2^raw$E` undoing the log2. dpcQuant places each protein at its typical
-precursor intensity, so each protein counts once, however many precursors it has. Every protein
-group counts toward the denominator. MPE is computed before normalisation because cyclic loess
-assumes the typical protein holds still.
+normalisation, with `2^unnormalised$E` undoing the log2. dpcQuant places each protein at its
+typical precursor intensity, so each protein counts once, however many precursors it has. Every
+protein group counts toward the denominator. MPE is computed before normalisation because cyclic
+loess assumes the typical protein holds still.
 
 ```{r mpe}
-intensity <- 2^raw$E
+intensity <- 2^unnormalised$E
 is_mito <- protein_map$gene %in% sets$MitoCarta
 mpe <- tibble(
-  sample_id = colnames(raw), participant = targets$participant, leg = targets$leg,
+  sample_id = colnames(unnormalised), participant = targets$participant, leg = targets$leg,
   treatment = targets$treatment, timepoint = targets$timepoint,
   mpe = colSums(intensity[is_mito, ]) / colSums(intensity)
 )
@@ -128,8 +126,7 @@ mutate(mpe_test, across(where(is.double), function(x) signif(x, 3)))
 ## Citrate synthase
 
 Citrate synthase activity is the literature's usual marker of mitochondrial content. This is its
-protein, read from the stage 02 fit for comparison only. `topTable()` with `sort.by = "none"` keeps
-protein order so the row can be picked by name.
+protein, read from the stage 02 fit for comparison only.
 
 ```{r citrate-synthase}
 cs <- protein_map$protein[protein_map$gene %in% "CS" & protein_map$selected]
@@ -149,10 +146,9 @@ shows a change. The papers used VSN; we use cyclic loess, as for the main matrix
 
 The refit follows stage 02: `dpcDE()` reads the standard errors from `dpcQuant()` as precision
 weights, with no per-sample quality weights, and `eBayes(robust = TRUE)` moderates the variances.
-`plot = FALSE` skips `dpcDE()`'s diagnostic plot.
 
 ```{r mito-fit}
-mito <- raw[is_mito, ]
+mito <- unnormalised[is_mito, ]
 mito$E <- normalizeBetweenArrays(mito$E, method = "cyclicloess")
 mito_fit <- dpcDE(mito, d$design, plot = FALSE) |>
   contrasts.fit(d$contrasts) |>
@@ -170,7 +166,6 @@ mito_proteins <- map(set_names(contrast_names), function(cn) {
 }) |>
   list_rbind(names_to = "contrast") |>
   left_join(select(protein_map, protein, gene, label, selected), by = "protein")
-head(mito_proteins, 3)
 ```
 
 ## Complexes I to V
@@ -180,9 +175,6 @@ together, moved in one direction, and it allows for correlation between them. It
 precision weights from `y$weights`. `ids2indices()` turns each set's gene symbols into row
 positions, matching only each symbol's representative protein, as in `01_run_fgsea_and_fry`. fry
 returns its own BH FDR per contrast.
-
-`fry_sets()` returns one row per set and contrast. It runs on both fits for the complexes and on
-the normalised fit for MitoPathways.
 
 ```{r fry-helper}
 representative <- with(protein_map, set_names(if_else(selected, gene, NA), protein))
@@ -207,7 +199,6 @@ complex_tests <- bind_rows(
   .id = "fit"
 ) |>
   select(fit, contrast, set, NGenes, Direction, PValue, FDR)
-head(complex_tests, 5)
 ```
 
 ## MitoPathways
@@ -251,26 +242,20 @@ pathway_tests <- bind_rows(
 
 ## Figures
 
-Three A4 pages go to `b_reports/02_test_mito.pdf`. They share a theme and the arm colours.
-
-```{r theme}
-theme_set(theme_minimal(base_size = 9))
-arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
-```
-
-Page 1: MPE by arm and time, with each leg's pair joined.
+Three A4 pages go to `b_reports/02_test_mito.pdf`. Page 1: MPE by arm and time, with each leg's
+pair joined.
 
 ```{r mpe-page}
+theme_set(theme_minimal(base_size = 9))
+arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
 mpe_page <- ggplot(mpe, aes(timepoint, 100 * mpe, colour = treatment)) +
   geom_line(aes(group = paste(participant, leg)), alpha = 0.35) +
   geom_boxplot(aes(group = timepoint), width = 0.3, outlier.shape = NA, fill = NA) +
   geom_point(size = 1, alpha = 0.7) +
   facet_wrap(~treatment) +
   scale_colour_manual(values = arm_colours, guide = "none") +
-  labs(
-    x = NULL, y = "MPE, % of summed dpcQuant protein values",
-    title = "Mitochondrial protein enrichment by arm and time"
-  )
+  labs(x = NULL, y = "MPE, % of summed dpcQuant protein values",
+    title = "Mitochondrial protein enrichment by arm and time")
 ```
 
 Page 2: a complex by contrast grid for both fits, coloured by signed −log10 fry FDR.
@@ -280,20 +265,15 @@ complex_page <- complex_tests |>
   mutate(
     score = if_else(Direction == "Up", 1, -1) * -log10(FDR),
     contrast = factor(contrast, contrast_names), set = factor(set, rev(complexes)),
-    fit = factor(
-      fit, c("standard", "mitochondria_normalised"),
-      c("standard fit", "mitochondria-normalised fit")
-    )
+    fit = factor(fit, c("standard", "mitochondria_normalised"),
+      c("standard fit", "mitochondria-normalised fit"))
   ) |>
   ggplot(aes(contrast, set, fill = score)) +
   geom_tile(colour = "white") +
   geom_text(aes(label = signif(FDR, 2)), size = 2.6) +
   facet_wrap(~fit, ncol = 1) +
   scale_fill_gradient2(low = "#2166AC", high = "#B2182B", name = "signed -log10 FDR") +
-  labs(
-    x = NULL, y = NULL,
-    title = "Complexes I to V, standard and mitochondria-normalised fits"
-  ) +
+  labs(x = NULL, y = NULL, title = "Complexes I to V, standard and mitochondria-normalised fits") +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), legend.position = "top")
 ```
 
@@ -325,10 +305,8 @@ volcano <- function(cn) {
     label_mode = "top_per_direction", label_size = 2.6, axis_size = 2.6, point_size = 0.9
   ) +
     guides(fill = guide_colorbar(direction = "horizontal", title.position = "top")) +
-    theme(
-      legend.position = "bottom", legend.key.height = unit(2, "mm"),
-      legend.key.width = unit(16, "mm")
-    )
+    theme(legend.position = "bottom", legend.key.height = unit(2, "mm"),
+      legend.key.width = unit(16, "mm"))
 }
 volcano_page <- wrap_plots(map(setdiff(contrast_names, d$baseline), volcano), ncol = 2) +
   plot_annotation(title = "Mitochondria-normalised proteins")
@@ -365,11 +343,8 @@ pathway_tests |>
 
 ```{r write}
 write_xlsx(
-  list(
-    mpe = mpe, mpe_test = mpe_test, citrate_synthase = citrate_synthase,
-    complex_tests = complex_tests,
-    pathway_tests = pathway_tests, mito_proteins = mito_proteins
-  ),
+  list(mpe = mpe, mpe_test = mpe_test, citrate_synthase = citrate_synthase,
+    complex_tests = complex_tests, pathway_tests = pathway_tests, mito_proteins = mito_proteins),
   file.path(stage, "c_data", "02_test_mito.xlsx")
 )
 ```

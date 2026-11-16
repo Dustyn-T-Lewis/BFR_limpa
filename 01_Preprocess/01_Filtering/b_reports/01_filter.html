@@ -2249,8 +2249,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-measurements" class="level2">
 <h2 class="anchored" data-anchor-id="read-measurements">Read measurements</h2>
-<p><code>readDIANN()</code> reads DIA-NN’s normalised intensity (<code>Precursor.Normalised</code>) for each precursor, a peptide at one charge state, and keeps those passing its default 0.01 cutoffs on <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code>. The limpa vignette gives these cutoffs for a match-between-runs (MBR) search, where an identification in one run supports the same peptide in others; whether this search used MBR is unrecorded. Protein-level normalisation comes after quantification, in <code>02_Quantification</code>.</p>
-<p><code>y$E</code> holds log2 intensities, precursors in rows and runs in columns; <code>y$genes</code> holds their annotations. <code>Protein.Ids</code> is added to the default annotation columns because the repair below needs it. <code>NA</code> marks a missing measurement.</p>
+<p><code>readDIANN()</code> reads DIA-NN’s normalised precursor intensities (<code>Precursor.Normalised</code>) as log2 values and keeps precursors passing its default 0.01 cutoffs on <code>Q.Value</code>, <code>Lib.Q.Value</code> and <code>Lib.PG.Q.Value</code>. The limpa vignette gives these cutoffs for a match-between-runs search; whether this search used match-between-runs is unrecorded. <code>Protein.Ids</code> is added to the annotation columns for the repair below.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">readDIANN</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;report.parquet&quot;</span>),</span>
@@ -2263,70 +2262,28 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 53852   132</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(y<span class="sc">$</span>genes, <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A data frame: 6 × 5
-  Protein.Group Protein.Ids Protein.Names Genes Proteotypic
-* &lt;chr&gt;         &lt;chr&gt;       &lt;chr&gt;         &lt;chr&gt;       &lt;dbl&gt;
-1 O75822        O75822      EIF3J_HUMAN   EIF3J           1
-2 P28482        P28482      MK01_HUMAN    MAPK1           1
-3 P09417        P09417      DHPR_HUMAN    QDPR            1
-4 O00410        O00410      IPO5_HUMAN    IPO5            1
-5 O00410        O00410      IPO5_HUMAN    IPO5            1
-6 Q9Y2Z0        Q9Y2Z0      SGT1_HUMAN    SUGT1           1</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>E[<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                                      CL_MDR_2E-T1 CL_MDR_2E-T2 CL_MDR_3D-T1
-(UniMod:1)AAAAAAAGDSDSWDADAFSVEDPVRK3     20.24789     19.17699     18.74988
-(UniMod:1)AAAAAAGAGPEM(UniMod:35)VR2      19.13844     18.74501     18.36366
-(UniMod:1)AAAAAAGEAR2                     23.07495     22.66151     21.87962
-(UniMod:1)AAAAAEQQQFYLLLGNLLSPDNVVR3      15.11600     13.78317     13.84991
-(UniMod:1)AAAAAEQQQFYLLLGNLLSPDNVVRK3           NA           NA           NA
-(UniMod:1)AAAAAGTATSQR2                         NA           NA           NA
-                                      CL_MDR_3D-T2
-(UniMod:1)AAAAAAAGDSDSWDADAFSVEDPVRK3     18.32769
-(UniMod:1)AAAAAAGAGPEM(UniMod:35)VR2      18.28723
-(UniMod:1)AAAAAAGEAR2                     21.81536
-(UniMod:1)AAAAAEQQQFYLLLGNLLSPDNVVR3      14.07011
-(UniMod:1)AAAAAEQQQFYLLLGNLLSPDNVVRK3           NA
-(UniMod:1)AAAAAGTATSQR2                         NA</code></pre>
-</div>
 </div>
 </section>
 <section id="match-samples" class="level2">
 <h2 class="anchored" data-anchor-id="match-samples">Match samples</h2>
-<p>Run names are matched to the metadata ignoring letter case (one run, <code>Cl_MDR_7E-T2</code>, is written <code>CL_MDR_7E-T2</code> in the sheet), and the columns are reordered and renamed to sample IDs. Every metadata run must be in the report; the report’s runs left out are printed. One is the discarded S08 injection, in the report but not the metadata.</p>
+<p>Run names are matched to the metadata ignoring case (<code>Cl_MDR_7E-T2</code> is <code>CL_MDR_7E-T2</code> in the sheet), and columns are reordered and renamed to sample IDs. Every metadata run must be in the report. The report’s runs left out are printed; one is the discarded S08 injection.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">str_to_lower</span>(metadata<span class="sc">$</span>run), <span class="fu">str_to_lower</span>(<span class="fu">colnames</span>(y)))</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(i))</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">setdiff</span>(<span class="fu">colnames</span>(y), <span class="fu">colnames</span>(y)[i])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>metadata <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="fu">here</span>(<span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;metadata.csv&quot;</span>), <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>i <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">str_to_lower</span>(metadata<span class="sc">$</span>run), <span class="fu">str_to_lower</span>(<span class="fu">colnames</span>(y)))</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(i))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">setdiff</span>(<span class="fu">colnames</span>(y), <span class="fu">colnames</span>(y)[i])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;CL_MDR_8E-T1&quot;</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[, i]</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(y) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># EList subsetting expects targets to be a data.frame, not a tibble.</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>targets <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(metadata, <span class="at">row.names =</span> metadata<span class="sc">$</span>sample_id)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(y<span class="sc">$</span>targets[<span class="fu">c</span>(<span class="st">&quot;run&quot;</span>, <span class="st">&quot;sample_id&quot;</span>, <span class="st">&quot;participant&quot;</span>, <span class="st">&quot;leg&quot;</span>, <span class="st">&quot;treatment&quot;</span>, <span class="st">&quot;timepoint&quot;</span>)], <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>                  run sample_id participant leg treatment timepoint
-S02_L_T1 CL_MDR_2E-T1  S02_L_T1         S02   L      HLRT        T1
-S02_L_T2 CL_MDR_2E-T2  S02_L_T2         S02   L      HLRT        T2
-S02_R_T1  CL_MR_2D_T1  S02_R_T1         S02   R       BFR        T1
-S02_R_T2 CL_MR_2D_T2r  S02_R_T2         S02   R       BFR        T2
-S03_L_T1 CL_MDR_3E-T1  S03_L_T1         S03   L      HLRT        T1
-S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[, i]</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(y) <span class="ot">&lt;-</span> metadata<span class="sc">$</span>sample_id</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># EList subsetting expects targets to be a data.frame, not a tibble.</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>targets <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(metadata, <span class="at">row.names =</span> metadata<span class="sc">$</span>sample_id)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
-<p>Signal, the summed intensity on the natural scale, shows how much a filter removes, which precursor counts alone cannot. <code>total_signal()</code> computes it from log2 values; the starting signal stays fixed, so the percentages from different filters compare.</p>
+<p>Signal, the summed intensity on the natural scale, shows how much a filter removes, which precursor counts alone cannot. Every percentage below is of the starting signal.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>total_signal <span class="ot">&lt;-</span> <span class="cf">function</span>(log2_intensities) {</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum</span>(<span class="dv">2</span><span class="sc">^</span>log2_intensities, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>signal_start <span class="ot">&lt;-</span> <span class="fu">total_signal</span>(y<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>total_signal <span class="ot">&lt;-</span> <span class="cf">function</span>(log2_intensities) <span class="fu">sum</span>(<span class="dv">2</span><span class="sc">^</span>log2_intensities, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>signal_start <span class="ot">&lt;-</span> <span class="fu">total_signal</span>(y<span class="sc">$</span>E)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="repair-annotations" class="level2">
@@ -2334,71 +2291,34 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 <p>The search FASTA appended the cRAP database of common laboratory contaminants, which lists some human proteins the human FASTA already holds. DIA-NN therefore reports myoglobin as <code>P02144;cRAP-P02144</code> and marks it non-proteotypic (not unique to one protein), along with creatine kinase M and both haemoglobins. Left unrepaired, the shared-peptide filter below deletes them.</p>
 <p>Two kinds of row are dropped: protein groups made only of cRAP entries, and reversed sequences (<code>rev_</code>), which the FASTA carried as ordinary entries, so DIA-NN treated them as real. Mixed groups stay for repair.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>members <span class="ot">&lt;-</span> <span class="fu">str_split</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group, <span class="st">&quot;;&quot;</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>crap_only <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(members, <span class="cf">function</span>(ids) <span class="fu">all</span>(<span class="fu">str_starts</span>(ids, <span class="st">&quot;cRAP-&quot;</span>)))</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>is_decoy <span class="ot">&lt;-</span> <span class="fu">str_starts</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group, <span class="st">&quot;rev_&quot;</span>)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>mentions_crap <span class="ot">&lt;-</span> <span class="fu">str_detect</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Ids, <span class="st">&quot;cRAP-&quot;</span>)</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>removed_rows <span class="ot">&lt;-</span> crap_only <span class="sc">|</span> is_decoy</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>crap_only <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(<span class="fu">str_split</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group, <span class="st">&quot;;&quot;</span>), <span class="cf">function</span>(ids) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(<span class="fu">str_starts</span>(ids, <span class="st">&quot;cRAP-&quot;</span>))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>is_decoy <span class="ot">&lt;-</span> <span class="fu">str_starts</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group, <span class="st">&quot;rev_&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>mentions_crap <span class="ot">&lt;-</span> <span class="fu">str_detect</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Protein.Ids, <span class="st">&quot;cRAP-&quot;</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>removed_rows <span class="ot">&lt;-</span> crap_only <span class="sc">|</span> is_decoy</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Counts and signal per category, before the rows go. The categories overlap, and “mentions cRAP at all” is counted, not removed.</p>
+<p>The categories overlap, and “mentions cRAP at all” is counted, not removed.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>reasons <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;cRAP-only group&quot;</span> <span class="ot">=</span> crap_only,</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;reversed decoy&quot;</span> <span class="ot">=</span> is_decoy,</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;mentions cRAP at all&quot;</span> <span class="ot">=</span> mentions_crap</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>removal_counts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">reason =</span> <span class="fu">names</span>(reasons),</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">precursors =</span> <span class="fu">map_int</span>(reasons, sum),</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">map_dbl</span>(reasons, <span class="cf">function</span>(rows) {</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">total_signal</span>(y<span class="sc">$</span>E[rows, , <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">/</span> signal_start</span>
-<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>reasons <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;cRAP-only group&quot;</span> <span class="ot">=</span> crap_only,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;reversed decoy&quot;</span> <span class="ot">=</span> is_decoy,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;mentions cRAP at all&quot;</span> <span class="ot">=</span> mentions_crap</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>removal_counts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">reason =</span> <span class="fu">names</span>(reasons),</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">precursors =</span> <span class="fu">map_int</span>(reasons, sum),</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">map_dbl</span>(reasons, <span class="cf">function</span>(rows) {</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">total_signal</span>(y<span class="sc">$</span>E[rows, , <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">/</span> signal_start</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+<p>Flagged rows go first, so every row left to repair keeps at least one human entry. Six of the rows to repair, before repair:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">category =</span> <span class="fu">c</span>(<span class="st">&quot;cRAP-only&quot;</span>, <span class="st">&quot;mixed cRAP&quot;</span>, <span class="st">&quot;reversed decoy&quot;</span>),</span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">precursors =</span> <span class="fu">c</span>(<span class="fu">sum</span>(crap_only), <span class="fu">sum</span>(mentions_crap <span class="sc">&amp;</span> <span class="sc">!</span>crap_only), <span class="fu">sum</span>(is_decoy))</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 3 × 2
-  category       precursors
-  &lt;chr&gt;               &lt;int&gt;
-1 cRAP-only              89
-2 mixed cRAP           1169
-3 reversed decoy         19</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>show_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Protein.Group&quot;</span>, <span class="st">&quot;Protein.Ids&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;Proteotypic&quot;</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(y<span class="sc">$</span>genes[<span class="fu">which</span>(crap_only), show_cols], <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A data frame: 6 × 4
-  Protein.Group Protein.Ids                    Genes    Proteotypic
-* &lt;chr&gt;         &lt;chr&gt;                          &lt;chr&gt;          &lt;dbl&gt;
-1 cRAP-P02769   cRAP-P02769                    cRAP-ALB           1
-2 cRAP-P02769   cRAP-P02769                    cRAP-ALB           1
-3 cRAP-P68082   cRAP-P68082;cRAP-P02144;P02144 cRAP-MB            0
-4 cRAP-P02769   cRAP-P02768;cRAP-P02769;P02768 cRAP-ALB           0
-5 cRAP-P00698   cRAP-P00698                    cRAP-LYZ           1
-6 cRAP-P02769   cRAP-P02769                    cRAP-ALB           1</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(y<span class="sc">$</span>genes[<span class="fu">which</span>(is_decoy), show_cols], <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A data frame: 6 × 4
-  Protein.Group             Protein.Ids                        Genes Proteotypic
-* &lt;chr&gt;                     &lt;chr&gt;                              &lt;chr&gt;       &lt;dbl&gt;
-1 rev_sp|P54105|ICLN_HUMAN  rev_sp|P54105|ICLN_HUMAN           Meth…           1
-2 rev_sp|Q9Y4F4|TGRM1_HUMAN rev_sp|Q9Y4F4|TGRM1_HUMAN          TOG             1
-3 rev_sp|Q9UN72|PCDA7_HUMAN rev_sp|Q9UN72|PCDA7_HUMAN;rev_sp|… Prot…           1
-4 rev_sp|Q7Z392|TPC11_HUMAN rev_sp|Q7Z392|TPC11_HUMAN          Traf…           1
-5 rev_sp|P62805|H4_HUMAN    rev_sp|P62805|H4_HUMAN             Hist…           1
-6 rev_sp|O94952|FBX21_HUMAN rev_sp|O94952|FBX21_HUMAN          F-box           1</code></pre>
-</div>
-</div>
-<p>Remove flagged rows first, so every row left to repair keeps at least one human entry. The preview shows retained cRAP rows before repair.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>removed_rows, ]</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>repair_examples <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">which</span>(mentions_crap[<span class="sc">!</span>removed_rows]), <span class="dv">6</span>)</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes[repair_examples, show_cols]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>removed_rows, ]</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>show_cols <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Protein.Group&quot;</span>, <span class="st">&quot;Protein.Ids&quot;</span>, <span class="st">&quot;Genes&quot;</span>, <span class="st">&quot;Proteotypic&quot;</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>repair_examples <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">which</span>(mentions_crap[<span class="sc">!</span>removed_rows]), <span class="dv">6</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes[repair_examples, show_cols]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A data frame: 6 × 4
   Protein.Group      Protein.Ids        Genes        Proteotypic
@@ -2413,25 +2333,25 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </div>
 <p>Drop every cRAP entry, not just its prefix, then recompute <code>Proteotypic</code>, the flag the next filter uses to find uniquely assigned evidence. cRAP holds other species’ copies (<code>cRAP-P00883;P04075</code> is rabbit and human ALDOA), and a stripped prefix would leave those proteins looking shared.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes <span class="ot">&lt;-</span> y<span class="sc">$</span>genes <span class="sc">|&gt;</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(Protein.Group, Protein.Ids, Protein.Names, Genes),</span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>      <span class="cf">function</span>(x) {</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">str_split</span>(x, <span class="st">&quot;;&quot;</span>) <span class="sc">|&gt;</span> <span class="fu">map</span>(str_subset, <span class="st">&quot;^cRAP-&quot;</span>, <span class="at">negate =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span> <span class="fu">map_chr</span>(str_flatten, <span class="st">&quot;;&quot;</span>)</span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mutate() evaluates in order, so this reads the repaired Protein.Ids above.</span></span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Proteotypic =</span> <span class="fu">if_else</span>(</span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>      mentions_crap[<span class="sc">!</span>removed_rows],</span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(<span class="sc">!</span><span class="fu">str_detect</span>(Protein.Ids, <span class="st">&quot;;&quot;</span>)),</span>
-<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(Proteotypic)</span>
-<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes <span class="ot">&lt;-</span> y<span class="sc">$</span>genes <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">across</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(Protein.Group, Protein.Ids, Protein.Names, Genes),</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>      <span class="cf">function</span>(x) {</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">str_split</span>(x, <span class="st">&quot;;&quot;</span>) <span class="sc">|&gt;</span> <span class="fu">map</span>(str_subset, <span class="st">&quot;^cRAP-&quot;</span>, <span class="at">negate =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span> <span class="fu">map_chr</span>(str_flatten, <span class="st">&quot;;&quot;</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># mutate() evaluates in order, so this reads the repaired Protein.Ids above.</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">Proteotypic =</span> <span class="fu">if_else</span>(</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>      mentions_crap[<span class="sc">!</span>removed_rows],</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(<span class="sc">!</span><span class="fu">str_detect</span>(Protein.Ids, <span class="st">&quot;;&quot;</span>)),</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">as.integer</span>(Proteotypic)</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>The same rows after repair:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes[repair_examples, show_cols]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>y<span class="sc">$</span>genes[repair_examples, show_cols]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A data frame: 6 × 4
   Protein.Group Protein.Ids Genes Proteotypic
@@ -2447,108 +2367,99 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="remove-ambiguous-assignments" class="level2">
 <h2 class="anchored" data-anchor-id="remove-ambiguous-assignments">Remove ambiguous assignments</h2>
-<p><code>filterNonProteotypicPeptides()</code> removes precursors shared between protein groups, and <code>filterCompoundProteins()</code> removes compound groups, those naming more than one protein, in the limpa vignette’s order. The vignette calls <code>filterSingletonPeptides()</code> optional and recommends keeping all proteins, so it is not applied. Nothing is filtered on missing values: <code>dpc()</code> models how the chance of detection rises with intensity, so a missing value carries information.</p>
-<p><code>step_summary()</code> returns one row per filter.</p>
+<p><code>filterNonProteotypicPeptides()</code> removes precursors shared between protein groups, and <code>filterCompoundProteins()</code> removes groups naming more than one protein, in the limpa vignette’s order. The vignette calls <code>filterSingletonPeptides()</code> optional and recommends keeping all proteins, so it is not applied. Nothing is filtered on missing values: <code>dpc()</code> models how the chance of detection rises with intensity, so a missing value carries information.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>step_summary <span class="ot">&lt;-</span> <span class="cf">function</span>(elist, step, starting_signal) {</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">step =</span> step,</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">precursors =</span> <span class="fu">nrow</span>(elist),</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_groups =</span> <span class="fu">n_distinct</span>(elist<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group),</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">total_signal</span>(elist<span class="sc">$</span>E) <span class="sc">/</span> starting_signal</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>, signal_start)</span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterNonProteotypicPeptides</span>(y)</span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(filter_log, <span class="fu">step_summary</span>(y, <span class="st">&quot;shared peptides removed&quot;</span>, signal_start))</span>
-<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterCompoundProteins</span>(y)</span>
-<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(filter_log, <span class="fu">step_summary</span>(y, <span class="st">&quot;compound groups removed&quot;</span>, signal_start))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>step_summary <span class="ot">&lt;-</span> <span class="cf">function</span>(elist, step) {</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">step =</span> step,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">precursors =</span> <span class="fu">nrow</span>(elist),</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">protein_groups =</span> <span class="fu">n_distinct</span>(elist<span class="sc">$</span>genes<span class="sc">$</span>Protein.Group),</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">total_signal</span>(elist<span class="sc">$</span>E) <span class="sc">/</span> signal_start</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">step_summary</span>(y, <span class="st">&quot;repaired&quot;</span>)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterNonProteotypicPeptides</span>(y)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(filter_log, <span class="fu">step_summary</span>(y, <span class="st">&quot;shared peptides removed&quot;</span>))</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">filterCompoundProteins</span>(y)</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(filter_log, <span class="fu">step_summary</span>(y, <span class="st">&quot;compound groups removed&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="filter-contaminants" class="level2">
 <h2 class="anchored" data-anchor-id="filter-contaminants">Filter contaminants</h2>
 <p>A needle biopsy carries blood and passes through skin. These proteins are removed here, before quantification, because <code>dpc()</code> fits one detection curve across every precursor and <code>dpcQuant()</code> takes its prior from all the data. That order is a project choice: limpa’s ccRCC case study removes immunoglobulins after <code>dpcQuant()</code> instead.</p>
-<p>The 4 family patterns match immunoglobulin, keratin, SPRR (small proline-rich proteins of skin) and haemoglobin names; <code>^</code> and <code>$</code> require a whole-name match, so <code>KRTCAP2</code> is not caught. The 147 individual symbols are plasma, red-cell, platelet, neutrophil and skin proteins, picked by judgement from the dataset’s gene symbols on 2026-09-04 with Human Protein Atlas (HPA) single-cell expression in view. No script produced the list.</p>
+<p>The 4 family patterns match whole immunoglobulin, keratin, SPRR (small proline-rich proteins of skin) and haemoglobin names, so <code>KRTCAP2</code> is not caught. The 147 individual symbols are plasma, red-cell, platelet, neutrophil and skin proteins, picked by judgement from the dataset’s gene symbols on 2026-09-04 with Human Protein Atlas (HPA) single-cell expression in view. No script produced the list.</p>
 <p>A scripted rule was tried in its place on 2026-10-13: remove a gene when HPA finds it specific to blood, immune, skin or liver cells and does not detect it in myonuclei. It kept 86 proteins this list removes, many of them complement and other plasma proteins that the muscle’s own fibroblasts and vessels also make (C3, C1R, C1S and SERPING1 all have muscle RNA in HPA). With those proteins in, the baseline BFR against HLRT comparison, where counterbalanced legs should differ by nothing, flagged 21 gene sets in stage 03’s fgsea, all complement, coagulation, immunoglobulin or red-cell, against 1 with this list. No annotation rule tried could tell plasma-borne complement from locally made complement, so the list stays. It predates that comparison, which therefore checks the list rather than tuning it.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>contaminant_families <span class="ot">&lt;-</span> <span class="fu">str_c</span>(<span class="st">&quot;^(&quot;</span>, <span class="fu">str_flatten</span>(<span class="fu">c</span>(</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;IG[HKL][VDJCAGMEL]([0-9][0-9A-Z-]*)?&quot;</span>, <span class="st">&quot;KRT([0-9]|AP)[0-9A-Z-]*&quot;</span>,</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SPRR[0-9][0-9A-Z]*&quot;</span>, <span class="st">&quot;HB[ABDGMQZ][0-9]?&quot;</span></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>), <span class="st">&quot;|&quot;</span>), <span class="st">&quot;)$&quot;</span>)</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>contaminant_symbols <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;JCHAIN&quot;</span>, <span class="st">&quot;HRNR&quot;</span>, <span class="st">&quot;DCD&quot;</span>, <span class="st">&quot;SBSN&quot;</span>, <span class="st">&quot;CSTA&quot;</span>, <span class="st">&quot;AHSP&quot;</span>,</span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A1BG&quot;</span>, <span class="st">&quot;AFM&quot;</span>, <span class="st">&quot;AGT&quot;</span>, <span class="st">&quot;AHSG&quot;</span>, <span class="st">&quot;ALB&quot;</span>, <span class="st">&quot;AMBP&quot;</span>, <span class="st">&quot;APCS&quot;</span>, <span class="st">&quot;APOA1&quot;</span>, <span class="st">&quot;APOA2&quot;</span>, <span class="st">&quot;APOA4&quot;</span>, <span class="st">&quot;APOB&quot;</span>,</span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;APOC1&quot;</span>, <span class="st">&quot;APOC2&quot;</span>, <span class="st">&quot;APOC3&quot;</span>, <span class="st">&quot;APOD&quot;</span>, <span class="st">&quot;APOE&quot;</span>, <span class="st">&quot;APOF&quot;</span>, <span class="st">&quot;APOH&quot;</span>, <span class="st">&quot;APOL1&quot;</span>, <span class="st">&quot;APOL2&quot;</span>, <span class="st">&quot;APOM&quot;</span>,</span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ARHGDIB&quot;</span>, <span class="st">&quot;AZGP1&quot;</span>, <span class="st">&quot;BCAM&quot;</span>, <span class="st">&quot;BTD&quot;</span>, <span class="st">&quot;C1QB&quot;</span>, <span class="st">&quot;C1QC&quot;</span>, <span class="st">&quot;C1R&quot;</span>, <span class="st">&quot;C1RL&quot;</span>, <span class="st">&quot;C1S&quot;</span>, <span class="st">&quot;C2&quot;</span>, <span class="st">&quot;C3&quot;</span>,</span>
-<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;C4A&quot;</span>, <span class="st">&quot;C4B&quot;</span>, <span class="st">&quot;C4BPA&quot;</span>, <span class="st">&quot;C4BPB&quot;</span>, <span class="st">&quot;C5&quot;</span>, <span class="st">&quot;C6&quot;</span>, <span class="st">&quot;C7&quot;</span>, <span class="st">&quot;C8A&quot;</span>, <span class="st">&quot;C8B&quot;</span>, <span class="st">&quot;C8G&quot;</span>, <span class="st">&quot;C9&quot;</span>, <span class="st">&quot;CA1&quot;</span>,</span>
-<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CFB&quot;</span>, <span class="st">&quot;CFD&quot;</span>, <span class="st">&quot;CFH&quot;</span>, <span class="st">&quot;CFHR2&quot;</span>, <span class="st">&quot;CFHR5&quot;</span>, <span class="st">&quot;CFI&quot;</span>, <span class="st">&quot;CLEC3B&quot;</span>, <span class="st">&quot;CLU&quot;</span>, <span class="st">&quot;CP&quot;</span>, <span class="st">&quot;CPB2&quot;</span>, <span class="st">&quot;CPN1&quot;</span>,</span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CPN2&quot;</span>, <span class="st">&quot;CTSG&quot;</span>, <span class="st">&quot;DEFA1&quot;</span>, <span class="st">&quot;DMTN&quot;</span>, <span class="st">&quot;ELANE&quot;</span>, <span class="st">&quot;EPB42&quot;</span>, <span class="st">&quot;F10&quot;</span>, <span class="st">&quot;F11&quot;</span>, <span class="st">&quot;F12&quot;</span>, <span class="st">&quot;F13A1&quot;</span>, <span class="st">&quot;F13B&quot;</span>,</span>
-<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;F2&quot;</span>, <span class="st">&quot;F9&quot;</span>, <span class="st">&quot;FCN3&quot;</span>, <span class="st">&quot;FERMT3&quot;</span>, <span class="st">&quot;FETUB&quot;</span>, <span class="st">&quot;FGA&quot;</span>, <span class="st">&quot;FGB&quot;</span>, <span class="st">&quot;FGG&quot;</span>, <span class="st">&quot;FYB1&quot;</span>, <span class="st">&quot;GC&quot;</span>, <span class="st">&quot;GIMAP1&quot;</span>,</span>
-<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;GIMAP4&quot;</span>, <span class="st">&quot;GMFG&quot;</span>, <span class="st">&quot;GP1BA&quot;</span>, <span class="st">&quot;GPLD1&quot;</span>, <span class="st">&quot;GYPC&quot;</span>, <span class="st">&quot;HABP2&quot;</span>, <span class="st">&quot;HP&quot;</span>, <span class="st">&quot;HPR&quot;</span>, <span class="st">&quot;HPX&quot;</span>, <span class="st">&quot;HRG&quot;</span>,</span>
-<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;IGFALS&quot;</span>, <span class="st">&quot;ITIH1&quot;</span>, <span class="st">&quot;ITIH3&quot;</span>, <span class="st">&quot;KEL&quot;</span>, <span class="st">&quot;KLKB1&quot;</span>, <span class="st">&quot;KNG1&quot;</span>, <span class="st">&quot;LBP&quot;</span>, <span class="st">&quot;LCAT&quot;</span>, <span class="st">&quot;LCP1&quot;</span>, <span class="st">&quot;LPA&quot;</span>,</span>
-<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;LRG1&quot;</span>, <span class="st">&quot;LTF&quot;</span>, <span class="st">&quot;LYZ&quot;</span>, <span class="st">&quot;MASP1&quot;</span>, <span class="st">&quot;MPO&quot;</span>, <span class="st">&quot;MPP1&quot;</span>, <span class="st">&quot;NCF1&quot;</span>, <span class="st">&quot;ORM1&quot;</span>, <span class="st">&quot;ORM2&quot;</span>, <span class="st">&quot;PF4&quot;</span>, <span class="st">&quot;PGLYRP2&quot;</span>,</span>
-<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;PLG&quot;</span>, <span class="st">&quot;PLTP&quot;</span>, <span class="st">&quot;PON1&quot;</span>, <span class="st">&quot;PPBP&quot;</span>, <span class="st">&quot;PROS1&quot;</span>, <span class="st">&quot;PRTN3&quot;</span>, <span class="st">&quot;PZP&quot;</span>, <span class="st">&quot;RBP4&quot;</span>, <span class="st">&quot;RHCE&quot;</span>, <span class="st">&quot;RNASE3&quot;</span>,</span>
-<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;S100A8&quot;</span>, <span class="st">&quot;S100A9&quot;</span>, <span class="st">&quot;SAA1&quot;</span>, <span class="st">&quot;SAA4&quot;</span>, <span class="st">&quot;SELENOP&quot;</span>, <span class="st">&quot;SERPINA1&quot;</span>, <span class="st">&quot;SERPINA3&quot;</span>, <span class="st">&quot;SERPINA4&quot;</span>,</span>
-<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SERPINA5&quot;</span>, <span class="st">&quot;SERPINA6&quot;</span>, <span class="st">&quot;SERPINA7&quot;</span>, <span class="st">&quot;SERPINC1&quot;</span>, <span class="st">&quot;SERPIND1&quot;</span>, <span class="st">&quot;SERPINF2&quot;</span>, <span class="st">&quot;SERPING1&quot;</span>,</span>
-<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SHBG&quot;</span>, <span class="st">&quot;SLC4A1&quot;</span>, <span class="st">&quot;SPTA1&quot;</span>, <span class="st">&quot;TF&quot;</span>, <span class="st">&quot;TTR&quot;</span>, <span class="st">&quot;TUBB1&quot;</span>, <span class="st">&quot;VTN&quot;</span>, <span class="st">&quot;VWF&quot;</span></span>
-<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>contaminant_families <span class="ot">&lt;-</span> <span class="fu">str_c</span>(<span class="st">&quot;^(&quot;</span>, <span class="fu">str_flatten</span>(<span class="fu">c</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;IG[HKL][VDJCAGMEL]([0-9][0-9A-Z-]*)?&quot;</span>, <span class="st">&quot;KRT([0-9]|AP)[0-9A-Z-]*&quot;</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SPRR[0-9][0-9A-Z]*&quot;</span>, <span class="st">&quot;HB[ABDGMQZ][0-9]?&quot;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>), <span class="st">&quot;|&quot;</span>), <span class="st">&quot;)$&quot;</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>contaminant_symbols <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;JCHAIN&quot;</span>, <span class="st">&quot;HRNR&quot;</span>, <span class="st">&quot;DCD&quot;</span>, <span class="st">&quot;SBSN&quot;</span>, <span class="st">&quot;CSTA&quot;</span>, <span class="st">&quot;AHSP&quot;</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;A1BG&quot;</span>, <span class="st">&quot;AFM&quot;</span>, <span class="st">&quot;AGT&quot;</span>, <span class="st">&quot;AHSG&quot;</span>, <span class="st">&quot;ALB&quot;</span>, <span class="st">&quot;AMBP&quot;</span>, <span class="st">&quot;APCS&quot;</span>, <span class="st">&quot;APOA1&quot;</span>, <span class="st">&quot;APOA2&quot;</span>, <span class="st">&quot;APOA4&quot;</span>, <span class="st">&quot;APOB&quot;</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;APOC1&quot;</span>, <span class="st">&quot;APOC2&quot;</span>, <span class="st">&quot;APOC3&quot;</span>, <span class="st">&quot;APOD&quot;</span>, <span class="st">&quot;APOE&quot;</span>, <span class="st">&quot;APOF&quot;</span>, <span class="st">&quot;APOH&quot;</span>, <span class="st">&quot;APOL1&quot;</span>, <span class="st">&quot;APOL2&quot;</span>, <span class="st">&quot;APOM&quot;</span>,</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;ARHGDIB&quot;</span>, <span class="st">&quot;AZGP1&quot;</span>, <span class="st">&quot;BCAM&quot;</span>, <span class="st">&quot;BTD&quot;</span>, <span class="st">&quot;C1QB&quot;</span>, <span class="st">&quot;C1QC&quot;</span>, <span class="st">&quot;C1R&quot;</span>, <span class="st">&quot;C1RL&quot;</span>, <span class="st">&quot;C1S&quot;</span>, <span class="st">&quot;C2&quot;</span>, <span class="st">&quot;C3&quot;</span>,</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;C4A&quot;</span>, <span class="st">&quot;C4B&quot;</span>, <span class="st">&quot;C4BPA&quot;</span>, <span class="st">&quot;C4BPB&quot;</span>, <span class="st">&quot;C5&quot;</span>, <span class="st">&quot;C6&quot;</span>, <span class="st">&quot;C7&quot;</span>, <span class="st">&quot;C8A&quot;</span>, <span class="st">&quot;C8B&quot;</span>, <span class="st">&quot;C8G&quot;</span>, <span class="st">&quot;C9&quot;</span>, <span class="st">&quot;CA1&quot;</span>,</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CFB&quot;</span>, <span class="st">&quot;CFD&quot;</span>, <span class="st">&quot;CFH&quot;</span>, <span class="st">&quot;CFHR2&quot;</span>, <span class="st">&quot;CFHR5&quot;</span>, <span class="st">&quot;CFI&quot;</span>, <span class="st">&quot;CLEC3B&quot;</span>, <span class="st">&quot;CLU&quot;</span>, <span class="st">&quot;CP&quot;</span>, <span class="st">&quot;CPB2&quot;</span>, <span class="st">&quot;CPN1&quot;</span>,</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;CPN2&quot;</span>, <span class="st">&quot;CTSG&quot;</span>, <span class="st">&quot;DEFA1&quot;</span>, <span class="st">&quot;DMTN&quot;</span>, <span class="st">&quot;ELANE&quot;</span>, <span class="st">&quot;EPB42&quot;</span>, <span class="st">&quot;F10&quot;</span>, <span class="st">&quot;F11&quot;</span>, <span class="st">&quot;F12&quot;</span>, <span class="st">&quot;F13A1&quot;</span>, <span class="st">&quot;F13B&quot;</span>,</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;F2&quot;</span>, <span class="st">&quot;F9&quot;</span>, <span class="st">&quot;FCN3&quot;</span>, <span class="st">&quot;FERMT3&quot;</span>, <span class="st">&quot;FETUB&quot;</span>, <span class="st">&quot;FGA&quot;</span>, <span class="st">&quot;FGB&quot;</span>, <span class="st">&quot;FGG&quot;</span>, <span class="st">&quot;FYB1&quot;</span>, <span class="st">&quot;GC&quot;</span>, <span class="st">&quot;GIMAP1&quot;</span>,</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;GIMAP4&quot;</span>, <span class="st">&quot;GMFG&quot;</span>, <span class="st">&quot;GP1BA&quot;</span>, <span class="st">&quot;GPLD1&quot;</span>, <span class="st">&quot;GYPC&quot;</span>, <span class="st">&quot;HABP2&quot;</span>, <span class="st">&quot;HP&quot;</span>, <span class="st">&quot;HPR&quot;</span>, <span class="st">&quot;HPX&quot;</span>, <span class="st">&quot;HRG&quot;</span>,</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;IGFALS&quot;</span>, <span class="st">&quot;ITIH1&quot;</span>, <span class="st">&quot;ITIH3&quot;</span>, <span class="st">&quot;KEL&quot;</span>, <span class="st">&quot;KLKB1&quot;</span>, <span class="st">&quot;KNG1&quot;</span>, <span class="st">&quot;LBP&quot;</span>, <span class="st">&quot;LCAT&quot;</span>, <span class="st">&quot;LCP1&quot;</span>, <span class="st">&quot;LPA&quot;</span>,</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;LRG1&quot;</span>, <span class="st">&quot;LTF&quot;</span>, <span class="st">&quot;LYZ&quot;</span>, <span class="st">&quot;MASP1&quot;</span>, <span class="st">&quot;MPO&quot;</span>, <span class="st">&quot;MPP1&quot;</span>, <span class="st">&quot;NCF1&quot;</span>, <span class="st">&quot;ORM1&quot;</span>, <span class="st">&quot;ORM2&quot;</span>, <span class="st">&quot;PF4&quot;</span>, <span class="st">&quot;PGLYRP2&quot;</span>,</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;PLG&quot;</span>, <span class="st">&quot;PLTP&quot;</span>, <span class="st">&quot;PON1&quot;</span>, <span class="st">&quot;PPBP&quot;</span>, <span class="st">&quot;PROS1&quot;</span>, <span class="st">&quot;PRTN3&quot;</span>, <span class="st">&quot;PZP&quot;</span>, <span class="st">&quot;RBP4&quot;</span>, <span class="st">&quot;RHCE&quot;</span>, <span class="st">&quot;RNASE3&quot;</span>,</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;S100A8&quot;</span>, <span class="st">&quot;S100A9&quot;</span>, <span class="st">&quot;SAA1&quot;</span>, <span class="st">&quot;SAA4&quot;</span>, <span class="st">&quot;SELENOP&quot;</span>, <span class="st">&quot;SERPINA1&quot;</span>, <span class="st">&quot;SERPINA3&quot;</span>, <span class="st">&quot;SERPINA4&quot;</span>,</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SERPINA5&quot;</span>, <span class="st">&quot;SERPINA6&quot;</span>, <span class="st">&quot;SERPINA7&quot;</span>, <span class="st">&quot;SERPINC1&quot;</span>, <span class="st">&quot;SERPIND1&quot;</span>, <span class="st">&quot;SERPINF2&quot;</span>, <span class="st">&quot;SERPING1&quot;</span>,</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;SHBG&quot;</span>, <span class="st">&quot;SLC4A1&quot;</span>, <span class="st">&quot;SPTA1&quot;</span>, <span class="st">&quot;TF&quot;</span>, <span class="st">&quot;TTR&quot;</span>, <span class="st">&quot;TUBB1&quot;</span>, <span class="st">&quot;VTN&quot;</span>, <span class="st">&quot;VWF&quot;</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>A group is removed only when every gene symbol on it matches a listed symbol or a family pattern, so a contaminant sharing a group with a muscle protein stays. <code>by_symbol</code> records whether the listed symbols alone cover the group; it only labels the summary.</p>
+<p>A group is removed only when every gene symbol on it matches a listed symbol or a family pattern, so a contaminant sharing a group with a muscle protein stays. <code>by_symbol</code> only labels the summary.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>gene_symbols <span class="ot">&lt;-</span> <span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>)</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>by_symbol <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(gene_symbols, <span class="cf">function</span>(symbols) <span class="fu">all</span>(symbols <span class="sc">%in%</span> contaminant_symbols))</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>contaminant <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(gene_symbols, <span class="cf">function</span>(symbols) {</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(symbols <span class="sc">%in%</span> contaminant_symbols <span class="sc">|</span> <span class="fu">str_detect</span>(symbols, contaminant_families))</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(y<span class="sc">$</span>genes[<span class="fu">which</span>(contaminant), <span class="fu">c</span>(<span class="st">&quot;Protein.Group&quot;</span>, <span class="st">&quot;Genes&quot;</span>)], <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A data frame: 6 × 2
-  Protein.Group Genes 
-* &lt;chr&gt;         &lt;chr&gt; 
-1 P02730        SLC4A1
-2 P02730        SLC4A1
-3 P02768        ALB   
-4 P13796        LCP1  
-5 P02766        TTR   
-6 P02766        TTR   </code></pre>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>gene_symbols <span class="ot">&lt;-</span> <span class="fu">str_split</span>(<span class="fu">str_to_upper</span>(y<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="st">&quot;;&quot;</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>by_symbol <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(gene_symbols, <span class="cf">function</span>(symbols) <span class="fu">all</span>(symbols <span class="sc">%in%</span> contaminant_symbols))</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>contaminant <span class="ot">&lt;-</span> <span class="fu">map_lgl</span>(gene_symbols, <span class="cf">function</span>(symbols) {</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">all</span>(symbols <span class="sc">%in%</span> contaminant_symbols <span class="sc">|</span> <span class="fu">str_detect</span>(symbols, contaminant_families))</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</div>
-<p>Signal removed per gene-symbol string and matching route, as a percentage of starting signal; “family” means the listed symbols alone did not cover the group.</p>
+<p>Signal removed per gene-symbol string; “family” means the listed symbols alone did not cover the group.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>contaminants_removed <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">symbol =</span> y<span class="sc">$</span>genes<span class="sc">$</span>Genes[contaminant],</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">matched_by =</span> <span class="fu">if_else</span>(by_symbol[contaminant], <span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;family&quot;</span>),</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">signal =</span> <span class="fu">rowSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">precursors =</span> <span class="fu">n</span>(), <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">sum</span>(signal) <span class="sc">/</span> signal_start,</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(symbol, matched_by)</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(pct_signal))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>contaminants_removed <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">symbol =</span> y<span class="sc">$</span>genes<span class="sc">$</span>Genes[contaminant],</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">matched_by =</span> <span class="fu">if_else</span>(by_symbol[contaminant], <span class="st">&quot;symbol&quot;</span>, <span class="st">&quot;family&quot;</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">signal =</span> <span class="fu">rowSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">precursors =</span> <span class="fu">n</span>(), <span class="at">pct_signal =</span> <span class="dv">100</span> <span class="sc">*</span> <span class="fu">sum</span>(signal) <span class="sc">/</span> signal_start,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(symbol, matched_by)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(pct_signal))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>The fraction removed from each sample uses that sample’s signal just before this filter as its denominator, so uneven contamination between samples and groups is visible.</p>
+<p>Each sample’s removed fraction is of its own signal just before this filter, so uneven contamination between samples shows.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>contaminant_fraction <span class="ot">&lt;-</span> <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>sample_contamination <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">sample_id =</span> <span class="fu">colnames</span>(y),</span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">group =</span> y<span class="sc">$</span>targets<span class="sc">$</span>group,</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_signal_removed =</span> <span class="dv">100</span> <span class="sc">*</span> contaminant_fraction</span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>sample_contamination <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">sample_id =</span> <span class="fu">colnames</span>(y),</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">group =</span> y<span class="sc">$</span>targets<span class="sc">$</span>group,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">pct_signal_removed =</span> <span class="dv">100</span> <span class="sc">*</span> (<span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E[contaminant, , <span class="at">drop =</span> <span class="cn">FALSE</span>], <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="sc">/</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">colSums</span>(<span class="dv">2</span><span class="sc">^</span>y<span class="sc">$</span>E, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Haemoglobin beta and alpha (HBB, HBA1) come from red cells, which muscle does not make, so their abundance measures how much blood a biopsy holds. Their precursors are set aside for <code>02_Quantification</code>, which turns them into a blood index.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>haemoglobin <span class="ot">&lt;-</span> y[y<span class="sc">$</span>genes<span class="sc">$</span>Genes <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;HBB&quot;</span>, <span class="st">&quot;HBA1&quot;</span>), ]</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">setequal</span>(<span class="fu">unique</span>(haemoglobin<span class="sc">$</span>genes<span class="sc">$</span>Genes), <span class="fu">c</span>(<span class="st">&quot;HBB&quot;</span>, <span class="st">&quot;HBA1&quot;</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>contaminant, ]</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(filter_log, <span class="fu">step_summary</span>(y, <span class="st">&quot;contaminants removed&quot;</span>, signal_start))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> y[<span class="sc">!</span>contaminant, ]</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>filter_log <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(filter_log, <span class="fu">step_summary</span>(y, <span class="st">&quot;contaminants removed&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="filtering-summary" class="level2">
 <h2 class="anchored" data-anchor-id="filtering-summary">Filtering summary</h2>
-<p>Rows, distinct protein groups and percentage of starting signal after each filter, then the annotation exclusions. Signal percentages describe measured intensity, not protein mass.</p>
+<p>Signal percentages describe measured intensity, not protein mass.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>filter_log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>filter_log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 4
   step                    precursors protein_groups pct_signal
@@ -2558,7 +2469,7 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 3 compound groups removed      49858           3662       87.6
 4 contaminants removed         47201           3451       59.7</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>removal_counts</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>removal_counts</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 3
   reason               precursors pct_signal
@@ -2568,9 +2479,9 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 3 mentions cRAP at all       1258   64.8    </code></pre>
 </div>
 </div>
-<p>The 20 removed gene-symbol strings carrying the most signal.</p>
+<p>The 20 removed gene-symbol strings carrying the most signal, the median percentage removed per group, and the five most contaminated samples, which a median hides.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(contaminants_removed, <span class="dv">20</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(contaminants_removed, <span class="dv">20</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 20 × 4
    symbol   matched_by precursors pct_signal
@@ -2596,15 +2507,17 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 19 IGHM     family             31    0.00750
 20 SLC4A1   symbol             42    0.00747</code></pre>
 </div>
-</div>
-<p>The median removed fraction per treatment and timepoint group, then the five most contaminated samples, which a median hides. Nothing tests or adjusts for either.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">tapply</span>(contaminant_fraction, y<span class="sc">$</span>targets<span class="sc">$</span>group, median), <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summarise</span>(sample_contamination, <span class="at">median_pct =</span> <span class="fu">median</span>(pct_signal_removed), <span class="at">.by =</span> group)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> BFR_T1  BFR_T2 HLRT_T1 HLRT_T2 
- 0.2518  0.2973  0.2880  0.2899 </code></pre>
+<pre><code># A tibble: 4 × 2
+  group   median_pct
+  &lt;chr&gt;        &lt;dbl&gt;
+1 HLRT_T1       28.8
+2 HLRT_T2       29.0
+3 BFR_T1        25.2
+4 BFR_T2        29.7</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_max</span>(sample_contamination, pct_signal_removed, <span class="at">n =</span> <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">slice_max</span>(sample_contamination, pct_signal_removed, <span class="at">n =</span> <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 3
   sample_id group   pct_signal_removed
@@ -2619,30 +2532,31 @@ S03_L_T2 CL_MDR_3E-T2  S03_L_T2         S03   L      HLRT        T2</code></pre>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>precursors_filtered.rds</code> holds the filtered measurements for protein quantification, and <code>01_filter.xlsx</code> the summaries, both in <code>c_data/</code>. Rerun protein quantification whenever this matrix changes.</p>
+<p>Rerun <code>02_quantify_run.R</code> whenever <code>precursors_filtered.rds</code> changes.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;01_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(y, <span class="fu">file.path</span>(out, <span class="st">&quot;precursors_filtered.rds&quot;</span>))</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="fu">as.data.frame</span>(y<span class="sc">$</span>targets),</span>
-<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">filtering_summary =</span> filter_log,</span>
-<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">annotation_exclusions =</span> removal_counts,</span>
-<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">removed_contaminants =</span> contaminants_removed,</span>
-<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">sample_contamination =</span> sample_contamination</span>
-<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_filter.xlsx&quot;</span>)</span>
-<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;01_Filtering&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(y, <span class="fu">file.path</span>(out, <span class="st">&quot;precursors_filtered.rds&quot;</span>))</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(haemoglobin, <span class="fu">file.path</span>(out, <span class="st">&quot;haemoglobin_precursors.rds&quot;</span>))</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">samples =</span> <span class="fu">as.data.frame</span>(y<span class="sc">$</span>targets),</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">filtering_summary =</span> filter_log,</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">annotation_exclusions =</span> removal_counts,</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">removed_contaminants =</span> contaminants_removed,</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">sample_contamination =</span> sample_contamination</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_filter.xlsx&quot;</span>)</span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
-Running under: macOS Tahoe 26.6.2
+Running under: macOS 27.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib 

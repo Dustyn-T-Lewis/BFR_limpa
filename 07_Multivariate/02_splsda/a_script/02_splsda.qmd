@@ -1,0 +1,358 @@
+---
+title: "02 · Multilevel sPLS-DA"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 7
+    fig-height: 5
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+`pROC` and `fgsea` are called with `::`.
+
+```{r setup}
+pacman::p_load(here, mixOmics, dplyr, tidyr, purrr, readxl, ggplot2, patchwork, writexl)
+here::i_am("07_Multivariate/02_splsda/a_script/02_splsda.qmd")
+```
+
+## Read proteins
+
+The normalised log2 abundances with the blood index's effect removed (`proteins_adjusted.rds`).
+
+```{r read}
+stage <- here("07_Multivariate", "02_splsda")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
+targets <- proteins$targets
+gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
+dim(proteins$E)
+```
+
+## Build the five comparisons
+
+Sparse PLS-DA (Lê Cao et al. 2011, doi:10.1186/1471-2105-12-253) builds a score from a weighted
+sum of a few proteins, chosen to separate two groups. Each comparison here takes two samples per
+participant, and `multilevel = participant` subtracts each participant's mean first (Liquet et
+al. 2012), so the score compares a person's two samples with each other:
+
+- training in each arm: a leg's sample before training (T1) against after (T2);
+- BFR against HLRT before training: the two legs' T1 samples;
+- BFR against HLRT after training: the two legs' T2 samples;
+- BFR against HLRT on change: each leg's T2 minus T1, one leg against the other.
+
+Participants without both samples a comparison needs drop out of that comparison. A two-factor
+multilevel design on all four samples is not used: with one sample per participant, leg and time,
+its decomposition is computed from the class labels themselves.
+
+```{r comparisons}
+legs <- targets |>
+  mutate(leg_id = paste(participant, leg, sep = "_")) |>
+  select(leg_id, participant, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = timepoint, values_from = sample_id) |>
+  drop_na(T1, T2)
+
+training <- function(arm) {
+  arm_legs <- filter(legs, treatment == arm)
+  list(
+    x = t(proteins$E[, c(arm_legs$T1, arm_legs$T2)]),
+    y = factor(rep(c("T1", "T2"), each = nrow(arm_legs))),
+    participant = rep(arm_legs$participant, 2)
+  )
+}
+
+paired_legs <- legs |> filter(n() == 2, .by = participant)
+change <- t(proteins$E[, paired_legs$T2] - proteins$E[, paired_legs$T1])
+rownames(change) <- paired_legs$leg_id
+arms_at <- function(time) {
+  samples <- targets |> filter(timepoint == time) |> filter(n() == 2, .by = participant)
+  list(
+    x = t(proteins$E[, samples$sample_id]), y = factor(samples$treatment, c("HLRT", "BFR")),
+    participant = samples$participant
+  )
+}
+
+comparisons <- list(
+  training_bfr = training("BFR"),
+  training_hlrt = training("HLRT"),
+  arms_pre = arms_at("T1"),
+  arms_post = arms_at("T2"),
+  arms_change = list(
+    x = change, y = factor(paired_legs$treatment, c("HLRT", "BFR")),
+    participant = paired_legs$participant
+  )
+)
+comparison_labels <- c(
+  training_bfr = "Training, BFR leg: T1 vs T2",
+  training_hlrt = "Training, HLRT leg: T1 vs T2",
+  arms_pre = "BFR vs HLRT, before training",
+  arms_post = "BFR vs HLRT, after training",
+  arms_change = "BFR vs HLRT, training change"
+)
+map(comparisons, \(cmp) table(cmp$y))
+```
+
+## Tune, fit and cross-validate
+
+For each comparison, `tune.splsda()` tries panels of 5 to 1,000 proteins on each of two
+components and keeps the size with the lowest balanced error rate (BER, the mean of the two
+groups' error rates; 0.5 is chance). Cross-validation is 5-fold, repeated 50 times, and folds hold
+out whole participants. `splsda()` then fits the chosen panel on everyone, and `perf()` reruns the
+same cross-validation on that model to give the BER under each of the package's three
+classification rules and the cross-validated AUC. The panel size was chosen on the same data, so
+these error rates are somewhat optimistic; there is no permutation reference. Proteins are scaled
+to unit variance (the default).
+
+```{r fit}
+keep_grid <- c(5, 10, 20, 50, 100, 200, 500, 1000)
+fit_splsda <- function(cmp) {
+  tuned <- tune.splsda(
+    cmp$x, cmp$y, ncomp = 2, test.keepX = keep_grid, multilevel = cmp$participant,
+    validation = "Mfold", folds = 5, nrepeat = 50, dist = "max.dist", measure = "BER",
+    seed = 2026
+  )
+  model <- splsda(cmp$x, cmp$y, ncomp = 2, keepX = tuned$choice.keepX,
+    multilevel = cmp$participant)
+  performance <- perf(model, validation = "Mfold", folds = 5, nrepeat = 50, dist = "all",
+    auc = TRUE, seed = 2026)
+  list(tuned = tuned, model = model, performance = performance)
+}
+fits <- map(comparisons, fit_splsda)
+```
+
+## Error and AUC
+
+One row per comparison and component: panel size, the tuning BER at that size, `perf()`'s mean
+BER under each rule, and the cross-validated AUC.
+
+```{r models}
+model_summary <- imap(fits, function(fit, name) {
+  ber <- fit$performance$error.rate$BER
+  ber_sd <- fit$performance$error.rate.sd$BER
+  tibble(
+    comparison = name,
+    n_participants = n_distinct(comparisons[[name]]$participant),
+    n_samples = nrow(comparisons[[name]]$x),
+    component = 1:2,
+    keep_x = unname(fit$tuned$choice.keepX),
+    tune_ber = map2_dbl(keep_x, component, \(k, h) fit$tuned$error.rate[as.character(k), h]),
+    ber_max = ber[, "max.dist"],
+    ber_max_sd = ber_sd[, "max.dist"],
+    ber_centroids = ber[, "centroids.dist"],
+    ber_mahalanobis = ber[, "mahalanobis.dist"],
+    auc = map_dbl(fit$performance$auc, "AUC.mean"),
+    auc_sd = map_dbl(fit$performance$auc, "AUC.sd")
+  )
+}) |>
+  list_rbind()
+model_summary |> mutate(across(where(is.double), \(x) round(x, 3)))
+```
+
+## Panels
+
+Every protein the final model selects, with its loading (its weight in the component score; the
+sign gives the direction) and its stability, the share of the 250 cross-validation refits that
+also selected it.
+
+```{r panels}
+panels <- imap(fits, function(fit, name) {
+  map(1:2, function(h) {
+    loading <- fit$model$loadings$X[, h]
+    stable <- fit$performance$features$stable[[h]]
+    tibble(protein = names(loading), loading = unname(loading)) |>
+      filter(loading != 0) |>
+      mutate(
+        comparison = name, component = h, gene = gene_of[protein],
+        stability = coalesce(as.numeric(stable[protein]), 0), .before = protein
+      ) |>
+      arrange(desc(abs(loading)))
+  }) |>
+    list_rbind()
+}) |>
+  list_rbind()
+panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
+  .by = c(comparison, component))
+```
+
+## Transfer between arms
+
+Each arm's training panel scores the other arm's legs: the HLRT model classifies BFR legs as before
+or after training, and the BFR model HLRT legs, with `predict(multilevel = participant)` applying
+the same within-person centring. The scored legs belong to the same participants the model was
+fitted on, so the transfer AUC is not out-of-person like the cross-validated AUC and the two are
+not directly comparable. A high transfer AUC says the signature is shared between a person's two
+legs.
+
+```{r transfer}
+transfer <- tibble(model_arm = c("HLRT", "BFR"), scored_arm = c("BFR", "HLRT")) |>
+  mutate(
+    transfer_auc = map2_dbl(model_arm, scored_arm, function(model_arm, scored_arm) {
+      target <- comparisons[[paste0("training_", tolower(scored_arm))]]
+      model <- fits[[paste0("training_", tolower(model_arm))]]$model
+      score <- predict(model, target$x, multilevel = target$participant)$predict[, "T2", 1]
+      as.numeric(pROC::auc(pROC::roc(target$y, score, levels = c("T1", "T2"), direction = "<",
+        quiet = TRUE)))
+    }),
+    own_cv_auc = map_dbl(scored_arm, function(arm) {
+      filter(model_summary, comparison == paste0("training_", tolower(arm)), component == 1)$auc
+    })
+  )
+transfer
+```
+
+## Annotate the training panels
+
+What the two training panels are made of: each panel protein's WGCNA module in the main network of
+`04_Network` (with the module's BH top set), and the gene sets over-represented among component 1's
+proteins, by `fgsea::fora()` against every measured gene with the set list and size limits of
+`04_Network`. Only the training panels are annotated; the arm panels predict at chance, and
+annotating them would describe noise.
+
+```{r annotate}
+network_book <- here("04_Network", "01_modules", "c_data", "01_modules.xlsx")
+module_of <- read_excel(network_book, "membership") |>
+  filter(network == "main") |>
+  select(protein, module) |>
+  left_join(
+    read_excel(network_book, "modules") |> filter(network == "main") |> select(module, top_set),
+    by = "module"
+  )
+panels <- left_join(panels, module_of, by = "protein")
+sets <- readRDS(here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data", "gene_sets.rds"))
+universe <- unique(na.omit(proteins$genes$Genes))
+panel_pathways <- panels |>
+  filter(startsWith(comparison, "training"), component == 1) |>
+  summarise(genes = list(unique(na.omit(gene))), .by = comparison) |>
+  mutate(result = map(genes, function(genes) {
+    as_tibble(fgsea::fora(sets, genes, universe = universe, minSize = 15, maxSize = 500))
+  })) |>
+  select(comparison, result) |>
+  unnest(result) |>
+  filter(pval < 0.05) |>
+  mutate(overlapGenes = map_chr(overlapGenes, paste, collapse = ";")) |>
+  arrange(comparison, pval)
+panels |>
+  filter(startsWith(comparison, "training"), component == 1, module != "M0") |>
+  count(comparison, module, top_set, sort = TRUE) |>
+  slice_max(n, n = 5, by = comparison)
+slice_min(panel_pathways, pval, n = 5, by = comparison) |>
+  select(comparison, pathway, overlap, size, padj)
+```
+
+## Figures
+
+One page per comparison:
+
+- the samples on the two component scores, with a line joining each participant's two samples;
+- the ROC curve of each of the 50 cross-validation repeats, built from component 1's held-out
+  predictions;
+- the 25 largest loadings on each component, shaded by stability.
+
+```{r figures}
+#| fig-height: 10
+group_colours <- c(T1 = "grey55", T2 = "#009E73", HLRT = "#0072B2", BFR = "#D55E00")
+
+score_plot <- function(fit, cmp) {
+  as_tibble(fit$model$variates$X, rownames = "sample") |>
+    mutate(group = cmp$y, participant = cmp$participant) |>
+    ggplot(aes(comp1, comp2, colour = group)) +
+    geom_line(aes(group = participant), colour = "grey80", linewidth = 0.3) +
+    geom_point(size = 1.6) +
+    scale_colour_manual(values = group_colours) +
+    labs(x = "Component 1", y = "Component 2", colour = NULL) +
+    theme_bw(base_size = 8)
+}
+
+roc_plot <- function(fit, cmp) {
+  predicted <- fit$performance$predict$comp1
+  curves <- map(seq_len(dim(predicted)[3]), function(r) {
+    roc <- pROC::roc(cmp$y, predicted[, 2, r], levels = levels(cmp$y), direction = "<",
+      quiet = TRUE)
+    tibble(repeat_id = r, specificity = roc$specificities, sensitivity = roc$sensitivities)
+  }) |>
+    list_rbind()
+  auc <- fit$performance$auc$comp1
+  ggplot(curves, aes(1 - specificity, sensitivity, group = repeat_id)) +
+    geom_abline(linetype = "dashed", colour = "grey70") +
+    geom_step(alpha = 0.15, direction = "vh") +
+    annotate("text", x = 0.62, y = 0.08, size = 2.8,
+      label = sprintf("CV AUC %.2f ± %.2f", auc[["AUC.mean"]], auc[["AUC.sd"]])) +
+    coord_equal() +
+    labs(x = "1 - specificity", y = "Sensitivity") +
+    theme_bw(base_size = 8)
+}
+
+loading_plot <- function(name, h) {
+  panels |>
+    filter(comparison == name, component == h) |>
+    slice_max(abs(loading), n = 25, with_ties = FALSE) |>
+    ggplot(aes(loading, reorder(gene, loading), fill = stability)) +
+    geom_col(width = 0.7) +
+    scale_fill_gradient(low = "grey85", high = "grey15", limits = c(0, 1)) +
+    labs(x = paste("Component", h, "loading"), y = NULL, fill = "Stability") +
+    theme_bw(base_size = 7)
+}
+
+pages <- imap(fits, function(fit, name) {
+  headline <- filter(model_summary, comparison == name, component == 1)
+  (score_plot(fit, comparisons[[name]]) | roc_plot(fit, comparisons[[name]])) /
+    (loading_plot(name, 1) | loading_plot(name, 2)) +
+    plot_layout(heights = c(1, 1.4), guides = "collect") +
+    plot_annotation(
+      title = comparison_labels[[name]],
+      subtitle = sprintf("%d participants; component 1: %d proteins, CV BER %.2f",
+        headline$n_participants, headline$keep_x, headline$ber_max)
+    )
+})
+pages[[1]]
+
+module_page <- panels |>
+  filter(startsWith(comparison, "training"), component == 1) |>
+  mutate(
+    module = if_else(module == "M0", "unassigned", paste(module, coalesce(top_set, "no set"))),
+    comparison = comparison_labels[comparison]
+  ) |>
+  count(comparison, module) |>
+  slice_max(n, n = 10, by = comparison, with_ties = FALSE) |>
+  ggplot(aes(n, reorder(module, n))) +
+  geom_col(width = 0.7, fill = "grey40") +
+  facet_wrap(~comparison, scales = "free", ncol = 1) +
+  labs(x = "Panel proteins (component 1)", y = NULL,
+    title = "Training panels by WGCNA module (main network)") +
+  theme_bw(base_size = 7)
+module_page
+
+pdf(file.path(stage, "b_reports", "02_splsda.pdf"), width = 8.27, height = 11.69)
+walk(pages, print)
+print(module_page)
+invisible(dev.off())
+```
+
+## Save results
+
+```{r write}
+write_xlsx(
+  list(
+    models = model_summary,
+    panels = panels,
+    transfer = transfer,
+    panel_pathways = panel_pathways,
+    scores = imap(fits, function(fit, name) {
+      as_tibble(fit$model$variates$X, rownames = "sample") |>
+        mutate(comparison = name, participant = comparisons[[name]]$participant,
+          group = as.character(comparisons[[name]]$y), .before = 1)
+    }) |>
+      list_rbind()
+  ),
+  file.path(stage, "c_data", "02_splsda.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```
