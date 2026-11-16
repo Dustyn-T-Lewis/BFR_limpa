@@ -93,8 +93,7 @@ sample-level designs.
 The test is the least-squares t on the outcome coefficient, shown as an r-equivalent,
 sign(t) × √(t² / (t² + df)): the partial correlation of module and outcome given the other terms,
 the same scale as the YvO figure. BH runs within each network, block and outcome across modules.
-Echo intensity falls as muscle quality improves. `slope_t()` fits one design to an eigengene
-matrix; `level_slopes()` and `change_slopes()` build the designs for one network.
+Echo intensity falls as muscle quality improves.
 
 ```{r slope-t}
 slope_t <- function(eigengenes, design, block = NULL) {
@@ -102,9 +101,9 @@ slope_t <- function(eigengenes, design, block = NULL) {
     duplicateCorrelation(eigengenes, design, block = block)$consensus.correlation
   }
   fit <- lmFit(eigengenes, design, block = block, correlation = correlation)
-  t <- fit$coefficients[, "value"] / (fit$stdev.unscaled[, "value"] * fit$sigma)
-  tibble(module = rownames(eigengenes), n = nrow(design), t, df = fit$df.residual,
-    p = 2 * pt(-abs(t), df))
+  t_stat <- fit$coefficients[, "value"] / (fit$stdev.unscaled[, "value"] * fit$sigma)
+  tibble(module = rownames(eigengenes), n = nrow(design), t = t_stat, df = fit$df.residual,
+    p = 2 * pt(-abs(t_stat), df))
 }
 r_equivalent <- function(t, df) sign(t) * sqrt(t^2 / (t^2 + df))
 ```
@@ -123,22 +122,22 @@ level_slopes <- function(me, timepoint) {
   samples <- filter(targets, sample_id %in% rownames(me), .data$timepoint == .env$timepoint)
   block <- c(T1 = "Pre", T2 = "Post")[[timepoint]]
   map(set_names(names(outcomes)), function(o) {
-    data <- inner_join(samples, filter(measured, outcome == o),
+    joined <- inner_join(samples, filter(measured, outcome == o),
       by = c("participant", "leg", "timepoint"))
-    slope_t(t(me[data$sample_id, ]), model.matrix(~ treatment + value, data), data$participant)
+    slope_t(t(me[joined$sample_id, ]), model.matrix(~ treatment + value, joined),
+      joined$participant)
   }) |>
     list_rbind(names_to = "outcome") |>
     mutate(block = .env$block)
 }
 change_slopes <- function(me) {
   map(set_names(names(outcomes)), function(o) {
-    data <- inner_join(legs, filter(measured_change, outcome == o), by = c("participant", "leg"))
+    joined <- inner_join(legs, filter(measured_change, outcome == o), by = c("participant", "leg"))
+    x <- t(me[joined$leg_id, ])
     bind_rows(
-      Change = slope_t(
-        t(me[data$leg_id, ]), model.matrix(~ treatment + blood_change + value, data)
-      ),
+      Change = slope_t(x, model.matrix(~ treatment + blood_change + value, joined)),
       "Change within participant" = slope_t(
-        t(me[data$leg_id, ]), model.matrix(~ participant + treatment + blood_change + value, data)
+        x, model.matrix(~ participant + treatment + blood_change + value, joined)
       ),
       .id = "block"
     )
@@ -202,7 +201,7 @@ cells <- phenotype_tests |>
 One page per network. Purple and green show the contrasts, red and blue the phenotype
 associations. A solid outline marks BH p < 0.05 with stars, a dashed outline nominal p < 0.05, and
 bold text |r| ≥ 0.40. The left bar gives each module's size, labelled with its BH-enriched top set
-(or "no set" when none passes) and its hub protein. `module_heatmap()` draws one network's page.
+(or "no set" when none passes) and its hub protein.
 
 ```{r heatmap}
 block_order <- c("Training", "BFR vs HLRT", "Pre", "Post", "Change", "Change within participant")
@@ -218,21 +217,21 @@ module_heatmap <- function(name, title) {
   info <- filter(module_info, network == name) |>
     arrange(desc(as.integer(sub("M", "", module)))) |>
     mutate(module = factor(module, module))
-  data <- filter(cells, network == name) |>
+  net_cells <- filter(cells, network == name) |>
     mutate(
       module = factor(module, levels(info$module)),
       strip = factor(strip, unique(strip[order(match(block, block_order))]))
     )
-  heatmap <- ggplot(data, aes(column, module)) +
-    geom_tile(data = filter(data, kind == "contrast"), aes(fill = r), colour = "white") +
+  heatmap <- ggplot(net_cells, aes(column, module)) +
+    geom_tile(data = filter(net_cells, kind == "contrast"), aes(fill = r), colour = "white") +
     scale_fill_gradient2(low = "#1b7837", mid = "white", high = "#762a83", limits = c(-0.8, 0.8),
       oob = scales::squish, name = "r-equivalent (contrasts)") +
     ggnewscale::new_scale_fill() +
-    geom_tile(data = filter(data, kind == "phenotype"), aes(fill = r), colour = "white") +
+    geom_tile(data = filter(net_cells, kind == "phenotype"), aes(fill = r), colour = "white") +
     scale_fill_gradient2(low = "#2166ac", mid = "white", high = "#b2182b", limits = c(-0.8, 0.8),
       oob = scales::squish, name = "r-equivalent (phenotype)") +
-    geom_tile(data = filter(data, padj < 0.05), fill = NA, colour = "black", linewidth = 0.5) +
-    geom_tile(data = filter(data, padj >= 0.05, p < 0.05), fill = NA, colour = "black",
+    geom_tile(data = filter(net_cells, padj < 0.05), fill = NA, colour = "black", linewidth = 0.5) +
+    geom_tile(data = filter(net_cells, padj >= 0.05, p < 0.05), fill = NA, colour = "black",
       linewidth = 0.3, linetype = "dashed") +
     geom_text(aes(label = sprintf("%.2f", r), fontface = if_else(abs(r) >= 0.4, "bold", "plain")),
       size = 1.6) +
@@ -255,12 +254,11 @@ module_heatmap <- function(name, title) {
     theme(panel.grid = element_blank())
   size_bars + heatmap + plot_layout(widths = c(0.8, 4)) + plot_annotation(title = title)
 }
-heatmap_pages <- list(
-  module_heatmap("main", "Main network: module-trait associations"),
-  module_heatmap("change", "Change network: module-trait associations"),
-  module_heatmap("pre", "Pre-training network: module-trait associations"),
-  module_heatmap("post", "Post-training network: module-trait associations")
-)
+network_titles <- c(main = "Main network", change = "Change network",
+  pre = "Pre-training network", post = "Post-training network")
+heatmap_pages <- imap(network_titles, function(title, name) {
+  module_heatmap(name, paste0(title, ": module-trait associations"))
+})
 ```
 
 ## Draw the scatters
@@ -270,8 +268,7 @@ contrasts, with the module's proteins as the set and the stage 02 moderated t as
 in the YvO figure. The right scatter places each module by its eigengene r-equivalent, BFR against
 HLRT, before and after training. It uses the eigengene tests rather than NES: modules are built
 from proteins that move together, and fgsea, which treats proteins as independent, gives
-between-leg NES near ±3 where the eigengene tests are flat. `quadrant_scatter()` takes the table,
-the two columns, the axis labels and the quadrant names, clockwise from top left.
+between-leg NES near ±3 where the eigengene tests are flat.
 
 ```{r scatters}
 main_info <- filter(module_info, network == "main")
@@ -293,13 +290,14 @@ between_legs <- contrast_cells |>
   select(module, column, r) |>
   pivot_wider(names_from = column, values_from = r) |>
   left_join(select(main_info, module, size = proteins, colour), by = "module")
-quadrant_scatter <- function(data, x, y, xlab, ylab, quadrants) {
-  limit <- max(abs(c(data[[x]], data[[y]]))) * 1.15
+# quadrants run clockwise from top left
+quadrant_scatter <- function(points, x, y, xlab, ylab, quadrants) {
+  limit <- max(abs(c(points[[x]], points[[y]]))) * 1.15
   counts <- c(
-    sum(data[[x]] < 0 & data[[y]] > 0), sum(data[[x]] > 0 & data[[y]] > 0),
-    sum(data[[x]] > 0 & data[[y]] < 0), sum(data[[x]] < 0 & data[[y]] < 0)
+    sum(points[[x]] < 0 & points[[y]] > 0), sum(points[[x]] > 0 & points[[y]] > 0),
+    sum(points[[x]] > 0 & points[[y]] < 0), sum(points[[x]] < 0 & points[[y]] < 0)
   )
-  ggplot(data, aes(.data[[x]], .data[[y]])) +
+  ggplot(points, aes(.data[[x]], .data[[y]])) +
     geom_hline(yintercept = 0, colour = "grey60") +
     geom_vline(xintercept = 0, colour = "grey60") +
     geom_abline(linetype = "dashed", colour = "grey60") +
