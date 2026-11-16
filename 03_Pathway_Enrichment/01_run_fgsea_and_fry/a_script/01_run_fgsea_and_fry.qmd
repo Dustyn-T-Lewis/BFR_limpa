@@ -22,17 +22,12 @@ here::i_am("03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and
 
 ## Read inputs
 
-Every tested gene set is checked on every contrast with two methods. fgsea (fast gene set
-enrichment analysis) ranks all proteins by a statistic and asks whether a set's members sit
-towards the top or bottom of the ranking more than random sets of the same size. It is
-competitive, comparing a set with the other proteins, and assumes proteins are exchangeable, which
-they are not: proteins in a pathway move together. fry, from limma, is self-contained: it asks
-whether the set's members move at all, using the sample-level data, so correlation between
-members cannot inflate its null.
-
-The inputs are the tested sets and their catalogue from `00_build_gene_sets`, the fitted
-contrasts and design from stage 02, and the protein estimates from quantification, which fry reads
-at the sample level.
+Every tested set is checked on every contrast with two methods. fgsea ranks proteins by a
+statistic and asks whether a set's members sit towards either end of the ranking more than random
+sets of the same size. It is competitive and assumes proteins are exchangeable, which they are
+not: proteins in a pathway move together. limma's fry is self-contained: it asks whether the set's
+members move at all, from the sample-level data, so correlation between members cannot inflate its
+null.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry")
@@ -44,47 +39,38 @@ protein_map <- read_excel(gene_set_book, "protein_gene_map")
 fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
 proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
-length(sets)
 ```
 
 ## Check alignment
 
-A stale fit still lines up by count, so the checks compare names rather than lengths: proteins in
-the fit, the protein map and the abundance matrix must match row for row, and the fit's
-contrasts must match the design's.
+A stale fit still lines up by count, so the checks compare names.
 
 ```{r check}
 contrast_names <- colnames(d$contrasts)
 stopifnot(
   identical(rownames(fit$coefficients), protein_map$protein),
   identical(colnames(fit$coefficients), contrast_names),
-  identical(rownames(proteins$E), protein_map$protein)
+  identical(rownames(proteins$E), protein_map$protein),
+  identical(rownames(d$design), colnames(proteins$E))
 )
-contrast_names
 ```
 
 ## Protein results
 
-`topTable()` gives one row per protein for each contrast: log2 fold change, average abundance,
-moderated t, p and BH-adjusted p. BH stays as `02_Differential` applied it,
-within each contrast. The rows are stacked across contrasts and joined to the protein map.
-
-`pi_score` is P.Value^|logFC| (Xiao et al. 2014, PMID 22321699), which combines effect size and
-significance. It orders proteins within a contrast and selects nothing.
+One `topTable()` row per protein and contrast, BH within each contrast as in `02_Differential`.
+`pi_score` is P.Value^|logFC| (Xiao et al. 2014, PMID 22321699); it orders proteins and selects
+nothing.
 
 ```{r protein-results}
 protein_results <- map(set_names(contrast_names), function(contrast) {
-  topTable(fit, coef = contrast, number = Inf, adjust.method = "BH", sort.by = "none") |>
+  topTable(fit, coef = contrast, number = Inf, sort.by = "none") |>
     rownames_to_column("protein") |>
     select(protein, logFC, AveExpr, t, P.Value, adj.P.Val)
 }) |>
   list_rbind(names_to = "contrast") |>
   left_join(protein_map, by = "protein", relationship = "many-to-one") |>
   mutate(pi_score = P.Value^abs(logFC))
-head(protein_results[c("contrast", "protein", "gene", "logFC", "t", "adj.P.Val", "pi_score")], 4)
 ```
-
-Proteins up and down at FDR 0.05, per contrast.
 
 ```{r protein-summary}
 protein_summary <- protein_results |>
@@ -99,22 +85,17 @@ protein_summary
 
 ## Run fgsea
 
-fgsea needs one ranked vector per contrast: the moderated t of each representative protein,
-named by gene symbol so fgsea's leading edge comes back in the namespace the volcanoes label
-with. The order of `ranked` matters, because the seeded fgsea calls draw their permutations in
-this order.
+fgsea ranks the moderated t of each representative protein, named by gene symbol so leading
+edges come back as symbols. The seeded calls draw their permutations in the order of `ranked`.
 
 ```{r ranked}
 ranked <- map(set_names(contrast_names), function(cn) {
   with(filter(protein_results, selected, contrast == cn), set_names(t, gene))
 })
-lengths(ranked)
 ```
 
-For each set fgsea returns a p-value, its BH-adjusted `padj` over all sets in the contrast, the
-NES (normalised enrichment score: positive when members sit towards the top of the ranking,
-negative towards the bottom, scaled for set size) and the leading edge, the members that drive
-the score.
+`padj` is BH over all sets in the contrast. NES (normalised enrichment score) is positive when
+members sit towards the top of the ranking. The leading edge is the members that drive the score.
 
 ```{r fgsea}
 set.seed(1)
@@ -123,10 +104,10 @@ fgsea_raw <- map(ranked, function(stats) fgsea::fgsea(sets, stats, minSize = 15,
 
 ## Run fry
 
-fry reads rows of `proteins$E`, so each set's gene symbols are turned into row numbers through each
-symbol's representative protein. It reads limpa's precision weights through `proteins$weights`, with
-robust empirical Bayes as in the protein fit. No `block`: participant is a fixed term in the design,
-and the residual within-leg correlation is 0.027.
+fry reads rows of `proteins$E`, so set symbols become row numbers through each representative
+protein. It reads limpa's precision weights from `proteins$weights`, with robust empirical Bayes
+and the design of the protein fit, blood index included. No `block`: participant is a fixed term,
+which leaves little within-leg correlation (`correlation_strata` sheet of `01_Design`).
 
 ```{r fry-index}
 selected_rows <- which(protein_map$selected)
@@ -136,9 +117,8 @@ set_rows <- map(sets, function(genes) {
 proteins$weights <- fit$EList$weights
 ```
 
-Both methods go into one long table, one row per set, contrast and method. Each package returns
-its own BH column over the list it was given, fgsea's `padj` and fry's `FDR`; neither is
-recomputed here. `NES` and `leadingEdge` exist for fgsea only.
+One row per set, contrast and method. fgsea's `padj` and fry's `FDR` are each package's own BH;
+neither is recomputed.
 
 ```{r set-tests}
 set_tests <- bind_rows(
@@ -167,25 +147,18 @@ table(set_tests$method)
 ## Collapse redundant sets
 
 Collections overlap: glycolysis sits in all four. `fgsea::collapsePathways()` walks the
-significant sets in order of p, and each set it reaches that is not yet a child acts as a parent.
-Every other set not yet a child is tested twice against the parent's whole gene set, in its own
-direction: once on the ranking with the parent's genes removed, and once on the parent's genes
-alone. A set becomes the parent's child when both p exceed 0.05. The sets never made a child are
-the `mainPathways`; they keep the `padj` fgsea gave them, with no re-adjustment. Every set stays
-in the table.
+significant sets in order of p; each set not yet a child acts as a parent, and another set becomes
+its child when it shows no enrichment of its own, both with the parent's genes removed from the
+ranking and within the parent's genes (p > 0.05). The `mainPathways` keep their fgsea `padj`.
+Survivors get `main = TRUE`; fry rows get `NA`.
 
 ```{r collapse}
 main_sets <- map(set_names(contrast_names), function(contrast) {
   significant <- fgsea_raw[[contrast]][padj < 0.05][order(pval)]
-  if (nrow(significant) < 2) {
-    return(significant$pathway)
-  }
   fgsea::collapsePathways(significant, sets, ranked[[contrast]], pval.threshold = 0.05)$mainPathways
 })
 lengths(main_sets)
 ```
-
-Survivors get `main = TRUE`; fry rows get `NA`, since only fgsea results are collapsed.
 
 ```{r annotate-tests}
 set_tests <- set_tests |>
@@ -198,13 +171,11 @@ set_tests <- set_tests |>
     by = "set_id"
   ) |>
   relocate(contrast, method, set_id, database, pathway)
-head(select(set_tests, contrast, method, set_id, n, NES, p, padj, main), 4)
 ```
 
 ## Set summary
 
-Significant sets per contrast at an adjusted p below 0.05, for fgsea, fgsea after collapse, and
-fry. The baseline contrast sits in the table unflagged, for comparison.
+Sets at adjusted p < 0.05 per contrast.
 
 ```{r set-summary}
 set_summary <- set_tests |>
@@ -220,10 +191,7 @@ set_summary
 
 ## Figures
 
-The figures go to one A4 PDF, S1 and S2.
-
-The dot plots show the four contrasts other than baseline. `survivors` holds the significant
-fgsea sets that survived the collapse.
+The figures show the four contrasts other than baseline.
 
 ```{r survivors}
 shown <- c("BFR_Post-Pre", "HLRT_Post-Pre", "Modality_x_Time_Interaction", "BFR_Post-HLRT_Post")
@@ -234,12 +202,9 @@ survivors <- set_tests |>
 count(survivors, contrast, .drop = FALSE)
 ```
 
-S1 stacks one dot plot per contrast that has a survivor, each showing its ten survivors with the
-lowest adjusted p: NES on the x axis, point size for set size, colour for the collection. The size
-scale spans every row on the page, so the panels compare. Labels drop the collection prefix, and
-`GOBP_MUSCLE_CONTRACTION` and `REACTOME_MUSCLE_CONTRACTION` would then share a row, so a name whose
-stem repeats within a contrast gets its collection appended. Each collection's own view is the
-dotplot in `07_pathway_maps`.
+S1 shows each contrast's ten survivors with the lowest adjusted p. The size scale spans the whole
+page so panels compare. Labels drop the collection prefix, so a stem that repeats within a
+contrast (`GOBP_MUSCLE_CONTRACTION`, `REACTOME_MUSCLE_CONTRACTION`) gets its collection appended.
 
 ```{r survivor-figure}
 labelled <- mutate(
@@ -269,43 +234,36 @@ panels <- map(split(labelled, labelled$contrast, drop = TRUE), function(contrast
     theme_minimal(base_size = 9) +
     theme(panel.grid.major.y = element_blank(), plot.title = element_text(size = 9))
 })
-figures <- list(
-  wrap_plots(panels, ncol = 1, guides = "collect") +
-    plot_annotation(title = "S1. Ten strongest collapse survivors", tag_levels = "A")
-)
+s1 <- wrap_plots(panels, ncol = 1, guides = "collect") +
+  plot_annotation(title = "S1. Ten strongest collapse survivors", tag_levels = "A")
 ```
 
-S2 shows how much redundancy the collapse removed: significant sets per collection and contrast,
-before and after.
+S2 counts significant sets per collection and contrast before and after the collapse.
 
 ```{r collapse-effect}
 collapse_effect <- set_tests |>
   filter(method == "fgsea", padj < 0.05, contrast %in% shown) |>
   summarise(before = n(), after = sum(main), .by = c(contrast, database)) |>
-  pivot_longer(c(before, after), names_to = "stage", values_to = "sets") |>
-  mutate(stage = factor(stage, c("before", "after")), contrast = factor(contrast, shown))
-figures <- c(figures, list(
-  ggplot(collapse_effect, aes(stage, sets, fill = database)) +
-    geom_col(position = "dodge") +
-    facet_wrap(~contrast, scales = "free_y", ncol = 2) +
-    scale_fill_brewer(palette = "Dark2", name = NULL) +
-    labs(x = NULL, y = "significant sets") +
-    theme_minimal(base_size = 10) +
-    theme(legend.position = "bottom") +
-    plot_annotation(title = "S2. Significant sets before and after collapse")
-))
-```
+  pivot_longer(c(before, after), names_to = "when", values_to = "sets") |>
+  mutate(when = factor(when, c("before", "after")), contrast = factor(contrast, shown))
+s2 <- ggplot(collapse_effect, aes(when, sets, fill = database)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~contrast, scales = "free_y", ncol = 2) +
+  scale_fill_brewer(palette = "Dark2", name = NULL) +
+  labs(x = NULL, y = "significant sets") +
+  theme_minimal(base_size = 10) +
+  theme(legend.position = "bottom") +
+  plot_annotation(title = "S2. Significant sets before and after collapse")
 
-```{r write-figures}
 pdf(file.path(stage, "b_reports", "01_run_fgsea_and_fry_figures.pdf"), width = 8.27, height = 11.69)
-walk(figures, print)
+print(s1)
+print(s2)
 invisible(dev.off())
 ```
 
 ## Save results
 
-`01_run_fgsea_and_fry.xlsx` holds `set_tests`, one row per set, contrast and method, with the
-leading edge joined by `;`, and `protein_results`, every protein and contrast from the fit.
+Leading edges are saved `;`-joined.
 
 ```{r write}
 write_xlsx(

@@ -20,40 +20,35 @@ here::i_am("02_Differential_Expression/02_Differential/a_script/02_differential.
 
 ## Read proteins and design
 
-`proteins` holds the normalised log2 abundances and their standard errors; `d` holds the design,
-the contrasts and the baseline contrast's name. Design rows and matrix columns must name the same
-samples in the same order; equal dimensions alone would not catch a swapped sample.
+Design rows and matrix columns must name the same samples in the same order.
 
 ```{r read}
-proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+quant <- here("01_Preprocess", "02_Quantification", "c_data")
+proteins <- readRDS(file.path(quant, "proteins.rds"))
 d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
-fitted_slope_file <- here(
-  "01_Preprocess", "02_Quantification", "c_data", "quant_runs", "proteins_slope_fitted.rds"
-)
-
 stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 ```
 
 ## Fit
 
-limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` takes the
-place of `lmFit()` because only it reads the standard errors from `dpcQuant()`, as precision
-weights. No per-sample quality weights (limpa's default): estimated, they ranged from 0.09 to 3.6
-and did not follow contaminant load. `contrasts.fit()` forms the five comparisons and `eBayes()`
-moderates each protein's variance toward a prior fitted across all proteins; `robust = TRUE` keeps
-proteins with outlying variances from distorting that prior.
+limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` replaces
+`lmFit()` because only it reads the `dpcQuant()` standard errors, as precision weights. No sample
+quality weights (limpa's default): estimated, they ranged from 0.09 to 3.6 and did not follow
+contaminant load. `robust = TRUE` keeps proteins with outlying variances from distorting the
+prior. The blood coefficient, read before the contrasts are formed, is each protein's blood slope:
+log2 protein per log2 haemoglobin, near 1 for a protein that comes only from blood.
 
 ```{r fit}
-fit <- dpcDE(proteins, d$design)
-fit <- contrasts.fit(fit, d$contrasts)
-fit <- eBayes(fit, robust = TRUE)
+coefficient_fit <- dpcDE(proteins, d$design)
+blood_fit <- eBayes(coefficient_fit, robust = TRUE) |>
+  topTable(coef = "blood", number = Inf, sort.by = "none")
+fit <- eBayes(contrasts.fit(coefficient_fit, d$contrasts), robust = TRUE)
+sum(blood_fit$adj.P.Val < 0.05)
 ```
 
 ## Results
 
-In `topTable()`, `sort.by = "none"` keeps protein order (the default sorts on the B statistic).
-Benjamini–Hochberg (BH) adjustment controls the false discovery rate within each contrast, not
-across all five.
+Benjamini-Hochberg (BH) adjustment runs within each contrast, not across all five.
 
 ```{r results}
 results <- map(colnames(d$contrasts), function(cn) {
@@ -77,9 +72,7 @@ contrast_summary |>
 
 ## Inspect p-value distributions
 
-Per contrast: the estimated share of true nulls (`propTrueNull()`), the median absolute t and the
-fraction of p below 0.2. Under a flat null, 20% of p fall below 0.2 and the median |t| is about
-0.67.
+Under a flat null, 20% of p fall below 0.2 and the median |t| is about 0.67.
 
 ```{r null-calibration}
 null_summary <- results |>
@@ -102,9 +95,8 @@ ggplot(results, aes(P.Value)) +
   theme_minimal()
 ```
 
-From the fitted standard errors, the interaction effect each protein would need for 80% power at
-an unadjusted two-sided 0.05 threshold, on the log2 scale: median and 90th percentile across
-proteins. It describes sensitivity, not FDR-adjusted power.
+The log2 interaction effect each protein would need for 80% power at unadjusted two-sided 0.05,
+median and 90th percentile across proteins. It describes sensitivity, not FDR-adjusted power.
 
 ```{r detectable-effect}
 se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
@@ -113,11 +105,10 @@ round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0
 
 ## The pi score
 
-`pi_score` is `P.Value^abs(logFC)`, which equals 10 to the minus Xiao et al.'s π (|logFC| times
-−log10 p; 2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest
-first: large effects with small p. It ranks the two within-leg contrasts, controls no error rate
-and selects nothing. The mean number of observed precursors per sample sits beside it, because the
-top of a pi ranking is often thinly observed.
+`pi_score` is `P.Value^abs(logFC)`, 10 to the minus Xiao et al.'s π (|logFC| times -log10 p;
+2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest first. It ranks
+the two within-leg contrasts, controls no error rate and selects nothing. Mean observed precursors
+per sample sit beside it, because the top of a pi ranking is often thinly observed.
 
 ```{r pi-ranking}
 results |>
@@ -130,36 +121,50 @@ results |>
 
 ## Baseline comparison
 
-The two legs before training, where counterbalanced legs should differ by nothing; a difference
-can be biological or technical. The five smallest p:
+Counterbalanced legs before training should differ by nothing. The five smallest p:
 
 ```{r baseline}
-baseline <- filter(results, contrast == d$baseline)
-stopifnot(nrow(baseline) == nrow(proteins))
-
-slice_min(baseline, P.Value, n = 5) |>
+results |>
+  filter(contrast == d$baseline) |>
+  slice_min(P.Value, n = 5) |>
   select(protein, Genes, logFC, P.Value, adj.P.Val)
+```
+
+## Without the blood covariate
+
+The same fit without the blood index, its BH discoveries per contrast beside the primary fit's.
+
+```{r unadjusted}
+unadjusted_design <- d$design[, colnames(d$design) != "blood"]
+unadjusted <- dpcDE(proteins, unadjusted_design, plot = FALSE) |>
+  contrasts.fit(d$contrasts[colnames(unadjusted_design), ]) |>
+  eBayes(robust = TRUE)
+primary_hits <- decideTests(fit) != 0
+unadjusted_hits <- decideTests(unadjusted) != 0
+contrast_summary$n_fdr_05_unadjusted <- colSums(unadjusted_hits)[contrast_summary$contrast]
+rbind(
+  blood_adjusted = colSums(primary_hits),
+  unadjusted = colSums(unadjusted_hits),
+  both = colSums(primary_hits & unadjusted_hits)
+)
 ```
 
 ## Slope sensitivity
 
-`02_quantify_run.R --sensitivity` also quantifies with the detection-curve (DPC) slope fitted to
-these data (0.478) instead of the preset 0.7. When that run exists, it gets the same detection
-filter, normalisation and design, and its discovery counts are set beside the primary run's.
+The run with the detection-curve slope fitted (0.478) instead of preset at 0.7, when it exists,
+with the same detection filter, normalisation and design.
 
 ```{r slope-sensitivity}
-#| eval: !expr file.exists(fitted_slope_file)
-fitted_slope <- readRDS(fitted_slope_file)
+#| eval: !expr file.exists(file.path(quant, "quant_runs", "proteins_slope_fitted.rds"))
+fitted_slope <- readRDS(file.path(quant, "quant_runs", "proteins_slope_fitted.rds"))
 fitted_slope <- fitted_slope[
   filterByDetection(fitted_slope, n.samples = min(table(fitted_slope$targets$group))),
 ]
 fitted_slope$E <- normalizeBetweenArrays(fitted_slope$E, method = "cyclicloess")
 stopifnot(identical(colnames(fitted_slope$E), rownames(d$design)))
-refit <- dpcDE(fitted_slope, d$design) |>
+refit <- dpcDE(fitted_slope, d$design, plot = FALSE) |>
   contrasts.fit(d$contrasts) |>
   eBayes(robust = TRUE)
-primary_hits <- decideTests(fit) != 0
-stopifnot(all(rownames(primary_hits) %in% rownames(refit)))
 refit_hits <- decideTests(refit)[rownames(primary_hits), , drop = FALSE] != 0
 rbind(
   slope_0.7 = colSums(primary_hits),
@@ -170,10 +175,6 @@ rbind(
 
 ## Save results
 
-`fit.rds` keeps the fitted model for the stages that rebuild contrasts. `02_differential.xlsx`
-holds `DEP_matrix` (one row per protein: log2 fold change, p and BH-adjusted p per contrast),
-discovery counts and the distribution summaries.
-
 ```{r write}
 dep_matrix <- results |>
   select(protein, Genes, NPrec, contrast, logFC, P.Value, adj.P.Val) |>
@@ -181,6 +182,10 @@ dep_matrix <- results |>
     names_from = contrast,
     values_from = c(logFC, P.Value, adj.P.Val),
     names_glue = "{contrast}_{.value}"
+  ) |>
+  mutate(
+    blood_slope = blood_fit[protein, "logFC"],
+    blood_adj.P.Val = blood_fit[protein, "adj.P.Val"]
   )
 
 out <- here("02_Differential_Expression", "02_Differential", "c_data")

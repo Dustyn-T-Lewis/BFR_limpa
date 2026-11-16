@@ -88,26 +88,23 @@ interaction_fry
 
 ## Figures
 
-Three A4 pages go to `b_reports/03_complex_subunits.pdf`, sharing one theme.
+Three A4 pages go to `b_reports/03_complex_subunits.pdf`. Page 1 holds Sam's two summaries,
+stacked: complex subunits, then assembly factors with "Other". Each bar is the mean change of a
+group's measured proteins per leg, with the standard error across them, and every protein is a
+point. The standard error describes spread among correlated proteins and is not a test; the test is
+fry, whose interaction FDR labels the subunit summary. Axis labels give measured of all MitoCarta
+members. The jitter is seeded, so points land in the same place on every run.
 
-```{r theme}
+```{r summary-page}
 theme_set(theme_minimal(base_size = 9))
 theme_update(legend.position = "top", panel.grid.major.x = element_blank())
 arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
-```
-
-Page 1 holds Sam's two summaries, stacked: complex subunits, then assembly factors with "Other".
-Each bar is the mean change of a group's measured proteins per leg, with the standard error across
-them, and every protein is a point. The standard error describes spread among correlated proteins
-and is not a test; the test is fry, whose interaction FDR labels the subunit summary. Axis labels
-give measured of all MitoCarta members. The jitter has its own seed, so the points land in the
-same place on every run.
-
-```{r summary-page}
 group_size <- members |>
   summarise(measured = sum(measured), total = n(), .by = c(complex, role)) |>
   mutate(label = sprintf("%s\n(n = %d/%d)", complex, measured, total))
-summary_plot <- function(roles, title, fry) {
+summary_plot <- function(roles, title) {
+  # an empty fry table, not NULL, so geom_text() does not inherit the plot data
+  fry <- if (identical(roles, "subunits")) interaction_fry else interaction_fry[0, ]
   rows <- filter(subunits, role %in% roles) |>
     pivot_longer(c(BFR_logFC, HLRT_logFC), names_to = "arm", values_to = "logFC") |>
     mutate(arm = str_remove(arm, "_logFC"))
@@ -131,11 +128,8 @@ summary_plot <- function(roles, title, fry) {
     scale_fill_manual(values = arm_colours, name = NULL) +
     labs(x = NULL, y = "log2 change, post - pre", title = title)
 }
-summary_page <- summary_plot("subunits", "Complex subunits, summary by leg", interaction_fry) /
-  summary_plot(
-    c("assembly factors", "other"), "Assembly factors and other OXPHOS proteins, by leg",
-    interaction_fry[0, ]
-  )
+summary_page <- summary_plot("subunits", "Complex subunits, summary by leg") /
+  summary_plot(c("assembly factors", "other"), "Assembly factors and other OXPHOS proteins, by leg")
 ```
 
 Pages 2 and 3 draw every protein of one role by leg, one panel per complex. Panel titles carry the
@@ -163,24 +157,16 @@ role_page <- function(which_role, title) {
     geom_col(position = position_dodge(width = 0.75), width = 0.7) +
     facet_wrap(~panel, ncol = 1, scales = "free_x") +
     scale_fill_manual(values = arm_colours, name = NULL) +
-    labs(
-      x = NULL, y = "log2 change, post - pre",
-      title = title
-    ) +
+    labs(x = NULL, y = "log2 change, post - pre", title = title) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6))
 }
 ```
 
 ```{r pdf}
 pdf(file.path(stage, "b_reports", "03_complex_subunits.pdf"), width = 8.27, height = 11.69)
-walk(
-  list(
-    summary_page,
-    role_page("subunits", "Complex subunits by leg"),
-    role_page("assembly factors", "Complex assembly factors by leg")
-  ),
-  print
-)
+print(summary_page)
+print(role_page("subunits", "Complex subunits by leg"))
+print(role_page("assembly factors", "Complex assembly factors by leg"))
 invisible(dev.off())
 ```
 
