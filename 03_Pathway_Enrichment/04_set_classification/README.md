@@ -47,5 +47,5 @@ degradation also rises (AUC 0.74), while growth factor response and NF-κB signa
 0.68, q 0.018). The nominal leads on change are NF-κB signalling and programmed cell death, both
 lower in BFR's change (AUC 0.27), and after training tRNA processing sits higher in BFR (AUC 0.67,
 q 0.14). The between-arm rows of the table sit near chance, so the single BH hit among the many
-sets tested and these leads need confirmation. Protein-level classification is
-`02_Differential_Expression/04_Protein_Classification`.
+sets tested and these leads need confirmation. Protein-panel classification is
+`07_Multivariate/02_splsda`.

@@ -29,7 +29,6 @@ Outputs:
 - `c_data/03_protein_association.xlsx`:
   - `summary`: one row per analysis and outcome; nominal and BH hits against chance;
   - `associations`: one row per protein, analysis and outcome; slope, t, p and FDR, sorted by FDR.
-    Read by `04_Protein_Classification`.
 
 The closest lead is AGMAT, which rises more in legs whose RF CSA grew more (pooled, t 4.5,
 q 0.090). SMTNL1, which falls with training in both arms, falls further in legs that grew more in

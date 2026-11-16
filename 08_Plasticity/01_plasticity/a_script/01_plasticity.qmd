@@ -1,0 +1,738 @@
+---
+title: "01 · Plasticity"
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-width: 8.27
+    fig-height: 11.69
+knitr:
+  opts_chunk:
+    message: false
+---
+
+## Load packages
+
+```{r setup}
+pacman::p_load(here, limpa, limma, dplyr, tidyr, tibble, purrr, readr, readxl, ggplot2,
+  patchwork, ggrepel, writexl)
+here::i_am("08_Plasticity/01_plasticity/a_script/01_plasticity.qmd")
+set.seed(2026)
+```
+
+## Question
+
+Earlier stages test BFR against HLRT one protein, set or module at a time and find no between-arm
+hit. This step asks four broader questions of the two training responses: how far each leg moved
+(magnitude), whether the legs moved the same proteins the same way (direction), whether pathways,
+modules and rankings agree (coherence), and whether any response summary tracks muscle growth. It
+gathers the classification results and the BFR against HLRT leads on one page.
+
+## Read inputs
+
+```{r read}
+stage <- here("08_Plasticity", "01_plasticity")
+proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins.rds"))
+adjusted <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "proteins_adjusted.rds"))
+d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.rds"))
+fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
+dep <- read_excel(
+  here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
+  "DEP_matrix"
+)
+gene_sets <- readRDS(here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data",
+  "gene_sets.rds"))
+set_tests <- read_excel(
+  here("03_Pathway_Enrichment", "01_run_fgsea_and_fry", "c_data", "01_run_fgsea_and_fry.xlsx"),
+  "set_tests"
+)
+module_file <- here("04_Network", "01_modules", "c_data", "01_modules.xlsx")
+splsda_file <- here("07_Multivariate", "02_splsda", "c_data", "02_splsda.xlsx")
+phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
+stopifnot(identical(dep$protein, rownames(proteins)), identical(dep$protein, rownames(adjusted)),
+  identical(dep$protein, rownames(fit$t)))
+
+ct_bfr <- "BFR_Post-Pre"
+ct_hlrt <- "HLRT_Post-Pre"
+ct_inter <- "Modality_x_Time_Interaction"
+col <- function(contrast, stat) dep[[paste0(contrast, "_", stat)]]
+arm_colours <- c(BFR = "#D55E00", HLRT = "#0072B2", Both = "grey30")
+set_databases <- c("Hallmark", "GO_Slim", "Reactome")
+theme_set(theme_bw(base_size = 8) + theme(plot.title = element_text(size = 9, face = "bold")))
+```
+
+## Magnitude
+
+### Training hits
+
+Hit counts per arm and direction, at BH 0.05 and at nominal p 0.05. A difference in counts is not
+a test of a difference between arms; the cross-fit and the signature score below are.
+
+```{r counts}
+counts <- expand_grid(arm = c("BFR", "HLRT"), level = c("FDR < 0.05", "p < 0.05")) |>
+  mutate(
+    contrast = if_else(arm == "BFR", ct_bfr, ct_hlrt),
+    passing = map2(contrast, level, function(ct, lv) {
+      p <- if (lv == "FDR < 0.05") col(ct, "adj.P.Val") else col(ct, "P.Value")
+      p < 0.05
+    }),
+    up = map2_int(passing, contrast, function(k, ct) sum(k & col(ct, "logFC") > 0)),
+    down = map2_int(passing, contrast, function(k, ct) sum(k & col(ct, "logFC") < 0))
+  ) |>
+  select(arm, level, up, down)
+counts
+```
+
+### Leg changes
+
+Each leg's change is T2 minus T1 in `proteins_adjusted.rds` (blood effect removed). The cross-fit
+and the signature test use the 32 participants with all four biopsies, so every comparison is
+within person.
+
+```{r changes}
+leg_samples <- adjusted$targets |>
+  select(participant, leg, treatment, timepoint, sample_id) |>
+  pivot_wider(names_from = timepoint, values_from = sample_id) |>
+  drop_na(T1, T2)
+leg_change <- adjusted$E[, leg_samples$T2] - adjusted$E[, leg_samples$T1]
+complete_legs <- leg_samples |>
+  select(participant, treatment, T1, T2) |>
+  pivot_wider(names_from = treatment, values_from = c(T1, T2)) |>
+  drop_na()
+change_bfr <- adjusted$E[, complete_legs$T2_BFR] - adjusted$E[, complete_legs$T1_BFR]
+change_hlrt <- adjusted$E[, complete_legs$T2_HLRT] - adjusted$E[, complete_legs$T1_HLRT]
+n_complete <- nrow(complete_legs)
+bh_size <- c(BFR = sum(col(ct_bfr, "adj.P.Val") < 0.05),
+  HLRT = sum(col(ct_hlrt, "adj.P.Val") < 0.05))
+c(legs = nrow(leg_samples), complete_participants = n_complete, bh_size)
+```
+
+### Cross-fitted magnitude
+
+Choosing proteins by one arm and measuring that arm on the same people inflates it. So each of 200
+random splits sends half the participants to choose the proteins and the other half to measure both
+arms' median |log2 change| on them, as in the YvO Figure 4C. Sets run from all proteins to the top
+500 and 250 and the BH set (as many proteins as the choosing arm's BH hits), chosen once by HLRT and
+once by BFR. `split_low` and `split_high` are the middle 95% of splits, not a confidence interval.
+The swap p compares the ratio with 200 data sets in which each participant's BFR and HLRT labels
+are swapped at random, each summarised over 200 splits like the observed ratio, and is +1
+corrected.
+
+```{r crossfit}
+crossfit <- function(x_bfr, x_hlrt, splits) {
+  map(seq_len(splits), function(split) {
+    half <- sample(n_complete, n_complete %/% 2)
+    measured <- list(BFR = abs(rowMeans(x_bfr[, -half])), HLRT = abs(rowMeans(x_hlrt[, -half])))
+    chooser <- list(BFR = abs(rowMeans(x_bfr[, half])), HLRT = abs(rowMeans(x_hlrt[, half])))
+    expand_grid(selected_on = c("HLRT", "BFR"), set = c("All", "Top 500", "Top 250", "BH")) |>
+      mutate(
+        size = case_when(
+          set == "All" ~ nrow(x_bfr), set == "Top 500" ~ 500, set == "Top 250" ~ 250,
+          .default = bh_size[selected_on]
+        ),
+        chosen = map2(selected_on, size, function(arm, k) {
+          rank(-chooser[[arm]], ties.method = "first") <= k
+        }),
+        bfr = map_dbl(chosen, function(k) median(measured$BFR[k])),
+        hlrt = map_dbl(chosen, function(k) median(measured$HLRT[k]))
+      ) |>
+      select(-chosen)
+  }) |>
+    list_rbind() |>
+    mutate(ratio = bfr / hlrt)
+}
+split_results <- crossfit(change_bfr, change_hlrt, 200)
+swapped <- map(seq_len(200), function(i) {
+  flip <- sample(c(TRUE, FALSE), n_complete, replace = TRUE)
+  swap_bfr <- change_bfr
+  swap_hlrt <- change_hlrt
+  swap_bfr[, flip] <- change_hlrt[, flip]
+  swap_hlrt[, flip] <- change_bfr[, flip]
+  summarise(crossfit(swap_bfr, swap_hlrt, 200), null_ratio = median(ratio),
+    .by = c(selected_on, set))
+}) |>
+  list_rbind()
+magnitude <- split_results |>
+  summarise(
+    split_low = quantile(ratio, 0.025), split_high = quantile(ratio, 0.975),
+    size = first(size), bfr = median(bfr), hlrt = median(hlrt), ratio = median(ratio),
+    .by = c(selected_on, set)
+  ) |>
+  left_join(summarise(swapped, nulls = list(null_ratio), .by = c(selected_on, set)),
+    by = c("selected_on", "set")) |>
+  mutate(swap_p = map2_dbl(nulls, ratio, function(null, r) {
+    (1 + sum(abs(log(null)) >= abs(log(r)))) / (1 + length(null))
+  })) |>
+  select(selected_on, set, size, bfr, hlrt, ratio, split_low, split_high, swap_p)
+mutate(magnitude, across(where(is.double), function(x) signif(x, 3)))
+```
+
+### Signature score
+
+The training direction is the mean change across both arms. For each participant it is learned
+from the other participants only, over a set fixed before any comparison: the proteins whose
+average training change across both arms passes BH 0.05 in the limpa model. Each leg's score is its
+change projected onto that direction; 1 means it moved as far as the average leg of the others.
+BFR against HLRT is a paired t on one number per participant and a sign-flip test over 5,000 random
+flips of the per-participant differences, +1 corrected.
+
+```{r average-fit}
+coefficient_fit <- dpcDE(proteins, d$design, plot = FALSE)
+proteins$weights <- coefficient_fit$EList$weights
+average <- makeContrasts(average = (BFR_T2 - BFR_T1 + HLRT_T2 - HLRT_T1) / 2, levels = d$design)
+average_fit <- topTable(eBayes(contrasts.fit(coefficient_fit, average), robust = TRUE),
+  number = Inf, sort.by = "none")
+training_set <- list(
+  up = rownames(average_fit)[average_fit$adj.P.Val < 0.05 & average_fit$logFC > 0],
+  down = rownames(average_fit)[average_fit$adj.P.Val < 0.05 & average_fit$logFC < 0]
+)
+lengths(training_set)
+```
+
+```{r signature}
+signature_rows <- rownames(change_bfr) %in% unlist(training_set)
+project <- function(x, direction) sum(x[signature_rows] * direction) / sum(direction^2)
+signature_scores <- map(seq_len(n_complete), function(i) {
+  direction <- rowMeans((change_bfr + change_hlrt)[signature_rows, -i] / 2)
+  tibble(
+    participant = complete_legs$participant[i],
+    BFR = project(change_bfr[, i], direction),
+    HLRT = project(change_hlrt[, i], direction)
+  )
+}) |>
+  list_rbind()
+score_difference <- signature_scores$BFR - signature_scores$HLRT
+flips <- replicate(5000, mean(score_difference * sample(c(-1, 1), n_complete, replace = TRUE)))
+signature_test <- tibble(
+  test = "signature score", proteins = sum(signature_rows),
+  bfr = mean(signature_scores$BFR), hlrt = mean(signature_scores$HLRT),
+  ratio = bfr / hlrt, p = t.test(score_difference)$p.value,
+  swap_p = (1 + sum(abs(flips) >= abs(mean(score_difference)))) / (1 + length(flips))
+)
+signature_test
+```
+
+### fry on the interaction
+
+If BFR responds less, the proteins that rise with training rise less in BFR, so their interaction
+(BFR change minus HLRT change) leans negative, and those that fall lean positive. fry tests each set
+in the limpa model with the blood covariate. Choosing sets by the average of the two arms does not
+bias the interaction, because swapping a participant's legs leaves the average unchanged.
+
+```{r fry-interaction}
+interaction_contrast <- d$contrasts[, ct_inter]
+interaction_change <- set_names(col(ct_inter, "logFC"), dep$protein)
+fry_interaction <- fry(proteins, training_set, d$design, interaction_contrast, robust = TRUE,
+  sort = "none") |>
+  as_tibble(rownames = "set") |>
+  mutate(
+    median_training = map_dbl(training_set, function(rows) median(average_fit[rows, "logFC"])),
+    median_interaction = map_dbl(training_set, function(rows) median(interaction_change[rows]))
+  )
+fry_interaction
+```
+
+### Magnitude page
+
+```{r page-magnitude}
+count_plot <- counts |>
+  pivot_longer(c(up, down), names_to = "direction", values_to = "proteins") |>
+  mutate(proteins = if_else(direction == "down", -proteins, proteins)) |>
+  ggplot(aes(arm, proteins, fill = arm)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_hline(yintercept = 0) +
+  geom_text(aes(label = abs(proteins), vjust = if_else(proteins > 0, -0.3, 1.2)), size = 2.5) +
+  facet_wrap(~level, scales = "free_y") +
+  scale_y_continuous(expand = expansion(0.15)) +
+  scale_fill_manual(values = arm_colours) +
+  labs(x = NULL, y = "Proteins (up above zero, down below)", title = "a  Training hits")
+bars <- magnitude |>
+  mutate(
+    set = factor(set, c("All", "Top 500", "Top 250", "BH")),
+    selected_on = factor(paste("Chosen by", selected_on), c("Chosen by HLRT", "Chosen by BFR")),
+    label = sprintf("%.2f\n(%.2f-%.2f)\np %.2f", ratio, split_low, split_high, swap_p)
+  )
+magnitude_plot <- bars |>
+  pivot_longer(c(bfr, hlrt), names_to = "arm", values_to = "median_change") |>
+  mutate(arm = toupper(arm)) |>
+  ggplot(aes(set, median_change, fill = arm)) +
+  geom_col(position = position_dodge(0.8), width = 0.7) +
+  geom_text(data = bars, aes(set, pmax(bfr, hlrt), label = label), inherit.aes = FALSE,
+    vjust = -0.15, size = 2.3, lineheight = 0.9) +
+  facet_wrap(~selected_on) +
+  scale_fill_manual(values = arm_colours) +
+  scale_y_continuous(expand = expansion(c(0, 0.45))) +
+  labs(x = NULL, y = "Median |log2 change|, held-out half", fill = NULL,
+    title = "c  Cross-fitted magnitude",
+    subtitle = "Labels: BFR/HLRT ratio, middle 95% of 200 splits, swap p") +
+  theme(legend.position = "top")
+score_plot <- signature_scores |>
+  pivot_longer(c(BFR, HLRT), names_to = "arm", values_to = "score") |>
+  ggplot(aes(arm, score, group = participant)) +
+  geom_hline(yintercept = 0, colour = "grey80") +
+  geom_line(colour = "grey75", linewidth = 0.3) +
+  geom_point(aes(colour = arm), size = 1.2, show.legend = FALSE) +
+  stat_summary(aes(group = 1), fun = mean, geom = "line", linewidth = 1) +
+  scale_colour_manual(values = arm_colours) +
+  labs(x = NULL, y = "Signature score", title = "b  Signature score",
+    subtitle = sprintf("BFR/HLRT %.2f, paired p %.3f, sign-flip p %.3f", signature_test$ratio,
+      signature_test$p, signature_test$swap_p))
+page_magnitude <- (count_plot | score_plot) / magnitude_plot / plot_spacer() +
+  plot_layout(heights = c(1, 1.1, 0.5)) +
+  plot_annotation(title = "Magnitude: how far each leg moved")
+page_magnitude
+```
+
+## Direction
+
+Proteins that pass BH in either arm's training, BFR change against HLRT change. The Deming line
+is descriptive only: most points are HLRT hits chosen for a large HLRT change, so their HLRT values
+are inflated and the slope is biased low. The cross-fit above is the fair estimate of relative
+size. Each quadrant is tested for over-represented Hallmark, GO Slim and Reactome sets
+(`fgsea::fora()`, universe every measured gene, 10 to 500 members).
+
+```{r direction}
+direction_hits <- tibble(
+  protein = dep$protein, gene = dep$Genes,
+  bfr_logfc = col(ct_bfr, "logFC"), bfr_fdr = col(ct_bfr, "adj.P.Val"),
+  hlrt_logfc = col(ct_hlrt, "logFC"), hlrt_fdr = col(ct_hlrt, "adj.P.Val")
+) |>
+  filter(bfr_fdr < 0.05 | hlrt_fdr < 0.05) |>
+  mutate(
+    hit = case_when(bfr_fdr < 0.05 & hlrt_fdr < 0.05 ~ "Both", bfr_fdr < 0.05 ~ "BFR",
+      .default = "HLRT"),
+    quadrant = paste0(if_else(hlrt_logfc > 0, "HLRT up", "HLRT down"), ", ",
+      if_else(bfr_logfc > 0, "BFR up", "BFR down"))
+  )
+concordance <- mean(sign(direction_hits$bfr_logfc) == sign(direction_hits$hlrt_logfc))
+deming <- function(x, y) {
+  sxx <- var(x)
+  syy <- var(y)
+  sxy <- cov(x, y)
+  (syy - sxx + sqrt((syy - sxx)^2 + 4 * sxy^2)) / (2 * sxy)
+}
+deming_slope <- deming(direction_hits$hlrt_logfc, direction_hits$bfr_logfc)
+count(direction_hits, hit)
+count(direction_hits, quadrant)
+c(concordance = concordance, deming_slope = deming_slope)
+```
+
+```{r quadrant-sets}
+universe <- unique(dep$Genes)
+ora_sets <- gene_sets[sub("\\|.*", "", names(gene_sets)) %in% set_databases]
+quadrant_sets <- direction_hits |>
+  summarise(members = list(unique(gene)), proteins = n(), .by = quadrant) |>
+  mutate(result = map(members, function(g) {
+    fgsea::fora(ora_sets, g, universe = universe, minSize = 10, maxSize = 500) |>
+      as_tibble() |>
+      slice_min(pval, n = 10, with_ties = FALSE) |>
+      transmute(database = sub("\\|.*", "", pathway), pathway = sub("^[^|]+\\|", "", pathway),
+        size, overlap, p = pval, fdr = padj)
+  })) |>
+  select(quadrant, proteins, result) |>
+  unnest(result)
+quadrant_sets |>
+  slice_min(p, n = 3, by = quadrant) |>
+  select(quadrant, proteins, pathway, overlap, fdr)
+```
+
+```{r page-direction}
+direction_plot <- ggplot(direction_hits, aes(hlrt_logfc, bfr_logfc, colour = hit)) +
+  geom_hline(yintercept = 0, colour = "grey80") +
+  geom_vline(xintercept = 0, colour = "grey80") +
+  geom_abline(linetype = "dashed", colour = "grey60") +
+  geom_abline(slope = deming_slope, colour = "black", linewidth = 0.4) +
+  geom_point(size = 1, alpha = 0.8) +
+  geom_text_repel(data = slice_max(direction_hits, abs(hlrt_logfc) + abs(bfr_logfc), n = 14),
+    aes(label = gene), size = 2.2, show.legend = FALSE, max.overlaps = 30) +
+  scale_colour_manual(values = arm_colours) +
+  labs(x = "HLRT training log2FC", y = "BFR training log2FC", colour = "FDR < 0.05 in",
+    title = "a  Training change, proteins at FDR 0.05 in either arm",
+    subtitle = sprintf(paste0("%d proteins, %.0f%% same direction\nSolid: Deming slope %.2f ",
+      "(descriptive, biased low by selection); dashed: slope 1"),
+      nrow(direction_hits), 100 * concordance, deming_slope))
+ora_plot <- quadrant_sets |>
+  slice_min(p, n = 3, by = quadrant, with_ties = FALSE) |>
+  mutate(
+    pathway = substr(sub("^(HALLMARK|REACTOME)_", "", pathway), 1, 50),
+    panel = paste0(quadrant, " (", proteins, " proteins)")
+  ) |>
+  ggplot(aes(-log10(fdr), reorder(pathway, -log10(fdr)))) +
+  geom_col(fill = "grey45", width = 0.6) +
+  geom_vline(xintercept = -log10(0.05), linetype = "dashed", colour = "grey60") +
+  facet_wrap(~panel, scales = "free_y", ncol = 1) +
+  labs(x = "-log10 BH q (dashed: 0.05)", y = NULL, title = "b  Top three sets per quadrant")
+page_direction <- direction_plot / ora_plot + plot_layout(heights = c(1.3, 1)) +
+  plot_annotation(title = "Direction: do the legs move the same proteins the same way?")
+page_direction
+```
+
+## Coherence
+
+RRHO2 compares the two training rankings (signed -log10 p, from stage 02) across every threshold:
+bottom left is up in both, top right down in both. fgsea NES of each Hallmark, GO Slim and Reactome
+set (from `03_Pathway_Enrichment/01_run_fgsea_and_fry`) and the change of each main-network WGCNA
+module eigengene (from `04_Network/01_modules`) are compared between arms. The rho and r are
+descriptive, because sets overlap and modules share proteins. fry then asks whether HLRT's
+training hits, split by direction, move together in the BFR training contrast.
+
+```{r coherence}
+signed_score <- function(ct) -log10(col(ct, "P.Value")) * sign(col(ct, "logFC"))
+unique_gene <- !duplicated(dep$Genes)
+rrho <- RRHO2::RRHO2_initialize(
+  data.frame(dep$Genes, signed_score(ct_hlrt))[unique_gene, ],
+  data.frame(dep$Genes, signed_score(ct_bfr))[unique_gene, ],
+  labels = c("HLRT training", "BFR training"), log10.ind = TRUE
+)
+nes <- set_tests |>
+  filter(method == "fgsea", contrast %in% c(ct_bfr, ct_hlrt), database %in% set_databases) |>
+  select(contrast, set_id, NES, padj) |>
+  pivot_wider(names_from = contrast, values_from = c(NES, padj)) |>
+  rename(nes_bfr = `NES_BFR_Post-Pre`, nes_hlrt = `NES_HLRT_Post-Pre`,
+    fdr_bfr = `padj_BFR_Post-Pre`, fdr_hlrt = `padj_HLRT_Post-Pre`) |>
+  drop_na(nes_bfr, nes_hlrt) |>
+  mutate(sig = case_when(
+    fdr_bfr < 0.05 & fdr_hlrt < 0.05 ~ "Both", fdr_bfr < 0.05 ~ "BFR",
+    fdr_hlrt < 0.05 ~ "HLRT", .default = "neither"
+  ))
+nes_rho <- cor(nes$nes_hlrt, nes$nes_bfr, method = "spearman")
+modules <- read_excel(module_file, "eigengene_tests") |>
+  filter(contrast %in% c(ct_bfr, ct_hlrt)) |>
+  select(contrast, module, estimate, fdr) |>
+  pivot_wider(names_from = contrast, values_from = c(estimate, fdr)) |>
+  rename(change_bfr = `estimate_BFR_Post-Pre`, change_hlrt = `estimate_HLRT_Post-Pre`,
+    fdr_bfr = `fdr_BFR_Post-Pre`, fdr_hlrt = `fdr_HLRT_Post-Pre`) |>
+  left_join(
+    read_excel(module_file, "modules") |> filter(network == "main") |>
+      select(module, proteins, hub),
+    by = "module"
+  )
+module_r <- cor(modules$change_hlrt, modules$change_bfr)
+hlrt_sets <- list(
+  HLRT_up = which(col(ct_hlrt, "adj.P.Val") < 0.05 & col(ct_hlrt, "logFC") > 0),
+  HLRT_down = which(col(ct_hlrt, "adj.P.Val") < 0.05 & col(ct_hlrt, "logFC") < 0)
+)
+fry_bfr <- fry(proteins, hlrt_sets, d$design, d$contrasts[, ct_bfr], robust = TRUE,
+  sort = "none")
+fry_bfr
+coherence <- bind_rows(
+  tibble(statistic = "fgsea NES, BFR vs HLRT training, Spearman rho", n = nrow(nes),
+    estimate = nes_rho),
+  tibble(statistic = "main-network eigengene change, BFR vs HLRT training, Pearson r",
+    n = nrow(modules), estimate = module_r),
+  tibble(statistic = paste("fry in BFR training,", rownames(fry_bfr), "FDR set"),
+    n = fry_bfr$NGenes, direction = fry_bfr$Direction, p = fry_bfr$PValue)
+)
+coherence
+```
+
+```{r page-coherence}
+rrho_cells <- as_tibble(rrho$hypermat, .name_repair = function(x) as.character(seq_along(x))) |>
+  mutate(hlrt_step = row_number()) |>
+  pivot_longer(-hlrt_step, names_to = "bfr_step", values_to = "log_p",
+    names_transform = as.integer)
+rrho_plot <- ggplot(rrho_cells, aes(hlrt_step, bfr_step, fill = log_p)) +
+  geom_raster() +
+  scale_fill_viridis_c(option = "inferno", na.value = "white") +
+  coord_equal(expand = FALSE) +
+  labs(x = "HLRT ranking (up to down)", y = "BFR ranking (up to down)", fill = "-log10 p",
+    title = "a  RRHO2 of the two training rankings",
+    subtitle = sprintf("Overlap: %d up in both, %d down in both",
+      length(rrho$genelist_uu$gene_list_overlap_uu),
+      length(rrho$genelist_dd$gene_list_overlap_dd))) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank())
+nes_plot <- ggplot(nes, aes(nes_hlrt, nes_bfr, colour = sig)) +
+  geom_hline(yintercept = 0, colour = "grey80") +
+  geom_vline(xintercept = 0, colour = "grey80") +
+  geom_abline(linetype = "dashed", colour = "grey60") +
+  geom_point(size = 0.8, alpha = 0.8) +
+  scale_colour_manual(values = c(arm_colours, neither = "grey85")) +
+  labs(x = "HLRT NES", y = "BFR NES", colour = "BH in",
+    title = "b  Set response (Hallmark, GO Slim, Reactome)",
+    subtitle = sprintf("Spearman rho %.2f over %d sets", nes_rho, nrow(nes))) +
+  theme(legend.position = "bottom")
+module_plot <- ggplot(modules, aes(change_hlrt, change_bfr)) +
+  geom_hline(yintercept = 0, colour = "grey80") +
+  geom_vline(xintercept = 0, colour = "grey80") +
+  geom_abline(linetype = "dashed", colour = "grey60") +
+  geom_point(aes(size = proteins), alpha = 0.6) +
+  geom_text_repel(data = filter(modules, fdr_bfr < 0.05 | fdr_hlrt < 0.05),
+    aes(label = paste(module, hub)), size = 2.1, max.overlaps = 30) +
+  scale_size_area(max_size = 5) +
+  labs(x = "HLRT eigengene change", y = "BFR eigengene change", size = "Proteins",
+    title = "c  Main-network module change",
+    subtitle = sprintf("Pearson r %.2f over %d modules; labelled: BH in either arm", module_r,
+      nrow(modules))) +
+  theme(legend.position = "bottom")
+bfr_rank <- rank(-fit$t[, ct_bfr])
+barcode <- imap(hlrt_sets, function(rows, set) tibble(set = set, bfr_rank = bfr_rank[rows])) |>
+  list_rbind()
+barcode_plot <- ggplot(barcode, aes(bfr_rank, fill = set)) +
+  geom_histogram(binwidth = 100, boundary = 0) +
+  scale_fill_manual(values = c(HLRT_up = "#B2182B", HLRT_down = "#2166AC")) +
+  labs(x = "Rank in BFR training (most up on the left)", y = "Proteins", fill = NULL,
+    title = "d  HLRT training hits in the BFR ranking",
+    subtitle = sprintf("fry in BFR: HLRT up %s (p %.1e), HLRT down %s (p %.1e)",
+      fry_bfr["HLRT_up", "Direction"], fry_bfr["HLRT_up", "PValue"],
+      fry_bfr["HLRT_down", "Direction"], fry_bfr["HLRT_down", "PValue"])) +
+  theme(legend.position = "bottom")
+page_coherence <- (rrho_plot | nes_plot) / (module_plot | barcode_plot) +
+  plot_annotation(title = "Coherence: do rankings, sets and modules agree?")
+page_coherence
+```
+
+## Classification
+
+Cross-validated AUC of component 1 for each multilevel sPLS-DA comparison in
+`07_Multivariate/02_splsda`. Panel sizes were tuned on the same data, so AUCs lean optimistic.
+
+```{r classification}
+comparison_names <- c(
+  training_bfr = "BFR: T1 vs T2", training_hlrt = "HLRT: T1 vs T2",
+  arms_pre = "BFR vs HLRT, before", arms_post = "BFR vs HLRT, after",
+  arms_change = "BFR vs HLRT, change"
+)
+classification <- read_excel(splsda_file, "models") |>
+  filter(component == 1) |>
+  transmute(comparison, label = comparison_names[comparison], participants = n_participants,
+    panel_size = keep_x, ber = ber_max, auc, auc_sd)
+classification
+```
+
+## BFR against HLRT leads
+
+Proteins at nominal p < 0.05 for the interaction are leads; none passes BH. Circled points are the
+component 1 panel of the sPLS-DA change comparison. The set panel shows the 12 Hallmark, GO Slim and
+Reactome sets with the smallest fgsea p on the interaction in `03_Pathway_Enrichment`. fgsea
+shuffles proteins as if independent, so its q values run small for correlated sets; fry, in the
+same step, passes no interaction set at BH. The last panel shows the interaction of the
+average-response sets tested by fry above.
+
+```{r leads}
+change_panel <- read_excel(splsda_file, "panels") |>
+  filter(comparison == "arms_change", component == 1)
+volcano_data <- tibble(
+  protein = dep$protein, gene = dep$Genes,
+  interaction_logfc = col(ct_inter, "logFC"), interaction_p = col(ct_inter, "P.Value"),
+  interaction_fdr = col(ct_inter, "adj.P.Val"),
+  bfr_logfc = col(ct_bfr, "logFC"), bfr_p = col(ct_bfr, "P.Value"),
+  hlrt_logfc = col(ct_hlrt, "logFC"), hlrt_p = col(ct_hlrt, "P.Value")
+) |>
+  mutate(in_change_panel = protein %in% change_panel$protein, lead = interaction_p < 0.05)
+leads <- volcano_data |>
+  filter(lead) |>
+  select(-lead) |>
+  arrange(interaction_p)
+inter_sets <- set_tests |>
+  filter(method == "fgsea", contrast == ct_inter, database %in% set_databases) |>
+  slice_min(p, n = 12, with_ties = FALSE) |>
+  mutate(label = sprintf("%s (q %.2g)", substr(sub("^(HALLMARK|REACTOME)_", "", pathway), 1, 45),
+    padj))
+c(leads = nrow(leads), larger_bfr = sum(leads$interaction_logfc > 0),
+  larger_hlrt = sum(leads$interaction_logfc < 0),
+  panel_in_leads = sum(leads$in_change_panel), panel = nrow(change_panel))
+select(inter_sets, database, label, NES, p, padj)
+```
+
+```{r page-leads}
+class_plot <- classification |>
+  mutate(label = factor(label, rev(comparison_names))) |>
+  ggplot(aes(auc, label)) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", colour = "grey60") +
+  geom_errorbar(aes(xmin = auc - auc_sd, xmax = auc + auc_sd), width = 0.2,
+    orientation = "y") +
+  geom_point(size = 2) +
+  geom_text(aes(label = paste(panel_size, "proteins")), nudge_y = 0.3, size = 2.2) +
+  scale_x_continuous(limits = c(0.3, 1.05)) +
+  labs(x = "Cross-validated AUC (mean, SD)", y = NULL, title = "a  sPLS-DA classification")
+set_plot <- ggplot(inter_sets, aes(NES, reorder(label, -p), fill = NES > 0)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  scale_fill_manual(values = c(`TRUE` = "#D55E00", `FALSE` = "#0072B2")) +
+  labs(x = "Interaction NES (orange: more with BFR)", y = NULL,
+    title = "b  Interaction set leads (fgsea)", subtitle = "fgsea BH q in labels; fry passes none")
+volcano <- ggplot(volcano_data, aes(interaction_logfc, -log10(interaction_p))) +
+  geom_point(aes(colour = lead), size = 0.6, show.legend = FALSE) +
+  geom_point(data = filter(volcano_data, in_change_panel), shape = 21, size = 1.8,
+    stroke = 0.5, colour = "black") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", colour = "grey60") +
+  geom_text_repel(data = slice_min(leads, interaction_p, n = 20), aes(label = gene), size = 2.2,
+    max.overlaps = 40) +
+  scale_colour_manual(values = c(`TRUE` = "grey20", `FALSE` = "grey80")) +
+  labs(x = "Interaction log2FC (BFR change minus HLRT change)", y = "-log10 p",
+    title = "c  Interaction leads",
+    subtitle = sprintf(paste0("%d leads at p < 0.05 (%d larger with BFR, %d with HLRT), none at ",
+      "BH; circled: sPLS-DA change panel"), nrow(leads), sum(leads$interaction_logfc > 0),
+      sum(leads$interaction_logfc < 0)))
+fry_data <- imap(training_set, function(rows, set) {
+  tibble(set = paste("Average", set), interaction_logfc = interaction_change[rows])
+}) |>
+  list_rbind()
+fry_label <- with(fry_interaction, sprintf("%s: %d proteins, median %+.3f, %s, p %.2f",
+  paste("Average", set), NGenes, median_interaction, Direction, PValue))
+fry_plot <- ggplot(fry_data, aes(interaction_logfc, fill = set)) +
+  geom_vline(xintercept = 0, colour = "grey60") +
+  geom_histogram(bins = 50, alpha = 0.7, position = "identity") +
+  scale_fill_manual(values = c(`Average up` = "#B2182B", `Average down` = "#2166AC")) +
+  labs(x = "Interaction log2FC", y = "Proteins", fill = NULL,
+    title = "d  Interaction of the average-response sets (fry)",
+    subtitle = paste(fry_label, collapse = "\n")) +
+  theme(legend.position = "top")
+page_leads <- (class_plot | set_plot) / volcano / fry_plot +
+  plot_layout(heights = c(1, 1.4, 0.8)) +
+  plot_annotation(title = "Classification and BFR vs HLRT leads")
+page_leads
+```
+
+## Response against growth
+
+Three per-leg response summaries against each leg's change in VL and RF CSA and echo intensity
+(post minus pre): the signature score, MPE change and slow-fraction change (T2 minus T1). A leg of a
+complete participant takes its leave-one-participant-out score from above; the one leg of the
+participant missing a biopsy is scored on the direction of all 32 complete participants. Spearman
+rho is computed within each arm, and pooled within participant after centring each participant's
+two legs. Centring makes the two legs mirror images, so the pooled p comes from 5,000 random swaps
+of the response between a participant's legs (+1 corrected), not from `cor.test()`.
+
+```{r growth-legs}
+full_direction <- rowMeans((change_bfr + change_hlrt)[signature_rows, ] / 2)
+signature_legs <- signature_scores |>
+  pivot_longer(c(BFR, HLRT), names_to = "treatment", values_to = "signature")
+incomplete <- leg_samples |>
+  filter(!participant %in% complete_legs$participant) |>
+  mutate(signature = map_dbl(T2, function(s) {
+    project(leg_change[, match(s, leg_samples$T2)], full_direction)
+  })) |>
+  select(participant, treatment, signature)
+per_sample <- function(sheet_file, sheet, value) {
+  read_excel(sheet_file, sheet) |>
+    select(participant, leg, timepoint, value = all_of(value)) |>
+    pivot_wider(names_from = timepoint, values_from = value) |>
+    transmute(participant, leg, change = T2 - T1)
+}
+mpe_change <- per_sample(
+  here("05_Mitochondria", "02_test_mito", "c_data", "02_test_mito.xlsx"), "mpe", "mpe"
+)
+slow_change <- per_sample(
+  here("06_Composition", "02_fibre_type", "c_data", "02_fibre_type.xlsx"), "slow_fraction",
+  "slow"
+)
+legs <- leg_samples |>
+  select(participant, leg, treatment) |>
+  left_join(bind_rows(signature_legs, incomplete), by = c("participant", "treatment")) |>
+  left_join(rename(mpe_change, mpe_change = change), by = c("participant", "leg")) |>
+  left_join(rename(slow_change, slow_change = change), by = c("participant", "leg")) |>
+  left_join(
+    transmute(phenotype, participant, leg,
+      vl_csa = vl_csa_post_cm2 - vl_csa_pre_cm2, rf_csa = rf_csa_post_cm2 - rf_csa_pre_cm2,
+      vl_echo = vl_echo_post_au - vl_echo_pre_au, rf_echo = rf_echo_post_au - rf_echo_pre_au),
+    by = c("participant", "leg"), relationship = "one-to-one"
+  ) |>
+  mutate(both_legs = participant %in% complete_legs$participant) |>
+  arrange(participant, treatment)
+stopifnot(!anyNA(select(legs, -both_legs)))
+count(legs, treatment)
+```
+
+```{r growth-tests}
+responses <- c(signature = "Signature score", mpe_change = "MPE change",
+  slow_change = "Slow-fraction change")
+outcomes <- c(vl_csa = "VL CSA change (cm²)", rf_csa = "RF CSA change (cm²)",
+  vl_echo = "VL echo change (a.u.)", rf_echo = "RF echo change (a.u.)")
+within_rho <- function(x, y, person, flips = 5000) {
+  x <- x - ave(x, person)
+  y <- y - ave(y, person)
+  observed <- cor(x, y, method = "spearman")
+  people <- unique(person)
+  null <- replicate(flips, {
+    sign_flip <- sample(c(-1, 1), length(people), replace = TRUE)[match(person, people)]
+    cor(x * sign_flip, y, method = "spearman")
+  })
+  tibble(rho = observed, n = length(x),
+    p = (1 + sum(abs(null) >= abs(observed))) / (1 + flips))
+}
+growth <- expand_grid(response = names(responses), outcome = names(outcomes)) |>
+  mutate(result = map2(response, outcome, function(r, o) {
+    by_arm <- map(c("BFR", "HLRT"), function(arm) {
+      arm_legs <- filter(legs, treatment == arm)
+      test <- cor.test(arm_legs[[r]], arm_legs[[o]], method = "spearman", exact = FALSE)
+      tibble(analysis = arm, rho = unname(test$estimate), n = nrow(arm_legs), p = test$p.value)
+    })
+    paired <- filter(legs, both_legs)
+    bind_rows(by_arm, mutate(within_rho(paired[[r]], paired[[o]], paired$participant),
+      analysis = "within participant"))
+  })) |>
+  unnest(result) |>
+  select(response, outcome, analysis, rho, n, p)
+growth |>
+  slice_max(abs(rho), n = 6) |>
+  mutate(across(c(rho, p), function(x) signif(x, 2)))
+```
+
+```{r page-growth}
+growth_points <- legs |>
+  pivot_longer(names(responses), names_to = "response", values_to = "response_value") |>
+  pivot_longer(names(outcomes), names_to = "outcome", values_to = "outcome_value") |>
+  mutate(response = factor(responses[response], responses),
+    outcome = factor(outcomes[outcome], outcomes))
+growth_labels <- growth |>
+  mutate(text = sprintf("%s %.2f (p %.2g)",
+    c(BFR = "BFR", HLRT = "HLRT", `within participant` = "within")[analysis], rho, p)) |>
+  summarise(text = paste(text, collapse = "\n"), .by = c(response, outcome)) |>
+  mutate(response = factor(responses[response], responses),
+    outcome = factor(outcomes[outcome], outcomes))
+growth_plot <- ggplot(growth_points, aes(outcome_value, response_value, colour = treatment)) +
+  geom_point(size = 0.9, alpha = 0.8) +
+  geom_text(data = growth_labels, aes(x = -Inf, y = Inf, label = text), inherit.aes = FALSE,
+    hjust = -0.04, vjust = 1.1, size = 1.9, lineheight = 0.9) +
+  facet_grid(response ~ outcome, scales = "free", switch = "both") +
+  scale_y_continuous(expand = expansion(c(0.05, 0.45))) +
+  scale_colour_manual(values = arm_colours[c("BFR", "HLRT")]) +
+  labs(x = NULL, y = NULL, colour = NULL,
+    subtitle = "Spearman rho per arm, and within participant after centring each person's legs") +
+  theme(legend.position = "top", strip.placement = "outside",
+    strip.background = element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
+page_growth <- growth_plot / plot_spacer() + plot_layout(heights = c(1, 0.3)) +
+  plot_annotation(title = "Response against growth, per leg")
+page_growth
+```
+
+## Save results
+
+```{r write}
+pdf(file.path(stage, "b_reports", "01_plasticity.pdf"), width = 8.27, height = 11.69)
+print(page_magnitude)
+print(page_direction)
+print(page_coherence)
+print(page_leads)
+print(page_growth)
+invisible(dev.off())
+
+tests <- bind_rows(
+  signature_test,
+  transmute(fry_interaction, test = paste("fry interaction, average", set), proteins = NGenes,
+    median_training, median_interaction, direction = Direction, p = PValue)
+)
+write_xlsx(
+  list(
+    counts = counts,
+    magnitude = magnitude |>
+      mutate(selected_on = if_else(set == "All", "none", selected_on)) |>
+      distinct(selected_on, set, .keep_all = TRUE),
+    legs = legs,
+    direction = direction_hits,
+    quadrant_sets = quadrant_sets,
+    coherence = coherence,
+    classification = classification,
+    leads = leads,
+    tests = tests,
+    growth = growth
+  ),
+  file.path(stage, "c_data", "01_plasticity.xlsx")
+)
+```
+
+## Session information
+
+```{r session}
+sessionInfo()
+```

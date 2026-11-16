@@ -46,3 +46,7 @@ VL CSA). In the BFR fits held-out predictions correlate negatively with observed
 echo outcomes (r −0.46 RF, −0.28 VL), the pattern of a model fitting noise. This matches the
 absence of change associations in stages 02 to 04, where the only CSA association is one
 post-training level in `04_Network`.
+
+This step is kept as a documented null. Growth is answered protein by protein in
+`02_Differential_Expression/03_Protein_Association`, by gene set in
+`03_Pathway_Enrichment/05_set_association` and by module in `04_Network/02_module_traits`.

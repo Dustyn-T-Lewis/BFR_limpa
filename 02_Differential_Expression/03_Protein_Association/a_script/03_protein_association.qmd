@@ -359,10 +359,9 @@ chance_plot
 
 ## Save results
 
-`03_protein_association.xlsx` holds the summary and every association sorted by FDR;
-`04_Protein_Classification` reads the `associations` sheet. `association_t.rds` holds the t matrix
-for gene set tests, as rds because a workbook round trip can change the last bit of a double, and
-`association_designs.rds` the design matrices for fry.
+`03_protein_association.xlsx` holds the summary and every association sorted by FDR.
+`association_t.rds` holds the t matrix for gene set tests, as rds because a workbook round trip can
+change the last bit of a double, and `association_designs.rds` the design matrices for fry.
 
 ```{r write}
 saveRDS(association_t, file.path(stage, "c_data", "association_t.rds"))
