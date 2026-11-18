@@ -27,10 +27,13 @@ nothing is filtered on missingness before quantification.
 
 ## Layout
 
-Each step holds `README.md`, `a_script/` (a Quarto notebook), `b_reports/` (the rendered HTML and
-any figure PDF) and, where it writes tables, `c_data/` (one workbook, plus an `.rds` where a later
-step needs the R object). Each step's README lists its workbook sheets. Data passes through disk,
-so any step reruns from a fresh session. "Planned" means only a README exists.
+Each step holds `README.md`, `a_script/` (a Quarto notebook), `b_reports/` (the rendered HTML
+and, where the step draws figures, one PDF named like the step) and, where it writes tables,
+`c_data/` (one workbook of results, plus an `.rds` where a later step needs the R object).
+Diagnostics stay in the HTML.
+Each step README gives its purpose, inputs, run command, outputs with one line per sheet, and its
+results; stage READMEs say what each step asks, and this README carries no results. Data passes
+through disk, so any step reruns from a fresh session. "Planned" means only a README exists.
 
 ## Running the pipeline
 
