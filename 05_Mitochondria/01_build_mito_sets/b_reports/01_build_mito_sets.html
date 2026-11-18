@@ -2247,8 +2247,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-mitocarta-and-the-protein-map" class="level2">
 <h2 class="anchored" data-anchor-id="read-mitocarta-and-the-protein-map">Read MitoCarta and the protein map</h2>
-<p>MitoCarta 3.0 is the Broad Institute’s inventory of human mitochondrial proteins, 1,136 genes. Its workbook also lists 149 MitoPathways: curated functional groups such as “CI subunits” or “Fatty acid oxidation”. The file was downloaded on 2026-09-28 from personal.broadinstitute.org/scalvo/MitoCarta3.0/.</p>
-<p><code>protein_map</code> comes from stage 03 and links each protein group to its gene symbol. <code>selected</code> marks the one representative protein per symbol, the rows that <code>01_run_fgsea_and_fry</code> tests.</p>
+<p>MitoCarta 3.0 (downloaded 2026-09-28 from personal.broadinstitute.org/scalvo/MitoCarta3.0/) is the inventory of human mitochondrial proteins and 149 curated MitoPathways. Genes are matched to the representative protein per symbol, the rows <code>01_run_fgsea_and_fry</code> tests.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mitocarta <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;05_Mitochondria&quot;</span>, <span class="st">&quot;00_Input&quot;</span>, <span class="st">&quot;Human.MitoCarta3.0.xls&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>protein_map <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
@@ -2259,14 +2258,14 @@ vertical-align: -.125em;
 </section>
 <section id="build-the-sets" class="level2">
 <h2 class="anchored" data-anchor-id="build-the-sets">Build the sets</h2>
-<p>The “C MitoPathways” sheet holds one row per pathway with its genes in one comma-separated cell. <code>col_types = &quot;text&quot;</code> stops readxl guessing each column’s type, which warns on this file. The pathways nest, so a parent such as “Complex I” holds its children’s genes too.</p>
+<p>The full list and each MitoPathway become one set; pathways nest, so a parent such as “Complex I” holds its children’s genes too.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pathways <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(mitocarta, <span class="st">&quot;C MitoPathways&quot;</span>, <span class="at">col_types =</span> <span class="st">&quot;text&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(MitoPathway)) <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">collection =</span> <span class="st">&quot;MitoPathways&quot;</span>, <span class="at">set =</span> MitoPathway, <span class="at">gene =</span> Genes) <span class="sc">|&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_longer_delim</span>(gene, <span class="st">&quot;, &quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># text columns stop readxl guessing types, which warns on this file</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>pathways <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(mitocarta, <span class="st">&quot;C MitoPathways&quot;</span>, <span class="at">col_types =</span> <span class="st">&quot;text&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(MitoPathway)) <span class="sc">|&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">collection =</span> <span class="st">&quot;MitoPathways&quot;</span>, <span class="at">set =</span> MitoPathway, <span class="at">gene =</span> Genes) <span class="sc">|&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate_longer_delim</span>(gene, <span class="st">&quot;, &quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>The full MitoCarta list, from the “A Human MitoCarta3.0” sheet, is one more set. A gene counts as measured when a representative protein carries its symbol.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>all_mito <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">collection =</span> <span class="st">&quot;MitoCarta&quot;</span>, <span class="at">set =</span> <span class="st">&quot;MitoCarta&quot;</span>,</span>
@@ -2278,7 +2277,7 @@ vertical-align: -.125em;
 </section>
 <section id="check-the-complexes" class="level2">
 <h2 class="anchored" data-anchor-id="check-the-complexes">Check the complexes</h2>
-<p>The complex readouts in <code>02_test_mito</code> are the pathways “CI subunits” to “CV subunits”: the structural subunits, mtDNA-encoded ones included. The parent pathways “Complex I” and so on also hold assembly factors, which build a complex without tracking how much of it exists.</p>
+<p>The complex readouts downstream are “CI subunits” to “CV subunits”, because the parent pathways also hold assembly factors, which build a complex without tracking how much of it exists.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>membership <span class="sc">|&gt;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(set <span class="sc">%in%</span> <span class="fu">c</span>(<span class="fu">paste</span>(<span class="fu">c</span>(<span class="st">&quot;CI&quot;</span>, <span class="st">&quot;CII&quot;</span>, <span class="st">&quot;CIII&quot;</span>, <span class="st">&quot;CIV&quot;</span>, <span class="st">&quot;CV&quot;</span>), <span class="st">&quot;subunits&quot;</span>), <span class="st">&quot;Complex I&quot;</span>)) <span class="sc">|&gt;</span></span>
@@ -2298,7 +2297,7 @@ vertical-align: -.125em;
 </section>
 <section id="summary" class="level2">
 <h2 class="anchored" data-anchor-id="summary">Summary</h2>
-<p>Number of sets, genes listed and genes measured, per collection.</p>
+<p>Coverage per collection shows how much of MitoCarta the data can speak to.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>membership <span class="sc">|&gt;</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">sets =</span> <span class="fu">n_distinct</span>(set), <span class="at">rows =</span> <span class="fu">n</span>(), <span class="at">measured_rows =</span> <span class="fu">sum</span>(measured), <span class="at">.by =</span> collection)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2313,7 +2312,7 @@ vertical-align: -.125em;
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>01_build_mito_sets.xlsx</code> holds the <code>membership</code> sheet that <code>02_test_mito</code> and <code>03_complex_subunits</code> read.</p>
+<p><code>02_test_mito</code> and <code>03_complex_subunits</code> read <code>membership</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">membership =</span> membership),</span>

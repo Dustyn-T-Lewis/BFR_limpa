@@ -4,8 +4,9 @@ Shows every measured subunit and assembly factor of complexes I to V with its tr
 each leg, so a reader can see which proteins carry a complex (Sam's PR #26). Descriptive only; the
 set-level test is fry in `02_test_mito`.
 
-Inputs: `DEP_matrix` from `02_Differential_Expression/02_Differential/c_data/02_differential.xlsx`,
-the `membership` sheet of `01_build_mito_sets` and the `complex_tests` sheet of `02_test_mito`.
+Inputs: the `protein_results` sheet of
+`02_Differential_Expression/02_Differential/c_data/02_differential.xlsx`, the `membership` sheet of
+`01_build_mito_sets` and the `complex_tests` sheet of `02_test_mito`.
 
 ```sh
 quarto render 05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.qmd \
