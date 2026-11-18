@@ -20,9 +20,8 @@ here::i_am("07_Multivariate/03_spls/a_script/03_spls.qmd")
 
 ## Read proteins and phenotype
 
-`phenotype.csv` holds one row per leg with vastus lateralis (`vl_`) and rectus femoris (`rf_`)
-cross-sectional area (CSA) and echo intensity before and after training. Protein abundances have
-the blood index's effect removed (`proteins_adjusted.rds`).
+Growth is each leg's change in vastus lateralis (VL) and rectus femoris (RF) cross-sectional area
+(CSA) and echo intensity; the blood-adjusted abundances keep the blood index out of the panels.
 
 ```{r read}
 stage <- here("07_Multivariate", "03_spls")
@@ -33,8 +32,7 @@ gene_of <- set_names(proteins$genes$Genes, rownames(proteins))
 
 ## Changes per leg
 
-Protein change is each leg's T2 minus T1 on the log2 scale; outcome change is post minus pre, as
-in `03_Protein_Association`. Treatment comes from the sample table.
+Changes are taken as in `03_Protein_Association`, so the two analyses ask the same question.
 
 ```{r changes}
 outcomes <- c(
@@ -61,15 +59,10 @@ count(legs, treatment)
 
 ## Fits
 
-Sparse PLS regression with one outcome (sPLS1) builds a score from a weighted sum of a few
-proteins' changes, chosen to predict the outcome change. Each outcome gets three fits:
-
-- BFR legs alone and HLRT legs alone, one leg per participant, so cross-validation folds are folds
-  of people;
-- both arms pooled, a sensitivity run with twice the legs. A participant's two legs grow together
-  (r = 0.57 for VL CSA), so `perf()` here holds out each participant's two legs together.
-  `tune.spls()` takes only a number of folds, so the pooled panel size is chosen on folds that can
-  split a participant; that choice may lean optimistic.
+sPLS1 asks whether a few proteins' changes together predict growth. Single-arm fits have one leg per
+participant, so folds are folds of people; the pooled fit doubles the legs, and because a person's
+two legs grow together (r = 0.57 for VL CSA) `perf()` holds both out at once. `tune.spls()` cannot
+do that, so the pooled panel size may lean optimistic.
 
 ```{r fits}
 fits_to_run <- expand_grid(outcome = names(outcomes), fit = c("BFR", "HLRT", "pooled")) |>
@@ -81,16 +74,9 @@ fits_to_run |> mutate(n_legs = lengths(rows)) |> select(-rows)
 
 ## Tune, fit and cross-validate
 
-`tune.spls()` tries panels of 5 to 1,000 proteins on each of two components and keeps the size
-with the lowest mean absolute error (MAE). mixOmics divides each absolute miss by the outcome's
-variance, so this MAE compares panel sizes within an outcome but is not in the outcome's units.
-Cross-validation is 5-fold, repeated 50 times. `spls()` fits the chosen panel on all legs of the
-fit, and `perf()` reruns cross-validation for the mean squared error of prediction (MSEP, also
-relative to the outcome's variance, so 1 means no better than predicting the mean), R² and Q².
-Q² is 1 minus the prediction error over the outcome's variance: above 0.0975 a component predicts
-better than chance by the package's rule, and below 0 it predicts worse than the mean. The pooled
-fits' `perf()` uses one fold per participant. The panel size was chosen on the same data, so the
-errors are somewhat optimistic; there is no permutation reference.
+Q² judges each fit: above 0.0975 a component predicts better than chance by the package's rule, and
+below 0 worse than the mean. Panel size is tuned on the same data and there is no permutation
+reference, so the errors lean optimistic.
 
 ```{r fit}
 keep_grid <- c(5, 10, 20, 50, 100, 200, 500, 1000)
@@ -112,7 +98,8 @@ fits <- mutate(fits_to_run, result = pmap(list(outcome, fit, rows), fit_spls))
 
 ## Prediction error
 
-One row per outcome, fit and component.
+MSEP and Q² are relative to the outcome's variance, so a fit that predicts no better than the mean
+reads as MSEP 1 and Q² 0.
 
 ```{r models}
 measure <- function(performance, name) performance$measures[[name]]$summary$mean
@@ -135,7 +122,7 @@ model_summary |> mutate(across(where(is.double), \(x) signif(x, 3)))
 
 ## Panels
 
-Every selected protein, with its loading and its stability across the cross-validation refits.
+Stability across the refits separates a reproducible panel from one fitted to noise.
 
 ```{r panels}
 panels <- pmap(fits, function(outcome, fit, rows, result) {
@@ -159,10 +146,8 @@ panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
 
 ## Held-out predictions
 
-`perf()` does not return its predictions, so the figure's predicted values come from one
-cross-validation pass written with `spls()` and `predict()`: component 1 at the tuned panel size,
-on the same fold scheme as `perf()`. In a single arm that is one random draw of 5 folds, not
-`perf()`'s 50 repeats; pooled it is one participant per fold, the same folds `perf()` uses.
+`perf()` does not return its predictions, so one cross-validation pass on the same fold scheme
+supplies the figure's held-out values.
 
 ```{r predictions}
 set.seed(2026)
@@ -189,9 +174,7 @@ held_out |> summarise(r = cor(observed, predicted), .by = c(outcome, fit))
 
 ## Figures
 
-One page per outcome: held-out predicted against observed change for each fit, with the correlation
-from that single pass and component 1's Q² from `perf()`; below, the 20 largest component 1 loadings
-of each fit, shaded by stability.
+One page per outcome, so the three fits of an outcome read side by side.
 
 ```{r figures}
 #| fig-height: 10

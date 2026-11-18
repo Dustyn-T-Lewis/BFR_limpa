@@ -2252,7 +2252,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins">Read proteins</h2>
-<p>The normalised log2 abundances with the blood index’s effect removed (<code>proteins_adjusted.rds</code>).</p>
+<p>The blood-adjusted abundances keep the blood index out of the panels.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;07_Multivariate&quot;</span>, <span class="st">&quot;02_splsda&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
@@ -2266,14 +2266,7 @@ vertical-align: -.125em;
 </section>
 <section id="build-the-five-comparisons" class="level2">
 <h2 class="anchored" data-anchor-id="build-the-five-comparisons">Build the five comparisons</h2>
-<p>Sparse PLS-DA (Lê Cao et al. 2011, doi:10.1186/1471-2105-12-253) builds a score from a weighted sum of a few proteins, chosen to separate two groups. Each comparison here takes two samples per participant, and <code>multilevel = participant</code> subtracts each participant’s mean first (Liquet et al. 2012), so the score compares a person’s two samples with each other:</p>
-<ul>
-<li>training in each arm: a leg’s sample before training (T1) against after (T2);</li>
-<li>BFR against HLRT before training: the two legs’ T1 samples;</li>
-<li>BFR against HLRT after training: the two legs’ T2 samples;</li>
-<li>BFR against HLRT on change: each leg’s T2 minus T1, one leg against the other.</li>
-</ul>
-<p>Participants without both samples a comparison needs drop out of that comparison. A two-factor multilevel design on all four samples is not used: with one sample per participant, leg and time, its decomposition is computed from the class labels themselves.</p>
+<p>Sparse PLS-DA (Lê Cao et al. 2011, doi:10.1186/1471-2105-12-253) asks whether a few proteins together separate two groups. Each comparison takes two samples per participant with a one-factor multilevel design (Liquet et al. 2012), so it compares a person’s two samples; a two-factor design on all four samples is not used, because on this crossover its decomposition is computed from the class labels themselves.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>legs <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
@@ -2349,7 +2342,7 @@ HLRT  BFR
 </section>
 <section id="tune-fit-and-cross-validate" class="level2">
 <h2 class="anchored" data-anchor-id="tune-fit-and-cross-validate">Tune, fit and cross-validate</h2>
-<p>For each comparison, <code>tune.splsda()</code> tries panels of 5 to 1,000 proteins on each of two components and keeps the size with the lowest balanced error rate (BER, the mean of the two groups’ error rates; 0.5 is chance). Cross-validation is 5-fold, repeated 50 times, and folds hold out whole participants. <code>splsda()</code> then fits the chosen panel on everyone, and <code>perf()</code> reruns the same cross-validation on that model to give the BER under each of the package’s three classification rules and the cross-validated AUC. The panel size was chosen on the same data, so these error rates are somewhat optimistic; there is no permutation reference. Proteins are scaled to unit variance (the default).</p>
+<p>Folds hold out whole participants, so the balanced error rate (BER, 0.5 is chance) and AUC are judged on people the model has not seen. Panel size is tuned on the same data and there is no permutation reference, so the error rates lean optimistic.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>keep_grid <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">500</span>, <span class="dv">1000</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fit_splsda <span class="ot">&lt;-</span> <span class="cf">function</span>(cmp) {</span>
@@ -2369,7 +2362,7 @@ HLRT  BFR
 </section>
 <section id="error-and-auc" class="level2">
 <h2 class="anchored" data-anchor-id="error-and-auc">Error and AUC</h2>
-<p>One row per comparison and component: panel size, the tuning BER at that size, <code>perf()</code>’s mean BER under each rule, and the cross-validated AUC.</p>
+<p>BER under each of the package’s three distances shows whether a call depends on the rule.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>model_summary <span class="ot">&lt;-</span> <span class="fu">imap</span>(fits, <span class="cf">function</span>(fit, name) {</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  ber <span class="ot">&lt;-</span> fit<span class="sc">$</span>performance<span class="sc">$</span>error.rate<span class="sc">$</span>BER</span>
@@ -2412,7 +2405,7 @@ HLRT  BFR
 </section>
 <section id="panels" class="level2">
 <h2 class="anchored" data-anchor-id="panels">Panels</h2>
-<p>Every protein the final model selects, with its loading (its weight in the component score; the sign gives the direction) and its stability, the share of the 250 cross-validation refits that also selected it.</p>
+<p>Stability, the share of the 250 refits that also selected a protein, separates a reproducible panel from one fitted to noise.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>panels <span class="ot">&lt;-</span> <span class="fu">imap</span>(fits, <span class="cf">function</span>(fit, name) {</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="cf">function</span>(h) {</span>
@@ -2450,7 +2443,7 @@ HLRT  BFR
 </section>
 <section id="transfer-between-arms" class="level2">
 <h2 class="anchored" data-anchor-id="transfer-between-arms">Transfer between arms</h2>
-<p>Each arm’s training panel scores the other arm’s legs: the HLRT model classifies BFR legs as before or after training, and the BFR model HLRT legs, with <code>predict(multilevel = participant)</code> applying the same within-person centring. The scored legs belong to the same participants the model was fitted on, so the transfer AUC is not out-of-person like the cross-validated AUC and the two are not directly comparable. A high transfer AUC says the signature is shared between a person’s two legs.</p>
+<p>Scoring one arm’s legs with the other arm’s training panel asks whether the signature is shared. The scored legs belong to the participants the model was fitted on, so the transfer AUC is not comparable with the cross-validated AUC.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>transfer <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">model_arm =</span> <span class="fu">c</span>(<span class="st">&quot;HLRT&quot;</span>, <span class="st">&quot;BFR&quot;</span>), <span class="at">scored_arm =</span> <span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
@@ -2477,7 +2470,7 @@ HLRT  BFR
 </section>
 <section id="annotate-the-training-panels" class="level2">
 <h2 class="anchored" data-anchor-id="annotate-the-training-panels">Annotate the training panels</h2>
-<p>What the two training panels are made of: each panel protein’s WGCNA module in the main network of <code>04_Network</code> (with the module’s BH top set), and the gene sets over-represented among component 1’s proteins, by <code>fgsea::fora()</code> against every measured gene with the set list and size limits of <code>04_Network</code>. Only the training panels are annotated; the arm panels predict at chance, and annotating them would describe noise.</p>
+<p>Modules and over-represented sets say what the training panels are made of. The arm panels predict at chance, so annotating them would describe noise.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>network_book <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;01_modules&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_modules.xlsx&quot;</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>module_of <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(network_book, <span class="st">&quot;membership&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -2539,12 +2532,7 @@ HLRT  BFR
 </section>
 <section id="figures" class="level2">
 <h2 class="anchored" data-anchor-id="figures">Figures</h2>
-<p>One page per comparison:</p>
-<ul>
-<li>the samples on the two component scores, with a line joining each participant’s two samples;</li>
-<li>the ROC curve of each of the 50 cross-validation repeats, built from component 1’s held-out predictions;</li>
-<li>the 25 largest loadings on each component, shaded by stability.</li>
-</ul>
+<p>One page per comparison; the ROC curve of every repeat shows how much the AUC moves with the folds.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>group_colours <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">T1 =</span> <span class="st">&quot;grey55&quot;</span>, <span class="at">T2 =</span> <span class="st">&quot;#009E73&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#0072B2&quot;</span>, <span class="at">BFR =</span> <span class="st">&quot;#D55E00&quot;</span>)</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
