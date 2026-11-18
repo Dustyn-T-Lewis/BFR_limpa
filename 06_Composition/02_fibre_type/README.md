@@ -33,7 +33,6 @@ Outputs:
   - `slow_fraction`: per sample, participant, leg, treatment, timepoint, sex and slow fraction.
   - `contrasts`: the five stage 02 contrasts in percentage points, with SE, df, p and 95% interval.
   - `group_summary`: mean, SD and n of the slow fraction per arm and timepoint.
-  - `checks`: leg and timepoint agreement, variance between participants and the sex difference.
 
 Results: training did not shift the slow fraction: BFR +1.0 points (95% interval -1.7 to 3.6,
 p 0.47), HLRT +1.3 (-1.4 to 3.9, p 0.34), interaction -0.3 (-4.0 to 3.4, p 0.87). The median

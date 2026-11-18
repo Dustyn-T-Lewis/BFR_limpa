@@ -20,15 +20,10 @@ here::i_am("06_Composition/02_fibre_type/a_script/02_fibre_type.qmd")
 
 ## Read proteins and reference
 
-FibeRtypeR (Van der Stede et al. 2026, doi:10.1113/JP290082) reads each biopsy as a mix of a pure
-slow (type I) and a pure fast (type II) fibre profile. Its proteomics markers are the 77 slow and
-68 fast proteins of its Table S1 (Shared and Proteome columns). As in the paper, the reference is
-sex-specific: each marker's median log2 abundance in the slow and in the fast pre-training fibre
-pools of each sex (12 pools per sex and type) of Moesgaard et al. 2026
-(doi:10.1038/s41467-026-77275-9, PRIDE PXD056664), the data FibeRtypeR's proteomics reference was
-built from; `references/fibertyper_reference.csv` holds both. The bulk input is the limpa matrix
-rather than DIA-NN's LFQ, because limpa's complete matrix measures more markers in every
-sample.
+FibeRtypeR (Van der Stede et al. 2026, doi:10.1113/JP290082) reads a biopsy as a mix of pure slow
+and fast fibre profiles, built as in the paper from its Table S1 markers and the sex-specific fibre
+pools of Moesgaard et al. 2026 (doi:10.1038/s41467-026-77275-9). The limpa matrix replaces DIA-NN
+LFQ as input, because it measures more markers in every sample.
 
 ```{r read}
 stage <- here("06_Composition", "02_fibre_type")
@@ -47,12 +42,9 @@ count(reference, marker_type)
 
 ## Estimate the slow fraction
 
-Markers are matched to the matrix by gene symbol, one row per symbol, and kept when both sexes'
-references have them. Each sample is fitted against its own sex's reference, and shifted so its
-median over the markers equals that reference's, because limpa's scale differs from the deposit's.
-For two fractions that are non-negative and sum to one, the least-squares fit FibeRtypeR runs
-(DeconRNASeq, equivalently `limSolve::lsei()`) has a closed form: the projection of the sample onto
-the line from the fast to the slow profile, clipped to [0, 1].
+For two non-negative fractions summing to one, FibeRtypeR's least-squares fit has a closed form:
+the projection onto the line from the fast to the slow profile, clipped to [0, 1]. Each sample is
+shifted to its own sex's reference median, because limpa's scale differs from the deposit's.
 
 ```{r deconvolve}
 genes <- proteins$genes$Genes
@@ -72,9 +64,8 @@ summary(targets$slow)
 
 ## Checks without histology
 
-No histology exists for these biopsies, so the level is unvalidated. The checks ask whether the
-ranking behaves like fibre type: a person's two legs and one leg's two biopsies should agree, most
-variation should sit between people, and women's muscle is usually slower than men's.
+No histology exists, so these ask whether the ranking behaves like fibre type: legs and repeat
+biopsies should agree, most variation should sit between people, and women should be slower.
 
 ```{r checks}
 wide <- targets |>
@@ -97,9 +88,8 @@ mutate(checks, value = round(value, 2))
 
 ## Did training or arm shift fibre type?
 
-The slow fraction goes through the stage 02 design and contrasts as a single row, so the test is
-the plain least-squares t (no moderation), as for MPE in `05_Mitochondria`. Estimates are in
-percentage points.
+The slow fraction is one row, so it gets the stage 02 design with the plain least-squares t (no
+moderation), as MPE does in `05_Mitochondria`.
 
 ```{r contrasts}
 fit <- contrasts.fit(lmFit(rbind(slow = 100 * targets$slow), d$design), d$contrasts)
@@ -119,7 +109,7 @@ mutate(slow_tests, across(where(is.double), function(x) signif(x, 3)))
 
 ## Figure
 
-Each leg's slow fraction before and after training, one line per leg, by arm.
+One line per leg shows whether any leg shifted, which a group mean would hide.
 
 ```{r figure}
 figure <- targets |>
@@ -148,8 +138,7 @@ write_xlsx(
   list(
     slow_fraction = select(targets, sample_id, participant, leg, treatment, timepoint, sex, slow),
     contrasts = slow_tests,
-    group_summary = group_summary,
-    checks = checks
+    group_summary = group_summary
   ),
   file.path(stage, "c_data", "02_fibre_type.xlsx")
 )

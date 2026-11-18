@@ -2248,7 +2248,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins-and-reference" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins-and-reference">Read proteins and reference</h2>
-<p>FibeRtypeR (Van der Stede et al. 2026, doi:10.1113/JP290082) reads each biopsy as a mix of a pure slow (type I) and a pure fast (type II) fibre profile. Its proteomics markers are the 77 slow and 68 fast proteins of its Table S1 (Shared and Proteome columns). As in the paper, the reference is sex-specific: each marker’s median log2 abundance in the slow and in the fast pre-training fibre pools of each sex (12 pools per sex and type) of Moesgaard et al. 2026 (doi:10.1038/s41467-026-77275-9, PRIDE PXD056664), the data FibeRtypeR’s proteomics reference was built from; <code>references/fibertyper_reference.csv</code> holds both. The bulk input is the limpa matrix rather than DIA-NN’s LFQ, because limpa’s complete matrix measures more markers in every sample.</p>
+<p>FibeRtypeR (Van der Stede et al. 2026, doi:10.1113/JP290082) reads a biopsy as a mix of pure slow and fast fibre profiles, built as in the paper from its Table S1 markers and the sex-specific fibre pools of Moesgaard et al. 2026 (doi:10.1038/s41467-026-77275-9). The limpa matrix replaces DIA-NN LFQ as input, because it measures more markers in every sample.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;06_Composition&quot;</span>, <span class="st">&quot;02_fibre_type&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
@@ -2273,7 +2273,7 @@ vertical-align: -.125em;
 </section>
 <section id="estimate-the-slow-fraction" class="level2">
 <h2 class="anchored" data-anchor-id="estimate-the-slow-fraction">Estimate the slow fraction</h2>
-<p>Markers are matched to the matrix by gene symbol, one row per symbol, and kept when both sexes’ references have them. Each sample is fitted against its own sex’s reference, and shifted so its median over the markers equals that reference’s, because limpa’s scale differs from the deposit’s. For two fractions that are non-negative and sum to one, the least-squares fit FibeRtypeR runs (DeconRNASeq, equivalently <code>limSolve::lsei()</code>) has a closed form: the projection of the sample onto the line from the fast to the slow profile, clipped to [0, 1].</p>
+<p>For two non-negative fractions summing to one, FibeRtypeR’s least-squares fit has a closed form: the projection onto the line from the fast to the slow profile, clipped to [0, 1]. Each sample is shifted to its own sex’s reference median, because limpa’s scale differs from the deposit’s.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>genes <span class="ot">&lt;-</span> proteins<span class="sc">$</span>genes<span class="sc">$</span>Genes</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>reference <span class="ot">&lt;-</span> <span class="fu">filter</span>(reference, <span class="sc">!</span><span class="fu">is.na</span>(slow_F <span class="sc">+</span> fast_F <span class="sc">+</span> slow_M <span class="sc">+</span> fast_M))</span>
@@ -2303,7 +2303,7 @@ vertical-align: -.125em;
 </section>
 <section id="checks-without-histology" class="level2">
 <h2 class="anchored" data-anchor-id="checks-without-histology">Checks without histology</h2>
-<p>No histology exists for these biopsies, so the level is unvalidated. The checks ask whether the ranking behaves like fibre type: a person’s two legs and one leg’s two biopsies should agree, most variation should sit between people, and women’s muscle is usually slower than men’s.</p>
+<p>No histology exists, so these ask whether the ranking behaves like fibre type: legs and repeat biopsies should agree, most variation should sit between people, and women should be slower.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>wide <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(participant, leg, timepoint, slow) <span class="sc">|&gt;</span></span>
@@ -2334,7 +2334,7 @@ vertical-align: -.125em;
 </section>
 <section id="did-training-or-arm-shift-fibre-type" class="level2">
 <h2 class="anchored" data-anchor-id="did-training-or-arm-shift-fibre-type">Did training or arm shift fibre type?</h2>
-<p>The slow fraction goes through the stage 02 design and contrasts as a single row, so the test is the plain least-squares t (no moderation), as for MPE in <code>05_Mitochondria</code>. Estimates are in percentage points.</p>
+<p>The slow fraction is one row, so it gets the stage 02 design with the plain least-squares t (no moderation), as MPE does in <code>05_Mitochondria</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">contrasts.fit</span>(<span class="fu">lmFit</span>(<span class="fu">rbind</span>(<span class="at">slow =</span> <span class="dv">100</span> <span class="sc">*</span> targets<span class="sc">$</span>slow), d<span class="sc">$</span>design), d<span class="sc">$</span>contrasts)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>slow_tests <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
@@ -2370,7 +2370,7 @@ vertical-align: -.125em;
 </section>
 <section id="figure" class="level2">
 <h2 class="anchored" data-anchor-id="figure">Figure</h2>
-<p>Each leg’s slow fraction before and after training, one line per leg, by arm.</p>
+<p>One line per leg shows whether any leg shifted, which a group mean would hide.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>figure <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg)) <span class="sc">|&gt;</span></span>
@@ -2404,11 +2404,10 @@ vertical-align: -.125em;
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">slow_fraction =</span> <span class="fu">select</span>(targets, sample_id, participant, leg, treatment, timepoint, sex, slow),</span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrasts =</span> slow_tests,</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">group_summary =</span> group_summary,</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">checks =</span> checks</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_fibre_type.xlsx&quot;</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">group_summary =</span> group_summary</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_fibre_type.xlsx&quot;</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
