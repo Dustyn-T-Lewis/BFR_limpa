@@ -8,8 +8,8 @@ growth. Magnitude uses a cross-fit over 200 participant splits (as in the YvO Fi
 calls at BH, and fry on the interaction.
 
 Inputs: `01_Preprocess/02_Quantification/c_data/proteins.rds` and `proteins_adjusted.rds`,
-`02_Differential_Expression/01_Design/c_data/design.rds`, `fit.rds` and the `DEP_matrix` sheet of
-`02_Differential_Expression/02_Differential/c_data/02_differential.xlsx`,
+`02_Differential_Expression/01_Design/c_data/design.rds`, `fit.rds` and the `protein_results`
+sheet of `02_Differential_Expression/02_Differential/c_data/02_differential.xlsx`,
 `03_Pathway_Enrichment/00_build_gene_sets/c_data/gene_sets.rds`, the `set_tests` sheet of
 `03_Pathway_Enrichment/01_run_fgsea_and_fry/c_data/01_run_fgsea_and_fry.xlsx`, the
 `eigengene_tests` and `modules` sheets of `04_Network/01_modules/c_data/01_modules.xlsx`, the `mpe`
@@ -40,7 +40,6 @@ Outputs:
   - `direction`: per protein at FDR 0.05 in either arm, logFC and FDR per arm, hit and quadrant;
   - `quadrant_sets`: the ten sets with the smallest p per quadrant, size, overlap, p, BH q;
   - `coherence`: NES rho, module r and the two fry tests of HLRT hits in BFR training;
-  - `classification`: per sPLS-DA comparison, component 1 participants, panel size, BER, AUC, SD;
   - `leads`: per protein at nominal interaction p < 0.05, interaction and per-arm statistics and
     whether it sits in the sPLS-DA change panel;
   - `tests`: the directional-change test (proteins, mean per arm, ratio, paired p) and the two fry

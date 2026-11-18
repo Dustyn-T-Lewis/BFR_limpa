@@ -2208,7 +2208,6 @@ vertical-align: -.125em;
    
   <ul>
   <li><a href="#load-packages" id="toc-load-packages" class="nav-link active" data-scroll-target="#load-packages">Load packages</a></li>
-  <li><a href="#question" id="toc-question" class="nav-link" data-scroll-target="#question">Question</a></li>
   <li><a href="#read-inputs" id="toc-read-inputs" class="nav-link" data-scroll-target="#read-inputs">Read inputs</a></li>
   <li><a href="#magnitude" id="toc-magnitude" class="nav-link" data-scroll-target="#magnitude">Magnitude</a>
   <ul class="collapse">
@@ -2259,12 +2258,9 @@ vertical-align: -.125em;
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2026</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="question" class="level2">
-<h2 class="anchored" data-anchor-id="question">Question</h2>
-<p>Earlier stages test BFR against HLRT one protein, set or module at a time and find no between-arm hit. This step asks four broader questions of the two training responses: how far each leg moved (magnitude), whether the legs moved the same proteins the same way (direction), whether pathways, modules and rankings agree (coherence), and whether any response summary tracks muscle growth. It gathers the classification results and the BFR against HLRT leads on one page.</p>
-</section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
+<p>Earlier stages test BFR against HLRT one protein, set or module at a time and find no between-arm hit, so this step compares the two training responses as wholes.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;08_Plasticity&quot;</span>, <span class="st">&quot;01_plasticity&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
@@ -2273,7 +2269,7 @@ vertical-align: -.125em;
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;fit.rds&quot;</span>))</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>dep <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(</span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;02_Differential&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;02_differential.xlsx&quot;</span>),</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;DEP_matrix&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;protein_results&quot;</span></span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>,</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;gene_sets.rds&quot;</span>))</span>
@@ -2304,7 +2300,7 @@ vertical-align: -.125em;
 <h2 class="anchored" data-anchor-id="magnitude">Magnitude</h2>
 <section id="training-hits" class="level3">
 <h3 class="anchored" data-anchor-id="training-hits">Training hits</h3>
-<p>Hit counts per arm and direction, at BH 0.05 and at nominal p 0.05. A difference in counts is not a test of a difference between arms; the cross-fit and the directional change below are.</p>
+<p>A difference in hit counts is not a test of a difference between arms; the cross-fit and the directional change below are.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">arm =</span> <span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>), <span class="at">level =</span> <span class="fu">c</span>(<span class="st">&quot;FDR &lt; 0.05&quot;</span>, <span class="st">&quot;p &lt; 0.05&quot;</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
@@ -2329,7 +2325,7 @@ vertical-align: -.125em;
 </section>
 <section id="leg-changes" class="level3">
 <h3 class="anchored" data-anchor-id="leg-changes">Leg changes</h3>
-<p>Each leg’s change is T2 minus T1 in <code>proteins_adjusted.rds</code> (blood effect removed). The cross-fit and the directional test use the 32 participants with all four biopsies, so every comparison is within person.</p>
+<p>The cross-fit and the directional test use the participants with all four biopsies, so every comparison is within person.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>leg_samples <span class="ot">&lt;-</span> adjusted<span class="sc">$</span>targets <span class="sc">|&gt;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(participant, leg, treatment, timepoint, sample_id) <span class="sc">|&gt;</span></span>
@@ -2356,54 +2352,55 @@ vertical-align: -.125em;
 </section>
 <section id="cross-fitted-magnitude" class="level3">
 <h3 class="anchored" data-anchor-id="cross-fitted-magnitude">Cross-fitted magnitude</h3>
-<p>Choosing proteins by one arm and measuring that arm on the same people inflates it. So each of 200 random splits sends half the participants to choose the proteins and the other half to measure both arms’ median |log2 change| on them, as in the YvO Figure 4C. Sets run from all proteins to the top 500 and 250 and the BH set (as many proteins as the choosing arm’s BH hits), chosen once by HLRT and once by BFR. <code>split_low</code> and <code>split_high</code> are the middle 95% of splits, not a confidence interval. The swap p compares the ratio with 200 data sets in which each participant’s BFR and HLRT labels are swapped at random, each summarised over 200 splits like the observed ratio, and is +1 corrected.</p>
+<p>Choosing proteins by one arm and measuring that arm on the same people inflates it, so half the participants choose and the other half measure, over 200 splits (as in the YvO Figure 4C). The swap p compares the ratio with 200 data sets in which each participant’s arm labels are swapped.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>crossfit <span class="ot">&lt;-</span> <span class="cf">function</span>(x_bfr, x_hlrt, splits) {</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">seq_len</span>(splits), <span class="cf">function</span>(split) {</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    half <span class="ot">&lt;-</span> <span class="fu">sample</span>(n_complete, n_complete <span class="sc">%/%</span> <span class="dv">2</span>)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    measured <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">BFR =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_bfr[, <span class="sc">-</span>half])), <span class="at">HLRT =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_hlrt[, <span class="sc">-</span>half])))</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    chooser <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">BFR =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_bfr[, half])), <span class="at">HLRT =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_hlrt[, half])))</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">expand_grid</span>(<span class="at">selected_on =</span> <span class="fu">c</span>(<span class="st">&quot;HLRT&quot;</span>, <span class="st">&quot;BFR&quot;</span>), <span class="at">set =</span> <span class="fu">c</span>(<span class="st">&quot;All&quot;</span>, <span class="st">&quot;Top 500&quot;</span>, <span class="st">&quot;Top 250&quot;</span>, <span class="st">&quot;BH&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">size =</span> <span class="fu">case_when</span>(</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>          set <span class="sc">==</span> <span class="st">&quot;All&quot;</span> <span class="sc">~</span> <span class="fu">nrow</span>(x_bfr), set <span class="sc">==</span> <span class="st">&quot;Top 500&quot;</span> <span class="sc">~</span> <span class="dv">500</span>, set <span class="sc">==</span> <span class="st">&quot;Top 250&quot;</span> <span class="sc">~</span> <span class="dv">250</span>,</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>          <span class="at">.default =</span> bh_size[selected_on]</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        ),</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">chosen =</span> <span class="fu">map2</span>(selected_on, size, <span class="cf">function</span>(arm, k) {</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>          <span class="fu">rank</span>(<span class="sc">-</span>chooser[[arm]], <span class="at">ties.method =</span> <span class="st">&quot;first&quot;</span>) <span class="sc">&lt;=</span> k</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        }),</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>        <span class="at">bfr =</span> <span class="fu">map_dbl</span>(chosen, <span class="cf">function</span>(k) <span class="fu">median</span>(measured<span class="sc">$</span>BFR[k])),</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">hlrt =</span> <span class="fu">map_dbl</span>(chosen, <span class="cf">function</span>(k) <span class="fu">median</span>(measured<span class="sc">$</span>HLRT[k]))</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">-</span>chosen)</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ratio =</span> bfr <span class="sc">/</span> hlrt)</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>split_results <span class="ot">&lt;-</span> <span class="fu">crossfit</span>(change_bfr, change_hlrt, <span class="dv">200</span>)</span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>swapped <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">seq_len</span>(<span class="dv">200</span>), <span class="cf">function</span>(i) {</span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  flip <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>), n_complete, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  swap_bfr <span class="ot">&lt;-</span> change_bfr</span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  swap_hlrt <span class="ot">&lt;-</span> change_hlrt</span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  swap_bfr[, flip] <span class="ot">&lt;-</span> change_hlrt[, flip]</span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  swap_hlrt[, flip] <span class="ot">&lt;-</span> change_bfr[, flip]</span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="fu">crossfit</span>(swap_bfr, swap_hlrt, <span class="dv">200</span>), <span class="at">null_ratio =</span> <span class="fu">median</span>(ratio),</span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(selected_on, set))</span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>magnitude <span class="ot">&lt;-</span> split_results <span class="sc">|&gt;</span></span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">split_low =</span> <span class="fu">quantile</span>(ratio, <span class="fl">0.025</span>), <span class="at">split_high =</span> <span class="fu">quantile</span>(ratio, <span class="fl">0.975</span>),</span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="fu">first</span>(size), <span class="at">bfr =</span> <span class="fu">median</span>(bfr), <span class="at">hlrt =</span> <span class="fu">median</span>(hlrt), <span class="at">ratio =</span> <span class="fu">median</span>(ratio),</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(selected_on, set)</span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">summarise</span>(swapped, <span class="at">nulls =</span> <span class="fu">list</span>(null_ratio), <span class="at">.by =</span> <span class="fu">c</span>(selected_on, set)),</span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;selected_on&quot;</span>, <span class="st">&quot;set&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">swap_p =</span> <span class="fu">map2_dbl</span>(nulls, ratio, <span class="cf">function</span>(null, r) {</span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">sum</span>(<span class="fu">abs</span>(<span class="fu">log</span>(null)) <span class="sc">&gt;=</span> <span class="fu">abs</span>(<span class="fu">log</span>(r)))) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">length</span>(null))</span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>  })) <span class="sc">|&gt;</span></span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(selected_on, set, size, bfr, hlrt, ratio, split_low, split_high, swap_p)</span>
-<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(magnitude, <span class="fu">across</span>(<span class="fu">where</span>(is.double), <span class="cf">function</span>(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># split_low and split_high are the middle 95% of splits, not a confidence interval</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>crossfit <span class="ot">&lt;-</span> <span class="cf">function</span>(x_bfr, x_hlrt, splits) {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">map</span>(<span class="fu">seq_len</span>(splits), <span class="cf">function</span>(split) {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    half <span class="ot">&lt;-</span> <span class="fu">sample</span>(n_complete, n_complete <span class="sc">%/%</span> <span class="dv">2</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    measured <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">BFR =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_bfr[, <span class="sc">-</span>half])), <span class="at">HLRT =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_hlrt[, <span class="sc">-</span>half])))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    chooser <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">BFR =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_bfr[, half])), <span class="at">HLRT =</span> <span class="fu">abs</span>(<span class="fu">rowMeans</span>(x_hlrt[, half])))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">expand_grid</span>(<span class="at">selected_on =</span> <span class="fu">c</span>(<span class="st">&quot;HLRT&quot;</span>, <span class="st">&quot;BFR&quot;</span>), <span class="at">set =</span> <span class="fu">c</span>(<span class="st">&quot;All&quot;</span>, <span class="st">&quot;Top 500&quot;</span>, <span class="st">&quot;Top 250&quot;</span>, <span class="st">&quot;BH&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">size =</span> <span class="fu">case_when</span>(</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>          set <span class="sc">==</span> <span class="st">&quot;All&quot;</span> <span class="sc">~</span> <span class="fu">nrow</span>(x_bfr), set <span class="sc">==</span> <span class="st">&quot;Top 500&quot;</span> <span class="sc">~</span> <span class="dv">500</span>, set <span class="sc">==</span> <span class="st">&quot;Top 250&quot;</span> <span class="sc">~</span> <span class="dv">250</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>          <span class="at">.default =</span> bh_size[selected_on]</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">chosen =</span> <span class="fu">map2</span>(selected_on, size, <span class="cf">function</span>(arm, k) {</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>          <span class="fu">rank</span>(<span class="sc">-</span>chooser[[arm]], <span class="at">ties.method =</span> <span class="st">&quot;first&quot;</span>) <span class="sc">&lt;=</span> k</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>        }),</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">bfr =</span> <span class="fu">map_dbl</span>(chosen, <span class="cf">function</span>(k) <span class="fu">median</span>(measured<span class="sc">$</span>BFR[k])),</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">hlrt =</span> <span class="fu">map_dbl</span>(chosen, <span class="cf">function</span>(k) <span class="fu">median</span>(measured<span class="sc">$</span>HLRT[k]))</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">-</span>chosen)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ratio =</span> bfr <span class="sc">/</span> hlrt)</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>split_results <span class="ot">&lt;-</span> <span class="fu">crossfit</span>(change_bfr, change_hlrt, <span class="dv">200</span>)</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>swapped <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">seq_len</span>(<span class="dv">200</span>), <span class="cf">function</span>(i) {</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  flip <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="cn">TRUE</span>, <span class="cn">FALSE</span>), n_complete, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  swap_bfr <span class="ot">&lt;-</span> change_bfr</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  swap_hlrt <span class="ot">&lt;-</span> change_hlrt</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  swap_bfr[, flip] <span class="ot">&lt;-</span> change_hlrt[, flip]</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  swap_hlrt[, flip] <span class="ot">&lt;-</span> change_bfr[, flip]</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="fu">crossfit</span>(swap_bfr, swap_hlrt, <span class="dv">200</span>), <span class="at">null_ratio =</span> <span class="fu">median</span>(ratio),</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(selected_on, set))</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>()</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>magnitude <span class="ot">&lt;-</span> split_results <span class="sc">|&gt;</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">split_low =</span> <span class="fu">quantile</span>(ratio, <span class="fl">0.025</span>), <span class="at">split_high =</span> <span class="fu">quantile</span>(ratio, <span class="fl">0.975</span>),</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">size =</span> <span class="fu">first</span>(size), <span class="at">bfr =</span> <span class="fu">median</span>(bfr), <span class="at">hlrt =</span> <span class="fu">median</span>(hlrt), <span class="at">ratio =</span> <span class="fu">median</span>(ratio),</span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(selected_on, set)</span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">summarise</span>(swapped, <span class="at">nulls =</span> <span class="fu">list</span>(null_ratio), <span class="at">.by =</span> <span class="fu">c</span>(selected_on, set)),</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;selected_on&quot;</span>, <span class="st">&quot;set&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">swap_p =</span> <span class="fu">map2_dbl</span>(nulls, ratio, <span class="cf">function</span>(null, r) {</span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>    (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">sum</span>(<span class="fu">abs</span>(<span class="fu">log</span>(null)) <span class="sc">&gt;=</span> <span class="fu">abs</span>(<span class="fu">log</span>(r)))) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">length</span>(null))</span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>  })) <span class="sc">|&gt;</span></span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(selected_on, set, size, bfr, hlrt, ratio, split_low, split_high, swap_p)</span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(magnitude, <span class="fu">across</span>(<span class="fu">where</span>(is.double), <span class="cf">function</span>(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 9
   selected_on set      size   bfr  hlrt ratio split_low split_high swap_p
@@ -2421,7 +2418,7 @@ vertical-align: -.125em;
 </section>
 <section id="directional-change" class="level3">
 <h3 class="anchored" data-anchor-id="directional-change">Directional change</h3>
-<p>The training-responsive proteins come from a time-only limpa model, <code>~ 0 + participant + timepoint + blood</code> on <code>proteins.rds</code>, which pools the arms: those whose T2 coefficient passes BH 0.05. Each leg’s directional change is the mean over those proteins of its log2 change, each signed by the protein’s time-only logFC, so a positive value means the leg moved the way training moves the proteome. BFR against HLRT is a paired t over the complete participants. Choosing proteins by the pooled time effect does not bias the between-arm difference, because swapping a participant’s legs leaves the pooled effect unchanged.</p>
+<p>Proteins are chosen by a time-only model that pools the arms, which cannot bias the between-arm difference because swapping a participant’s legs leaves the pooled effect unchanged. Each leg’s change on them, signed by the training direction, says how far that leg moved the way training moves the proteome.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>time_design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> participant <span class="sc">+</span> timepoint <span class="sc">+</span> blood, proteins<span class="sc">$</span>targets)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>time_fit <span class="ot">&lt;-</span> <span class="fu">topTable</span>(<span class="fu">eBayes</span>(<span class="fu">dpcDE</span>(proteins, time_design, <span class="at">plot =</span> <span class="cn">FALSE</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>),</span>
@@ -2461,7 +2458,7 @@ vertical-align: -.125em;
 </section>
 <section id="fry-on-the-interaction" class="level3">
 <h3 class="anchored" data-anchor-id="fry-on-the-interaction">fry on the interaction</h3>
-<p>If BFR responds less, the proteins that rise with training rise less in BFR, so their interaction (BFR change minus HLRT change) leans negative, and those that fall lean positive. fry tests each set in the limpa model with the blood covariate, on the time-only set split by direction. As above, choosing by the pooled time effect does not bias the interaction.</p>
+<p>If BFR responds less, the interaction of the rising training proteins leans negative and that of the falling ones positive. fry tests both sets in the stage 02 model.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>proteins<span class="sc">$</span>weights <span class="ot">&lt;-</span> fit<span class="sc">$</span>EList<span class="sc">$</span>weights</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>interaction_contrast <span class="ot">&lt;-</span> d<span class="sc">$</span>contrasts[, ct_inter]</span>
@@ -2545,7 +2542,7 @@ vertical-align: -.125em;
 </section>
 <section id="direction" class="level2">
 <h2 class="anchored" data-anchor-id="direction">Direction</h2>
-<p>Proteins that pass BH in either arm’s training, BFR change against HLRT change. The Deming line is descriptive only: most points are HLRT hits chosen for a large HLRT change, so their HLRT values are inflated and the slope is biased low. The cross-fit above is the fair estimate of relative size. Each quadrant is tested for over-represented Hallmark, GO Slim and Reactome sets (<code>fgsea::fora()</code>, universe every measured gene, 10 to 500 members).</p>
+<p>Whether the legs moved the same proteins the same way, and what each quadrant holds. The Deming slope is descriptive: most points are HLRT hits chosen for a large HLRT change, so it is biased low.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>bh_in <span class="ot">&lt;-</span> <span class="cf">function</span>(bfr_fdr, hlrt_fdr) {</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">case_when</span>(bfr_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">&amp;</span> hlrt_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">~</span> <span class="st">&quot;Both&quot;</span>, bfr_fdr <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">~</span> <span class="st">&quot;BFR&quot;</span>,</span>
@@ -2665,7 +2662,7 @@ vertical-align: -.125em;
 </section>
 <section id="coherence" class="level2">
 <h2 class="anchored" data-anchor-id="coherence">Coherence</h2>
-<p>RRHO2 compares the two training rankings (signed -log10 p, from stage 02) across every threshold: bottom left is up in both, top right down in both. fgsea NES of each Hallmark, GO Slim and Reactome set (from <code>03_Pathway_Enrichment/01_run_fgsea_and_fry</code>) and the change of each main-network WGCNA module eigengene (from <code>04_Network/01_modules</code>) are compared between arms. The rho and r are descriptive, because sets overlap and modules share proteins. fry then asks whether HLRT’s training hits, split by direction, move together in the BFR training contrast.</p>
+<p>Whether rankings, sets and modules agree between the arms. The rho and r are descriptive, because sets overlap and modules share proteins; fry asks whether HLRT’s hits move together in BFR.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>signed_score <span class="ot">&lt;-</span> <span class="cf">function</span>(ct) <span class="sc">-</span><span class="fu">log10</span>(<span class="fu">dep_stat</span>(ct, <span class="st">&quot;P.Value&quot;</span>)) <span class="sc">*</span> <span class="fu">sign</span>(<span class="fu">dep_stat</span>(ct, <span class="st">&quot;logFC&quot;</span>))</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>unique_gene <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">duplicated</span>(dep<span class="sc">$</span>Genes)</span>
@@ -2776,7 +2773,7 @@ vertical-align: -.125em;
 </section>
 <section id="classification" class="level2">
 <h2 class="anchored" data-anchor-id="classification">Classification</h2>
-<p>Cross-validated AUC of component 1 for each multilevel sPLS-DA comparison in <code>07_Multivariate/02_splsda</code>. Panel sizes were tuned on the same data, so AUCs lean optimistic.</p>
+<p>The sPLS-DA AUCs of <code>07_Multivariate/02_splsda</code> set the between-arm comparisons against training on one page. Panel sizes were tuned on the same data, so they lean optimistic.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>comparison_names <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">training_bfr =</span> <span class="st">&quot;BFR: T1 vs T2&quot;</span>, <span class="at">training_hlrt =</span> <span class="st">&quot;HLRT: T1 vs T2&quot;</span>,</span>
@@ -2802,7 +2799,7 @@ vertical-align: -.125em;
 </section>
 <section id="bfr-against-hlrt-leads" class="level2">
 <h2 class="anchored" data-anchor-id="bfr-against-hlrt-leads">BFR against HLRT leads</h2>
-<p>Proteins at nominal p &lt; 0.05 for the interaction are leads; none passes BH. Circled points are the component 1 panel of the sPLS-DA change comparison. The set panel shows the 12 Hallmark, GO Slim and Reactome sets with the smallest fgsea p on the interaction in <code>03_Pathway_Enrichment</code>. fgsea shuffles proteins as if independent, so its q values run small for correlated sets; fry, in the same step, passes no interaction set at BH. The last panel shows the interaction of the training-responsive sets tested by fry above.</p>
+<p>No interaction passes BH, so proteins at nominal p &lt; 0.05 are leads. fgsea treats correlated proteins as independent and fry passes no interaction set, so the fgsea sets are leads too.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>change_panel <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(splsda_file, <span class="st">&quot;panels&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(comparison <span class="sc">==</span> <span class="st">&quot;arms_change&quot;</span>, component <span class="sc">==</span> <span class="dv">1</span>)</span>
@@ -2907,7 +2904,7 @@ vertical-align: -.125em;
 </section>
 <section id="response-against-growth" class="level2">
 <h2 class="anchored" data-anchor-id="response-against-growth">Response against growth</h2>
-<p>Three per-leg response summaries against each leg’s change in VL and RF CSA and echo intensity (post minus pre): the directional change, MPE change and slow-fraction change (T2 minus T1). Every leg, including the one leg of the participant missing a biopsy, has a directional change. Spearman rho is computed within each arm, and pooled within participant after centring each participant’s two legs. Centring makes the two legs mirror images, so the pooled p comes from 5,000 random swaps of the response between a participant’s legs (+1 corrected), not from <code>cor.test()</code>.</p>
+<p>Whether a leg that moved further also grew more. Centring a participant’s two legs makes them mirror images, so the pooled within-participant p comes from 5,000 swaps of the response between a participant’s legs, not from <code>cor.test()</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>per_sample <span class="ot">&lt;-</span> <span class="cf">function</span>(sheet_file, sheet, value) {</span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_excel</span>(sheet_file, sheet) <span class="sc">|&gt;</span></span>
@@ -3023,9 +3020,6 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-</section>
-<section id="save-results" class="level2">
-<h2 class="anchored" data-anchor-id="save-results">Save results</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;01_plasticity.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(page_magnitude)</span>
@@ -3033,36 +3027,39 @@ vertical-align: -.125em;
 <span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(page_coherence)</span>
 <span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(page_leads)</span>
 <span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(page_growth)</span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
-<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>tests <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
-<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>  directional_test,</span>
-<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(fry_interaction, <span class="at">test =</span> <span class="fu">paste</span>(<span class="st">&quot;fry interaction, training&quot;</span>, set), <span class="at">proteins =</span> NGenes,</span>
-<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>    median_training, median_interaction, <span class="at">direction =</span> Direction, <span class="at">p =</span> PValue)</span>
-<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> counts,</span>
-<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">magnitude =</span> magnitude <span class="sc">|&gt;</span></span>
-<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">selected_on =</span> <span class="fu">if_else</span>(set <span class="sc">==</span> <span class="st">&quot;All&quot;</span>, <span class="st">&quot;none&quot;</span>, selected_on)) <span class="sc">|&gt;</span></span>
-<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>(selected_on, set, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">legs =</span> legs,</span>
-<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> direction_hits,</span>
-<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadrant_sets =</span> quadrant_sets,</span>
-<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">coherence =</span> coherence,</span>
-<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">classification =</span> classification,</span>
-<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">leads =</span> leads,</span>
-<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">tests =</span> tests,</span>
-<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth =</span> growth</span>
-<span id="cb40-28"><a href="#cb40-28" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb40-29"><a href="#cb40-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_plasticity.xlsx&quot;</span>)</span>
-<span id="cb40-30"><a href="#cb40-30" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="save-results" class="level2">
+<h2 class="anchored" data-anchor-id="save-results">Save results</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>tests <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  directional_test,</span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(fry_interaction, <span class="at">test =</span> <span class="fu">paste</span>(<span class="st">&quot;fry interaction, training&quot;</span>, set), <span class="at">proteins =</span> NGenes,</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    median_training, median_interaction, <span class="at">direction =</span> Direction, <span class="at">p =</span> PValue)</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">counts =</span> counts,</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">magnitude =</span> magnitude <span class="sc">|&gt;</span></span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">selected_on =</span> <span class="fu">if_else</span>(set <span class="sc">==</span> <span class="st">&quot;All&quot;</span>, <span class="st">&quot;none&quot;</span>, selected_on)) <span class="sc">|&gt;</span></span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">distinct</span>(selected_on, set, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">legs =</span> legs,</span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">direction =</span> direction_hits,</span>
+<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadrant_sets =</span> quadrant_sets,</span>
+<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">coherence =</span> coherence,</span>
+<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">leads =</span> leads,</span>
+<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">tests =</span> tests,</span>
+<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">growth =</span> growth</span>
+<span id="cb41-19"><a href="#cb41-19" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb41-20"><a href="#cb41-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_plasticity.xlsx&quot;</span>)</span>
+<span id="cb41-21"><a href="#cb41-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">
 <h2 class="anchored" data-anchor-id="session-information">Session information</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>R version 4.6.0 (2026-04-24)
 Platform: aarch64-apple-darwin23
