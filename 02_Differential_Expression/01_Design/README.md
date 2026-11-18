@@ -17,7 +17,6 @@ Outputs:
   - `samples`: sample identifiers and study metadata.
   - `design`: the design matrix, one row per sample.
   - `contrasts`: contrast weights, one column per comparison.
-  - `correlation_strata`: the within-leg residual correlation, participant fixed.
 
 Results: 131 samples, 37 coefficients, 94 residual degrees of freedom. The within-leg residual
 correlation is 0.015, so `02_Differential` fits without a leg block. The estimate ignores the

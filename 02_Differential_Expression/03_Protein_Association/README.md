@@ -27,8 +27,9 @@ quarto render \
 Outputs:
 
 - `b_reports/03_protein_association.html`: the report.
-- `b_reports/03_association_<outcome>.pdf`: per outcome, the three smallest p per coefficient,
-  protein change against outcome; panel headers give t, p and BH q.
+- `b_reports/03_protein_association.pdf`: one page per outcome (VL CSA, VL echo, RF CSA, RF echo,
+  volume load), the three smallest p per coefficient, protein change against outcome; panel headers
+  give t, p and BH q.
 - `c_data/association_t.rds`: moderated t, proteins by ranking (`average_<outcome>`,
   `difference_<outcome>`), for fgsea in `05_set_association`.
 - `c_data/association_designs.rds`: per ranking, the arm design and contrast vector, for fry.

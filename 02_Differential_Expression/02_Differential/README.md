@@ -17,10 +17,9 @@ Outputs:
 - `c_data/fit.rds`: the fitted contrasts, for `03_Pathway_Enrichment/01_run_fgsea_and_fry`,
   `04_Network/02_module_traits`, `05_Mitochondria/02_test_mito` and `08_Plasticity`.
 - `c_data/02_differential.xlsx`:
-  - `DEP_matrix`: per protein, log2 fold change, p and BH p per contrast, and the blood slope (log2
-    protein per log2 haemoglobin) with its BH p.
+  - `protein_results`: per protein, log2 fold change, p and BH p per contrast, and the blood slope
+    (log2 protein per log2 haemoglobin) with its BH p.
   - `contrast_summary`: discoveries per contrast at FDR 0.05 and 0.10, and at 0.05 without blood.
-  - `null_summary`: per contrast, estimated share of true nulls, median |t| and share of p < 0.2.
 
 Results: training changes 95 proteins with BFR (58 up, 37 down) and 218 with HLRT (106 up, 112
 down) at FDR 0.05. The 51 shared hits all move the same way: RBP1, CA14, NAMPT and the IDH3

@@ -2252,7 +2252,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins-and-phenotype" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins-and-phenotype">Read proteins and phenotype</h2>
-<p>The models read <code>proteins.rds</code> and carry the blood index as a covariate; the figures and the leg correlation use <code>proteins_adjusted.rds</code>, with the blood effect removed. <code>phenotype.csv</code> holds one row per leg: cross-sectional area (CSA) and echo intensity of vastus lateralis (<code>vl_</code>) and rectus femoris (<code>rf_</code>) before and after training, and the total volume load lifted.</p>
+<p>The models carry the blood index as a covariate, so they read <code>proteins.rds</code>; the figures and the leg correlation take no design, so they read <code>proteins_adjusted.rds</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;03_Protein_Association&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
@@ -2263,7 +2263,7 @@ vertical-align: -.125em;
 </section>
 <section id="pair-the-samples" class="level2">
 <h2 class="anchored" data-anchor-id="pair-the-samples">Pair the samples</h2>
-<p><code>legs</code> has one row per leg with both samples; <code>delta_pairs</code> one row per participant with both legs.</p>
+<p>A slope on change needs both samples of a leg, and the within slope needs both legs of a participant.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>legs <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
@@ -2285,7 +2285,7 @@ vertical-align: -.125em;
 </section>
 <section id="compute-the-outcomes" class="level2">
 <h2 class="anchored" data-anchor-id="compute-the-outcomes">Compute the outcomes</h2>
-<p>Each outcome is one number per leg: post minus pre for CSA and echo, and total volume load in tonnes. Echo intensity falls as muscle composition improves, so a negative change is favourable. Treatment comes from the sample table, not the phenotype file.</p>
+<p>Each outcome is one number per leg: the change in vastus lateralis (<code>vl_</code>) and rectus femoris (<code>rf_</code>) cross-sectional area (CSA) and echo intensity, and total volume load in tonnes. Treatment comes from the sample table, because leg assignment was counterbalanced.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>outcomes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;vl_csa&quot;</span>, <span class="st">&quot;vl_echo&quot;</span>, <span class="st">&quot;rf_csa&quot;</span>, <span class="st">&quot;rf_echo&quot;</span>, <span class="st">&quot;volume_load_t&quot;</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>leg_phenotype <span class="ot">&lt;-</span> legs <span class="sc">|&gt;</span></span>
@@ -2314,7 +2314,7 @@ vertical-align: -.125em;
 </section>
 <section id="fit-the-models" class="level2">
 <h2 class="anchored" data-anchor-id="fit-the-models">Fit the models</h2>
-<p>Both models are limpa fits (<code>dpcDE()</code>, so the <code>dpcQuant()</code> standard errors act as precision weights, then <code>eBayes(robust = TRUE)</code>). <code>post</code> is 1 at T2 and 0 at T1; <code>x</code> is the leg’s outcome, centred on the mean leg.</p>
+<p>Both models are <code>dpcDE()</code> fits, so the standard errors act as precision weights, with <code>post</code> 1 at T2 and <code>x</code> the leg’s centred outcome. The paired terms follow the limma User’s Guide (9.4.1, 9.5.3).</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -2398,7 +2398,7 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<p>The within model is not fitted for volume load: dose differs by arm by design, so the difference between a participant’s two legs is the arm difference. The paired design follows the limma User’s Guide (sections 9.4.1 and 9.5.3). BH adjustment runs within each outcome and coefficient.</p>
+<p>Volume load has no within model, because dose differs by arm by design. BH runs within each outcome and coefficient.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The one leg without a T2 sample has no outcome change; its x is set to 0, which it never</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># multiplies, because its only sample has post = 0.</span></span>
@@ -2414,52 +2414,52 @@ vertical-align: -.125em;
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">within =</span> <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> leg_id <span class="sc">+</span> participant<span class="sc">:</span>post <span class="sc">+</span> bfr_post <span class="sc">+</span> post<span class="sc">:</span>x <span class="sc">+</span> blood</span>
 <span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>The four arm coefficients are contrasts of the two arm slopes.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>arm_weights <span class="ot">&lt;-</span> <span class="fu">cbind</span>(</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>), <span class="at">HLRT =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">difference =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="at">average =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>tidy_coefficient <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, coefficient) {</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topTable</span>(fit, <span class="at">coef =</span> coefficient, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>      protein, <span class="at">gene =</span> <span class="fu">coalesce</span>(Genes, protein), <span class="at">slope =</span> logFC, t, <span class="at">p =</span> P.Value, <span class="at">fdr =</span> adj.P.Val</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>fits <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(outcome_name) {</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  model_data <span class="ot">&lt;-</span> <span class="fu">mutate</span>(samples, <span class="at">x =</span> .data[[outcome_name]])</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  arm_design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(models<span class="sc">$</span>arm, model_data)</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">is.fullrank</span>(arm_design))</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  arm_contrast <span class="ot">&lt;-</span> <span class="fu">matrix</span>(</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span>, <span class="fu">ncol</span>(arm_design), <span class="fu">ncol</span>(arm_weights),</span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">colnames</span>(arm_design), <span class="fu">colnames</span>(arm_weights))</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  arm_contrast[<span class="fu">c</span>(<span class="st">&quot;treatmentBFR:post:x&quot;</span>, <span class="st">&quot;treatmentHLRT:post:x&quot;</span>), ] <span class="ot">&lt;-</span> arm_weights</span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  arm_fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, arm_design, <span class="at">plot =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">contrasts.fit</span>(arm_contrast) <span class="sc">|&gt;</span></span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">eBayes</span>(<span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>  tables <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">colnames</span>(arm_contrast)), <span class="cf">function</span>(coefficient) {</span>
-<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tidy_coefficient</span>(arm_fit, coefficient)</span>
-<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (outcome_name <span class="sc">!=</span> <span class="st">&quot;volume_load_t&quot;</span>) {</span>
-<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>    within_design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(models<span class="sc">$</span>within, model_data)</span>
-<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stopifnot</span>(<span class="fu">is.fullrank</span>(within_design))</span>
-<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    within_fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">dpcDE</span>(proteins, within_design, <span class="at">plot =</span> <span class="cn">FALSE</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    tables<span class="sc">$</span>within <span class="ot">&lt;-</span> <span class="fu">tidy_coefficient</span>(within_fit, <span class="st">&quot;post:x&quot;</span>)</span>
-<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> arm_design, <span class="at">contrasts =</span> arm_contrast,</span>
-<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">results =</span> <span class="fu">list_rbind</span>(tables, <span class="at">names_to =</span> <span class="st">&quot;coefficient&quot;</span>)</span>
-<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>})</span>
-<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>coefficient_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>, <span class="st">&quot;difference&quot;</span>, <span class="st">&quot;average&quot;</span>, <span class="st">&quot;within&quot;</span>)</span>
-<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(fits, <span class="st">&quot;results&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;outcome&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(outcome, outcomes), <span class="fu">match</span>(coefficient, coefficient_order), p)</span>
-<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
-<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(p, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">by =</span> <span class="fu">c</span>(outcome, coefficient)) <span class="sc">|&gt;</span></span>
-<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(slope, t, p, fdr), <span class="cf">function</span>(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The four arm coefficients are contrasts of the two arm slopes.</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>arm_weights <span class="ot">&lt;-</span> <span class="fu">cbind</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">BFR =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>), <span class="at">HLRT =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>), <span class="at">difference =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="at">average =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fl">0.5</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>tidy_coefficient <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, coefficient) {</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topTable</span>(fit, <span class="at">coef =</span> coefficient, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">sort.by =</span> <span class="st">&quot;none&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(<span class="at">rownames =</span> <span class="st">&quot;protein&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      protein, <span class="at">gene =</span> <span class="fu">coalesce</span>(Genes, protein), <span class="at">slope =</span> logFC, t, <span class="at">p =</span> P.Value, <span class="at">fdr =</span> adj.P.Val</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>fits <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(outcomes), <span class="cf">function</span>(outcome_name) {</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  model_data <span class="ot">&lt;-</span> <span class="fu">mutate</span>(samples, <span class="at">x =</span> .data[[outcome_name]])</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  arm_design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(models<span class="sc">$</span>arm, model_data)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">is.fullrank</span>(arm_design))</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  arm_contrast <span class="ot">&lt;-</span> <span class="fu">matrix</span>(</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span>, <span class="fu">ncol</span>(arm_design), <span class="fu">ncol</span>(arm_weights),</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">colnames</span>(arm_design), <span class="fu">colnames</span>(arm_weights))</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  arm_contrast[<span class="fu">c</span>(<span class="st">&quot;treatmentBFR:post:x&quot;</span>, <span class="st">&quot;treatmentHLRT:post:x&quot;</span>), ] <span class="ot">&lt;-</span> arm_weights</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  arm_fit <span class="ot">&lt;-</span> <span class="fu">dpcDE</span>(proteins, arm_design, <span class="at">plot =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">contrasts.fit</span>(arm_contrast) <span class="sc">|&gt;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">eBayes</span>(<span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>  tables <span class="ot">&lt;-</span> <span class="fu">map</span>(<span class="fu">set_names</span>(<span class="fu">colnames</span>(arm_contrast)), <span class="cf">function</span>(coefficient) {</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tidy_coefficient</span>(arm_fit, coefficient)</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (outcome_name <span class="sc">!=</span> <span class="st">&quot;volume_load_t&quot;</span>) {</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>    within_design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(models<span class="sc">$</span>within, model_data)</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stopifnot</span>(<span class="fu">is.fullrank</span>(within_design))</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    within_fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">dpcDE</span>(proteins, within_design, <span class="at">plot =</span> <span class="cn">FALSE</span>), <span class="at">robust =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    tables<span class="sc">$</span>within <span class="ot">&lt;-</span> <span class="fu">tidy_coefficient</span>(within_fit, <span class="st">&quot;post:x&quot;</span>)</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> arm_design, <span class="at">contrasts =</span> arm_contrast,</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">results =</span> <span class="fu">list_rbind</span>(tables, <span class="at">names_to =</span> <span class="st">&quot;coefficient&quot;</span>)</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>coefficient_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;BFR&quot;</span>, <span class="st">&quot;HLRT&quot;</span>, <span class="st">&quot;difference&quot;</span>, <span class="st">&quot;average&quot;</span>, <span class="st">&quot;within&quot;</span>)</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> <span class="fu">map</span>(fits, <span class="st">&quot;results&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;outcome&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(outcome, outcomes), <span class="fu">match</span>(coefficient, coefficient_order), p)</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>results <span class="sc">|&gt;</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_min</span>(p, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">by =</span> <span class="fu">c</span>(outcome, coefficient)) <span class="sc">|&gt;</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(slope, t, p, fdr), <span class="cf">function</span>(x) <span class="fu">signif</span>(x, <span class="dv">3</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 24 × 8
    outcome coefficient protein gene        slope     t        p   fdr
@@ -2477,7 +2477,7 @@ vertical-align: -.125em;
 # ℹ 14 more rows</code></pre>
 </div>
 </div>
-<p>Neither model has a participant block: a participant’s two legs do not correlate in protein change (median Spearman r between their BFR and HLRT legs, across proteins).</p>
+<p>Neither model has a participant block, which holds only while a participant’s two legs do not correlate in protein change.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>delta <span class="ot">&lt;-</span> values[, legs<span class="sc">$</span>T2] <span class="sc">-</span> values[, legs<span class="sc">$</span>T1]</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(delta) <span class="ot">&lt;-</span> legs<span class="sc">$</span>leg_id</span>
@@ -2492,7 +2492,7 @@ vertical-align: -.125em;
 </section>
 <section id="summarise" class="level2">
 <h2 class="anchored" data-anchor-id="summarise">Summarise</h2>
-<p>One row per outcome and coefficient. Legs used counts the legs a slope is read from: every leg with both samples for the arm model, and the legs of participants with both legs for the within model. Chance alone gives about 152 nominal hits (5% of 3,042 proteins).</p>
+<p>Nominal counts are read against chance, about 152 hits (5% of 3,042 proteins), because proteins co-vary and counts swing widely under the null.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>legs_by_model <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">arm =</span> <span class="fu">sprintf</span>(</span>
@@ -2540,7 +2540,7 @@ vertical-align: -.125em;
 </section>
 <section id="rankings-for-gene-set-tests" class="level2">
 <h2 class="anchored" data-anchor-id="rankings-for-gene-set-tests">Rankings for gene set tests</h2>
-<p><code>association_t</code> is what <code>03_Pathway_Enrichment/05_set_association</code> ranks on: one row per protein, one column per ranking (<code>average_&lt;outcome&gt;</code>, <code>difference_&lt;outcome&gt;</code>), values the moderated t. <code>association_designs</code> holds, per ranking, the arm design and the contrast vector, so fry there tests the same coefficient.</p>
+<p><code>03_Pathway_Enrichment/05_set_association</code> ranks on these moderated t values, and its fry test needs the same design and contrast, so both are saved.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>rankings <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(<span class="at">coefficient =</span> <span class="fu">c</span>(<span class="st">&quot;average&quot;</span>, <span class="st">&quot;difference&quot;</span>), <span class="at">outcome =</span> outcomes) <span class="sc">|&gt;</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ranking =</span> <span class="fu">paste</span>(coefficient, outcome, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>))</span>
@@ -2559,10 +2559,10 @@ vertical-align: -.125em;
 </section>
 <section id="figures" class="level2">
 <h2 class="anchored" data-anchor-id="figures">Figures</h2>
-<p>One page per outcome: the three smallest p for each coefficient. Arm coefficients plot each leg’s protein change against its outcome, with a line fitted in each arm; the within coefficient plots what it tests, one point per participant, BFR minus HLRT for both.</p>
+<p>Each panel plots what its coefficient tests: leg change against outcome for the arm slopes, and BFR minus HLRT per participant for the within slope.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>paired <span class="ot">&lt;-</span> delta[, delta_pairs<span class="sc">$</span>BFR] <span class="sc">-</span> delta[, delta_pairs<span class="sc">$</span>HLRT]</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(outcomes, <span class="cf">function</span>(outcome_name) {</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>pages <span class="ot">&lt;-</span> <span class="fu">map</span>(outcomes, <span class="cf">function</span>(outcome_name) {</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  outcome_value <span class="ot">&lt;-</span> <span class="fu">set_names</span>(leg_phenotype[[outcome_name]], legs<span class="sc">$</span>leg_id)</span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  leads <span class="ot">&lt;-</span> results <span class="sc">|&gt;</span></span>
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(outcome <span class="sc">==</span> outcome_name) <span class="sc">|&gt;</span></span>
@@ -2586,7 +2586,7 @@ vertical-align: -.125em;
 <span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">|&gt;</span></span>
 <span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list_rbind</span>() <span class="sc">|&gt;</span></span>
 <span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">panel =</span> <span class="fu">factor</span>(panel, <span class="at">levels =</span> <span class="fu">unique</span>(panel)))</span>
-<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>  page <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(points, <span class="fu">aes</span>(change, value, <span class="at">colour =</span> series, <span class="at">fill =</span> series)) <span class="sc">+</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(points, <span class="fu">aes</span>(change, value, <span class="at">colour =</span> series, <span class="at">fill =</span> series)) <span class="sc">+</span></span>
 <span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
 <span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.25</span>, <span class="at">colour =</span> <span class="st">&quot;grey85&quot;</span>) <span class="sc">+</span></span>
 <span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="at">formula =</span> y <span class="sc">~</span> x, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">alpha =</span> <span class="fl">0.12</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
@@ -2602,13 +2602,11 @@ vertical-align: -.125em;
 <span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
 <span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">8</span>) <span class="sc">+</span></span>
 <span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(), <span class="at">legend.position =</span> <span class="st">&quot;top&quot;</span>)</span>
-<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pdf</span>(</span>
-<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="fu">paste0</span>(<span class="st">&quot;03_association_&quot;</span>, outcome_name, <span class="st">&quot;.pdf&quot;</span>)),</span>
-<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span></span>
-<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(page)</span>
-<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
-<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_protein_association.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(pages, print)</span>
+<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
