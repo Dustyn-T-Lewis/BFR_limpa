@@ -20,10 +20,9 @@ here::i_am("03_Pathway_Enrichment/03_run_singscore/a_script/03_run_singscore.qmd
 
 ## Read inputs
 
-singscore ranks every gene within a sample and scores a set by its members' mean rank, centred so
-0 is what random members would give. A score ignores the rest of the cohort: no p-value, no
-contrast. `04_set_classification` and `05_set_association` test the scores. The abundances have
-the blood index's effect removed (`proteins_adjusted.rds`).
+singscore (Foroutan et al. 2018, doi:10.1186/s12859-018-2435-4) scores a set within one sample by
+its members' mean rank, so a score never sees a contrast and later steps can test it against any
+grouping or phenotype. The abundances have the blood index's effect removed.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "03_run_singscore")
@@ -37,9 +36,7 @@ proteins <- readRDS(here("01_Preprocess", "02_Quantification", "c_data", "protei
 
 ## Score samples
 
-Sets are keyed on gene symbols, so the matrix keeps each symbol's representative protein, renamed
-to the gene. `multiScore()` returns `Scores` and `Dispersions` (the spread of a set's member
-ranks), both set by sample.
+Sets are keyed on gene symbols, so the matrix keeps each symbol's representative protein.
 
 ```{r score}
 gene_map <- filter(protein_map, selected)
@@ -52,6 +49,9 @@ dim(scores)
 
 ## Score and dispersion per set
 
+Dispersion, the spread of a set's member ranks, shows whether a score summarises members that
+move together.
+
 ```{r spread}
 set_spread <- set_catalog |>
   filter(qualifies) |>
@@ -60,39 +60,33 @@ set_spread <- set_catalog |>
     score = rowMeans(scores[set_id, ]),
     dispersion = rowMeans(scored$Dispersions[set_id, ])
   )
-collection_spread <- set_spread |>
+set_spread |>
   summarise(
     sets = n(), median_score = round(median(score), 4),
     median_dispersion = round(median(dispersion), 1), .by = database
   )
-collection_spread
 ```
 
 ## Check participant structure
 
-For the first two principal components of the scores, the R² on participant gives the share of
-the component explained by participant identity. `proteins$targets` rows follow the matrix
-columns.
+If participant identity dominates the raw scores, later steps must use within-leg change. The R²
+of each leading component on participant measures it.
 
 ```{r structure}
 components <- prcomp(t(scores))
-structure_check <- tibble(
+# proteins$targets rows follow the matrix columns.
+tibble(
   component = paste0("PC", 1:4),
   variance_explained = round(summary(components)$importance[2, 1:4], 3),
   participant_share = c(round(map_dbl(1:2, function(i) {
     summary(lm(components$x[, i] ~ proteins$targets$participant))$r.squared
   }), 3), NA, NA)
 )
-structure_check
 ```
-
-Participant identity dominates the raw scores, so later steps use the within-leg change, never
-the raw value.
 
 ## Figure
 
-singscore's `plotDispersion()` draws one signature at a time, so S5 plots every set's mean score
-against its mean dispersion directly.
+singscore's `plotDispersion()` draws one signature at a time, so S5 plots every set at once.
 
 ```{r figure}
 figure <- ggplot(set_spread, aes(score, dispersion, colour = database)) +
@@ -106,25 +100,20 @@ figure <- ggplot(set_spread, aes(score, dispersion, colour = database)) +
   ) +
   theme_minimal(base_size = 10) +
   theme(aspect.ratio = 1)
-pdf(file.path(stage, "b_reports", "03_run_singscore_figures.pdf"), width = 8.27, height = 11.69)
+pdf(file.path(stage, "b_reports", "03_run_singscore.pdf"), width = 8.27, height = 11.69)
 print(figure)
 invisible(dev.off())
 ```
 
 ## Save results
 
-Later steps read the scores from `set_scores.rds`: singscore values carry exact rank ties, and an
-Excel round trip changes the last bit of some, which breaks ties and moves 05's rank tests. The
-workbook copy is for reading.
+Later steps read `set_scores.rds`: an Excel round trip changes the last bit of some scores, which
+breaks singscore's exact rank ties and moves 05's rank tests. The workbook copy is for reading.
 
 ```{r write}
 saveRDS(scores, file.path(stage, "c_data", "set_scores.rds"))
 write_xlsx(
-  list(
-    collection_spread = collection_spread,
-    structure_check = structure_check,
-    set_scores = rownames_to_column(as.data.frame(scores), "set_id")
-  ),
+  list(set_scores = rownames_to_column(as.data.frame(scores), "set_id")),
   file.path(stage, "c_data", "03_run_singscore.xlsx")
 )
 ```

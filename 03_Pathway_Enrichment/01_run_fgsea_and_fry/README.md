@@ -16,7 +16,7 @@ quarto render 03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_a
 Outputs:
 
 - `b_reports/01_run_fgsea_and_fry.html`: the walkthrough.
-- `b_reports/01_run_fgsea_and_fry_figures.pdf`: S1, the ten strongest collapse survivors per
+- `b_reports/01_run_fgsea_and_fry.pdf`: S1, the ten strongest collapse survivors per
   contrast (size: measured genes, colour: collection); S2, significant sets before and after
   `collapsePathways`, which makes a set the child of a stronger one when it shows no enrichment
   of its own (p > 0.05).

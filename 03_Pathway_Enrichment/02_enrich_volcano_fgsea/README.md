@@ -14,7 +14,7 @@ quarto render 03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_v
 Outputs:
 
 - `b_reports/02_enrich_volcano_fgsea.html`: the walkthrough.
-- `b_reports/02_enrich_volcano_fgsea_figures.pdf`: S3, the interaction, both training responses
+- `b_reports/02_enrich_volcano_fgsea.pdf`: S3, the interaction, both training responses
   and post-training BFR against HLRT, the five lowest-FDR proteins named; S4, the training
   responses labelled by pi-score, which selects nothing, each label followed by the protein's mean
   observed precursors. Points are coloured at protein BH FDR < 0.05; the ring shows up to twelve

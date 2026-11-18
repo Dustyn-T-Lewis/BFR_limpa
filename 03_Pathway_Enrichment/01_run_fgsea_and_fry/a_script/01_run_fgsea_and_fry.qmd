@@ -22,12 +22,10 @@ here::i_am("03_Pathway_Enrichment/01_run_fgsea_and_fry/a_script/01_run_fgsea_and
 
 ## Read inputs
 
-Every tested set is checked on every contrast with two methods. fgsea ranks proteins by a
-statistic and asks whether a set's members sit towards either end of the ranking more than random
-sets of the same size. It is competitive and assumes proteins are exchangeable, which they are
-not: proteins in a pathway move together. limma's fry is self-contained: it asks whether the set's
-members move at all, from the sample-level data, so correlation between members cannot inflate its
-null.
+Every set is tested on every contrast twice. fgsea is competitive and assumes proteins are
+exchangeable, which co-regulated sets violate; fry is self-contained and works from the samples, so
+correlation between members cannot inflate its null. fgsea gives leads and fry confirms;
+`camera()` stays out because fry covers it.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "01_run_fgsea_and_fry")
@@ -57,8 +55,8 @@ stopifnot(
 
 ## Protein results
 
-One `topTable()` row per protein and contrast, BH within each contrast as in `02_Differential`.
-`pi_score` is P.Value^|logFC| (Xiao et al. 2014, PMID 22321699); it orders proteins and selects
+The protein table is rebuilt here so later steps read ranking and labels from one sheet. BH runs
+within each contrast; `pi_score` (Xiao et al. 2014, PMID 22321699) orders proteins and selects
 nothing.
 
 ```{r protein-results}
@@ -85,8 +83,8 @@ protein_summary
 
 ## Run fgsea
 
-fgsea ranks the moderated t of each representative protein, named by gene symbol so leading
-edges come back as symbols. The seeded calls draw their permutations in the order of `ranked`.
+fgsea ranks the moderated t of each symbol's representative protein, so leading edges come back as
+symbols.
 
 ```{r ranked}
 ranked <- map(set_names(contrast_names), function(cn) {
@@ -94,22 +92,19 @@ ranked <- map(set_names(contrast_names), function(cn) {
 })
 ```
 
-`padj` is BH over all sets in the contrast. NES (normalised enrichment score) is positive when
-members sit towards the top of the ranking. The leading edge is the members that drive the score.
-
 ```{r fgsea}
+# The seeded calls draw their permutations in the order of `ranked`.
 set.seed(1)
 fgsea_raw <- map(ranked, function(stats) fgsea::fgsea(sets, stats, minSize = 15, maxSize = 500))
 ```
 
 ## Run fry
 
-fry reads rows of `proteins$E`, so set symbols become row numbers through each representative
-protein. It reads limpa's precision weights from `proteins$weights`, with robust empirical Bayes
-and the design of the protein fit, blood index included. No `block`: participant is a fixed term,
-which leaves little within-leg correlation (`correlation_strata` sheet of `01_Design`).
+fry uses the design and precision weights of the protein fit, blood index included, with robust
+empirical Bayes. No `block`: participant is a fixed term.
 
 ```{r fry-index}
+# fry reads rows of proteins$E, so symbols become row numbers through each representative.
 selected_rows <- which(protein_map$selected)
 set_rows <- map(sets, function(genes) {
   selected_rows[match(genes, protein_map$gene[selected_rows])]
@@ -117,10 +112,8 @@ set_rows <- map(sets, function(genes) {
 proteins$weights <- fit$EList$weights
 ```
 
-One row per set, contrast and method. fgsea's `padj` and fry's `FDR` are each package's own BH;
-neither is recomputed.
-
 ```{r set-tests}
+# fgsea's padj and fry's FDR are each package's own BH over the contrast; neither is recomputed.
 set_tests <- bind_rows(
   map(contrast_names, function(contrast) {
     as_tibble(fgsea_raw[[contrast]]) |>
@@ -146,11 +139,9 @@ table(set_tests$method)
 
 ## Collapse redundant sets
 
-Collections overlap: glycolysis sits in all four. `fgsea::collapsePathways()` walks the
-significant sets in order of p; each set not yet a child acts as a parent, and another set becomes
-its child when it shows no enrichment of its own, both with the parent's genes removed from the
-ranking and within the parent's genes (p > 0.05). The `mainPathways` keep their fgsea `padj`.
-Survivors get `main = TRUE`; fry rows get `NA`.
+Collections overlap (glycolysis sits in all four), so `collapsePathways()` marks the significant
+sets not explained by a stronger one. Sets are pooled, tested, then collapsed: deduplicating
+before testing lost two thirds of the hits. Survivors keep their `padj` and get `main = TRUE`.
 
 ```{r collapse}
 main_sets <- map(set_names(contrast_names), function(contrast) {
@@ -191,7 +182,7 @@ set_summary
 
 ## Figures
 
-The figures show the four contrasts other than baseline.
+The figures leave out baseline, which is in the summary table.
 
 ```{r survivors}
 shown <- c("BFR_Post-Pre", "HLRT_Post-Pre", "Modality_x_Time_Interaction", "BFR_Post-HLRT_Post")
@@ -202,11 +193,11 @@ survivors <- set_tests |>
 count(survivors, contrast, .drop = FALSE)
 ```
 
-S1 shows each contrast's ten survivors with the lowest adjusted p. The size scale spans the whole
-page so panels compare. Labels drop the collection prefix, so a stem that repeats within a
-contrast (`GOBP_MUSCLE_CONTRACTION`, `REACTOME_MUSCLE_CONTRACTION`) gets its collection appended.
+S1 shows each contrast's ten survivors with the lowest adjusted p, on one size scale so panels
+compare.
 
 ```{r survivor-figure}
+# Labels drop the collection prefix, so a stem repeated within a contrast gets its collection.
 labelled <- mutate(
   survivors,
   stem = sub("^[A-Z0-9]+_", "", pathway),
@@ -255,15 +246,13 @@ s2 <- ggplot(collapse_effect, aes(when, sets, fill = database)) +
   theme(legend.position = "bottom") +
   plot_annotation(title = "S2. Significant sets before and after collapse")
 
-pdf(file.path(stage, "b_reports", "01_run_fgsea_and_fry_figures.pdf"), width = 8.27, height = 11.69)
+pdf(file.path(stage, "b_reports", "01_run_fgsea_and_fry.pdf"), width = 8.27, height = 11.69)
 print(s1)
 print(s2)
 invisible(dev.off())
 ```
 
 ## Save results
-
-Leading edges are saved `;`-joined.
 
 ```{r write}
 write_xlsx(
