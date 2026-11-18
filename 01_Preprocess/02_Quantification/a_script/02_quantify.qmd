@@ -20,9 +20,8 @@ here::i_am("01_Preprocess/02_Quantification/a_script/02_quantify.qmd")
 
 ## Read measurements and protein estimates
 
-`dpcQuant()` takes about 100 minutes, so `02_quantify_run.R` runs it and this notebook reads the
-checkpoint. The checkpoint must have used every filtered precursor; if filtering changes, rerun the
-script.
+`dpcQuant()` takes about 100 minutes, so `02_quantify_run.R` writes a checkpoint; the check below
+fails when filtering has changed since.
 
 ```{r read}
 y <- readRDS(here("01_Preprocess", "01_Filtering", "c_data", "precursors_filtered.rds"))
@@ -33,8 +32,8 @@ stopifnot(sum(proteins$genes$NPrec) == nrow(y))
 
 ## Missingness
 
-In DIA data, low-intensity precursors go missing more often: each precursor's proportion missing
-against its mean observed intensity.
+Low-intensity precursors go missing more often in DIA data, which is why missing values are
+modelled rather than filtered.
 
 ```{r ave-vs-mis}
 plotAveVsMis(y)
@@ -42,9 +41,8 @@ plotAveVsMis(y)
 
 ## Fit the detection curve
 
-The detection probability curve (DPC) gives the probability that a precursor is observed as a
-logistic function of its true intensity. The `dpc()` default is `dpcCN()`, the complete-normal
-estimator the limpa FAQ recommends for noisy data.
+The detection probability curve (DPC) is a logistic function of true intensity; `dpc()` uses
+`dpcCN()`, the estimator the limpa FAQ recommends for noisy data.
 
 ```{r dpc}
 dpcest <- dpc(y$E)
@@ -54,19 +52,14 @@ dpc_parameters <- tibble(intercept = dpcest$dpc[1], slope = dpcest$dpc[2])
 round(dpc_parameters, 3)
 ```
 
-The fitted slope, `r round(dpcest$dpc[2], 3)`, sits below the 0.7 to 0.9 band the limpa FAQ calls
-typical for DIA-NN with match-between-runs. The FAQ's advice for that case is the project's choice
-for the primary run: "If `dpcCN()` doesn't give a value in that range, it would be reasonable to
-run `dpcQuant()` with a preset value `dpc.slope=0.7`." Standard errors or hit counts alone do not
-show which slope is right, so the fitted slope is kept as a sensitivity run (below and in
-`02_Differential`).
+The fitted slope, `r round(dpcest$dpc[2], 3)`, is below the 0.7 to 0.9 the limpa FAQ calls typical,
+so the primary run presets `dpc.slope = 0.7` as the FAQ advises; the fitted slope is a sensitivity
+run.
 
 ## Roll-up
 
-`dpcQuant()` rolls precursors up by `Protein.Group` into a complete matrix with a standard error
-per value, which `dpcDE()` later uses to predict each protein's variance. The checkpoint holds
-`r format(nrow(proteins), big.mark = ",")` protein groups from `r format(nrow(y), big.mark = ",")`
-precursors. Its curve, slope preset and intercept estimated:
+`dpcQuant()` returns a complete matrix with a standard error per value, which `dpcDE()` later uses
+to predict each protein's variance.
 
 ```{r used-curve}
 round(proteins$dpc, 3)
@@ -74,9 +67,8 @@ round(proteins$dpc, 3)
 
 ## Detection filter
 
-`filterByDetection()` keeps a protein detected in at least `n.samples` samples, here the smallest
-group size. Its help page leaves the threshold to the analyst. The count runs across all samples,
-so it does not guarantee detection within any one group.
+The threshold is the smallest group size, since the help page leaves it to the analyst; the count
+runs across all samples, so it does not guarantee detection within a group.
 
 ```{r detection}
 group_sizes <- table(proteins$targets$group)
@@ -94,18 +86,15 @@ detection_summary
 
 ## Normalisation
 
-Cyclic loess removes abundance-dependent differences between samples in the protein estimates;
-DIA-NN normalised only the precursors. Smyth recommends quantile or cyclic loess normalisation of
-limpa protein quantifications when sample differences are technical
-([Bioconductor support](https://support.bioconductor.org/p/9163187/#9163221)).
+DIA-NN normalised only the precursors, and Smyth recommends cyclic loess for limpa protein estimates
+when sample differences are technical
+([Bioconductor support](https://support.bioconductor.org/p/9163187/#9163221)). It subtracts an
+abundance-dependent offset without rescaling, so the standard errors still apply.
 
 ```{r normalise}
 unnormalised <- proteins$E
 proteins$E <- normalizeBetweenArrays(proteins$E, method = "cyclicloess")
 ```
-
-Densities before and after, then mean-difference plots for the sample whose median sat furthest
-from the others.
 
 ```{r normalise-plots}
 #| fig-height: 8
@@ -118,16 +107,11 @@ plotMD(unnormalised, column = worst, main = paste(colnames(unnormalised)[worst],
 plotMD(proteins$E, column = worst, main = paste(colnames(proteins$E)[worst], "after"))
 ```
 
-Cyclic loess subtracts an abundance-dependent offset without rescaling, so the standard errors
-still apply; the fitted offset is treated as known.
-
 ## Blood index
 
-Haemoglobin beta and alpha (HBB, HBA1), set aside in `01_Filtering`, measure how much blood a
-biopsy holds. `dpcQuant()` estimates both with the same detection curve as every other protein; the
-blood index is the mean of the two log2 estimates, centred. The contamination load from
-`01_Filtering`, the share of signal the contaminant filter removed (about 95% haemoglobin and
-albumin), joins the sample table for reference; later stages model the blood index.
+HBB and HBA1 come only from red cells, so their mean log2 estimate, centred, measures how much blood
+a biopsy holds; later stages model it. The contamination load from `01_Filtering` is kept beside it
+for reference.
 
 ```{r blood}
 haemoglobin <- readRDS(
@@ -149,9 +133,6 @@ proteins$targets$contamination <- contamination$pct_signal_removed[
 stopifnot(!anyNA(proteins$targets$contamination))
 ```
 
-Correlation of the two haemoglobins, Spearman correlation of the blood index with contamination
-load, and the median blood index per group:
-
 ```{r blood-checks}
 round(cor(haemoglobin_estimates$E[1, ], haemoglobin_estimates$E[2, ]), 3)
 round(cor(proteins$targets$blood, proteins$targets$contamination, method = "spearman"), 3)
@@ -160,9 +141,10 @@ round(tapply(proteins$targets$blood, proteins$targets$group, median), 3)
 
 ## Check protein estimates
 
-`dpcQuant()` writes the precursor count as `NPrec`, though its help page says `NPeptides`.
+Mean standard errors and observation counts show which proteins are thinly measured.
 
 ```{r quality}
+# dpcQuant() writes the precursor count as NPrec, though its help page says NPeptides.
 protein_quality <- tibble(
   protein = rownames(proteins),
   gene = proteins$genes$Genes,
@@ -175,10 +157,10 @@ protein_quality <- tibble(
 summary(protein_quality[c("mean_log2", "mean_standard_error", "prop_observed")])
 ```
 
-`plotMDSUsingSEs()` places samples by their protein profiles, weighted by the standard errors.
-limma's `plotMDS()` redraws it coloured by treatment (open T1, filled T2) and labelled by
-participant, saved as `02_quantify_mds.pdf`; then the share of the first coordinate participant and
-group explain.
+## Sample map
+
+`plotMDSUsingSEs()` weights the distances by the standard errors; participant should dominate the
+first coordinate if the paired design is right.
 
 ```{r mds}
 #| fig-height: 10
@@ -193,7 +175,7 @@ draw_mds <- function() {
   plotMDS(mds, labels = proteins$targets$participant, cex = 0.6, main = "Labelled by participant")
 }
 draw_mds()
-pdf(here("01_Preprocess", "02_Quantification", "b_reports", "02_quantify_mds.pdf"),
+pdf(here("01_Preprocess", "02_Quantification", "b_reports", "02_quantify.pdf"),
   width = 8.27, height = 11.69)
 draw_mds()
 invisible(dev.off())
@@ -204,10 +186,8 @@ round(sapply(proteins$targets[c("participant", "group")], function(f) {
 
 ## Slope sensitivity
 
-The sensitivity run quantifies against the fitted curve. It gets the same detection filter, which
-reads only observation counts and so keeps the same proteins, and the same normalisation. Each
-run's curve and mean standard error, then the median absolute abundance difference;
-`02_Differential` compares the contrasts.
+Hit counts cannot show which slope is right, so the fitted-curve run gets the same filter and
+normalisation and `02_Differential` compares its contrasts. It runs only when the checkpoint exists.
 
 ```{r slope-sensitivity}
 #| eval: !expr file.exists(file.path(checkpoints, "proteins_slope_fitted.rds"))
@@ -228,17 +208,10 @@ tibble(
 round(median(abs(proteins$E - sensitivity$E)), 4)
 ```
 
-The section runs only when `quant_runs/proteins_slope_fitted.rds` exists:
-
-```sh
-Rscript 01_Preprocess/02_Quantification/a_script/02_quantify_run.R --sensitivity
-```
-
 ## Save results
 
-Models that take a design (`dpcDE()`, fry) read `proteins.rds` and carry the blood index as a
-covariate. `proteins_adjusted.rds` has the blood effect removed by `removeBatchEffect()`, group and
-participant protected, for steps that take no design (singscore, WGCNA, mixOmics).
+Models with a design carry the blood index as a covariate; steps that take no design (singscore,
+WGCNA, mixOmics) need it removed first, with group and participant protected.
 
 ```{r write}
 out <- here("01_Preprocess", "02_Quantification", "c_data")
@@ -251,7 +224,6 @@ adjusted$E <- removeBatchEffect(
 saveRDS(adjusted, file.path(out, "proteins_adjusted.rds"))
 write_xlsx(
   list(
-    samples = as.data.frame(proteins$targets),
     dpc_parameters = dpc_parameters,
     detection_summary = detection_summary,
     protein_quality = protein_quality
