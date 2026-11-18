@@ -27,11 +27,9 @@ Outputs:
   - `heatmap`: per cell, network, block, column, module, n, r-equivalent, t, df, p, BH q;
   - `module_nes`: per main-network module, size, and NES and BH q in each arm's training.
 
-After training, 8 module levels track the phenotype at BH, all in the post network. Mitochondrial
-modules track RF echo: M7 (proton-motive-force ATP synthesis, hub NDUFA10), M41 (oxidative
-phosphorylation, hub SDHB), M35 (ATP5PF) and M42 (ATP5MG) are higher where echo is higher (r 0.38
-to 0.42), and M23 (glycogen metabolism) and M33 (PSMD12) lower (r −0.37 and −0.35). M25 (hub
-AOC3) tracks VL echo (r 0.47), and M22 (RNF123) runs against VL CSA (r −0.41), the only CSA
-association. No module's change tracks the phenotype. These are post-training levels, not
-responses, and nominal hits run near or below chance in the main and change networks and about
-twice chance in the pre and post networks.
+Three module levels track the phenotype at BH, all mitochondrial and all with RF muscle. Before
+training, oxidative phosphorylation (main M3, hub SUCLA2) is higher where RF CSA is larger (r 0.35,
+q 0.030). After training, ATP synthesis is higher where RF echo intensity is higher, in the main
+network (M7, hub NDUFA10, r 0.37, q 0.019) and the post network (M6, hub NDUFS7, r 0.41, q 0.0056).
+No module's change tracks the phenotype. Nominal hits run at or below chance (9 of 228 tests
+against 11.4 expected), so these three are leads.

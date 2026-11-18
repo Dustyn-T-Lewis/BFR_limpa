@@ -209,7 +209,7 @@ module_info <- module_info |>
   mutate(
     colour = WGCNA::labels2colors(as.integer(sub("M", "", module))),
     term = str_trunc(str_to_sentence(str_replace_all(
-      str_remove(top_set, "^.*\\|([A-Z]+_)?"), "_", " "
+      str_remove(top_set, "^.*\\|((HALLMARK|REACTOME|GOBP|KEGG)_)?"), "_", " "
     )), 32),
     label = paste0(module, ": ", coalesce(term, "no set"), " | ", hub)
   )

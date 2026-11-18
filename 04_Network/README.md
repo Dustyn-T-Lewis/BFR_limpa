@@ -8,3 +8,8 @@ those groups respond to training, differ between the arms or track muscle size a
   Matheus's PR #24.
 - [`02_module_traits`](02_module_traits/README.md): the module-trait heatmap of the YvO Figure 5
   for each network.
+
+Each network holds 7 or 8 modules (power 8, `deepSplit = 2`, at least 20 proteins), with 39% to
+50% of proteins unassigned. Training raises the oxidative phosphorylation module and lowers the
+calcium transport module in both arms; no module differs between the arms at BH. Three
+mitochondrial module levels track RF size or echo intensity at BH, with nominal hits at chance.

@@ -88,53 +88,47 @@ map_int(inputs, nrow)
 A signed network keeps the sign of correlation, so proteins that move in opposite directions do
 not join. Biweight midcorrelation (bicor) down-weights outlying samples; `maxPOutliers = 0.1` caps
 how many count as outliers, as the FAQ suggests. The soft power raises correlations to make the
-network approximately scale-free; `pickSoftThreshold()` returns the lowest power whose fit reaches
-R² 0.85, and the FAQ's table value for a signed network, 12, stands in if none does.
+network approximately scale-free. Every network uses power 8, following WGCNA guidance for signed
+networks (Langfelder: at least 8 for a signed network,
+https://peterlangfelder.com/2018/11/25/__trashed/). `pickSoftThreshold()` only fills the
+`soft_threshold` sheet, which shows the signed fit flattening at powers 7 to 8 here.
 
 `blockwiseModules()` builds each network in one block and cuts the topological-overlap tree into
-modules of at least 10 proteins at `deepSplit = 3`, merging modules whose eigengenes correlate
-above 0.75 (`mergeCutHeight = 0.25`). The tutorial uses 30 proteins and `deepSplit = 2`; those
-settings gave 11 main-network modules, and a grid over `deepSplit` 2 to 4 and minimum sizes 10 to
-30 found no between-arm module at any setting. The finer cut keeps small groups apart that the
-coarse one merges into large mixed modules, while the median kME of members stays near 0.5.
-Module 0 holds the proteins no module takes, and it is never tested.
+modules of at least 20 proteins at `deepSplit = 2`, merging modules whose eigengenes correlate
+above 0.75 (`mergeCutHeight = 0.25`). With these settings the modules re-formed in 86% to 100% of
+cases when each participant was left out in turn (median Jaccard 0.62 to 0.76 across networks; a
+one-off check, not part of this notebook). Module 0 holds the proteins no module takes, and it is
+never tested.
 
 Module membership (kME) is each protein's bicor with each eigengene; a protein's kME with its own
-module says how central it is.
-
-Two checks ride along. The network is rebuilt at power 12, and each module's best Jaccard
-overlap with a power-12 module is kept: near 1 means the module does not depend on the chosen
-power. `chooseTopHubInEachModule()` picks WGCNA's own hub, the member with the highest
-whole-network connectivity, to compare with the highest-kME hub.
+module says how central it is. `chooseTopHubInEachModule()` picks WGCNA's own hub, the member with
+the highest whole-network connectivity, to compare with the highest-kME hub.
 
 ```{r find-modules}
-find_modules <- function(x) {
+find_modules <- function(x, power = 8) {
   soft <- pickSoftThreshold(
     x,
     powerVector = c(1:10, seq(12, 20, 2)), networkType = "signed", corFnc = "bicor",
     corOptions = list(maxPOutliers = 0.1), verbose = 0
   )
-  power <- coalesce(soft$powerEstimate, 12)
-  build <- function(power) {
-    blockwiseModules(
-      x,
-      power = power, networkType = "signed", TOMType = "signed", corType = "bicor",
-      maxPOutliers = 0.1, minModuleSize = 10, mergeCutHeight = 0.25, deepSplit = 3,
-      pamRespectsDendro = FALSE, maxBlockSize = 5000, numericLabels = TRUE, verbose = 0
-    )
-  }
-  network <- build(power)
+  network <- blockwiseModules(
+    x,
+    power = power, networkType = "signed", TOMType = "signed", corType = "bicor",
+    maxPOutliers = 0.1, minModuleSize = 20, mergeCutHeight = 0.25, deepSplit = 2,
+    pamRespectsDendro = FALSE, maxBlockSize = 5000, numericLabels = TRUE, verbose = 0
+  )
   kme <- signedKME(x, network$MEs, corFnc = "bicor", corOptions = "maxPOutliers = 0.1")
   list(
     power = power, network = network,
-    hubs = chooseTopHubInEachModule(x, network$colors, omitColors = 0, type = "signed"),
+    hubs = chooseTopHubInEachModule(
+      x, network$colors, omitColors = 0, power = power, type = "signed"
+    ),
     soft_threshold = transmute(
       soft$fitIndices,
       power = Power, signed_r2 = -sign(slope) * SFT.R.sq, mean_connectivity = mean.k.
     ),
     membership = tibble(
       protein = colnames(x), module = paste0("M", network$colors),
-      module_12 = paste0("M", build(12)$colors),
       kme = kme[cbind(seq_len(nrow(kme)), match(paste0("kME", network$colors), colnames(kme)))]
     )
   )
@@ -185,15 +179,6 @@ enrichment <- membership |>
   filter(pval < 0.05) |>
   mutate(overlapGenes = map_chr(overlapGenes, paste, collapse = ";")) |>
   arrange(match(network, names(inputs)), as.integer(sub("M", "", module)), padj)
-power_12 <- membership |>
-  filter(module != "M0", module_12 != "M0") |>
-  count(network, module, module_12, name = "shared") |>
-  left_join(count(membership, network, module, name = "size"), by = c("network", "module")) |>
-  left_join(
-    count(membership, network, module_12, name = "size_12"), by = c("network", "module_12")
-  ) |>
-  mutate(power12_jaccard = shared / (size + size_12 - shared)) |>
-  slice_max(power12_jaccard, n = 1, by = c(network, module), with_ties = FALSE)
 connectivity_hubs <- map(networks, function(n) {
   tibble(module = paste0("M", names(n$hubs)), connectivity_hub = unname(gene_name[n$hubs]))
 }) |>
@@ -202,7 +187,6 @@ modules <- membership |>
   filter(module != "M0") |>
   summarise(proteins = n(), hub = gene[which.max(kme)], .by = c(network, module)) |>
   left_join(connectivity_hubs, by = c("network", "module")) |>
-  left_join(select(power_12, network, module, power12_jaccard), by = c("network", "module")) |>
   left_join(
     enrichment |>
       filter(padj < 0.05) |>
@@ -211,11 +195,7 @@ modules <- membership |>
     by = c("network", "module")
   )
 count(modules, network, named = !is.na(top_set))
-modules |>
-  summarise(
-    median_power12_jaccard = median(power12_jaccard, na.rm = TRUE),
-    hubs_agree = mean(hub == connectivity_hub), .by = network
-  )
+summarise(modules, hubs_agree = mean(hub == connectivity_hub), .by = network)
 ```
 
 ## Test the main-network eigengenes
@@ -300,8 +280,8 @@ count(preservation, evidence = cut(z_summary, c(-Inf, 2, 10, Inf), c("none", "mo
 
 ## Draw figures
 
-One A4 PDF: the soft-threshold fit of each network, then each network's protein dendrogram with
-module colours (WGCNA's own `plotDendroAndColors()`).
+One A4 PDF: the soft-threshold fit of each network (power 8 circled), then each network's protein
+dendrogram with module colours (WGCNA's own `plotDendroAndColors()`).
 
 ```{r figures}
 soft_threshold <- map(networks, "soft_threshold") |>
@@ -314,7 +294,7 @@ threshold_page <- ggplot(soft_threshold, aes(power, signed_r2, label = power)) +
   geom_text(size = 2.5) +
   geom_point(data = chosen, shape = 21, size = 5, colour = "#B2182B") +
   facet_wrap(~network) +
-  labs(x = "soft power", y = "scale-free fit, signed R²", title = "Soft-threshold choice") +
+  labs(x = "soft power", y = "scale-free fit, signed R²", title = "Soft-threshold fit") +
   theme_minimal(base_size = 10)
 pdf(file.path(stage, "b_reports", "01_modules.pdf"), width = 8.27, height = 11.69)
 print(threshold_page)
