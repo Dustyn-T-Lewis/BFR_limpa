@@ -21,12 +21,9 @@ here::i_am("04_Network/02_module_traits/a_script/02_module_traits.qmd")
 
 ## Read inputs
 
-The module-trait view of the YvO Figure 5 for each of the four networks from `01_modules`: the
-training and between-leg contrasts, and the association of each module with muscle size and echo
-intensity before training, after training and in change. Inputs: the membership, module names and
-eigengene tests from `01_modules`, the blood-adjusted protein estimates (`proteins_adjusted.rds`)
-for levels, the unadjusted ones (`proteins.rds`) for changes, the stage 02 fit and the phenotype
-table.
+The module-trait view of the YvO Figure 5 puts each module's contrasts and its associations with
+muscle size and echo intensity on one scale, so a module that responds to training can be checked
+against growth.
 
 ```{r read}
 stage <- here("04_Network", "02_module_traits")
@@ -46,12 +43,9 @@ count(module_info, network)
 
 ## Recompute the eigengenes
 
-The main network removes each participant's mean, which a change keeps intact but a level loses,
-so its eigengenes are recomputed with the network's memberships on the blood-adjusted abundance,
-participant kept, and between-person differences in module level stay in. The pre and post
-networks use their own timepoint's samples, as in `01_modules`. Changes, each leg's post minus pre,
-come from the unadjusted abundance instead, and each leg's blood change enters their designs below,
-as stage 02 does; the main network's change is the change in eigengenes recomputed on it.
+The main network removed each participant's mean, which a level association needs, so its
+eigengenes are recomputed with participant kept. Changes come from the unadjusted abundance with
+each leg's blood change in the design, as in stage 02.
 
 ```{r eigengenes}
 legs <- targets |>
@@ -81,19 +75,11 @@ rownames(main_change) <- legs$leg_id
 
 ## Test the phenotype associations
 
-Each module gets one test per outcome, using both arms. Levels are regressed on the outcome with
-arm as a covariate, and participant enters as a block: each person gave two legs, and
-`duplicateCorrelation()` estimates how alike those two legs are so that the second counts for
-less than an independent leg. Changes use the two analyses of `03_Protein_Association`, on each
-leg's eigengene change against its outcome change with the leg's blood change as a covariate:
-pooled, with one intercept per arm, and within participant, with one intercept per participant.
-Applied to one protein's unadjusted change, these designs give the same slope t as that step's
-sample-level designs.
-
-The test is the least-squares t on the outcome coefficient, shown as an r-equivalent,
-sign(t) × √(t² / (t² + df)): the partial correlation of module and outcome given the other terms,
-the same scale as the YvO figure. BH runs within each network, block and outcome across modules.
-Echo intensity falls as muscle quality improves.
+Levels use arm as a covariate and participant as a `duplicateCorrelation()` block, because each
+person gave two legs. Changes use the pooled and within-participant designs of
+`03_Protein_Association`, which they reproduce exactly for a single protein. The t is shown as an
+r-equivalent, sign(t) × √(t² / (t² + df)), the scale of the YvO figure; echo intensity falls as
+muscle quality improves.
 
 ```{r slope-t}
 slope_t <- function(eigengenes, design, block = NULL) {
@@ -163,10 +149,8 @@ filter(phenotype_tests, padj < 0.05) |> arrange(network, padj)
 
 ## Contrasts as correlations
 
-The contrast columns convert each eigengene t from `01_modules` to the same r-equivalent: the five
-stage 02 contrasts for the main network, and the per-arm training means and their paired
-difference for the change network. The difference of the training changes is the BFR × Time
-interaction, so it shares that label.
+The eigengene tests of `01_modules` go on the same r-equivalent scale so contrasts and phenotype sit
+side by side. The difference of the training changes is the BFR × Time interaction.
 
 ```{r contrasts}
 contrast_label <- c(
@@ -198,10 +182,7 @@ cells <- phenotype_tests |>
 
 ## Draw the heatmaps
 
-One page per network. Purple and green show the contrasts, red and blue the phenotype
-associations. A solid outline marks BH p < 0.05 with stars, a dashed outline nominal p < 0.05, and
-bold text |r| ≥ 0.40. The left bar gives each module's size, labelled with its BH-enriched top set
-(or "no set" when none passes) and its hub protein.
+One page per network, so each network's modules read against the same columns.
 
 ```{r heatmap}
 block_order <- c("Training", "BFR vs HLRT", "Pre", "Post", "Change", "Change within participant")
@@ -263,12 +244,9 @@ heatmap_pages <- imap(network_titles, function(title, name) {
 
 ## Draw the scatters
 
-For the main network, the left scatter places each module by its fgsea NES in the two training
-contrasts, with the module's proteins as the set and the stage 02 moderated t as the ranking, as
-in the YvO figure. The right scatter places each module by its eigengene r-equivalent, BFR against
-HLRT, before and after training. It uses the eigengene tests rather than NES: modules are built
-from proteins that move together, and fgsea, which treats proteins as independent, gives
-between-leg NES near ±3 where the eigengene tests are flat.
+Training NES follows the YvO figure. The between-leg scatter uses the eigengene tests instead of
+NES, because fgsea treats co-moving proteins as independent and gives between-leg NES near ±3
+where the eigengene tests are flat.
 
 ```{r scatters}
 main_info <- filter(module_info, network == "main")
@@ -323,7 +301,7 @@ scatter_page <- (
   plot_annotation(title = "Main network: training response and between-leg difference")
 ```
 
-```{r write-figures}
+```{r pdf}
 pdf(file.path(stage, "b_reports", "02_module_traits.pdf"), width = 8.27, height = 11.69)
 walk(heatmap_pages, print)
 print(scatter_page)

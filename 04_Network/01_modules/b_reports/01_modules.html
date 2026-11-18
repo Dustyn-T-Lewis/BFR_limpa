@@ -2253,8 +2253,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>The question: which proteins move together across samples, whether or not a curated set groups them, and do those groups respond to training or differ between the arms? WGCNA (weighted gene co-expression network analysis; Langfelder and Horvath 2008, doi:10.1186/1471-2105-9-559) groups proteins into modules by correlation and summarises each module by its eigengene, the first principal component of its members. Associations with muscle size and echo intensity are in <code>02_module_traits</code>.</p>
-<p>Inputs: the protein estimates with the blood index’s effect removed (<code>proteins_adjusted.rds</code>), the stage 02 design and contrasts, and the gene sets and protein-to-gene map from <code>00_build_gene_sets</code>.</p>
+<p>WGCNA (Langfelder and Horvath 2008, doi:10.1186/1471-2105-9-559) finds proteins that move together whether or not a curated set groups them, and summarises each module by its eigengene, the first principal component of its members. The blood-adjusted estimates keep the blood index out of the correlations.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;01_modules&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
@@ -2274,13 +2273,7 @@ vertical-align: -.125em;
 </section>
 <section id="build-the-four-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="build-the-four-inputs">Build the four inputs</h2>
-<p>Each network answers a different question, so each starts from a different matrix:</p>
-<ul>
-<li>main: all 131 samples with participant removed. Participant explains most of the leading variation, so without this step the network would mostly group proteins by who the biopsy came from. The WGCNA FAQ asks for such effects to be removed first, and the Bioconductor forum answer for paired designs (support.bioconductor.org/p/86486, /p/126464) is <code>removeBatchEffect()</code> with participant as the batch and the treatment-by-time group as the design to protect.</li>
-<li>change: each leg’s post- minus pre-training abundance, so proteins group by whether they change together with training, whatever their level. A leg’s own baseline cancels, and with it the participant.</li>
-<li>pre and post: the samples from one timepoint, participant kept, because these networks feed associations with muscle size across people and between-person differences are the signal.</li>
-</ul>
-<p>Every protein enters every network: the FAQ advises against filtering by differential expression.</p>
+<p>Each network asks a different question. The main network removes participant, which otherwise dominates the correlations, with <code>removeBatchEffect()</code> protecting the treatment-by-time group (WGCNA FAQ; support.bioconductor.org/p/86486); the change network groups proteins that change together; the pre and post networks keep participant, because between-person differences feed the muscle-size associations in <code>02_module_traits</code>. Every protein enters, as the FAQ advises.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>adjusted <span class="ot">&lt;-</span> <span class="fu">removeBatchEffect</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  proteins<span class="sc">$</span>E, <span class="at">batch =</span> targets<span class="sc">$</span>participant, <span class="at">design =</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group, targets)</span>
@@ -2305,38 +2298,37 @@ vertical-align: -.125em;
 </section>
 <section id="find-modules" class="level2">
 <h2 class="anchored" data-anchor-id="find-modules">Find modules</h2>
-<p>A signed network keeps the sign of correlation, so proteins that move in opposite directions do not join. Biweight midcorrelation (bicor) down-weights outlying samples; <code>maxPOutliers = 0.1</code> caps how many count as outliers, as the FAQ suggests. The soft power raises correlations to make the network approximately scale-free. Every network uses power 8, following WGCNA guidance for signed networks (Langfelder: at least 8 for a signed network, https://peterlangfelder.com/2018/11/25/__trashed/). <code>pickSoftThreshold()</code> only fills the <code>soft_threshold</code> sheet, which shows the signed fit flattening at powers 7 to 8 here.</p>
-<p><code>blockwiseModules()</code> builds each network in one block and cuts the topological-overlap tree into modules of at least 20 proteins at <code>deepSplit = 2</code>, merging modules whose eigengenes correlate above 0.75 (<code>mergeCutHeight = 0.25</code>). With these settings the modules re-formed in 86% to 100% of cases when each participant was left out in turn (median Jaccard 0.62 to 0.76 across networks; a one-off check, not part of this notebook). Module 0 holds the proteins no module takes, and it is never tested.</p>
-<p>Module membership (kME) is each protein’s bicor with each eigengene; a protein’s kME with its own module says how central it is. <code>chooseTopHubInEachModule()</code> picks WGCNA’s own hub, the member with the highest whole-network connectivity, to compare with the highest-kME hub.</p>
+<p>A signed bicor network keeps opposite movers apart and down-weights outlying samples. Power 8 follows Langfelder’s guidance for signed networks (at least 8, https://peterlangfelder.com/2018/11/25/__trashed/); <code>pickSoftThreshold()</code> only records the fit, which flattens at powers 7 to 8 here. With modules of at least 20 proteins at <code>deepSplit = 2</code>, the modules re-formed in 86% to 100% of leave-one-participant-out refits (median Jaccard 0.62 to 0.76; a one-off check outside this notebook). M0 holds unassigned proteins and is never tested.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>find_modules <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">power =</span> <span class="dv">8</span>) {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  soft <span class="ot">&lt;-</span> <span class="fu">pickSoftThreshold</span>(</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    x,</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">powerVector =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="fu">seq</span>(<span class="dv">12</span>, <span class="dv">20</span>, <span class="dv">2</span>)), <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>,</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">corOptions =</span> <span class="fu">list</span>(<span class="at">maxPOutliers =</span> <span class="fl">0.1</span>), <span class="at">verbose =</span> <span class="dv">0</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  network <span class="ot">&lt;-</span> <span class="fu">blockwiseModules</span>(</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    x,</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">power =</span> power, <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">TOMType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corType =</span> <span class="st">&quot;bicor&quot;</span>,</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">maxPOutliers =</span> <span class="fl">0.1</span>, <span class="at">minModuleSize =</span> <span class="dv">20</span>, <span class="at">mergeCutHeight =</span> <span class="fl">0.25</span>, <span class="at">deepSplit =</span> <span class="dv">2</span>,</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">pamRespectsDendro =</span> <span class="cn">FALSE</span>, <span class="at">maxBlockSize =</span> <span class="dv">5000</span>, <span class="at">numericLabels =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="dv">0</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  kme <span class="ot">&lt;-</span> <span class="fu">signedKME</span>(x, network<span class="sc">$</span>MEs, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>, <span class="at">corOptions =</span> <span class="st">&quot;maxPOutliers = 0.1&quot;</span>)</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">power =</span> power, <span class="at">network =</span> network,</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">hubs =</span> <span class="fu">chooseTopHubInEachModule</span>(</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>      x, network<span class="sc">$</span>colors, <span class="at">omitColors =</span> <span class="dv">0</span>, <span class="at">power =</span> power, <span class="at">type =</span> <span class="st">&quot;signed&quot;</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">soft_threshold =</span> <span class="fu">transmute</span>(</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>      soft<span class="sc">$</span>fitIndices,</span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">power =</span> Power, <span class="at">signed_r2 =</span> <span class="sc">-</span><span class="fu">sign</span>(slope) <span class="sc">*</span> SFT.R.sq, <span class="at">mean_connectivity =</span> mean.k.</span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">membership =</span> <span class="fu">tibble</span>(</span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">protein =</span> <span class="fu">colnames</span>(x), <span class="at">module =</span> <span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, network<span class="sc">$</span>colors),</span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">kme =</span> kme[<span class="fu">cbind</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(kme)), <span class="fu">match</span>(<span class="fu">paste0</span>(<span class="st">&quot;kME&quot;</span>, network<span class="sc">$</span>colors), <span class="fu">colnames</span>(kme)))]</span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># kME hub and WGCNA&#39;s connectivity hub are both kept, to show where they disagree</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>find_modules <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">power =</span> <span class="dv">8</span>) {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  soft <span class="ot">&lt;-</span> <span class="fu">pickSoftThreshold</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">powerVector =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="fu">seq</span>(<span class="dv">12</span>, <span class="dv">20</span>, <span class="dv">2</span>)), <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">corOptions =</span> <span class="fu">list</span>(<span class="at">maxPOutliers =</span> <span class="fl">0.1</span>), <span class="at">verbose =</span> <span class="dv">0</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  network <span class="ot">&lt;-</span> <span class="fu">blockwiseModules</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">power =</span> power, <span class="at">networkType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">TOMType =</span> <span class="st">&quot;signed&quot;</span>, <span class="at">corType =</span> <span class="st">&quot;bicor&quot;</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">maxPOutliers =</span> <span class="fl">0.1</span>, <span class="at">minModuleSize =</span> <span class="dv">20</span>, <span class="at">mergeCutHeight =</span> <span class="fl">0.25</span>, <span class="at">deepSplit =</span> <span class="dv">2</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">pamRespectsDendro =</span> <span class="cn">FALSE</span>, <span class="at">maxBlockSize =</span> <span class="dv">5000</span>, <span class="at">numericLabels =</span> <span class="cn">TRUE</span>, <span class="at">verbose =</span> <span class="dv">0</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  kme <span class="ot">&lt;-</span> <span class="fu">signedKME</span>(x, network<span class="sc">$</span>MEs, <span class="at">corFnc =</span> <span class="st">&quot;bicor&quot;</span>, <span class="at">corOptions =</span> <span class="st">&quot;maxPOutliers = 0.1&quot;</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">power =</span> power, <span class="at">network =</span> network,</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">hubs =</span> <span class="fu">chooseTopHubInEachModule</span>(</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>      x, network<span class="sc">$</span>colors, <span class="at">omitColors =</span> <span class="dv">0</span>, <span class="at">power =</span> power, <span class="at">type =</span> <span class="st">&quot;signed&quot;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">soft_threshold =</span> <span class="fu">transmute</span>(</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>      soft<span class="sc">$</span>fitIndices,</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">power =</span> Power, <span class="at">signed_r2 =</span> <span class="sc">-</span><span class="fu">sign</span>(slope) <span class="sc">*</span> SFT.R.sq, <span class="at">mean_connectivity =</span> mean.k.</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">membership =</span> <span class="fu">tibble</span>(</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">protein =</span> <span class="fu">colnames</span>(x), <span class="at">module =</span> <span class="fu">paste0</span>(<span class="st">&quot;M&quot;</span>, network<span class="sc">$</span>colors),</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">kme =</span> kme[<span class="fu">cbind</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(kme)), <span class="fu">match</span>(<span class="fu">paste0</span>(<span class="st">&quot;kME&quot;</span>, network<span class="sc">$</span>colors), <span class="fu">colnames</span>(kme)))]</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>networks <span class="ot">&lt;-</span> <span class="fu">map</span>(inputs, find_modules)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -2369,7 +2361,7 @@ vertical-align: -.125em;
 </section>
 <section id="name-the-modules" class="level2">
 <h2 class="anchored" data-anchor-id="name-the-modules">Name the modules</h2>
-<p><code>fgsea::fora()</code> runs a hypergeometric test of each module’s genes against the project’s one set list, with every measured gene as the universe and the size limits of <code>01_run_fgsea_and_fry</code>; its <code>padj</code> is BH within the module. A module is named by its top set when that set passes BH; with thousands of sets some set always reaches nominal p &lt; 0.05, so a nominal set names nothing. Every module also carries its hub, the member with the highest kME. The saved table keeps sets with nominal p &lt; 0.05.</p>
+<p>A module takes the name of its top over-represented set only when that set passes BH, because with thousands of sets some set always reaches nominal p &lt; 0.05. Every module also carries its hub.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>enrichment <span class="ot">&lt;-</span> membership <span class="sc">|&gt;</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -2424,7 +2416,7 @@ vertical-align: -.125em;
 </section>
 <section id="test-the-main-network-eigengenes" class="level2">
 <h2 class="anchored" data-anchor-id="test-the-main-network-eigengenes">Test the main-network eigengenes</h2>
-<p>Eigengenes carry no standard errors, so they go through plain limma, with the stage 02 design (participant fixed, blood index as a covariate) and its five contrasts. The blood term is inert here, since the network’s abundances already have the blood effect removed. With a few dozen rows there is little for <code>eBayes()</code> to borrow, so, as for log2 MPE in <code>05_Mitochondria/02_test_mito</code>, the test is the least-squares t with <code>df.residual</code> degrees of freedom and a 95% interval. BH runs within each contrast across modules.</p>
+<p>Eigengenes carry no standard errors, so they take the stage 02 design and contrasts through plain <code>lmFit()</code>. With a handful of rows <code>eBayes()</code> has nothing to borrow, so the test is the least-squares t, with BH within each contrast.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>plain_t <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, coef) {</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
@@ -2461,7 +2453,7 @@ vertical-align: -.125em;
 </section>
 <section id="test-the-change-network-modules" class="level2">
 <h2 class="anchored" data-anchor-id="test-the-change-network-modules">Test the change-network modules</h2>
-<p>Change-network eigengenes are centred across legs, so their mean is zero by construction and says nothing about training. The training test uses each module’s mean member change per leg instead, in log2 units: its mean in each arm against zero, and BFR minus HLRT paired within participant (participant as a fixed term). BH runs within each test across modules.</p>
+<p>Change-network eigengenes are centred, so their mean is zero by construction; training is tested on each module’s mean member change per leg instead, per arm and paired between arms.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>change_modules <span class="ot">&lt;-</span> <span class="fu">filter</span>(membership, network <span class="sc">==</span> <span class="st">&quot;change&quot;</span>, module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>)</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>member_change <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">sapply</span>(<span class="fu">split</span>(change_modules<span class="sc">$</span>protein, change_modules<span class="sc">$</span>module), <span class="cf">function</span>(ids) {</span>
@@ -2486,7 +2478,7 @@ vertical-align: -.125em;
 </section>
 <section id="check-preservation" class="level2">
 <h2 class="anchored" data-anchor-id="check-preservation">Check preservation</h2>
-<p>Module preservation (Langfelder et al. 2011, doi:10.1371/journal.pcbi.1001057) asks whether the pre-network modules hold in the post-training samples. Zsummary above 10 is strong evidence of preservation, 2 to 10 weak to moderate, below 2 none. 200 permutations, seeded.</p>
+<p>Preservation (Langfelder et al. 2011, doi:10.1371/journal.pcbi.1001057) asks whether pre-training modules hold after training. Zsummary above 10 is strong evidence, 2 to 10 moderate, below 2 none.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>preserved <span class="ot">&lt;-</span> <span class="fu">modulePreservation</span>(</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">pre =</span> <span class="fu">list</span>(<span class="at">data =</span> inputs<span class="sc">$</span>pre), <span class="at">post =</span> <span class="fu">list</span>(<span class="at">data =</span> inputs<span class="sc">$</span>post)),</span>
@@ -2513,7 +2505,7 @@ vertical-align: -.125em;
 </section>
 <section id="draw-figures" class="level2">
 <h2 class="anchored" data-anchor-id="draw-figures">Draw figures</h2>
-<p>One A4 PDF: the soft-threshold fit of each network (power 8 circled), then each network’s protein dendrogram with module colours (WGCNA’s own <code>plotDendroAndColors()</code>).</p>
+<p>The soft-threshold fit shows where power 8 sits; the dendrograms show how much each network leaves unassigned.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>soft_threshold <span class="ot">&lt;-</span> <span class="fu">map</span>(networks, <span class="st">&quot;soft_threshold&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list_rbind</span>(<span class="at">names_to =</span> <span class="st">&quot;network&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -2540,7 +2532,7 @@ vertical-align: -.125em;
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p><code>01_modules.xlsx</code> holds one sheet per table.</p>
+<p><code>02_module_traits</code>, <code>07_Multivariate/02_splsda</code> and <code>08_Plasticity</code> read this workbook.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
