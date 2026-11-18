@@ -2247,7 +2247,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-results" class="level2">
 <h2 class="anchored" data-anchor-id="read-results">Read results</h2>
-<p>This step computes nothing. It draws protein volcanoes ringed by the fgsea sets that survived <code>collapsePathways</code> (<code>main</code>): point colour reads protein BH FDR, the ring reads set fgsea FDR. fry confirms no set on S3’s panels A and D (see <code>01_run_fgsea_and_fry</code>).</p>
+<p>A ringed volcano shows protein and set results on one page: point colour reads protein BH FDR, the ring the collapse-surviving fgsea sets. This step computes nothing.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>tests <span class="ot">&lt;-</span> <span class="fu">here</span>(</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_run_fgsea_and_fry.xlsx&quot;</span></span>
@@ -2273,7 +2273,7 @@ vertical-align: -.125em;
 </section>
 <section id="match-leading-edges-to-labels" class="level2">
 <h2 class="anchored" data-anchor-id="match-leading-edges-to-labels">Match leading edges to labels</h2>
-<p><code>plot_volcano_ring()</code> matches leading-edge genes against point labels, and a label carries an accession when a symbol sits on several proteins. S3 labels with <code>label</code> and S4 with <code>pi_label</code>, so each gets its own copy of the leading edges, each symbol mapped to its representative protein’s label.</p>
+<p><code>plot_volcano_ring()</code> matches leading edges against point labels, which carry an accession when a symbol sits on several proteins, so each label scheme gets its own copy of the leading edges.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>label_columns <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">fdr =</span> <span class="st">&quot;label&quot;</span>, <span class="at">pi =</span> <span class="st">&quot;pi_label&quot;</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>representatives <span class="ot">&lt;-</span> <span class="fu">filter</span>(protein_results, contrast <span class="sc">==</span> contrast[<span class="dv">1</span>], selected)</span>
@@ -2285,20 +2285,20 @@ vertical-align: -.125em;
 </section>
 <section id="build-plot-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="build-plot-inputs">Build plot inputs</h2>
-<p><code>enrichVolcano</code> drops the collection prefix from set names, so a stem that repeats within a contrast gets its collection appended, as in <code>01_</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>ring_sets <span class="ot">&lt;-</span> fgsea_results <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">stem =</span> <span class="fu">sub</span>(<span class="st">&quot;^[A-Z0-9]+_&quot;</span>, <span class="st">&quot;&quot;</span>, pathway),</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">pathway =</span> <span class="fu">if_else</span>(</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">duplicated</span>(stem) <span class="sc">|</span> <span class="fu">duplicated</span>(stem, <span class="at">fromLast =</span> <span class="cn">TRUE</span>), <span class="fu">paste0</span>(pathway, <span class="st">&quot; &quot;</span>, database), pathway</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> contrast</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(contrast, database, pathway, NES, <span class="at">pval =</span> p, padj, <span class="at">size =</span> n)</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>enrichment <span class="ot">&lt;-</span> <span class="fu">map</span>(leading_edges, <span class="cf">function</span>(edges) {</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">as_enrichment</span>(<span class="fu">mutate</span>(ring_sets, <span class="at">leadingEdge =</span> edges), <span class="at">enrichment_test =</span> <span class="st">&quot;fgsea&quot;</span>)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># enrichVolcano drops the collection prefix, so a repeated stem gets its collection, as in 01_.</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>ring_sets <span class="ot">&lt;-</span> fgsea_results <span class="sc">|&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">stem =</span> <span class="fu">sub</span>(<span class="st">&quot;^[A-Z0-9]+_&quot;</span>, <span class="st">&quot;&quot;</span>, pathway),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">pathway =</span> <span class="fu">if_else</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">duplicated</span>(stem) <span class="sc">|</span> <span class="fu">duplicated</span>(stem, <span class="at">fromLast =</span> <span class="cn">TRUE</span>), <span class="fu">paste0</span>(pathway, <span class="st">&quot; &quot;</span>, database), pathway</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> contrast</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(contrast, database, pathway, NES, <span class="at">pval =</span> p, padj, <span class="at">size =</span> n)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>enrichment <span class="ot">&lt;-</span> <span class="fu">map</span>(leading_edges, <span class="cf">function</span>(edges) {</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  enrichVolcano<span class="sc">::</span><span class="fu">as_enrichment</span>(<span class="fu">mutate</span>(ring_sets, <span class="at">leadingEdge =</span> edges), <span class="at">enrichment_test =</span> <span class="st">&quot;fgsea&quot;</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>da <span class="ot">&lt;-</span> <span class="fu">map</span>(label_columns, <span class="cf">function</span>(column) {</span>
@@ -2311,7 +2311,7 @@ vertical-align: -.125em;
 </section>
 <section id="draw-volcanoes" class="level2">
 <h2 class="anchored" data-anchor-id="draw-volcanoes">Draw volcanoes</h2>
-<p><code>make_volcano()</code> draws one ringed volcano. With <code>rank_by = &quot;fdr&quot;</code> it names the five proteins with the lowest BH FDR below 0.05; with <code>rank_by = &quot;pi&quot;</code> the five with the smallest pi-score, each with its mean observed precursors. The ring draws the twelve survivors with the lowest adjusted p. The interaction gets its formula as a subtitle, since a difference of differences has no short name.</p>
+<p>Labels name the five proteins with the lowest BH FDR, or in S4 the smallest pi-score with mean observed precursors, since pi-score’s top proteins are thinly observed. The interaction gets its formula as a subtitle: a difference of differences has no short name.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>contrast_subtitle <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">Modality_x_Time_Interaction =</span> <span class="st">&quot;(BFR_Post - BFR_Pre) - (HLRT_Post - HLRT_Pre)&quot;</span></span>
@@ -2352,30 +2352,29 @@ vertical-align: -.125em;
 <span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>S3 puts the primary question first, then the two training responses and the between-arm comparison. S4 repeats the training responses with labels moved to the pi-score ranking, so no protein named there is a discovery; the mean observed precursors flag thinly observed proteins.</p>
+<p>S3 puts the interaction first, then the two training responses and the between-arm comparison. S4 repeats the training responses labelled by pi-score, which selects nothing.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">here</span>(</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;02_enrich_volcano_fgsea&quot;</span>, <span class="st">&quot;b_reports&quot;</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;02_enrich_volcano_fgsea_figures.pdf&quot;</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">map</span>(</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(<span class="st">&quot;Modality_x_Time_Interaction&quot;</span>, <span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>, <span class="st">&quot;BFR_Post-HLRT_Post&quot;</span>),</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>      make_volcano</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">2</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S3. Protein volcanoes with fgsea sets ringed&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>)</span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(</span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(<span class="fu">map</span>(<span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>), make_volcano, <span class="at">rank_by =</span> <span class="st">&quot;pi&quot;</span>), <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S4. Protein volcanoes labelled by pi-score&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>)</span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;02_enrich_volcano_fgsea&quot;</span>, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;02_enrich_volcano_fgsea.pdf&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">map</span>(</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(<span class="st">&quot;Modality_x_Time_Interaction&quot;</span>, <span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>, <span class="st">&quot;BFR_Post-HLRT_Post&quot;</span>),</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>      make_volcano</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">ncol =</span> <span class="dv">2</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S3. Protein volcanoes with fgsea sets ringed&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>)</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">wrap_plots</span>(<span class="fu">map</span>(<span class="fu">c</span>(<span class="st">&quot;BFR_Post-Pre&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span>), make_volcano, <span class="at">rank_by =</span> <span class="st">&quot;pi&quot;</span>), <span class="at">ncol =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">plot_annotation</span>(<span class="at">title =</span> <span class="st">&quot;S4. Protein volcanoes labelled by pi-score&quot;</span>, <span class="at">tag_levels =</span> <span class="st">&quot;A&quot;</span>)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

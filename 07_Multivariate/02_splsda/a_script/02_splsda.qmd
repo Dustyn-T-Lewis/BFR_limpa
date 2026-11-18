@@ -22,7 +22,7 @@ here::i_am("07_Multivariate/02_splsda/a_script/02_splsda.qmd")
 
 ## Read proteins
 
-The normalised log2 abundances with the blood index's effect removed (`proteins_adjusted.rds`).
+The blood-adjusted abundances keep the blood index out of the panels.
 
 ```{r read}
 stage <- here("07_Multivariate", "02_splsda")
@@ -34,19 +34,11 @@ dim(proteins$E)
 
 ## Build the five comparisons
 
-Sparse PLS-DA (Lê Cao et al. 2011, doi:10.1186/1471-2105-12-253) builds a score from a weighted
-sum of a few proteins, chosen to separate two groups. Each comparison here takes two samples per
-participant, and `multilevel = participant` subtracts each participant's mean first (Liquet et
-al. 2012), so the score compares a person's two samples with each other:
-
-- training in each arm: a leg's sample before training (T1) against after (T2);
-- BFR against HLRT before training: the two legs' T1 samples;
-- BFR against HLRT after training: the two legs' T2 samples;
-- BFR against HLRT on change: each leg's T2 minus T1, one leg against the other.
-
-Participants without both samples a comparison needs drop out of that comparison. A two-factor
-multilevel design on all four samples is not used: with one sample per participant, leg and time,
-its decomposition is computed from the class labels themselves.
+Sparse PLS-DA (Lê Cao et al. 2011, doi:10.1186/1471-2105-12-253) asks whether a few proteins
+together separate two groups. Each comparison takes two samples per participant with a one-factor
+multilevel design (Liquet et al. 2012), so it compares a person's two samples; a two-factor design
+on all four samples is not used, because on this crossover its decomposition is computed from the
+class labels themselves.
 
 ```{r comparisons}
 legs <- targets |>
@@ -97,14 +89,9 @@ map(comparisons, \(cmp) table(cmp$y))
 
 ## Tune, fit and cross-validate
 
-For each comparison, `tune.splsda()` tries panels of 5 to 1,000 proteins on each of two
-components and keeps the size with the lowest balanced error rate (BER, the mean of the two
-groups' error rates; 0.5 is chance). Cross-validation is 5-fold, repeated 50 times, and folds hold
-out whole participants. `splsda()` then fits the chosen panel on everyone, and `perf()` reruns the
-same cross-validation on that model to give the BER under each of the package's three
-classification rules and the cross-validated AUC. The panel size was chosen on the same data, so
-these error rates are somewhat optimistic; there is no permutation reference. Proteins are scaled
-to unit variance (the default).
+Folds hold out whole participants, so the balanced error rate (BER, 0.5 is chance) and AUC are
+judged on people the model has not seen. Panel size is tuned on the same data and there is no
+permutation reference, so the error rates lean optimistic.
 
 ```{r fit}
 keep_grid <- c(5, 10, 20, 50, 100, 200, 500, 1000)
@@ -125,8 +112,7 @@ fits <- map(comparisons, fit_splsda)
 
 ## Error and AUC
 
-One row per comparison and component: panel size, the tuning BER at that size, `perf()`'s mean
-BER under each rule, and the cross-validated AUC.
+BER under each of the package's three distances shows whether a call depends on the rule.
 
 ```{r models}
 model_summary <- imap(fits, function(fit, name) {
@@ -153,9 +139,8 @@ model_summary |> mutate(across(where(is.double), \(x) round(x, 3)))
 
 ## Panels
 
-Every protein the final model selects, with its loading (its weight in the component score; the
-sign gives the direction) and its stability, the share of the 250 cross-validation refits that
-also selected it.
+Stability, the share of the 250 refits that also selected a protein, separates a reproducible
+panel from one fitted to noise.
 
 ```{r panels}
 panels <- imap(fits, function(fit, name) {
@@ -179,12 +164,9 @@ panels |> summarise(proteins = n(), stable_80 = sum(stability >= 0.8),
 
 ## Transfer between arms
 
-Each arm's training panel scores the other arm's legs: the HLRT model classifies BFR legs as before
-or after training, and the BFR model HLRT legs, with `predict(multilevel = participant)` applying
-the same within-person centring. The scored legs belong to the same participants the model was
-fitted on, so the transfer AUC is not out-of-person like the cross-validated AUC and the two are
-not directly comparable. A high transfer AUC says the signature is shared between a person's two
-legs.
+Scoring one arm's legs with the other arm's training panel asks whether the signature is shared.
+The scored legs belong to the participants the model was fitted on, so the transfer AUC is not
+comparable with the cross-validated AUC.
 
 ```{r transfer}
 transfer <- tibble(model_arm = c("HLRT", "BFR"), scored_arm = c("BFR", "HLRT")) |>
@@ -205,11 +187,8 @@ transfer
 
 ## Annotate the training panels
 
-What the two training panels are made of: each panel protein's WGCNA module in the main network of
-`04_Network` (with the module's BH top set), and the gene sets over-represented among component 1's
-proteins, by `fgsea::fora()` against every measured gene with the set list and size limits of
-`04_Network`. Only the training panels are annotated; the arm panels predict at chance, and
-annotating them would describe noise.
+Modules and over-represented sets say what the training panels are made of. The arm panels predict
+at chance, so annotating them would describe noise.
 
 ```{r annotate}
 network_book <- here("04_Network", "01_modules", "c_data", "01_modules.xlsx")
@@ -244,12 +223,8 @@ slice_min(panel_pathways, pval, n = 5, by = comparison) |>
 
 ## Figures
 
-One page per comparison:
-
-- the samples on the two component scores, with a line joining each participant's two samples;
-- the ROC curve of each of the 50 cross-validation repeats, built from component 1's held-out
-  predictions;
-- the 25 largest loadings on each component, shaded by stability.
+One page per comparison; the ROC curve of every repeat shows how much the AUC moves with the
+folds.
 
 ```{r figures}
 #| fig-height: 10

@@ -32,10 +32,11 @@ Outputs:
 Training separates clearly: component 1 BER 0.006 and AUC 1.000 in the HLRT leg (20 proteins), 0.18
 and 0.88 in the BFR leg (1,000 proteins). The HLRT panel scores BFR legs at AUC 0.91 and the BFR
 panel HLRT legs at 0.98, though the scored legs belong to participants the panel was fitted on. The
-BFR panel draws most from the aerobic-respiration module M3 (182 proteins) and the muscle module M1
-(124) and is enriched for oxidative phosphorylation, mitochondrial protein degradation and the TCA
-cycle (BH q < 0.001); the HLRT panel draws 7 proteins from M3, and its top set, arginine and
-proline metabolism, misses BH (q 0.058).
+BFR panel draws most from the oxidative phosphorylation module M3 (227 proteins) and the muscle
+module M1 (128), with 383 in no module, and is enriched for oxidative phosphorylation,
+mitochondrial protein degradation and the TCA cycle (BH q < 0.001); the HLRT panel draws 8
+proteins each from M3 and the calcium transport module M4, and its top set, arginine and proline
+metabolism, misses BH (q 0.058).
 
 The arm comparisons sit near chance: BER 0.39 and AUC 0.67 before training (5 proteins), 0.44 and
 0.60 after, 0.46 and 0.57 on change. Their panels pick the leads of stage 02 (PCYT1A, GPD2,

@@ -2264,7 +2264,7 @@ vertical-align: -.125em;
 </section>
 <section id="rank-the-proteins" class="level2">
 <h2 class="anchored" data-anchor-id="rank-the-proteins">Rank the proteins</h2>
-<p>The ranking of <code>01</code>, sorted from largest t, with a readable name for every set.</p>
+<p>The ranking of <code>01</code>, so the maps draw the same enrichment that was tested.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ranked <span class="ot">&lt;-</span> <span class="fu">map</span>(arms, <span class="cf">function</span>(cn) {</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">with</span>(<span class="fu">filter</span>(protein_results, contrast <span class="sc">==</span> cn, selected), <span class="fu">sort</span>(<span class="fu">set_names</span>(t, gene), <span class="cn">TRUE</span>))</span>
@@ -2346,7 +2346,7 @@ vertical-align: -.125em;
 </section>
 <section id="draw-figures" class="level2">
 <h2 class="anchored" data-anchor-id="draw-figures">Draw figures</h2>
-<p>Four A4 pages per collection. Pathway similarity is computed only among the drawn pathways, since GO:BP holds 1,366 sets.</p>
+<p>Four pages per collection, in one PDF. Pathway similarity is computed only among the drawn pathways, since GO:BP holds 1,366 sets.</p>
 <ul>
 <li>S19, dotplot: BFR and HLRT side by side, colour NES, dot size the share of the pathway in its leading edge.</li>
 <li>S20, enrichment map: a network with pathways as nodes, joined when their proteins overlap, each node a pie split by leg.</li>
@@ -2358,32 +2358,34 @@ vertical-align: -.125em;
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="fu">sprintf</span>(<span class="st">&quot;S%d. %s, %s&quot;</span>, number, title, db))</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>arm_fill <span class="ot">&lt;-</span> <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#2166AC&quot;</span>), <span class="at">name =</span> <span class="cn">NULL</span>)</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">walk</span>(<span class="fu">unique</span>(drawn<span class="sc">$</span>database), <span class="cf">function</span>(db) {</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  show <span class="ot">&lt;-</span> <span class="fu">filter</span>(drawn, database <span class="sc">==</span> db)<span class="sc">$</span>label</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  shown <span class="ot">&lt;-</span> <span class="fu">filter</span>(compared[[db]], Description <span class="sc">%in%</span> show)</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  similar <span class="ot">&lt;-</span> <span class="fu">pairwise_termsim</span>(shown, <span class="at">showCategory =</span> <span class="fu">length</span>(show))</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  pages <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">dotplot</span>(shown, <span class="at">showCategory =</span> <span class="fu">length</span>(show), <span class="at">color =</span> <span class="st">&quot;NES&quot;</span>, <span class="at">label_format =</span> <span class="dv">45</span>) <span class="sc">+</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_gradient2</span>(<span class="at">low =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="at">mid =</span> <span class="st">&quot;white&quot;</span>, <span class="at">high =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">name =</span> <span class="st">&quot;NES&quot;</span>) <span class="sc">+</span></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">figure_title</span>(<span class="dv">19</span>, <span class="st">&quot;Pathways by leg&quot;</span>, db),</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># On the two small collections (Hallmark, GO Slim) few pathways share proteins, and emapplot</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># warns from an internal max() over no edges; the map still draws.</span></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">suppressWarnings</span>(</span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>      <span class="fu">emapplot</span>(similar, <span class="at">showCategory =</span> <span class="fu">length</span>(show), <span class="at">label_format =</span> <span class="dv">30</span>, <span class="at">size_category =</span> <span class="fl">1.6</span>)</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span> arm_fill <span class="sc">+</span> <span class="fu">figure_title</span>(<span class="dv">20</span>, <span class="st">&quot;Enrichment map&quot;</span>, db),</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">treeplot</span>(</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      similar,</span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">showCategory =</span> <span class="fu">length</span>(show), <span class="at">nCluster =</span> <span class="fu">min</span>(<span class="dv">5</span>, <span class="fu">length</span>(show) <span class="sc">-</span> <span class="dv">1</span>), <span class="at">label_format =</span> <span class="dv">32</span>,</span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">fontsize_tiplab =</span> <span class="fl">2.6</span>, <span class="at">fontsize_cladelab =</span> <span class="fl">2.6</span>, <span class="at">hexpand =</span> <span class="fl">0.5</span>, <span class="at">cladelab_offset =</span> <span class="dv">9</span></span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span> arm_fill <span class="sc">+</span> <span class="fu">figure_title</span>(<span class="dv">21</span>, <span class="st">&quot;Pathway tree&quot;</span>, db),</span>
-<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cnetplot</span>(shown, <span class="at">showCategory =</span> <span class="fu">head</span>(show, <span class="dv">5</span>), <span class="at">node_label =</span> <span class="st">&quot;category&quot;</span>) <span class="sc">+</span> arm_fill <span class="sc">+</span></span>
-<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>      <span class="fu">figure_title</span>(<span class="dv">22</span>, <span class="st">&quot;Pathways and their proteins&quot;</span>, db)</span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="fu">paste0</span>(<span class="st">&quot;07_maps_&quot;</span>, db, <span class="st">&quot;.pdf&quot;</span>)), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
-<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">walk</span>(pages, print)</span>
-<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span>
-<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>collection_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Hallmark&quot;</span>, <span class="st">&quot;GO_Slim&quot;</span>, <span class="st">&quot;KEGG_Legacy&quot;</span>, <span class="st">&quot;Reactome&quot;</span>, <span class="st">&quot;GOBP&quot;</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">setequal</span>(collection_order, drawn<span class="sc">$</span>database))</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;07_pathway_maps.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (db <span class="cf">in</span> collection_order) {</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  show <span class="ot">&lt;-</span> <span class="fu">filter</span>(drawn, database <span class="sc">==</span> db)<span class="sc">$</span>label</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  shown <span class="ot">&lt;-</span> <span class="fu">filter</span>(compared[[db]], Description <span class="sc">%in%</span> show)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  similar <span class="ot">&lt;-</span> <span class="fu">pairwise_termsim</span>(shown, <span class="at">showCategory =</span> <span class="fu">length</span>(show))</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  pages <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># dotplot logs its colour scale, built for p-values; NES is signed, so a diverging scale.</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">dotplot</span>(shown, <span class="at">showCategory =</span> <span class="fu">length</span>(show), <span class="at">color =</span> <span class="st">&quot;NES&quot;</span>, <span class="at">label_format =</span> <span class="dv">45</span>) <span class="sc">+</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_gradient2</span>(<span class="at">low =</span> <span class="st">&quot;#2166AC&quot;</span>, <span class="at">mid =</span> <span class="st">&quot;white&quot;</span>, <span class="at">high =</span> <span class="st">&quot;#B2182B&quot;</span>, <span class="at">name =</span> <span class="st">&quot;NES&quot;</span>) <span class="sc">+</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>      <span class="fu">figure_title</span>(<span class="dv">19</span>, <span class="st">&quot;Pathways by leg&quot;</span>, db),</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># On the two small collections (Hallmark, GO Slim) few pathways share proteins, and emapplot</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># warns from an internal max() over no edges; the map still draws.</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">suppressWarnings</span>(</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">emapplot</span>(similar, <span class="at">showCategory =</span> <span class="fu">length</span>(show), <span class="at">label_format =</span> <span class="dv">30</span>, <span class="at">size_category =</span> <span class="fl">1.6</span>)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span> arm_fill <span class="sc">+</span> <span class="fu">figure_title</span>(<span class="dv">20</span>, <span class="st">&quot;Enrichment map&quot;</span>, db),</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">treeplot</span>(</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>      similar,</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">showCategory =</span> <span class="fu">length</span>(show), <span class="at">nCluster =</span> <span class="fu">min</span>(<span class="dv">5</span>, <span class="fu">length</span>(show) <span class="sc">-</span> <span class="dv">1</span>), <span class="at">label_format =</span> <span class="dv">32</span>,</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">fontsize_tiplab =</span> <span class="fl">2.6</span>, <span class="at">fontsize_cladelab =</span> <span class="fl">2.6</span>, <span class="at">hexpand =</span> <span class="fl">0.5</span>, <span class="at">cladelab_offset =</span> <span class="dv">9</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span> arm_fill <span class="sc">+</span> <span class="fu">figure_title</span>(<span class="dv">21</span>, <span class="st">&quot;Pathway tree&quot;</span>, db),</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cnetplot</span>(shown, <span class="at">showCategory =</span> <span class="fu">head</span>(show, <span class="dv">5</span>), <span class="at">node_label =</span> <span class="st">&quot;category&quot;</span>) <span class="sc">+</span> arm_fill <span class="sc">+</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">figure_title</span>(<span class="dv">22</span>, <span class="st">&quot;Pathways and their proteins&quot;</span>, db)</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">walk</span>(pages, print)</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="summary" class="level2">

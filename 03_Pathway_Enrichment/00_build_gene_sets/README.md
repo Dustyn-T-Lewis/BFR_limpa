@@ -21,10 +21,8 @@ Outputs:
 - `c_data/go_bp_measured.rds`: measured genes of every GO:BP set, tested or not, read by `06_`.
 - `c_data/00_build_gene_sets.xlsx`, read by `01_`, `03_` to `06_`, `04_Network` and
   `05_Mitochondria`:
-  - `collection_summary`: per collection, sets in the source, sets tested, median measured size.
   - `set_catalog`: one row per source set; `qualifies` marks the tested ones.
   - `protein_gene_map`: one row per protein; `selected` marks each symbol's representative.
-  - `mapping_summary`: proteins per mapping outcome.
 
 A set is tested with 15 to 500 source genes and at least 15 measured; no set is excluded by name.
 The measured universe is 3,040 symbols. GO Slim keeps the BP slim terms with GO:BP offspring.

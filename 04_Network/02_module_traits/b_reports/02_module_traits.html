@@ -2251,7 +2251,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>The module-trait view of the YvO Figure 5 for each of the four networks from <code>01_modules</code>: the training and between-leg contrasts, and the association of each module with muscle size and echo intensity before training, after training and in change. Inputs: the membership, module names and eigengene tests from <code>01_modules</code>, the blood-adjusted protein estimates (<code>proteins_adjusted.rds</code>) for levels, the unadjusted ones (<code>proteins.rds</code>) for changes, the stage 02 fit and the phenotype table.</p>
+<p>The module-trait view of the YvO Figure 5 puts each module’s contrasts and its associations with muscle size and echo intensity on one scale, so a module that responds to training can be checked against growth.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;02_module_traits&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>modules_book <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;04_Network&quot;</span>, <span class="st">&quot;01_modules&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_modules.xlsx&quot;</span>)</span>
@@ -2270,16 +2270,16 @@ vertical-align: -.125em;
 <pre><code># A tibble: 4 × 2
   network     n
   &lt;chr&gt;   &lt;int&gt;
-1 change     44
-2 main       42
-3 post       46
-4 pre        32</code></pre>
+1 change      7
+2 main        7
+3 post        7
+4 pre         8</code></pre>
 </div>
 </div>
 </section>
 <section id="recompute-the-eigengenes" class="level2">
 <h2 class="anchored" data-anchor-id="recompute-the-eigengenes">Recompute the eigengenes</h2>
-<p>The main network removes each participant’s mean, which a change keeps intact but a level loses, so its eigengenes are recomputed with the network’s memberships on the blood-adjusted abundance, participant kept, and between-person differences in module level stay in. The pre and post networks use their own timepoint’s samples, as in <code>01_modules</code>. Changes, each leg’s post minus pre, come from the unadjusted abundance instead, and each leg’s blood change enters their designs below, as stage 02 does; the main network’s change is the change in eigengenes recomputed on it.</p>
+<p>The main network removed each participant’s mean, which a level association needs, so its eigengenes are recomputed with participant kept. Changes come from the unadjusted abundance with each leg’s blood change in the design, as in stage 02.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>legs <span class="ot">&lt;-</span> targets <span class="sc">|&gt;</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">leg_id =</span> <span class="fu">paste</span>(participant, leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)) <span class="sc">|&gt;</span></span>
@@ -2308,8 +2308,7 @@ vertical-align: -.125em;
 </section>
 <section id="test-the-phenotype-associations" class="level2">
 <h2 class="anchored" data-anchor-id="test-the-phenotype-associations">Test the phenotype associations</h2>
-<p>Each module gets one test per outcome, using both arms. Levels are regressed on the outcome with arm as a covariate, and participant enters as a block: each person gave two legs, and <code>duplicateCorrelation()</code> estimates how alike those two legs are so that the second counts for less than an independent leg. Changes use the two analyses of <code>03_Protein_Association</code>, on each leg’s eigengene change against its outcome change with the leg’s blood change as a covariate: pooled, with one intercept per arm, and within participant, with one intercept per participant. Applied to one protein’s unadjusted change, these designs give the same slope t as that step’s sample-level designs.</p>
-<p>The test is the least-squares t on the outcome coefficient, shown as an r-equivalent, sign(t) × √(t² / (t² + df)): the partial correlation of module and outcome given the other terms, the same scale as the YvO figure. BH runs within each network, block and outcome across modules. Echo intensity falls as muscle quality improves.</p>
+<p>Levels use arm as a covariate and participant as a <code>duplicateCorrelation()</code> block, because each person gave two legs. Changes use the pooled and within-participant designs of <code>03_Protein_Association</code>, which they reproduce exactly for a single protein. The t is shown as an r-equivalent, sign(t) × √(t² / (t² + df)), the scale of the YvO figure; echo intensity falls as muscle quality improves.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>slope_t <span class="ot">&lt;-</span> <span class="cf">function</span>(eigengenes, design, <span class="at">block =</span> <span class="cn">NULL</span>) {</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  correlation <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(block)) {</span>
@@ -2376,34 +2375,29 @@ vertical-align: -.125em;
 <pre><code># A tibble: 8 × 6
   network block                     tests nominal expected    bh
   &lt;chr&gt;   &lt;chr&gt;                     &lt;int&gt;   &lt;int&gt;    &lt;dbl&gt; &lt;int&gt;
-1 main    Pre                         168      10      8.4     0
-2 main    Post                        168       8      8.4     0
-3 main    Change                      168       5      8.4     0
-4 main    Change within participant   168       5      8.4     0
-5 change  Change                      176       7      8.8     0
-6 change  Change within participant   176       4      8.8     0
-7 pre     Pre                         128      13      6.4     0
-8 post    Post                        184      19      9.2     8</code></pre>
+1 main    Pre                          28       2      1.4     1
+2 main    Post                         28       2      1.4     1
+3 main    Change                       28       0      1.4     0
+4 main    Change within participant    28       0      1.4     0
+5 change  Change                       28       0      1.4     0
+6 change  Change within participant    28       1      1.4     0
+7 pre     Pre                          32       3      1.6     0
+8 post    Post                         28       1      1.4     1</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(phenotype_tests, padj <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span> <span class="fu">arrange</span>(network, padj)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 8 × 10
-  network outcome module     n     t    df         p block      r    padj
-  &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;int&gt;     &lt;dbl&gt; &lt;chr&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-1 post    vl_echo M25       65  4.24    62 0.0000756 Post   0.474 0.00348
-2 post    rf_echo M35       65  3.22    62 0.00203   Post   0.379 0.0234 
-3 post    rf_echo M41       65  3.61    62 0.000608  Post   0.417 0.0234 
-4 post    rf_echo M42       65  3.43    62 0.00108   Post   0.399 0.0234 
-5 post    rf_echo M7        65  3.29    62 0.00167   Post   0.385 0.0234 
-6 post    rf_echo M23       65 -3.10    62 0.00290   Post  -0.366 0.0267 
-7 post    rf_echo M33       65 -2.97    62 0.00420   Post  -0.353 0.0322 
-8 post    vl_csa  M22       65 -3.54    62 0.000773  Post  -0.410 0.0356 </code></pre>
+<pre><code># A tibble: 3 × 10
+  network outcome module     n     t    df        p block     r    padj
+  &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;int&gt;    &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;   &lt;dbl&gt;
+1 main    rf_echo M7        65  3.12    62 0.00275  Post  0.368 0.0192 
+2 main    rf_csa  M3        66  2.97    63 0.00424  Pre   0.350 0.0297 
+3 post    rf_echo M6        65  3.53    62 0.000795 Post  0.409 0.00557</code></pre>
 </div>
 </div>
 </section>
 <section id="contrasts-as-correlations" class="level2">
 <h2 class="anchored" data-anchor-id="contrasts-as-correlations">Contrasts as correlations</h2>
-<p>The contrast columns convert each eigengene t from <code>01_modules</code> to the same r-equivalent: the five stage 02 contrasts for the main network, and the per-arm training means and their paired difference for the change network. The difference of the training changes is the BFR × Time interaction, so it shares that label.</p>
+<p>The eigengene tests of <code>01_modules</code> go on the same r-equivalent scale so contrasts and phenotype sit side by side. The difference of the training changes is the BFR × Time interaction.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>contrast_label <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;BFR_Post-Pre&quot;</span> <span class="ot">=</span> <span class="st">&quot;Tr. BFR&quot;</span>, <span class="st">&quot;HLRT_Post-Pre&quot;</span> <span class="ot">=</span> <span class="st">&quot;Tr. HLRT&quot;</span>,</span>
@@ -2434,14 +2428,14 @@ vertical-align: -.125em;
 </section>
 <section id="draw-the-heatmaps" class="level2">
 <h2 class="anchored" data-anchor-id="draw-the-heatmaps">Draw the heatmaps</h2>
-<p>One page per network. Purple and green show the contrasts, red and blue the phenotype associations. A solid outline marks BH p &lt; 0.05 with stars, a dashed outline nominal p &lt; 0.05, and bold text |r| ≥ 0.40. The left bar gives each module’s size, labelled with its BH-enriched top set (or “no set” when none passes) and its hub protein.</p>
+<p>One page per network, so each network’s modules read against the same columns.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>block_order <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Training&quot;</span>, <span class="st">&quot;BFR vs HLRT&quot;</span>, <span class="st">&quot;Pre&quot;</span>, <span class="st">&quot;Post&quot;</span>, <span class="st">&quot;Change&quot;</span>, <span class="st">&quot;Change within participant&quot;</span>)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>module_info <span class="ot">&lt;-</span> module_info <span class="sc">|&gt;</span></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">colour =</span> WGCNA<span class="sc">::</span><span class="fu">labels2colors</span>(<span class="fu">as.integer</span>(<span class="fu">sub</span>(<span class="st">&quot;M&quot;</span>, <span class="st">&quot;&quot;</span>, module))),</span>
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">term =</span> <span class="fu">str_trunc</span>(<span class="fu">str_to_sentence</span>(<span class="fu">str_replace_all</span>(</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">str_remove</span>(top_set, <span class="st">&quot;^.*</span><span class="sc">\\</span><span class="st">|([A-Z]+_)?&quot;</span>), <span class="st">&quot;_&quot;</span>, <span class="st">&quot; &quot;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">str_remove</span>(top_set, <span class="st">&quot;^.*</span><span class="sc">\\</span><span class="st">|((HALLMARK|REACTOME|GOBP|KEGG)_)?&quot;</span>), <span class="st">&quot;_&quot;</span>, <span class="st">&quot; &quot;</span></span>
 <span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    )), <span class="dv">32</span>),</span>
 <span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">label =</span> <span class="fu">paste0</span>(module, <span class="st">&quot;: &quot;</span>, <span class="fu">coalesce</span>(term, <span class="st">&quot;no set&quot;</span>), <span class="st">&quot; | &quot;</span>, hub)</span>
 <span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  )</span>
@@ -2495,7 +2489,7 @@ vertical-align: -.125em;
 </section>
 <section id="draw-the-scatters" class="level2">
 <h2 class="anchored" data-anchor-id="draw-the-scatters">Draw the scatters</h2>
-<p>For the main network, the left scatter places each module by its fgsea NES in the two training contrasts, with the module’s proteins as the set and the stage 02 moderated t as the ranking, as in the YvO figure. The right scatter places each module by its eigengene r-equivalent, BFR against HLRT, before and after training. It uses the eigengene tests rather than NES: modules are built from proteins that move together, and fgsea, which treats proteins as independent, gives between-leg NES near ±3 where the eigengene tests are flat.</p>
+<p>Training NES follows the YvO figure. The between-leg scatter uses the eigengene tests instead of NES, because fgsea treats co-moving proteins as independent and gives between-leg NES near ±3 where the eigengene tests are flat.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>main_info <span class="ot">&lt;-</span> <span class="fu">filter</span>(module_info, network <span class="sc">==</span> <span class="st">&quot;main&quot;</span>)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>main_members <span class="ot">&lt;-</span> <span class="fu">filter</span>(membership, network <span class="sc">==</span> <span class="st">&quot;main&quot;</span>, module <span class="sc">!=</span> <span class="st">&quot;M0&quot;</span>)</span>

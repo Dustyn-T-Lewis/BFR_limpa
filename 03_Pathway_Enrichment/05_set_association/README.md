@@ -21,12 +21,12 @@ quarto render 03_Pathway_Enrichment/05_set_association/a_script/05_set_associati
 Outputs:
 
 - `b_reports/05_set_association.html`: the walkthrough.
-- `b_reports/05_association_<collection>.pdf`: every set-outcome pair at nominal p, smallest p
-  first. S11 (all legs) plots each leg with a line per arm and the within-arm correlations inset;
-  S12 (within participant) plots the tested BFR minus HLRT differences, one point per
-  participant. Panel headers give Spearman r, p and BH q within collection and outcome.
-- `b_reports/05_chance_by_collection.pdf`: S13, nominal hits over the chance expectation by
-  collection, red above 1; labels give observed of tested.
+- `b_reports/05_set_association.pdf`: S13 first, nominal hits over the chance expectation by
+  collection, red above 1, labels giving observed of tested; then per collection (Hallmark,
+  GO_Slim, KEGG_Legacy, Reactome, GOBP) every set-outcome pair at nominal p, smallest p first.
+  S11 (all legs) plots each leg with a line per arm and the within-arm correlations inset; S12
+  (within participant) plots the tested BFR minus HLRT differences, one point per participant.
+  Panel headers give Spearman r, p and BH q within collection and outcome.
 - `c_data/05_set_association.xlsx`, read by no later step:
   - `chance_expectation`: one row per analysis, outcome and collection: nominal hits against chance.
   - `set_association`: one row per set, analysis and outcome: Spearman r, p and BH q.

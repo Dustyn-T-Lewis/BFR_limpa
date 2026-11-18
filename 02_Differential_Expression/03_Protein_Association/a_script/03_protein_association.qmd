@@ -22,10 +22,8 @@ here::i_am(
 
 ## Read proteins and phenotype
 
-The models read `proteins.rds` and carry the blood index as a covariate; the figures and the leg
-correlation use `proteins_adjusted.rds`, with the blood effect removed. `phenotype.csv` holds one
-row per leg: cross-sectional area (CSA) and echo intensity of vastus lateralis (`vl_`) and rectus
-femoris (`rf_`) before and after training, and the total volume load lifted.
+The models carry the blood index as a covariate, so they read `proteins.rds`; the figures and the
+leg correlation take no design, so they read `proteins_adjusted.rds`.
 
 ```{r read}
 stage <- here("02_Differential_Expression", "03_Protein_Association")
@@ -37,8 +35,8 @@ phenotype <- read_csv(here("00_Input", "phenotype.csv"), show_col_types = FALSE)
 
 ## Pair the samples
 
-`legs` has one row per leg with both samples; `delta_pairs` one row per participant with both
-legs.
+A slope on change needs both samples of a leg, and the within slope needs both legs of a
+participant.
 
 ```{r legs}
 legs <- targets |>
@@ -57,9 +55,9 @@ c(legs = nrow(legs), participants_with_both_legs = nrow(delta_pairs))
 
 ## Compute the outcomes
 
-Each outcome is one number per leg: post minus pre for CSA and echo, and total volume load in
-tonnes. Echo intensity falls as muscle composition improves, so a negative change is favourable.
-Treatment comes from the sample table, not the phenotype file.
+Each outcome is one number per leg: the change in vastus lateralis (`vl_`) and rectus femoris
+(`rf_`) cross-sectional area (CSA) and echo intensity, and total volume load in tonnes. Treatment
+comes from the sample table, because leg assignment was counterbalanced.
 
 ```{r outcomes}
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo", "volume_load_t")
@@ -82,9 +80,8 @@ leg_phenotype |>
 
 ## Fit the models
 
-Both models are limpa fits (`dpcDE()`, so the `dpcQuant()` standard errors act as precision
-weights, then `eBayes(robust = TRUE)`). `post` is 1 at T2 and 0 at T1; `x` is the leg's outcome,
-centred on the mean leg.
+Both models are `dpcDE()` fits, so the standard errors act as precision weights, with `post` 1 at
+T2 and `x` the leg's centred outcome. The paired terms follow the limma User's Guide (9.4.1, 9.5.3).
 
 | Term | What it does |
 |---|---|
@@ -104,9 +101,8 @@ centred on the mean leg.
 | average | arm | Does it track the outcome on average over both arms? |
 | within | within | Does the leg that changed more in the outcome change more in protein? |
 
-The within model is not fitted for volume load: dose differs by arm by design, so the difference
-between a participant's two legs is the arm difference. The paired design follows the limma User's
-Guide (sections 9.4.1 and 9.5.3). BH adjustment runs within each outcome and coefficient.
+Volume load has no within model, because dose differs by arm by design. BH runs within each
+outcome and coefficient.
 
 ```{r samples}
 # The one leg without a T2 sample has no outcome change; its x is set to 0, which it never
@@ -124,9 +120,8 @@ models <- list(
 )
 ```
 
-The four arm coefficients are contrasts of the two arm slopes.
-
 ```{r fits}
+# The four arm coefficients are contrasts of the two arm slopes.
 arm_weights <- cbind(
   BFR = c(1, 0), HLRT = c(0, 1), difference = c(1, -1), average = c(0.5, 0.5)
 )
@@ -173,8 +168,8 @@ results |>
   mutate(across(c(slope, t, p, fdr), function(x) signif(x, 3)))
 ```
 
-Neither model has a participant block: a participant's two legs do not correlate in protein change
-(median Spearman r between their BFR and HLRT legs, across proteins).
+Neither model has a participant block, which holds only while a participant's two legs do not
+correlate in protein change.
 
 ```{r leg-correlation}
 delta <- values[, legs$T2] - values[, legs$T1]
@@ -187,9 +182,8 @@ round(median(leg_r), 3)
 
 ## Summarise
 
-One row per outcome and coefficient. Legs used counts the legs a slope is read from: every leg with
-both samples for the arm model, and the legs of participants with both legs for the within model.
-Chance alone gives about 152 nominal hits (5% of 3,042 proteins).
+Nominal counts are read against chance, about 152 hits (5% of 3,042 proteins), because proteins
+co-vary and counts swing widely under the null.
 
 ```{r summary}
 legs_by_model <- c(
@@ -222,10 +216,8 @@ select(outcome_summary, outcome, coefficient, nominal, bh, best_fdr, top_5)
 
 ## Rankings for gene set tests
 
-`association_t` is what `03_Pathway_Enrichment/05_set_association` ranks on: one row per protein,
-one column per ranking (`average_<outcome>`, `difference_<outcome>`), values the moderated t.
-`association_designs` holds, per ranking, the arm design and the contrast vector, so fry there tests
-the same coefficient.
+`03_Pathway_Enrichment/05_set_association` ranks on these moderated t values, and its fry test
+needs the same design and contrast, so both are saved.
 
 ```{r rankings}
 rankings <- expand_grid(coefficient = c("average", "difference"), outcome = outcomes) |>
@@ -245,13 +237,12 @@ association_designs <- pmap(rankings, function(coefficient, outcome, ranking) {
 
 ## Figures
 
-One page per outcome: the three smallest p for each coefficient. Arm coefficients plot each leg's
-protein change against its outcome, with a line fitted in each arm; the within coefficient plots
-what it tests, one point per participant, BFR minus HLRT for both.
+Each panel plots what its coefficient tests: leg change against outcome for the arm slopes, and
+BFR minus HLRT per participant for the within slope.
 
 ```{r figure}
 paired <- delta[, delta_pairs$BFR] - delta[, delta_pairs$HLRT]
-walk(outcomes, function(outcome_name) {
+pages <- map(outcomes, function(outcome_name) {
   outcome_value <- set_names(leg_phenotype[[outcome_name]], legs$leg_id)
   leads <- results |>
     filter(outcome == outcome_name) |>
@@ -275,7 +266,7 @@ walk(outcomes, function(outcome_name) {
   }) |>
     list_rbind() |>
     mutate(panel = factor(panel, levels = unique(panel)))
-  page <- ggplot(points, aes(change, value, colour = series, fill = series)) +
+  ggplot(points, aes(change, value, colour = series, fill = series)) +
     geom_hline(yintercept = 0, linewidth = 0.25, colour = "grey85") +
     geom_vline(xintercept = 0, linewidth = 0.25, colour = "grey85") +
     geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.12, linewidth = 0.5) +
@@ -291,19 +282,17 @@ walk(outcomes, function(outcome_name) {
     ) +
     theme_minimal(base_size = 8) +
     theme(panel.grid.minor = element_blank(), legend.position = "top")
-  pdf(
-    file.path(stage, "b_reports", paste0("03_association_", outcome_name, ".pdf")),
-    width = 8.27, height = 11.69
-  )
-  print(page)
-  invisible(dev.off())
 })
+
+pdf(file.path(stage, "b_reports", "03_protein_association.pdf"), width = 8.27, height = 11.69)
+walk(pages, print)
+invisible(dev.off())
 ```
 
 ## Save results
 
-The rankings and designs travel as rds, because a workbook round trip can change the last bit of a
-double.
+The rankings and designs travel as rds, because a workbook round trip can change the last bit of
+a double.
 
 ```{r write}
 top_leads <- slice_min(results, p, n = 25, by = c(outcome, coefficient), with_ties = FALSE)

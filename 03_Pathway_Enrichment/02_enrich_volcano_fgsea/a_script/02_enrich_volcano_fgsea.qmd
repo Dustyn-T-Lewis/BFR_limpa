@@ -20,9 +20,8 @@ here::i_am("03_Pathway_Enrichment/02_enrich_volcano_fgsea/a_script/02_enrich_vol
 
 ## Read results
 
-This step computes nothing. It draws protein volcanoes ringed by the fgsea sets that survived
-`collapsePathways` (`main`): point colour reads protein BH FDR, the ring reads set fgsea FDR. fry
-confirms no set on S3's panels A and D (see `01_run_fgsea_and_fry`).
+A ringed volcano shows protein and set results on one page: point colour reads protein BH FDR, the
+ring the collapse-surviving fgsea sets. This step computes nothing.
 
 ```{r read}
 tests <- here(
@@ -39,10 +38,8 @@ count(fgsea_results, contrast)
 
 ## Match leading edges to labels
 
-`plot_volcano_ring()` matches leading-edge genes against point labels, and a label carries an
-accession when a symbol sits on several proteins. S3 labels with `label` and S4 with `pi_label`,
-so each gets its own copy of the leading edges, each symbol mapped to its representative
-protein's label.
+`plot_volcano_ring()` matches leading edges against point labels, which carry an accession when a
+symbol sits on several proteins, so each label scheme gets its own copy of the leading edges.
 
 ```{r leading-edge-labels}
 label_columns <- c(fdr = "label", pi = "pi_label")
@@ -55,10 +52,8 @@ leading_edges <- map(label_columns, function(column) {
 
 ## Build plot inputs
 
-`enrichVolcano` drops the collection prefix from set names, so a stem that repeats within a
-contrast gets its collection appended, as in `01_`.
-
 ```{r enrichment}
+# enrichVolcano drops the collection prefix, so a repeated stem gets its collection, as in 01_.
 ring_sets <- fgsea_results |>
   mutate(
     stem = sub("^[A-Z0-9]+_", "", pathway),
@@ -84,11 +79,9 @@ da <- map(label_columns, function(column) {
 
 ## Draw volcanoes
 
-`make_volcano()` draws one ringed volcano. With `rank_by = "fdr"` it names the five proteins with
-the lowest BH FDR below 0.05; with `rank_by = "pi"` the five with the smallest pi-score, each
-with its mean observed precursors. The ring draws the twelve survivors with the lowest adjusted p.
-The interaction gets its formula as a subtitle, since a difference of differences has no short
-name.
+Labels name the five proteins with the lowest BH FDR, or in S4 the smallest pi-score with mean
+observed precursors, since pi-score's top proteins are thinly observed. The interaction gets its
+formula as a subtitle: a difference of differences has no short name.
 
 ```{r volcano-helper}
 contrast_subtitle <- c(
@@ -131,15 +124,13 @@ make_volcano <- function(cn, rank_by = "fdr") {
 }
 ```
 
-S3 puts the primary question first, then the two training responses and the between-arm
-comparison. S4 repeats the training responses with labels moved to the pi-score ranking, so no
-protein named there is a discovery; the mean observed precursors flag thinly observed proteins.
+S3 puts the interaction first, then the two training responses and the between-arm comparison.
+S4 repeats the training responses labelled by pi-score, which selects nothing.
 
 ```{r figures}
 pdf(
   here(
-    "03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports",
-    "02_enrich_volcano_fgsea_figures.pdf"
+    "03_Pathway_Enrichment", "02_enrich_volcano_fgsea", "b_reports", "02_enrich_volcano_fgsea.pdf"
   ),
   width = 8.27, height = 11.69
 )

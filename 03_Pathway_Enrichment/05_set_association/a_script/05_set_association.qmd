@@ -22,7 +22,8 @@ here::i_am("03_Pathway_Enrichment/05_set_association/a_script/05_set_association
 
 ## Read inputs
 
-The protein-association inputs are read in their own section.
+Association asks whether the sets that move with training move more in legs that grew more. The
+protein-association inputs are read in their own section.
 
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "05_set_association")
@@ -40,9 +41,8 @@ table(catalog$database)
 
 ## Pair the samples
 
-`legs` has one row per leg sampled at both time points, with its T1 and T2 sample IDs;
-`delta_pairs` one row per participant with both legs. Treatment comes from the targets, never the
-leg letter: leg assignment was counterbalanced.
+Each leg's score change is T2 minus T1. Treatment comes from the targets, never the leg letter:
+leg assignment was counterbalanced.
 
 ```{r pair-legs}
 legs <- proteins$targets |>
@@ -64,10 +64,10 @@ colnames(delta) <- legs$leg_id
 
 Four outcomes, each a post minus pre change in one leg: cross-sectional area (`csa`) and echo
 intensity (`echo`) of vastus lateralis (`vl`) and rectus femoris (`rf`). Echo falls as muscle
-composition improves. The join is one-to-one, since a duplicated phenotype row would misalign
-every leg.
+composition improves.
 
 ```{r leg-phenotype}
+# One-to-one: a duplicated phenotype row would misalign every leg.
 outcomes <- c("vl_csa", "vl_echo", "rf_csa", "rf_echo")
 leg_phenotype <- legs |>
   left_join(
@@ -96,11 +96,9 @@ paired_outcome <- map(set_names(outcomes), function(name) {
 
 ## Correlate each set
 
-Spearman correlation measures any monotone relationship and is not pulled by single extreme
-legs. `cor.test()` uses AS 89: exact below 10 observations, an Edgeworth approximation at the 32
-and 65 here. `all_legs` correlates every leg's score change with its outcome change, both arms
-together; `within_participant` correlates the BFR minus HLRT differences. BH runs within each
-analysis, outcome and collection.
+Spearman correlation is not pulled by single extreme legs. `cor.test()` uses AS 89, an
+Edgeworth approximation at the 32 and 65 observations here, so p is not exact. BH runs within
+each analysis, outcome and collection.
 
 ```{r set-association}
 # Tied singscore changes make cor.test() warn and fall back to the t approximation.
@@ -128,8 +126,8 @@ set_association <- map(set_names(outcomes), function(name) {
   mutate(fdr = p.adjust(p, "BH"), .by = c(analysis, outcome, database))
 ```
 
-The all-legs analysis counts a participant's two legs as independent. The check is the median
-Spearman r between a participant's BFR and HLRT leg changes, across sets:
+The all-legs analysis counts a participant's two legs as independent; the median Spearman r
+between a participant's BFR and HLRT leg changes, across sets, checks that.
 
 ```{r leg-correlation}
 leg_r <- map_dbl(rownames(delta), function(id) {
@@ -138,7 +136,7 @@ leg_r <- map_dbl(rownames(delta), function(id) {
 round(median(leg_r), 3)
 ```
 
-The same correlation inside each arm, reported but not adjusted, for the all-legs figure insets.
+The same correlation inside each arm, not adjusted, feeds the all-legs figure insets.
 
 ```{r by-arm}
 by_arm <- map(set_names(c("BFR", "HLRT")), function(treatment) {
@@ -154,7 +152,7 @@ by_arm <- map(set_names(c("BFR", "HLRT")), function(treatment) {
 
 ## Compare with chance
 
-The chance expectation is 5% of the sets tested, so the ratio of nominal hits to it reads 1 at
+Sets co-vary, so a nominal count means little alone; its ratio to 5% of the sets tested reads 1 at
 chance, with one denominator per collection as in `04_`.
 
 ```{r chance}
@@ -180,10 +178,9 @@ summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = c(analysis, comparis
 
 ## Rank sets on the protein association
 
-`03_Protein_Association` saves two moderated t rankings per outcome: `average`, the
-protein-on-outcome slope averaged over BFR and HLRT, and `difference`, BFR slope minus HLRT
-slope, for the four change outcomes and volume load. fgsea runs with the sets, size limits and
-seed of `01_run_fgsea_and_fry`, BH within each ranking. Its calls are leads; fry confirms.
+Set scores ignore the protein model's precision weights, so sets are also tested on the protein
+slopes of `03_Protein_Association`, which keep them: `average` over BFR and HLRT and
+`difference`, BFR minus HLRT. As in `01_`, fgsea gives leads and fry confirms.
 
 ```{r association-fgsea}
 association_t <- readRDS(here(
@@ -205,8 +202,8 @@ association_fgsea <- map(set_names(colnames(association_t)), function(column) {
   left_join(select(set_catalog, set_id, database), by = "set_id")
 ```
 
-fry tests the same coefficient with protein correlation kept, on the saved design and contrast of
-each ranking, with that design's `dpcDE()` precision weights.
+fry tests the same coefficient on each ranking's saved design, with that design's `dpcDE()`
+precision weights.
 
 ```{r association-fry}
 association_designs <- readRDS(here(
@@ -239,11 +236,9 @@ association_sets |>
 
 ## Draw figures
 
-`association_figure()` draws every set-outcome pair in one collection reaching nominal p in one
-analysis, smallest p first, twelve to a page. All-legs pages (S11) plot each leg with a line
-fitted inside each arm and the within-arm correlations inset. Within-participant pages (S12) plot
-what was tested, the BFR minus HLRT differences, one point per participant. Pages are built from
-their own rows, because a paginating facet would build every panel for every page.
+Every set-outcome pair at nominal p is drawn, so the reader can judge each correlation by eye.
+S11 plots each leg with a line per arm; S12 plots what was tested, one BFR minus HLRT difference
+per participant.
 
 ```{r association-figure}
 figure_theme <- theme_minimal(base_size = 9) +
@@ -253,11 +248,7 @@ figure_theme <- theme_minimal(base_size = 9) +
     panel.spacing = unit(4, "mm"),
     legend.position = "top"
   )
-write_pdf <- function(pages, name) {
-  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
-  walk(pages, print)
-  invisible(dev.off())
-}
+# Pages are built from their own rows: a paginating facet would build every panel for every page.
 association_figure <- function(which_analysis, number, title, db) {
   hits <- set_association |>
     filter(analysis == which_analysis, database == db, p < 0.05) |>
@@ -326,20 +317,6 @@ association_figure <- function(which_analysis, number, title, db) {
 }
 ```
 
-One PDF per collection.
-
-```{r write-figures}
-walk(unique(catalog$database), function(db) {
-  write_pdf(
-    c(
-      association_figure("all_legs", 11, "Association over all legs", db),
-      association_figure("within_participant", 12, "Within participant, BFR minus HLRT", db)
-    ),
-    paste0("05_association_", db, ".pdf")
-  )
-})
-```
-
 S13 draws each chance ratio as a bar, one panel per analysis and outcome.
 
 ```{r chance-figure}
@@ -361,8 +338,23 @@ chance_plot <- chance_expectation |>
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())
-write_pdf(list(chance_plot), "05_chance_by_collection.pdf")
 chance_plot
+```
+
+One PDF: S13 first, then S11 and S12 per collection.
+
+```{r write-figures}
+collection_order <- c("Hallmark", "GO_Slim", "KEGG_Legacy", "Reactome", "GOBP")
+stopifnot(setequal(collection_order, catalog$database))
+pdf(file.path(stage, "b_reports", "05_set_association.pdf"), width = 8.27, height = 11.69)
+print(chance_plot)
+for (db in collection_order) {
+  walk(association_figure("all_legs", 11, "Association over all legs", db), print)
+  walk(
+    association_figure("within_participant", 12, "Within participant, BFR minus HLRT", db), print
+  )
+}
+invisible(dev.off())
 ```
 
 ## Save results

@@ -20,6 +20,9 @@ here::i_am("03_Pathway_Enrichment/04_set_classification/a_script/04_set_classifi
 
 ## Read inputs
 
+Classification asks whether a set's score separates two groups of samples, a question the
+contrast tests of `01_` do not ask directly.
+
 ```{r read}
 stage <- here("03_Pathway_Enrichment", "04_set_classification")
 set_catalog <- read_excel(
@@ -37,9 +40,8 @@ table(catalog$database)
 
 ## Pair the samples
 
-Every comparison is paired. `by_timepoint` has one row per leg with its T1 and T2 sample IDs;
-`legs` keeps legs sampled at both. Treatment comes from the targets, never the leg letter: leg
-assignment was counterbalanced.
+Every comparison is paired, so participant traits cancel. Treatment comes from the targets, never
+the leg letter: leg assignment was counterbalanced.
 
 ```{r pair-legs}
 by_timepoint <- targets |>
@@ -49,10 +51,8 @@ by_timepoint <- targets |>
 legs <- drop_na(by_timepoint, T1, T2) |> arrange(participant, treatment)
 ```
 
-`pair_by_treatment()` puts each participant's BFR and HLRT legs side by side; participants
-without both drop out.
-
 ```{r pair-participants}
+# Participants without both legs drop out.
 pair_by_treatment <- function(data, column) {
   data |>
     select(participant, treatment, value = all_of(column)) |>
@@ -65,8 +65,6 @@ delta_pairs <- pair_by_treatment(legs, "leg_id")
 c(legs = nrow(legs), baseline = nrow(baseline), post = nrow(post), change = nrow(delta_pairs))
 ```
 
-The change per leg is T2 minus T1, with columns named by leg.
-
 ```{r change-scores}
 delta <- values[, legs$T2] - values[, legs$T1]
 colnames(delta) <- legs$leg_id
@@ -74,13 +72,11 @@ colnames(delta) <- legs$leg_id
 
 ## Define the tasks
 
-Each task holds a score matrix and paired columns `positive` and `negative`, matched by position.
-Pre against post compares time points within each arm; the BFR against HLRT tasks compare a
-participant's two legs at baseline, after training and in change. Baseline is before any
-training, so it shows what the method returns when nothing is there. `favours` is the group an
-AUC above 0.5 points to.
+Five tasks: pre against post in each arm, and BFR against HLRT at baseline, after training and in
+change. Baseline precedes training, so it shows what the method returns when nothing is there.
 
 ```{r tasks}
+# positive and negative are paired by position; favours is the group an AUC above 0.5 points to.
 arm <- split(legs, legs$treatment)
 tasks <- list(
   pre_vs_post_BFR = list(
@@ -112,9 +108,9 @@ tibble(
 
 ## Score each set
 
-The AUC is the probability that a random positive sample scores higher than a random negative
-one (0.5 no separation); it ignores the pairing. The p-value is the paired Wilcoxon signed-rank
-test, which uses it. BH runs within each task and collection.
+The AUC reads as the chance a random positive sample outscores a random negative one, but ignores
+the pairing, so p comes from the paired Wilcoxon signed-rank test. BH runs within each task and
+collection.
 
 ```{r set-auc}
 # pROC::roc() auto-orients, turning an AUC of 0.194 into 0.806; direction = "<" pins it.
@@ -142,9 +138,8 @@ set_auc <- imap(tasks, function(spec, name) {
 
 ## Compare with chance
 
-The chance expectation is 5% of the sets tested, so the ratio of nominal hits to it reads 1 at
-chance. Each collection gets its own denominator, so a 41-set collection is not read against a
-1,366-set one.
+Sets co-vary, so a nominal count means little alone; its ratio to 5% of the sets tested reads 1 at
+chance, with one denominator per collection.
 
 ```{r chance}
 # The ratio divides by the unrounded expectation, not the rounded `expected` column.
@@ -159,10 +154,6 @@ chance_expectation <- set_auc |>
   )
 ```
 
-Nominal hits as a multiple of chance, then the sets passing BH per task. Training moves the pre
-against post ratios well above 1; the BFR against HLRT tasks, baseline included, sit near or
-below it.
-
 ```{r summary}
 chance_expectation |>
   select(comparison, database, ratio) |>
@@ -172,6 +163,8 @@ summarise(chance_expectation, fdr_sig = sum(fdr_sig), .by = comparison)
 
 ## Draw figures
 
+Every set reaching nominal p gets an ROC panel, so the reader sees how weak most separations are.
+
 ```{r figure-helpers}
 figure_theme <- theme_minimal(base_size = 9) +
   theme(
@@ -180,18 +173,10 @@ figure_theme <- theme_minimal(base_size = 9) +
     panel.spacing = unit(4, "mm"),
     legend.position = "top"
   )
-write_pdf <- function(pages, name) {
-  pdf(file.path(stage, "b_reports", name), width = 8.27, height = 11.69)
-  walk(pages, print)
-  invisible(dev.off())
-}
 ```
 
-Each drawn task and collection gets ROC curves for every set reaching nominal p, smallest p first,
-twelve to a page. Pages are built from their own rows, because a paginating facet would build
-every panel for every page.
-
 ```{r roc-figure}
+# Pages are built from their own rows: a paginating facet would build every panel for every page.
 roc_figure <- function(task_name, number, db) {
   spec <- tasks[[task_name]]
   hits <- set_auc |>
@@ -239,19 +224,6 @@ roc_figure <- function(task_name, number, db) {
 }
 ```
 
-One PDF per collection, S6 to S9 for the four tasks other than baseline, which is in the chance
-table only.
-
-```{r write-figures}
-drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
-walk(unique(catalog$database), function(db) {
-  write_pdf(
-    list_flatten(imap(drawn_tasks, function(task_name, i) roc_figure(task_name, 5 + i, db))),
-    paste0("04_classification_", db, ".pdf")
-  )
-})
-```
-
 S10 draws each chance ratio as a bar, one panel per task.
 
 ```{r chance-figure}
@@ -273,8 +245,21 @@ chance_plot <- chance_expectation |>
   ) +
   figure_theme +
   theme(panel.grid.major.y = element_blank())
-write_pdf(list(chance_plot), "04_chance_by_collection.pdf")
 chance_plot
+```
+
+One PDF: S10 first, then S6 to S9 per collection. Baseline is in the chance figure only.
+
+```{r write-figures}
+drawn_tasks <- setdiff(names(tasks), "baseline_BFR_vs_HLRT")
+collection_order <- c("Hallmark", "GO_Slim", "KEGG_Legacy", "Reactome", "GOBP")
+stopifnot(setequal(collection_order, catalog$database))
+pdf(file.path(stage, "b_reports", "04_set_classification.pdf"), width = 8.27, height = 11.69)
+print(chance_plot)
+for (db in collection_order) {
+  for (i in seq_along(drawn_tasks)) walk(roc_figure(drawn_tasks[i], 5 + i, db), print)
+}
+invisible(dev.off())
 ```
 
 ## Save results

@@ -2247,7 +2247,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-proteins" class="level2">
 <h2 class="anchored" data-anchor-id="read-proteins">Read proteins</h2>
-<p><code>proteins</code> holds the normalised log2 abundances of 3,042 proteins in 131 samples, with the blood index’s effect removed (<code>proteins_adjusted.rds</code>), and the sample table.</p>
+<p>The blood-adjusted abundances keep the blood index from driving a component.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;07_Multivariate&quot;</span>, <span class="st">&quot;01_pca&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins_adjusted.rds&quot;</span>))</span>
@@ -2261,7 +2261,7 @@ vertical-align: -.125em;
 </section>
 <section id="remove-each-participants-mean" class="level2">
 <h2 class="anchored" data-anchor-id="remove-each-participants-mean">Remove each participant’s mean</h2>
-<p>Participant explains about half of the first MDS coordinate in <code>02_Quantification</code>, so a plain PCA mostly separates people. <code>pca(multilevel = participant)</code> first subtracts each participant’s mean profile (Liquet et al. 2012, doi:10.1186/1471-2105-13-325), leaving only how a person’s four samples differ from one another: training, leg and noise. Proteins stay unscaled, as in the MDS plot.</p>
+<p>Participant explains about half of the first MDS coordinate in <code>02_Quantification</code>, so a plain PCA mostly separates people. The multilevel PCA (Liquet et al. 2012, doi:10.1186/1471-2105-13-325) subtracts each participant’s mean first, leaving how a person’s four samples differ.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>components <span class="ot">&lt;-</span> <span class="fu">pca</span>(<span class="fu">t</span>(proteins<span class="sc">$</span>E), <span class="at">ncomp =</span> <span class="dv">10</span>, <span class="at">multilevel =</span> targets<span class="sc">$</span>participant)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>variance <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
@@ -2288,7 +2288,7 @@ vertical-align: -.125em;
 </section>
 <section id="what-drives-the-components" class="level2">
 <h2 class="anchored" data-anchor-id="what-drives-the-components">What drives the components</h2>
-<p>For the first four components, the share of each component’s variance that timepoint, treatment and group explain, from a linear model on each factor.</p>
+<p>The R² of each design factor on PC1 to PC4 says whether training or something else drives the within-person variation.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>scores <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(components<span class="sc">$</span>variates<span class="sc">$</span>X[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="at">rownames =</span> <span class="st">&quot;sample_id&quot;</span>) <span class="sc">|&gt;</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(targets, <span class="at">by =</span> <span class="st">&quot;sample_id&quot;</span>)</span>
@@ -2313,7 +2313,7 @@ vertical-align: -.125em;
 </section>
 <section id="figure" class="level2">
 <h2 class="anchored" data-anchor-id="figure">Figure</h2>
-<p>Samples on the first two components, coloured by arm, open before training and filled after. A line joins each leg’s two samples, so its direction is that leg’s training change. The bars give the 20 proteins with the largest loadings on each component, the weight each carries in the component score.</p>
+<p>Joining each leg’s two samples shows its training change on the components, and the largest loadings say which proteins the components are made of.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>arm_colours <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">BFR =</span> <span class="st">&quot;#D55E00&quot;</span>, <span class="at">HLRT =</span> <span class="st">&quot;#0072B2&quot;</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>pc_label <span class="ot">&lt;-</span> <span class="cf">function</span>(pc) <span class="fu">sprintf</span>(<span class="st">&quot;%s (%.1f%%)&quot;</span>, pc, <span class="dv">100</span> <span class="sc">*</span> components<span class="sc">$</span>prop_expl_var<span class="sc">$</span>X[[pc]])</span>
@@ -2359,12 +2359,11 @@ vertical-align: -.125em;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">variance =</span> variance,</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">structure =</span> pc_structure,</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">scores =</span> <span class="fu">select</span>(scores, sample_id, participant, leg, treatment, timepoint, PC1<span class="sc">:</span>PC5),</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">loadings =</span> pc_loadings</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_pca.xlsx&quot;</span>)</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">scores =</span> <span class="fu">select</span>(scores, sample_id, participant, leg, treatment, timepoint, PC1<span class="sc">:</span>PC5),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">loadings =</span> pc_loadings</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;01_pca.xlsx&quot;</span>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

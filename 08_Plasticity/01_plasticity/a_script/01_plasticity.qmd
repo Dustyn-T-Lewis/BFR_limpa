@@ -20,15 +20,10 @@ here::i_am("08_Plasticity/01_plasticity/a_script/01_plasticity.qmd")
 set.seed(2026)
 ```
 
-## Question
+## Read inputs
 
 Earlier stages test BFR against HLRT one protein, set or module at a time and find no between-arm
-hit. This step asks four broader questions of the two training responses: how far each leg moved
-(magnitude), whether the legs moved the same proteins the same way (direction), whether pathways,
-modules and rankings agree (coherence), and whether any response summary tracks muscle growth. It
-gathers the classification results and the BFR against HLRT leads on one page.
-
-## Read inputs
+hit, so this step compares the two training responses as wholes.
 
 ```{r read}
 stage <- here("08_Plasticity", "01_plasticity")
@@ -38,7 +33,7 @@ d <- readRDS(here("02_Differential_Expression", "01_Design", "c_data", "design.r
 fit <- readRDS(here("02_Differential_Expression", "02_Differential", "c_data", "fit.rds"))
 dep <- read_excel(
   here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
-  "DEP_matrix"
+  "protein_results"
 )
 gene_sets <- readRDS(here("03_Pathway_Enrichment", "00_build_gene_sets", "c_data",
   "gene_sets.rds"))
@@ -69,8 +64,8 @@ origin_lines <- list(
 
 ### Training hits
 
-Hit counts per arm and direction, at BH 0.05 and at nominal p 0.05. A difference in counts is not
-a test of a difference between arms; the cross-fit and the signature score below are.
+A difference in hit counts is not a test of a difference between arms; the cross-fit and the
+directional change below are.
 
 ```{r counts}
 counts <- expand_grid(arm = c("BFR", "HLRT"), level = c("FDR < 0.05", "p < 0.05")) |>
@@ -87,9 +82,8 @@ counts
 
 ### Leg changes
 
-Each leg's change is T2 minus T1 in `proteins_adjusted.rds` (blood effect removed). The cross-fit
-and the signature test use the 32 participants with all four biopsies, so every comparison is
-within person.
+The cross-fit and the directional test use the participants with all four biopsies, so every
+comparison is within person.
 
 ```{r changes}
 leg_samples <- adjusted$targets |>
@@ -111,16 +105,12 @@ c(legs = nrow(leg_samples), complete_participants = n_complete, bh_size)
 
 ### Cross-fitted magnitude
 
-Choosing proteins by one arm and measuring that arm on the same people inflates it. So each of 200
-random splits sends half the participants to choose the proteins and the other half to measure both
-arms' median |log2 change| on them, as in the YvO Figure 4C. Sets run from all proteins to the top
-500 and 250 and the BH set (as many proteins as the choosing arm's BH hits), chosen once by HLRT and
-once by BFR. `split_low` and `split_high` are the middle 95% of splits, not a confidence interval.
-The swap p compares the ratio with 200 data sets in which each participant's BFR and HLRT labels
-are swapped at random, each summarised over 200 splits like the observed ratio, and is +1
-corrected.
+Choosing proteins by one arm and measuring that arm on the same people inflates it, so half the
+participants choose and the other half measure, over 200 splits (as in the YvO Figure 4C). The swap
+p compares the ratio with 200 data sets in which each participant's arm labels are swapped.
 
 ```{r crossfit}
+# split_low and split_high are the middle 95% of splits, not a confidence interval
 crossfit <- function(x_bfr, x_hlrt, splits) {
   map(seq_len(splits), function(split) {
     half <- sample(n_complete, n_complete %/% 2)
@@ -169,66 +159,55 @@ magnitude <- split_results |>
 mutate(magnitude, across(where(is.double), function(x) signif(x, 3)))
 ```
 
-### Signature score
+### Directional change
 
-The training direction is the mean change across both arms. For each participant it is learned
-from the other participants only, over a set fixed before any comparison: the proteins whose
-average training change across both arms passes BH 0.05 in the limpa model. Each leg's score is its
-change projected onto that direction; 1 means it moved as far as the average leg of the others.
-BFR against HLRT is a paired t on one number per participant and a sign-flip test over 5,000 random
-flips of the per-participant differences, +1 corrected.
+Proteins are chosen by a time-only model that pools the arms, which cannot bias the between-arm
+difference because swapping a participant's legs leaves the pooled effect unchanged. Each leg's
+change on them, signed by the training direction, says how far that leg moved the way training
+moves the proteome.
 
-```{r average-fit}
-coefficient_fit <- dpcDE(proteins, d$design, plot = FALSE)
-proteins$weights <- coefficient_fit$EList$weights
-average <- makeContrasts(average = (BFR_T2 - BFR_T1 + HLRT_T2 - HLRT_T1) / 2, levels = d$design)
-average_fit <- topTable(eBayes(contrasts.fit(coefficient_fit, average), robust = TRUE),
-  number = Inf, sort.by = "none")
+```{r time-only}
+time_design <- model.matrix(~ 0 + participant + timepoint + blood, proteins$targets)
+time_fit <- topTable(eBayes(dpcDE(proteins, time_design, plot = FALSE), robust = TRUE),
+  coef = "timepointT2", number = Inf, sort.by = "none")
+time_rows <- time_fit$adj.P.Val < 0.05
+time_sign <- sign(time_fit$logFC[time_rows])
 training_set <- list(
-  up = rownames(average_fit)[average_fit$adj.P.Val < 0.05 & average_fit$logFC > 0],
-  down = rownames(average_fit)[average_fit$adj.P.Val < 0.05 & average_fit$logFC < 0]
+  up = rownames(time_fit)[time_rows & time_fit$logFC > 0],
+  down = rownames(time_fit)[time_rows & time_fit$logFC < 0]
 )
 lengths(training_set)
 ```
 
-```{r signature}
-signature_rows <- rownames(change_bfr) %in% unlist(training_set)
-project <- function(x, direction) sum(x[signature_rows] * direction) / sum(direction^2)
-signature_scores <- map(seq_len(n_complete), function(i) {
-  direction <- rowMeans((change_bfr + change_hlrt)[signature_rows, -i] / 2)
-  tibble(
-    participant = complete_legs$participant[i],
-    BFR = project(change_bfr[, i], direction),
-    HLRT = project(change_hlrt[, i], direction)
-  )
-}) |>
-  list_rbind()
-score_difference <- signature_scores$BFR - signature_scores$HLRT
-flips <- replicate(5000, mean(score_difference * sample(c(-1, 1), n_complete, replace = TRUE)))
-signature_test <- tibble(
-  test = "signature score", proteins = sum(signature_rows),
-  bfr = mean(signature_scores$BFR), hlrt = mean(signature_scores$HLRT),
-  ratio = bfr / hlrt, p = t.test(score_difference)$p.value,
-  swap_p = (1 + sum(abs(flips) >= abs(mean(score_difference)))) / (1 + length(flips))
+```{r directional}
+directional <- function(x) colMeans(x[time_rows, , drop = FALSE] * time_sign)
+directional_pairs <- tibble(
+  participant = complete_legs$participant,
+  BFR = directional(change_bfr), HLRT = directional(change_hlrt)
 )
-signature_test
+directional_test <- tibble(
+  test = "directional change", proteins = sum(time_rows),
+  bfr = mean(directional_pairs$BFR), hlrt = mean(directional_pairs$HLRT),
+  ratio = bfr / hlrt,
+  p = t.test(directional_pairs$BFR, directional_pairs$HLRT, paired = TRUE)$p.value
+)
+directional_test
 ```
 
 ### fry on the interaction
 
-If BFR responds less, the proteins that rise with training rise less in BFR, so their interaction
-(BFR change minus HLRT change) leans negative, and those that fall lean positive. fry tests each set
-in the limpa model with the blood covariate. Choosing sets by the average of the two arms does not
-bias the interaction, because swapping a participant's legs leaves the average unchanged.
+If BFR responds less, the interaction of the rising training proteins leans negative and that of
+the falling ones positive. fry tests both sets in the stage 02 model.
 
 ```{r fry-interaction}
+proteins$weights <- fit$EList$weights
 interaction_contrast <- d$contrasts[, ct_inter]
 interaction_change <- set_names(dep_stat(ct_inter, "logFC"), dep$protein)
 fry_interaction <- fry(proteins, training_set, d$design, interaction_contrast, robust = TRUE,
   sort = "none") |>
   as_tibble(rownames = "set") |>
   mutate(
-    median_training = map_dbl(training_set, function(rows) median(average_fit[rows, "logFC"])),
+    median_training = map_dbl(training_set, function(rows) median(time_fit[rows, "logFC"])),
     median_interaction = map_dbl(training_set, function(rows) median(interaction_change[rows]))
   )
 fry_interaction
@@ -268,7 +247,7 @@ magnitude_plot <- bars |>
     title = "c  Cross-fitted magnitude",
     subtitle = "Labels: BFR/HLRT ratio, middle 95% of 200 splits, swap p") +
   theme(legend.position = "top")
-score_plot <- signature_scores |>
+score_plot <- directional_pairs |>
   pivot_longer(c(BFR, HLRT), names_to = "arm", values_to = "score") |>
   ggplot(aes(arm, score, group = participant)) +
   geom_hline(yintercept = 0, colour = "grey80") +
@@ -276,9 +255,9 @@ score_plot <- signature_scores |>
   geom_point(aes(colour = arm), size = 1.2, show.legend = FALSE) +
   stat_summary(aes(group = 1), fun = mean, geom = "line", linewidth = 1) +
   scale_colour_manual(values = arm_colours) +
-  labs(x = NULL, y = "Signature score", title = "b  Signature score",
-    subtitle = sprintf("BFR/HLRT %.2f, paired p %.3f, sign-flip p %.3f", signature_test$ratio,
-      signature_test$p, signature_test$swap_p))
+  labs(x = NULL, y = "Directional mean change (log2)", title = "b  Directional change",
+    subtitle = sprintf("%d training-responsive proteins\nBFR/HLRT %.2f, paired p %.2f",
+      directional_test$proteins, directional_test$ratio, directional_test$p))
 page_magnitude <- (count_plot | score_plot) / magnitude_plot / plot_spacer() +
   plot_layout(heights = c(1, 1.1, 0.5)) +
   plot_annotation(title = "Magnitude: how far each leg moved")
@@ -287,11 +266,8 @@ page_magnitude
 
 ## Direction
 
-Proteins that pass BH in either arm's training, BFR change against HLRT change. The Deming line
-is descriptive only: most points are HLRT hits chosen for a large HLRT change, so their HLRT values
-are inflated and the slope is biased low. The cross-fit above is the fair estimate of relative
-size. Each quadrant is tested for over-represented Hallmark, GO Slim and Reactome sets
-(`fgsea::fora()`, universe every measured gene, 10 to 500 members).
+Whether the legs moved the same proteins the same way, and what each quadrant holds. The Deming
+slope is descriptive: most points are HLRT hits chosen for a large HLRT change, so it is biased low.
 
 ```{r direction}
 bh_in <- function(bfr_fdr, hlrt_fdr) {
@@ -369,12 +345,8 @@ page_direction
 
 ## Coherence
 
-RRHO2 compares the two training rankings (signed -log10 p, from stage 02) across every threshold:
-bottom left is up in both, top right down in both. fgsea NES of each Hallmark, GO Slim and Reactome
-set (from `03_Pathway_Enrichment/01_run_fgsea_and_fry`) and the change of each main-network WGCNA
-module eigengene (from `04_Network/01_modules`) are compared between arms. The rho and r are
-descriptive, because sets overlap and modules share proteins. fry then asks whether HLRT's
-training hits, split by direction, move together in the BFR training contrast.
+Whether rankings, sets and modules agree between the arms. The rho and r are descriptive, because
+sets overlap and modules share proteins; fry asks whether HLRT's hits move together in BFR.
 
 ```{r coherence}
 signed_score <- function(ct) -log10(dep_stat(ct, "P.Value")) * sign(dep_stat(ct, "logFC"))
@@ -445,12 +417,11 @@ nes_plot <- ggplot(nes, aes(nes_hlrt, nes_bfr, colour = sig)) +
 module_plot <- ggplot(modules, aes(change_hlrt, change_bfr)) +
   origin_lines +
   geom_point(aes(size = proteins), alpha = 0.6) +
-  geom_text_repel(data = filter(modules, fdr_bfr < 0.05 | fdr_hlrt < 0.05),
-    aes(label = paste(module, hub)), size = 2.1, max.overlaps = 30) +
+  geom_text_repel(aes(label = paste(module, hub)), size = 2.1, max.overlaps = 30) +
   scale_size_area(max_size = 5) +
   labs(x = "HLRT eigengene change", y = "BFR eigengene change", size = "Proteins",
     title = "c  Main-network module change",
-    subtitle = sprintf("Pearson r %.2f over %d modules; labelled: BH in either arm", module_r,
+    subtitle = sprintf("Pearson r %.2f over %d modules; labels: module and hub", module_r,
       nrow(modules))) +
   theme(legend.position = "bottom")
 bfr_rank <- rank(-fit$t[, ct_bfr])
@@ -472,8 +443,8 @@ page_coherence
 
 ## Classification
 
-Cross-validated AUC of component 1 for each multilevel sPLS-DA comparison in
-`07_Multivariate/02_splsda`. Panel sizes were tuned on the same data, so AUCs lean optimistic.
+The sPLS-DA AUCs of `07_Multivariate/02_splsda` set the between-arm comparisons against training on
+one page. Panel sizes were tuned on the same data, so they lean optimistic.
 
 ```{r classification}
 comparison_names <- c(
@@ -490,12 +461,8 @@ classification
 
 ## BFR against HLRT leads
 
-Proteins at nominal p < 0.05 for the interaction are leads; none passes BH. Circled points are the
-component 1 panel of the sPLS-DA change comparison. The set panel shows the 12 Hallmark, GO Slim and
-Reactome sets with the smallest fgsea p on the interaction in `03_Pathway_Enrichment`. fgsea
-shuffles proteins as if independent, so its q values run small for correlated sets; fry, in the
-same step, passes no interaction set at BH. The last panel shows the interaction of the
-average-response sets tested by fry above.
+No interaction passes BH, so proteins at nominal p < 0.05 are leads. fgsea treats correlated
+proteins as independent and fry passes no interaction set, so the fgsea sets are leads too.
 
 ```{r leads}
 change_panel <- read_excel(splsda_file, "panels") |>
@@ -553,17 +520,17 @@ volcano <- ggplot(volcano_data, aes(interaction_logfc, -log10(interaction_p))) +
       "BH; circled: sPLS-DA change panel"), nrow(leads), sum(leads$interaction_logfc > 0),
       sum(leads$interaction_logfc < 0)))
 fry_data <- imap(training_set, function(rows, set) {
-  tibble(set = paste("Average", set), interaction_logfc = interaction_change[rows])
+  tibble(set = paste("Training", set), interaction_logfc = interaction_change[rows])
 }) |>
   list_rbind()
 fry_label <- with(fry_interaction, sprintf("%s: %d proteins, median %+.3f, %s, p %.2f",
-  paste("Average", set), NGenes, median_interaction, Direction, PValue))
+  paste("Training", set), NGenes, median_interaction, Direction, PValue))
 fry_plot <- ggplot(fry_data, aes(interaction_logfc, fill = set)) +
   geom_vline(xintercept = 0, colour = "grey60") +
   geom_histogram(bins = 50, alpha = 0.7, position = "identity") +
-  scale_fill_manual(values = c(`Average up` = "#B2182B", `Average down` = "#2166AC")) +
+  scale_fill_manual(values = c(`Training up` = "#B2182B", `Training down` = "#2166AC")) +
   labs(x = "Interaction log2FC", y = "Proteins", fill = NULL,
-    title = "d  Interaction of the average-response sets (fry)",
+    title = "d  Interaction of the training-responsive sets (fry)",
     subtitle = paste(fry_label, collapse = "\n")) +
   theme(legend.position = "top")
 page_leads <- (class_plot | set_plot) / volcano / fry_plot +
@@ -574,24 +541,11 @@ page_leads
 
 ## Response against growth
 
-Three per-leg response summaries against each leg's change in VL and RF CSA and echo intensity
-(post minus pre): the signature score, MPE change and slow-fraction change (T2 minus T1). A leg of a
-complete participant takes its leave-one-participant-out score from above; the one leg of the
-participant missing a biopsy is scored on the direction of all 32 complete participants. Spearman
-rho is computed within each arm, and pooled within participant after centring each participant's
-two legs. Centring makes the two legs mirror images, so the pooled p comes from 5,000 random swaps
-of the response between a participant's legs (+1 corrected), not from `cor.test()`.
+Whether a leg that moved further also grew more. Centring a participant's two legs makes them
+mirror images, so the pooled within-participant p comes from 5,000 swaps of the response between a
+participant's legs, not from `cor.test()`.
 
 ```{r growth-legs}
-full_direction <- rowMeans((change_bfr + change_hlrt)[signature_rows, ] / 2)
-signature_legs <- signature_scores |>
-  pivot_longer(c(BFR, HLRT), names_to = "treatment", values_to = "signature")
-incomplete <- leg_samples |>
-  filter(!participant %in% complete_legs$participant) |>
-  mutate(signature = map_dbl(T2, function(s) {
-    project(leg_change[, match(s, leg_samples$T2)], full_direction)
-  })) |>
-  select(participant, treatment, signature)
 per_sample <- function(sheet_file, sheet, value) {
   read_excel(sheet_file, sheet) |>
     select(participant, leg, timepoint, value = all_of(value)) |>
@@ -607,7 +561,7 @@ slow_change <- per_sample(
 )
 legs <- leg_samples |>
   select(participant, leg, treatment) |>
-  left_join(bind_rows(signature_legs, incomplete), by = c("participant", "treatment")) |>
+  mutate(directional_change = directional(leg_change)) |>
   left_join(rename(mpe_change, mpe_change = change), by = c("participant", "leg")) |>
   left_join(rename(slow_change, slow_change = change), by = c("participant", "leg")) |>
   left_join(
@@ -623,7 +577,7 @@ count(legs, treatment)
 ```
 
 ```{r growth-tests}
-responses <- c(signature = "Signature score", mpe_change = "MPE change",
+responses <- c(directional_change = "Directional change", mpe_change = "MPE change",
   slow_change = "Slow-fraction change")
 outcomes <- c(vl_csa = "VL CSA change (cm²)", rf_csa = "RF CSA change (cm²)",
   vl_echo = "VL echo change (a.u.)", rf_echo = "RF echo change (a.u.)")
@@ -684,9 +638,7 @@ page_growth <- growth_plot / plot_spacer() + plot_layout(heights = c(1, 0.3)) +
 page_growth
 ```
 
-## Save results
-
-```{r write}
+```{r pdf}
 pdf(file.path(stage, "b_reports", "01_plasticity.pdf"), width = 8.27, height = 11.69)
 print(page_magnitude)
 print(page_direction)
@@ -694,10 +646,14 @@ print(page_coherence)
 print(page_leads)
 print(page_growth)
 invisible(dev.off())
+```
 
+## Save results
+
+```{r write}
 tests <- bind_rows(
-  signature_test,
-  transmute(fry_interaction, test = paste("fry interaction, average", set), proteins = NGenes,
+  directional_test,
+  transmute(fry_interaction, test = paste("fry interaction, training", set), proteins = NGenes,
     median_training, median_interaction, direction = Direction, p = PValue)
 )
 write_xlsx(
@@ -710,7 +666,6 @@ write_xlsx(
     direction = direction_hits,
     quadrant_sets = quadrant_sets,
     coherence = coherence,
-    classification = classification,
     leads = leads,
     tests = tests,
     growth = growth

@@ -2247,7 +2247,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-sample-metadata" class="level2">
 <h2 class="anchored" data-anchor-id="read-sample-metadata">Read sample metadata</h2>
-<p>The design uses the sample table attached to the protein matrix, so it follows the same order.</p>
+<p>The sample table attached to the protein matrix is used, so the design follows its column order.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">&quot;01_Preprocess&quot;</span>, <span class="st">&quot;02_Quantification&quot;</span>, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;proteins.rds&quot;</span>))</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>targets <span class="ot">&lt;-</span> proteins<span class="sc">$</span>targets</span>
@@ -2263,22 +2263,22 @@ treatment T1 T2
 </section>
 <section id="design" class="level2">
 <h2 class="anchored" data-anchor-id="design">Design</h2>
-<p><code>~ 0 + group + participant + blood</code> gives one mean per treatment-by-timepoint group and a fixed effect per participant. Participant is fixed rather than random because every contrast sits within one person (limma User’s Guide §9.4.2), which makes pre-to-post comparisons paired; a participant-level variable such as sex cannot be estimated. <code>blood</code>, the haemoglobin index from <code>02_Quantification</code>, gives each protein a slope on how much blood its sample holds, so blood no longer adds to the residual variance.</p>
-<p><code>makeContrasts()</code> needs syntactic column names, so the <code>group</code> prefix is dropped.</p>
+<p>Participant is a fixed effect because every contrast sits within one person (limma User’s Guide §9.4.2), which pairs the comparisons. The blood index from <code>02_Quantification</code> gives each protein a slope on its sample’s blood content, so blood no longer adds to the residual variance.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group <span class="sc">+</span> participant <span class="sc">+</span> blood, <span class="at">data =</span> targets)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(design) <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">&quot;^group&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="fu">colnames</span>(design))</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(design) <span class="ot">&lt;-</span> targets<span class="sc">$</span>sample_id</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.fullrank</span>(design),</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">make.names</span>(<span class="fu">colnames</span>(design)), <span class="fu">colnames</span>(design))</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">samples =</span> <span class="fu">nrow</span>(design), <span class="at">coefficients =</span> <span class="fu">ncol</span>(design),</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">residual_df =</span> <span class="fu">nrow</span>(design) <span class="sc">-</span> <span class="fu">ncol</span>(design)</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># makeContrasts() needs syntactic names, so the group prefix goes.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> group <span class="sc">+</span> participant <span class="sc">+</span> blood, <span class="at">data =</span> targets)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(design) <span class="ot">&lt;-</span> <span class="fu">sub</span>(<span class="st">&quot;^group&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="fu">colnames</span>(design))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(design) <span class="ot">&lt;-</span> targets<span class="sc">$</span>sample_id</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">is.fullrank</span>(design),</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">make.names</span>(<span class="fu">colnames</span>(design)), <span class="fu">colnames</span>(design))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">samples =</span> <span class="fu">nrow</span>(design), <span class="at">coefficients =</span> <span class="fu">ncol</span>(design),</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">residual_df =</span> <span class="fu">nrow</span>(design) <span class="sc">-</span> <span class="fu">ncol</span>(design)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     samples coefficients  residual_df 
          131           37           94 </code></pre>
@@ -2287,7 +2287,7 @@ treatment T1 T2
 </section>
 <section id="contrasts" class="level2">
 <h2 class="anchored" data-anchor-id="contrasts">Contrasts</h2>
-<p>Positive values follow the subtraction order below.</p>
+<p>The interaction is the study question; the baseline contrast checks counterbalancing, since legs before training should differ by nothing.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>contrast_matrix <span class="ot">&lt;-</span> <span class="fu">makeContrasts</span>(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">`</span><span class="at">BFR_Post-Pre</span><span class="st">`</span> <span class="ot">=</span> BFR_T2 <span class="sc">-</span> BFR_T1,</span>
@@ -2361,28 +2361,22 @@ Levels    Modality_x_Time_Interaction
 </tr>
 </tbody>
 </table>
-<p>The interaction equals <code>BFR_Post-HLRT_Post</code> minus <code>BFR_Pre-HLRT_Pre</code> exactly, so the five are not independent questions. Baseline differences are inspected, not assumed absent.</p>
 </section>
 <section id="check-within-leg-correlation" class="level2">
 <h2 class="anchored" data-anchor-id="check-within-leg-correlation">Check within-leg correlation</h2>
-<p>Samples from the same leg may stay correlated after the participant term; <code>duplicateCorrelation()</code> estimates the average residual correlation within legs.</p>
+<p>Two samples from one leg may stay correlated after the participant term; while this estimate stays near zero, <code>02_Differential</code> fits without a leg block.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>leg_id <span class="ot">&lt;-</span> <span class="fu">paste</span>(targets<span class="sc">$</span>participant, targets<span class="sc">$</span>leg, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>strata <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">level =</span> <span class="st">&quot;within leg, participant fixed (unweighted matrix correlation)&quot;</span>,</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">correlation =</span> <span class="fu">duplicateCorrelation</span>(proteins<span class="sc">$</span>E, design, <span class="at">block =</span> leg_id)<span class="sc">$</span>consensus.correlation</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(strata<span class="sc">$</span>correlation, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Unweighted: the estimate ignores the standard errors the later fit uses.</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">duplicateCorrelation</span>(proteins<span class="sc">$</span>E, design, <span class="at">block =</span> leg_id)<span class="sc">$</span>consensus.correlation, <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.015</code></pre>
 </div>
 </div>
-<p>The estimate ignores the standard errors the later fit uses. <code>02_Differential</code> fits without a leg block while this stays near zero; if it rose, the fix is <code>block = leg_id</code> there.</p>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p>Identifier columns keep the matrix row names in the workbook.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;02_Differential_Expression&quot;</span>, <span class="st">&quot;01_Design&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(</span>
@@ -2395,11 +2389,10 @@ Levels    Modality_x_Time_Interaction
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">design =</span> <span class="fu">data.frame</span>(<span class="at">sample_id =</span> <span class="fu">rownames</span>(design), design, <span class="at">check.names =</span> <span class="cn">FALSE</span>),</span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">contrasts =</span> <span class="fu">data.frame</span>(</span>
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">coefficient =</span> <span class="fu">rownames</span>(contrast_matrix), contrast_matrix, <span class="at">check.names =</span> <span class="cn">FALSE</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">correlation_strata =</span> strata</span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_design.xlsx&quot;</span>)</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(out, <span class="st">&quot;01_design.xlsx&quot;</span>)</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

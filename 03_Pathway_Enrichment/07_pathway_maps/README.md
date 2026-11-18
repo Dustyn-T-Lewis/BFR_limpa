@@ -16,10 +16,11 @@ quarto render 03_Pathway_Enrichment/07_pathway_maps/a_script/07_pathway_maps.qmd
 Outputs:
 
 - `b_reports/07_pathway_maps.html`: the walkthrough, with the NES check against 01.
-- `b_reports/07_maps_<collection>.pdf`, four pages each: S19 dotplot (colour NES, size the
-  leading-edge share), S20 enrichment map (pathways joined by shared proteins, pies split by leg),
-  S21 pathway tree (clusters named by their most frequent words), S22 the five strongest pathways
-  and their leading-edge proteins, pies showing which leg each protein leads in.
+- `b_reports/07_pathway_maps.pdf`, four pages per collection (Hallmark, GO_Slim, KEGG_Legacy,
+  Reactome, GOBP): S19 dotplot (colour NES, size the leading-edge share), S20 enrichment map
+  (pathways joined by shared proteins, pies split by leg), S21 pathway tree (clusters named by
+  their most frequent words), S22 the five strongest pathways and their leading-edge proteins,
+  pies showing which leg each protein leads in.
 
 Each map shows the main sets 01 calls at FDR < 0.05 in either leg, at most 30 per collection: 5
 Hallmark, 13 GO Slim, 12 KEGG, 30 of Reactome's 31 and 30 of GO:BP's 79. Across all 3,980 set and

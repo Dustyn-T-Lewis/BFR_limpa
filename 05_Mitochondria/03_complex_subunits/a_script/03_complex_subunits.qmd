@@ -18,18 +18,14 @@ here::i_am("05_Mitochondria/03_complex_subunits/a_script/03_complex_subunits.qmd
 
 ## Read inputs
 
-Each subunit and assembly factor of complexes I to V, with its training change in each leg, side
-by side. From Sam's PR #26 (sc-norton). It is descriptive only: the inference is fry on the
-complexes in `02_test_mito`.
-
-`de` is the stage 02 `DEP_matrix`, one row per protein with logFC, p and BH-adjusted p per
-contrast. `membership` lists the MitoCarta sets; `complex_tests` holds fry's complex results.
+Showing every subunit and assembly factor by leg lets a reader see which proteins carry a complex's
+change (Sam's PR #26). It is descriptive; the inference is fry on the complexes in `02_test_mito`.
 
 ```{r read}
 stage <- here("05_Mitochondria", "03_complex_subunits")
 de <- read_excel(
   here("02_Differential_Expression", "02_Differential", "c_data", "02_differential.xlsx"),
-  "DEP_matrix"
+  "protein_results"
 )
 membership <- read_excel(
   here("05_Mitochondria", "01_build_mito_sets", "c_data", "01_build_mito_sets.xlsx"),
@@ -43,10 +39,8 @@ complex_tests <- read_excel(
 
 ## Collect the subunits
 
-Keep the measured genes of the MitoPathways "CI subunits" to "CV assembly factors", split the set
-name into complex and role, and join each gene to its stage 02 row by symbol. Sam's "Other" group
-joins them: the MitoPathways "Cytochrome C" and "Respirasome assembly" genes that belong to no
-single complex. Rows sort within complex and role by the interaction logFC, BFR minus HLRT.
+Sam's "Other" group holds the cytochrome C and respirasome assembly genes that belong to no single
+complex. Sorting by the interaction puts the proteins that differ most between legs at the ends.
 
 ```{r subunits}
 complexes <- c("CI", "CII", "CIII", "CIV", "CV", "Other")
@@ -75,9 +69,8 @@ head(subunits, 3)
 
 ## The set-level test
 
-A paired t-test across the subunits of a complex counts correlated proteins as independent
-replicates and makes p too small. The set-level test is fry on the subunits, standard fit,
-interaction contrast, and it goes in the panel titles. Assembly factors have no set test.
+A paired t-test across a complex's subunits treats correlated proteins as independent replicates,
+so the set-level test is fry's interaction FDR from `02_test_mito`. Assembly factors have none.
 
 ```{r interaction-fry}
 interaction_fry <- complex_tests |>
@@ -88,14 +81,11 @@ interaction_fry
 
 ## Figures
 
-Three A4 pages go to `b_reports/03_complex_subunits.pdf`. Page 1 holds Sam's two summaries,
-stacked: complex subunits, then assembly factors with "Other". Each bar is the mean change of a
-group's measured proteins per leg, with the standard error across them, and every protein is a
-point. The standard error describes spread among correlated proteins and is not a test; the test is
-fry, whose interaction FDR labels the subunit summary. Axis labels give measured of all MitoCarta
-members. The jitter is seeded, so points land in the same place on every run.
+Sam's summaries show each group's mean change per leg; the standard error describes spread among
+correlated proteins and is not a test, so fry's FDR labels the subunit bars.
 
 ```{r summary-page}
+# seeded jitter keeps the points in place across runs
 theme_set(theme_minimal(base_size = 9))
 theme_update(legend.position = "top", panel.grid.major.x = element_blank())
 arm_colours <- c(BFR = "#B2182B", HLRT = "#2166AC")
@@ -131,9 +121,6 @@ summary_plot <- function(roles, title) {
 summary_page <- summary_plot("subunits", "Complex subunits, summary by leg") /
   summary_plot(c("assembly factors", "other"), "Assembly factors and other OXPHOS proteins, by leg")
 ```
-
-Pages 2 and 3 draw every protein of one role by leg, one panel per complex. Panel titles carry the
-protein count and, on the subunit page, fry's interaction FDR.
 
 ```{r role-page}
 role_page <- function(which_role, title) {
@@ -172,8 +159,7 @@ invisible(dev.off())
 
 ## Summary
 
-Proteins per complex and role, and how many reach BH FDR < 0.05 in each leg and for the
-interaction.
+Counts at FDR 0.05 for the README.
 
 ```{r summary}
 subunits |>
@@ -184,8 +170,6 @@ subunits |>
 ```
 
 ## Save results
-
-`03_complex_subunits.xlsx` holds the `subunits` table.
 
 ```{r write}
 write_xlsx(list(subunits = subunits), file.path(stage, "c_data", "03_complex_subunits.xlsx"))

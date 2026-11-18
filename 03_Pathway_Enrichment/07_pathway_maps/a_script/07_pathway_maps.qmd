@@ -38,7 +38,7 @@ arms <- c(BFR = "BFR_Post-Pre", HLRT = "HLRT_Post-Pre")
 
 ## Rank the proteins
 
-The ranking of `01`, sorted from largest t, with a readable name for every set.
+The ranking of `01`, so the maps draw the same enrichment that was tested.
 
 ```{r ranked}
 ranked <- map(arms, function(cn) {
@@ -110,8 +110,8 @@ nes_check |>
 
 ## Draw figures
 
-Four A4 pages per collection. Pathway similarity is computed only among the drawn pathways,
-since GO:BP holds 1,366 sets.
+Four pages per collection, in one PDF. Pathway similarity is computed only among the drawn
+pathways, since GO:BP holds 1,366 sets.
 
 - S19, dotplot: BFR and HLRT side by side, colour NES, dot size the share of the pathway in its
   leading edge.
@@ -125,7 +125,10 @@ figure_title <- function(number, title, db) {
   labs(title = sprintf("S%d. %s, %s", number, title, db))
 }
 arm_fill <- scale_fill_manual(values = c(BFR = "#B2182B", HLRT = "#2166AC"), name = NULL)
-walk(unique(drawn$database), function(db) {
+collection_order <- c("Hallmark", "GO_Slim", "KEGG_Legacy", "Reactome", "GOBP")
+stopifnot(setequal(collection_order, drawn$database))
+pdf(file.path(stage, "b_reports", "07_pathway_maps.pdf"), width = 8.27, height = 11.69)
+for (db in collection_order) {
   show <- filter(drawn, database == db)$label
   shown <- filter(compared[[db]], Description %in% show)
   similar <- pairwise_termsim(shown, showCategory = length(show))
@@ -147,10 +150,9 @@ walk(unique(drawn$database), function(db) {
     cnetplot(shown, showCategory = head(show, 5), node_label = "category") + arm_fill +
       figure_title(22, "Pathways and their proteins", db)
   )
-  pdf(file.path(stage, "b_reports", paste0("07_maps_", db, ".pdf")), width = 8.27, height = 11.69)
   walk(pages, print)
-  invisible(dev.off())
-})
+}
+invisible(dev.off())
 ```
 
 ## Summary

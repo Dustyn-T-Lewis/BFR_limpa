@@ -2249,7 +2249,7 @@ vertical-align: -.125em;
 </section>
 <section id="read-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="read-inputs">Read inputs</h2>
-<p>singscore ranks every gene within a sample and scores a set by its members’ mean rank, centred so 0 is what random members would give. A score ignores the rest of the cohort: no p-value, no contrast. <code>04_set_classification</code> and <code>05_set_association</code> test the scores. The abundances have the blood index’s effect removed (<code>proteins_adjusted.rds</code>).</p>
+<p>singscore (Foroutan et al. 2018, doi:10.1186/s12859-018-2435-4) scores a set within one sample by its members’ mean rank, so a score never sees a contrast and later steps can test it against any grouping or phenotype. The abundances have the blood index’s effect removed.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>stage <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;03_run_singscore&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>gene_sets <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">&quot;03_Pathway_Enrichment&quot;</span>, <span class="st">&quot;00_build_gene_sets&quot;</span>, <span class="st">&quot;c_data&quot;</span>)</span>
@@ -2262,7 +2262,7 @@ vertical-align: -.125em;
 </section>
 <section id="score-samples" class="level2">
 <h2 class="anchored" data-anchor-id="score-samples">Score samples</h2>
-<p>Sets are keyed on gene symbols, so the matrix keeps each symbol’s representative protein, renamed to the gene. <code>multiScore()</code> returns <code>Scores</code> and <code>Dispersions</code> (the spread of a set’s member ranks), both set by sample.</p>
+<p>Sets are keyed on gene symbols, so the matrix keeps each symbol’s representative protein.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gene_map <span class="ot">&lt;-</span> <span class="fu">filter</span>(protein_map, selected)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>gene_matrix <span class="ot">&lt;-</span> proteins<span class="sc">$</span>E[gene_map<span class="sc">$</span>protein, ]</span>
@@ -2277,6 +2277,7 @@ vertical-align: -.125em;
 </section>
 <section id="score-and-dispersion-per-set" class="level2">
 <h2 class="anchored" data-anchor-id="score-and-dispersion-per-set">Score and dispersion per set</h2>
+<p>Dispersion, the spread of a set’s member ranks, shows whether a score summarises members that move together.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>set_spread <span class="ot">&lt;-</span> set_catalog <span class="sc">|&gt;</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(qualifies) <span class="sc">|&gt;</span></span>
@@ -2285,12 +2286,11 @@ vertical-align: -.125em;
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">score =</span> <span class="fu">rowMeans</span>(scores[set_id, ]),</span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">dispersion =</span> <span class="fu">rowMeans</span>(scored<span class="sc">$</span>Dispersions[set_id, ])</span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>collection_spread <span class="ot">&lt;-</span> set_spread <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>set_spread <span class="sc">|&gt;</span></span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">sets =</span> <span class="fu">n</span>(), <span class="at">median_score =</span> <span class="fu">round</span>(<span class="fu">median</span>(score), <span class="dv">4</span>),</span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_dispersion =</span> <span class="fu">round</span>(<span class="fu">median</span>(dispersion), <span class="dv">1</span>), <span class="at">.by =</span> database</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>collection_spread</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 4
   database     sets median_score median_dispersion
@@ -2305,17 +2305,17 @@ vertical-align: -.125em;
 </section>
 <section id="check-participant-structure" class="level2">
 <h2 class="anchored" data-anchor-id="check-participant-structure">Check participant structure</h2>
-<p>For the first two principal components of the scores, the R² on participant gives the share of the component explained by participant identity. <code>proteins$targets</code> rows follow the matrix columns.</p>
+<p>If participant identity dominates the raw scores, later steps must use within-leg change. The R² of each leading component on participant measures it.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>components <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(<span class="fu">t</span>(scores))</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>structure_check <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">component =</span> <span class="fu">paste0</span>(<span class="st">&quot;PC&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance_explained =</span> <span class="fu">round</span>(<span class="fu">summary</span>(components)<span class="sc">$</span>importance[<span class="dv">2</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], <span class="dv">3</span>),</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">participant_share =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">map_dbl</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="cf">function</span>(i) {</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summary</span>(<span class="fu">lm</span>(components<span class="sc">$</span>x[, i] <span class="sc">~</span> proteins<span class="sc">$</span>targets<span class="sc">$</span>participant))<span class="sc">$</span>r.squared</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  }), <span class="dv">3</span>), <span class="cn">NA</span>, <span class="cn">NA</span>)</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>structure_check</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># proteins$targets rows follow the matrix columns.</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">component =</span> <span class="fu">paste0</span>(<span class="st">&quot;PC&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">variance_explained =</span> <span class="fu">round</span>(<span class="fu">summary</span>(components)<span class="sc">$</span>importance[<span class="dv">2</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], <span class="dv">3</span>),</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">participant_share =</span> <span class="fu">c</span>(<span class="fu">round</span>(<span class="fu">map_dbl</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="cf">function</span>(i) {</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summary</span>(<span class="fu">lm</span>(components<span class="sc">$</span>x[, i] <span class="sc">~</span> proteins<span class="sc">$</span>targets<span class="sc">$</span>participant))<span class="sc">$</span>r.squared</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  }), <span class="dv">3</span>), <span class="cn">NA</span>, <span class="cn">NA</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 3
   component variance_explained participant_share
@@ -2326,11 +2326,10 @@ vertical-align: -.125em;
 4 PC4                    0.054            NA    </code></pre>
 </div>
 </div>
-<p>Participant identity dominates the raw scores, so later steps use the within-leg change, never the raw value.</p>
 </section>
 <section id="figure" class="level2">
 <h2 class="anchored" data-anchor-id="figure">Figure</h2>
-<p>singscore’s <code>plotDispersion()</code> draws one signature at a time, so S5 plots every set’s mean score against its mean dispersion directly.</p>
+<p>singscore’s <code>plotDispersion()</code> draws one signature at a time, so S5 plots every set at once.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>figure <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(set_spread, <span class="fu">aes</span>(score, dispersion, <span class="at">colour =</span> database)) <span class="sc">+</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linewidth =</span> <span class="fl">0.3</span>, <span class="at">colour =</span> <span class="st">&quot;grey80&quot;</span>) <span class="sc">+</span></span>
@@ -2343,24 +2342,20 @@ vertical-align: -.125em;
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">10</span>) <span class="sc">+</span></span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">aspect.ratio =</span> <span class="dv">1</span>)</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_run_singscore_figures.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="fu">pdf</span>(<span class="fu">file.path</span>(stage, <span class="st">&quot;b_reports&quot;</span>, <span class="st">&quot;03_run_singscore.pdf&quot;</span>), <span class="at">width =</span> <span class="fl">8.27</span>, <span class="at">height =</span> <span class="fl">11.69</span>)</span>
 <span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(figure)</span>
 <span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="fu">invisible</span>(<span class="fu">dev.off</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="save-results" class="level2">
 <h2 class="anchored" data-anchor-id="save-results">Save results</h2>
-<p>Later steps read the scores from <code>set_scores.rds</code>: singscore values carry exact rank ties, and an Excel round trip changes the last bit of some, which breaks ties and moves 05’s rank tests. The workbook copy is for reading.</p>
+<p>Later steps read <code>set_scores.rds</code>: an Excel round trip changes the last bit of some scores, which breaks singscore’s exact rank ties and moves 05’s rank tests. The workbook copy is for reading.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(scores, <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;set_scores.rds&quot;</span>))</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_xlsx</span>(</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">collection_spread =</span> collection_spread,</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">structure_check =</span> structure_check,</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>)</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;03_run_singscore.xlsx&quot;</span>)</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">set_scores =</span> <span class="fu">rownames_to_column</span>(<span class="fu">as.data.frame</span>(scores), <span class="st">&quot;set_id&quot;</span>)),</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(stage, <span class="st">&quot;c_data&quot;</span>, <span class="st">&quot;03_run_singscore.xlsx&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="session-information" class="level2">

@@ -20,8 +20,6 @@ here::i_am("02_Differential_Expression/02_Differential/a_script/02_differential.
 
 ## Read proteins and design
 
-Design rows and matrix columns must name the same samples in the same order.
-
 ```{r read}
 quant <- here("01_Preprocess", "02_Quantification", "c_data")
 proteins <- readRDS(file.path(quant, "proteins.rds"))
@@ -31,15 +29,13 @@ stopifnot(identical(rownames(d$design), colnames(proteins$E)))
 
 ## Fit
 
-limpa's sequence is `dpcDE()`, `contrasts.fit()`, `eBayes()`, `topTable()`. `dpcDE()` replaces
-`lmFit()` because only it reads the `dpcQuant()` standard errors, as precision weights. No sample
-quality weights (limpa's default): estimated, they ranged from 0.09 to 3.6 and did not follow
-contaminant load. `robust = TRUE` keeps proteins with outlying variances from distorting the
-prior. The blood coefficient, read before the contrasts are formed, is each protein's blood slope:
-log2 protein per log2 haemoglobin, near 1 for a protein that comes only from blood.
+`dpcDE()` replaces `lmFit()` because only it reads the `dpcQuant()` standard errors, and
+`robust = TRUE` keeps outlying variances from distorting the prior. Sample quality weights are off
+(limpa's default): estimated, they did not follow contaminant load.
 
 ```{r fit}
 coefficient_fit <- dpcDE(proteins, d$design)
+# The blood slope is log2 protein per log2 haemoglobin, near 1 for a protein only blood carries.
 blood_fit <- eBayes(coefficient_fit, robust = TRUE) |>
   topTable(coef = "blood", number = Inf, sort.by = "none")
 fit <- eBayes(contrasts.fit(coefficient_fit, d$contrasts), robust = TRUE)
@@ -48,7 +44,8 @@ sum(blood_fit$adj.P.Val < 0.05)
 
 ## Results
 
-Benjamini-Hochberg (BH) adjustment runs within each contrast, not across all five.
+Benjamini-Hochberg (BH) adjustment runs within each contrast, because each answers its own
+question.
 
 ```{r results}
 results <- map(colnames(d$contrasts), function(cn) {
@@ -72,19 +69,17 @@ contrast_summary |>
 
 ## Inspect p-value distributions
 
-Under a flat null, 20% of p fall below 0.2 and the median |t| is about 0.67.
+A skewed histogram would show miscalibration before any hit is trusted; under a flat null, 20% of
+p fall below 0.2 and the median |t| is about 0.67.
 
 ```{r null-calibration}
-null_summary <- results |>
+results |>
   summarise(
     prop_true_null = round(propTrueNull(P.Value), 3),
     median_abs_t = round(median(abs(t)), 3),
     p_below_0.2 = round(mean(P.Value < 0.2), 3), .by = contrast
   )
-null_summary
 ```
-
-The dashed line is the count per bin if p-values were uniform.
 
 ```{r p-histogram}
 ggplot(results, aes(P.Value)) +
@@ -95,20 +90,17 @@ ggplot(results, aes(P.Value)) +
   theme_minimal()
 ```
 
-The log2 interaction effect each protein would need for 80% power at unadjusted two-sided 0.05,
-median and 90th percentile across proteins. It describes sensitivity, not FDR-adjusted power.
-
 ```{r detectable-effect}
+# log2 interaction effect for 80% power at unadjusted 0.05: sensitivity, not FDR-adjusted power.
 se <- fit$stdev.unscaled[, "Modality_x_Time_Interaction"] * sqrt(fit$s2.post)
 round(quantile(se * (qt(0.975, fit$df.total) + qt(0.80, fit$df.total)), c(0.5, 0.9)), 3)
 ```
 
 ## The pi score
 
-`pi_score` is `P.Value^abs(logFC)`, 10 to the minus Xiao et al.'s π (|logFC| times -log10 p;
-2014, doi:10.1093/bioinformatics/btr671), so it orders proteins as π does, smallest first. It ranks
-the two within-leg contrasts, controls no error rate and selects nothing. Mean observed precursors
-per sample sit beside it, because the top of a pi ranking is often thinly observed.
+`pi_score` (`P.Value^abs(logFC)`) orders proteins as Xiao et al.'s π does (2014,
+doi:10.1093/bioinformatics/btr671); it ranks, controls no error rate and selects nothing. Mean
+observations sit beside it, because the top of a π ranking is often thinly observed.
 
 ```{r pi-ranking}
 results |>
@@ -121,7 +113,8 @@ results |>
 
 ## Baseline comparison
 
-Counterbalanced legs before training should differ by nothing. The five smallest p:
+Counterbalanced legs before training should differ by nothing, so hits here would point to a
+problem upstream.
 
 ```{r baseline}
 results |>
@@ -132,7 +125,7 @@ results |>
 
 ## Without the blood covariate
 
-The same fit without the blood index, its BH discoveries per contrast beside the primary fit's.
+Refitting without the blood index shows how much the covariate moves the discoveries.
 
 ```{r unadjusted}
 unadjusted_design <- d$design[, colnames(d$design) != "blood"]
@@ -151,8 +144,8 @@ rbind(
 
 ## Slope sensitivity
 
-The run with the detection-curve slope fitted (0.478) instead of preset at 0.7, when it exists,
-with the same detection filter, normalisation and design.
+The preset slope of 0.7 is a choice, so the fitted-slope run, when it exists, goes through the
+same filter, normalisation and design.
 
 ```{r slope-sensitivity}
 #| eval: !expr file.exists(file.path(quant, "quant_runs", "proteins_slope_fitted.rds"))
@@ -176,7 +169,7 @@ rbind(
 ## Save results
 
 ```{r write}
-dep_matrix <- results |>
+protein_results <- results |>
   select(protein, Genes, NPrec, contrast, logFC, P.Value, adj.P.Val) |>
   pivot_wider(
     names_from = contrast,
@@ -192,9 +185,8 @@ out <- here("02_Differential_Expression", "02_Differential", "c_data")
 saveRDS(fit, file.path(out, "fit.rds"))
 write_xlsx(
   list(
-    DEP_matrix = dep_matrix,
-    contrast_summary = contrast_summary,
-    null_summary = null_summary
+    protein_results = protein_results,
+    contrast_summary = contrast_summary
   ),
   file.path(out, "02_differential.xlsx")
 )

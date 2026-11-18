@@ -15,7 +15,6 @@ Outputs:
 - `c_data/precursors_filtered.rds`: filtered precursors, for `02_Quantification`.
 - `c_data/haemoglobin_precursors.rds`: HBB and HBA1 precursors, for the blood index.
 - `c_data/01_filter.xlsx`:
-  - `samples`: sample identifiers and study metadata.
   - `filtering_summary`: precursors, protein groups and % of starting signal after each filter.
   - `annotation_exclusions`: cRAP and decoy categories (overlapping), with their signal.
   - `removed_contaminants`: each removed gene-symbol string, its precursors and signal.

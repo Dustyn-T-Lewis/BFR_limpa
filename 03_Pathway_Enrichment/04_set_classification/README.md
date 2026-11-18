@@ -15,12 +15,12 @@ quarto render 03_Pathway_Enrichment/04_set_classification/a_script/04_set_classi
 Outputs:
 
 - `b_reports/04_set_classification.html`: the walkthrough.
-- `b_reports/04_classification_<collection>.pdf`: S6 to S9, one per task except baseline, an
-  ROC panel for every set at nominal p, smallest p first. Red curves are higher in the second
-  group (post, or BFR), blue lower; shading is the AUC, the dashed line chance. p is the paired
-  Wilcoxon signed-rank test, q BH within collection and task.
-- `b_reports/04_chance_by_collection.pdf`: S10, nominal hits over the chance expectation by
-  collection and task, red above 1; labels give observed of tested.
+- `b_reports/04_set_classification.pdf`: S10 first, nominal hits over the chance expectation by
+  collection and task, red above 1, labels giving observed of tested; then per collection
+  (Hallmark, GO_Slim, KEGG_Legacy, Reactome, GOBP) S6 to S9, one per task except baseline, an ROC
+  panel for every set at nominal p, smallest p first. Red curves are higher in the second group
+  (post, or BFR), blue lower; shading is the AUC, the dashed line chance. p is the paired Wilcoxon
+  signed-rank test, q BH within collection and task.
 - `c_data/04_set_classification.xlsx`, read by no later step:
   - `chance_expectation`: one row per task and collection: nominal hits against chance, BH hits.
   - `set_auc`: one row per set and task: AUC, paired Wilcoxon p and BH q, smallest p first.
@@ -41,9 +41,9 @@ mitochondrial RNA metabolism (AUC 0.69 to 0.71). With BFR mitochondrial protein 
 rises (AUC 0.74), while growth factor response and NF-κB signalling sets fall (AUC 0.22 to 0.29).
 Between the arms one set passes BH, HALLMARK_SPERMATOGENESIS on change (AUC 0.68, q 0.018); the
 nominal leads are NF-κB signalling and programmed cell death, lower in BFR's change (AUC 0.27),
-and tRNA processing, higher in BFR after training (AUC 0.67, q 0.14). The between-arm rows sit
-near chance, so the single BH hit and these leads need confirmation. Protein-panel
+and tRNA processing, higher in BFR after training (AUC 0.67, q 0.14). Protein-panel
 classification is `07_Multivariate/02_splsda`.
 
-Features co-vary, so nominal counts spread widely around chance; the shuffle range is in
-`02_Differential_Expression/03_Protein_Association`.
+The between-arm rows sit near chance, and because sets co-vary nominal counts spread widely
+around it (shuffle range in `02_Differential_Expression/03_Protein_Association`), so the single
+BH hit and these leads need confirmation.
